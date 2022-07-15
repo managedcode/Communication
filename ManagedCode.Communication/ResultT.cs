@@ -25,17 +25,17 @@ public class Result<T> : Result
         return new Result<T>(true, content, status);
     }
 
-    public static Result<T> Failed(ResultState status, Exception? error = null)
+    public new static Result<T> Failed(ResultState status, Exception? error = null)
     {
         return new Result<T>(error, status);
     }
 
-    public static Result<T> Failed(Exception? error, ResultState status = ResultState.Failed)
+    public new static Result<T> Failed(Exception? error, ResultState status = ResultState.Failed)
     {
         return new Result<T>(error, status);
     }
 
-    public static Result<T> Failed()
+    public new static Result<T> Failed()
     {
         return new Result<T>(null, ResultState.Failed);
     }
