@@ -34,6 +34,11 @@ public class Result
     {
         return new Result(true, status);
     }
+    
+    public static Result<T> Succeeded<T>(T result, ResultState status = ResultState.Success)
+    {
+        return new Result<T>(true, result, status);
+    }
 
     public static Result Failed(ResultState status, Exception? error = null)
     {
@@ -43,6 +48,11 @@ public class Result
     public static Result Failed(Exception? error, ResultState status = ResultState.Failed)
     {
         return new Result(error, status);
+    }
+    
+    public static Result<T> Failed<T>(T result, Exception? error, ResultState status = ResultState.Success)
+    {
+        return new Result<T>(true, result, status);
     }
 
     public static Result Failed()
