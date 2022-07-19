@@ -29,4 +29,9 @@ public class Result<T> : Result
     {
         return new Result<T>(null);
     }
+
+    public new static Result<T> Fail(Exception? error)
+    {
+        return new Result<T>(error);
+    }
 }

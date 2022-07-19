@@ -46,11 +46,6 @@ public class Result
         return new Result<T>(error);
     }
 
-    public static Result<T> Fail<T>(T result, Exception? error)
-    {
-        return new Result<T>(false, result);
-    }
-
     public static Result Fail()
     {
         return new Result(null);
