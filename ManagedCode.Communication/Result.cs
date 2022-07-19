@@ -4,59 +4,50 @@ namespace ManagedCode.Communication;
 
 public class Result
 {
-    public Result(bool isSucceeded, ResultState status, Exception? error)
+    public bool IsSuccess { get; }
+    public bool IsError => !IsSuccess;
+    public Exception? Error { get; }
+
+    public Result(bool isSuccess, Exception? error)
     {
-        IsSucceeded = isSucceeded;
-        Status = status;
+        IsSuccess = isSuccess;
         Error = error;
     }
 
-    public Result(bool isSucceeded, ResultState status)
+    public Result(bool isSuccess)
     {
-        IsSucceeded = isSucceeded;
-        Status = status;
+        IsSuccess = isSuccess;
         Error = null;
     }
 
-    public Result(Exception? error, ResultState status)
+    public Result(Exception? error)
     {
-        IsSucceeded = false;
+        IsSuccess = false;
         Error = error;
-        Status = status;
     }
 
-    public bool IsSucceeded { get; }
-    public bool IsError => !IsSucceeded;
-    public Exception? Error { get; }
-    public ResultState Status { get; }
-
-    public static Result Succeeded(ResultState status = ResultState.Success)
+    public static Result Succeed()
     {
-        return new Result(true, status);
-    }
-    
-    public static Result<T> Succeeded<T>(T result, ResultState status = ResultState.Success)
-    {
-        return new Result<T>(true, result, status);
+        return new Result(true);
     }
 
-    public static Result Failed(ResultState status, Exception? error = null)
+    public static Result<T> Succeed<T>(T result)
     {
-        return new Result(error, status);
+        return new Result<T>(true, result);
     }
 
-    public static Result Failed(Exception? error, ResultState status = ResultState.Failed)
+    public static Result Fail(Exception? error)
     {
-        return new Result(error, status);
-    }
-    
-    public static Result<T> Failed<T>(T result, Exception? error, ResultState status = ResultState.Success)
-    {
-        return new Result<T>(true, result, status);
+        return new Result(error);
     }
 
-    public static Result Failed()
+    public static Result<T> Fail<T>(T result, Exception? error)
     {
-        return new Result(null, ResultState.Failed);
+        return new Result<T>(true, result);
+    }
+
+    public static Result Fail()
+    {
+        return new Result(null);
     }
 }

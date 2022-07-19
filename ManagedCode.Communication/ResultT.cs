@@ -4,39 +4,29 @@ namespace ManagedCode.Communication;
 
 public class Result<T> : Result
 {
-    protected Result(Exception? error, ResultState status) : base(error, status)
-    {
-    }
-
-    public Result(bool isSucceeded, T value, ResultState status, Exception? error) : base(isSucceeded, status, error)
-    {
-        Value = value;
-    }
-
-    public Result(bool isSucceeded, T value, ResultState status) : base(isSucceeded, status)
-    {
-        Value = value;
-    }
-
     public T? Value { get; }
 
-    public static Result<T> Succeeded(T content, ResultState status = ResultState.Success)
+    protected Result(Exception? error) : base(error)
     {
-        return new Result<T>(true, content, status);
     }
 
-    public new static Result<T> Failed(ResultState status, Exception? error = null)
+    public Result(bool isSuccess, T value, Exception? error) : base(isSuccess, error)
     {
-        return new Result<T>(error, status);
+        Value = value;
     }
 
-    public new static Result<T> Failed(Exception? error, ResultState status = ResultState.Failed)
+    public Result(bool isSuccess, T value) : base(isSuccess)
     {
-        return new Result<T>(error, status);
+        Value = value;
     }
 
-    public new static Result<T> Failed()
+    public static Result<T> Succeed(T content)
     {
-        return new Result<T>(null, ResultState.Failed);
+        return new Result<T>(true, content);
+    }
+
+    public new static Result<T> Fail()
+    {
+        return new Result<T>(null);
     }
 }
