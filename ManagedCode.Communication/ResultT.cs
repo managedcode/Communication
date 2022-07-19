@@ -6,7 +6,7 @@ public class Result<T> : Result
 {
     public T? Value { get; }
 
-    protected Result(Exception? error) : base(error)
+    public Result(Exception? error) : base(error)
     {
     }
 
