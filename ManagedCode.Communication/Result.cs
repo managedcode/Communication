@@ -6,24 +6,24 @@ public class Result
 {
     public bool IsSuccess { get; }
     public bool IsError => !IsSuccess;
-    public Exception? Error { get; }
+    public Error? Error { get; }
 
-    public Result(bool isSuccess, Exception? error)
+    protected Result(Exception exception)
     {
-        IsSuccess = isSuccess;
-        Error = error;
+        IsSuccess = false;
+        Error = new Error(exception);
     }
 
-    public Result(bool isSuccess)
+    protected Result(string errorMessage)
+    {
+        IsSuccess = false;
+        Error = new Error(errorMessage);
+    }
+
+    protected Result(bool isSuccess)
     {
         IsSuccess = isSuccess;
         Error = null;
-    }
-
-    public Result(Exception? error)
-    {
-        IsSuccess = false;
-        Error = error;
     }
 
     public static Result Succeed()
@@ -31,23 +31,38 @@ public class Result
         return new Result(true);
     }
 
-    public static Result<T> Succeed<T>(T result)
-    {
-        return new Result<T>(true, result);
-    }
-
-    public static Result Fail(Exception? error)
+    public static Result Fail(Exception error)
     {
         return new Result(error);
     }
 
-    public static Result<T> Fail<T>(Exception? error)
+    public static Result Fail(string errorMessage)
     {
-        return new Result<T>(error);
+        return new Result(errorMessage);
     }
 
     public static Result Fail()
     {
-        return new Result(null);
+        return new Result(false);
+    }
+
+    public static Result<T> Succeed<T>(T content)
+    {
+        return new Result<T>(true, content);
+    }
+
+    public static Result<T> Fail<T>()
+    {
+        return new Result<T>(false);
+    }
+
+    public static Result<T> Fail<T>(Exception exception)
+    {
+        return new Result<T>(exception);
+    }
+
+    public static Result<T> Fail<T>(string errorMessage)
+    {
+        return new Result<T>(errorMessage);
     }
 }

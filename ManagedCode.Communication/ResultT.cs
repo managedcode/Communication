@@ -6,18 +6,21 @@ public class Result<T> : Result
 {
     public T? Value { get; }
 
-    public Result(Exception? error) : base(error)
+    public Result(Exception exception) : base(exception)
     {
     }
 
-    public Result(bool isSuccess, T value, Exception? error) : base(isSuccess, error)
+    public Result(string errorMessage) : base(errorMessage)
     {
-        Value = value;
     }
 
     public Result(bool isSuccess, T value) : base(isSuccess)
     {
         Value = value;
+    }
+
+    public Result(bool isSuccess) : base(isSuccess)
+    {
     }
 
     public static Result<T> Succeed(T content)
@@ -27,11 +30,16 @@ public class Result<T> : Result
 
     public new static Result<T> Fail()
     {
-        return new Result<T>(null);
+        return new Result<T>(false);
     }
 
-    public new static Result<T> Fail(Exception? error)
+    public new static Result<T> Fail(Exception exception)
     {
-        return new Result<T>(error);
+        return new Result<T>(exception);
+    }
+
+    public new static Result<T> Fail(string errorMessage)
+    {
+        return new Result<T>(errorMessage);
     }
 }
