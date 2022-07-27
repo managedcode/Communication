@@ -6,20 +6,24 @@ public class Result<T> : Result
 {
     public T? Value { get; }
 
-    public Result(Exception exception) : base(exception)
+    internal Result(Exception exception) : base(exception)
     {
     }
 
-    public Result(string errorMessage) : base(errorMessage)
+    internal Result(string errorMessage) : base(errorMessage)
     {
     }
 
-    public Result(bool isSuccess, T value) : base(isSuccess)
+    internal Result(bool isSuccess, T value) : base(isSuccess)
     {
         Value = value;
     }
 
-    public Result(bool isSuccess) : base(isSuccess)
+    internal Result(bool isSuccess) : base(isSuccess)
+    {
+    }
+
+    internal Result(Error error) : base(error)
     {
     }
 
@@ -31,6 +35,11 @@ public class Result<T> : Result
     public new static Result<T> Fail()
     {
         return new Result<T>(false);
+    }
+
+    public new static Result<T> Fail(Error error)
+    {
+        return new Result<T>(error);
     }
 
     public new static Result<T> Fail(Exception exception)

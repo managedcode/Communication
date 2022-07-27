@@ -26,9 +26,25 @@ public class Result
         Error = null;
     }
 
+    protected Result(Error error)
+    {
+        IsSuccess = false;
+        Error = error;
+    }
+
     public static Result Succeed()
     {
         return new Result(true);
+    }
+
+    public static Result Fail()
+    {
+        return new Result(false);
+    }
+
+    public static Result Fail(Error error)
+    {
+        return new Result(error);
     }
 
     public static Result Fail(Exception error)
@@ -41,11 +57,6 @@ public class Result
         return new Result(errorMessage);
     }
 
-    public static Result Fail()
-    {
-        return new Result(false);
-    }
-
     public static Result<T> Succeed<T>(T content)
     {
         return new Result<T>(true, content);
@@ -54,6 +65,11 @@ public class Result
     public static Result<T> Fail<T>()
     {
         return new Result<T>(false);
+    }
+
+    public static Result<T> Fail<T>(Error error)
+    {
+        return new Result<T>(error);
     }
 
     public static Result<T> Fail<T>(Exception exception)
