@@ -1,84 +1,71 @@
 using System;
+using System.Collections.Generic;
 
 namespace ManagedCode.Communication;
 
-public class Result
+public class Result : BaseResult<ErrorCode>
 {
-    public bool IsSuccess { get; }
-    public bool IsError => !IsSuccess;
-    public Error? Error { get; }
-
-    protected Result(Exception exception)
+    internal Result(bool isSuccess) : base(isSuccess)
     {
-        IsSuccess = false;
-        Error = new Error(exception);
     }
 
-    protected Result(string errorMessage)
+    internal Result(Error<ErrorCode> error) : base(error)
     {
-        IsSuccess = false;
-        Error = new Error(errorMessage);
     }
 
-    protected Result(bool isSuccess)
+    internal Result(List<Error<ErrorCode>> errors) : base(errors)
     {
-        IsSuccess = isSuccess;
-        Error = null;
     }
 
-    protected Result(Error error)
+
+    public static implicit operator Result(Error<ErrorCode> error) => new(error);
+    public static implicit operator Result(List<Error<ErrorCode>> errors) => new(errors);
+
+
+    public static Result Success() => new(true);
+    public static Result Fail() => new(false);
+    public static Result Fail(Error<ErrorCode> error) => new(error);
+    public static Result Fail(List<Error<ErrorCode>> errors) => new(errors);
+}
+
+public class Result<T> : BaseResult<T, ErrorCode>
+{
+    internal Result(T value) : base(value)
     {
-        IsSuccess = false;
-        Error = error;
     }
 
-    public static Result Succeed()
+    internal Result(bool isSuccess) : base(isSuccess)
     {
-        return new Result(true);
     }
 
-    public static Result Fail()
+    internal Result(Error<ErrorCode> error) : base(error)
     {
-        return new Result(false);
     }
 
-    public static Result Fail(Error error)
+    internal Result(List<Error<ErrorCode>> errors) : base(errors)
     {
-        return new Result(error);
     }
 
-    public static Result Fail(Exception error)
-    {
-        return new Result(error);
-    }
 
-    public static Result Fail(string errorMessage)
-    {
-        return new Result(errorMessage);
-    }
+    public static implicit operator Result<T>(T value) => new(value);
+    public static implicit operator Result<T>(Error<ErrorCode> error) => new(error);
+    public static implicit operator Result<T>(List<Error<ErrorCode>> errors) => new(errors);
 
-    public static Result<T> Succeed<T>(T content)
-    {
-        return new Result<T>(true, content);
-    }
 
-    public static Result<T> Fail<T>()
-    {
-        return new Result<T>(false);
-    }
+    public static Result<T> Success(T value) => new(value);
+    public static Result<T> Fail() => new(false);
+    public static Result<T> Fail(Error<ErrorCode> error) => new(error);
+    public static Result<T> Fail(List<Error<ErrorCode>> errors) => new(errors);
 
-    public static Result<T> Fail<T>(Error error)
+    
+    public Result<T> WithError(Error<ErrorCode> error)
     {
-        return new Result<T>(error);
-    }
+        if (IsSuccess)
+        {
+            throw new InvalidOperationException("Cannot add error to success result");
+        }
 
-    public static Result<T> Fail<T>(Exception exception)
-    {
-        return new Result<T>(exception);
-    }
-
-    public static Result<T> Fail<T>(string errorMessage)
-    {
-        return new Result<T>(errorMessage);
+        Errors!.Add(error);
+        return this;
     }
 }
