@@ -9,7 +9,7 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
     public bool IsSuccess { get; }
     public bool IsFail => !IsSuccess;
     public Error<TErrorCode>? Error => Errors?.FirstOrDefault();
-    public List<Error<TErrorCode>>? Errors { get; set; }
+    public List<Error<TErrorCode>>? Errors { get; }
 
 
     protected BaseResult(bool isSuccess)

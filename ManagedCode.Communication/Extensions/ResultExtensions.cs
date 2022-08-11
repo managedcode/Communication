@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.Extensions;
 
 public static class ResultExtensions
 {
