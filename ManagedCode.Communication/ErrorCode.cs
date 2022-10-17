@@ -12,5 +12,5 @@ public enum ErrorCode
     AccessDenied,
     NotImplemented,
     NotInitialized,
-    AlreadyExists,
+    AlreadyExists
 }

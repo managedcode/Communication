@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,24 +21,4 @@ public class ResultErrorHandlerTests
     {
         throw new Exception("Error");
     }
-}
-
-public class TestResult : BaseResult<TestEnumCode>
-{
-    public TestResult(bool isSuccess) : base(isSuccess)
-    {
-    }
-
-    public TestResult(Error<TestEnumCode> error) : base(error)
-    {
-    }
-
-    public TestResult(List<Error<TestEnumCode>> errors) : base(errors)
-    {
-    }
-}
-
-public enum TestEnumCode
-{
-    Test,
 }

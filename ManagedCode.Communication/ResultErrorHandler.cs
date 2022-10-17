@@ -84,9 +84,9 @@ public class ResultErrorHandler
         {
             _logger?.LogException(e);
 
-            var constructor = typeof(TResult).GetConstructor(new[] {typeof(Error<TErrorCode>)})!;
+            var constructor = typeof(TResult).GetConstructor(new[] { typeof(Error<TErrorCode>) })!;
 
-            var obj = constructor.Invoke(new object[] {Error<TErrorCode>.FromException(e)}) as TResult;
+            var obj = constructor.Invoke(new object[] { Error<TErrorCode>.FromException(e) }) as TResult;
 
             return obj!;
         }

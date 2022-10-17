@@ -6,12 +6,6 @@ namespace ManagedCode.Communication;
 
 public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
 {
-    public bool IsSuccess { get; }
-    public bool IsFail => !IsSuccess;
-    public Error<TErrorCode>? Error => Errors?.FirstOrDefault();
-    public List<Error<TErrorCode>>? Errors { get; }
-
-
     protected BaseResult(bool isSuccess)
     {
         IsSuccess = isSuccess;
@@ -20,7 +14,7 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
     protected BaseResult(Error<TErrorCode> error)
     {
         IsSuccess = false;
-        Errors = new List<Error<TErrorCode>> {error};
+        Errors = new List<Error<TErrorCode>> { error };
     }
 
     protected BaseResult(List<Error<TErrorCode>> errors)
@@ -28,13 +22,15 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
         IsSuccess = false;
         Errors = errors;
     }
+
+    public bool IsSuccess { get; }
+    public bool IsFail => !IsSuccess;
+    public Error<TErrorCode>? Error => Errors?.FirstOrDefault();
+    public List<Error<TErrorCode>>? Errors { get; }
 }
 
 public abstract class BaseResult<T, TErrorCode> : BaseResult<TErrorCode> where TErrorCode : Enum
 {
-    public T? Value { get; }
-    public T? ValueOrDefault(T? defaultValue = default) => Value ?? defaultValue;
-
     protected BaseResult(T value) : base(true)
     {
         Value = value;
@@ -50,5 +46,12 @@ public abstract class BaseResult<T, TErrorCode> : BaseResult<TErrorCode> where T
 
     protected BaseResult(List<Error<TErrorCode>> errors) : base(errors)
     {
+    }
+
+    public T? Value { get; }
+
+    public T? ValueOrDefault(T? defaultValue = default)
+    {
+        return Value ?? defaultValue;
     }
 }

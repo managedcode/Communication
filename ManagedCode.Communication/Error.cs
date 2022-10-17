@@ -24,7 +24,6 @@ public class Error<TErrorCode> where TErrorCode : Enum
         Message = message;
     }
 
-
     public string Message { get; set; }
     public Exception? Exception { get; set; }
     public TErrorCode? ErrorCode { get; set; }
