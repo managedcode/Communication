@@ -2,7 +2,7 @@ using System;
 
 namespace ManagedCode.Communication;
 
-public class Error<TErrorCode> where TErrorCode : Enum
+public sealed class Error<TErrorCode> where TErrorCode : Enum
 {
     public Error(string message, TErrorCode? errorCode = default)
     {

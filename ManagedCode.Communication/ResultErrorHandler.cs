@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication;
 
-public class ResultErrorHandler
+public sealed class ResultErrorHandler
 {
     private readonly ILogger<ResultErrorHandler>? _logger;
 
