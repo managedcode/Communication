@@ -10,11 +10,11 @@ public sealed class Error<TErrorCode> where TErrorCode : Enum
         ErrorCode = errorCode;
     }
 
-    public Error(Exception exception, TErrorCode? errorCode = default)
+    public Error(Exception? exception, TErrorCode? errorCode = default)
     {
         Exception = exception;
         ErrorCode = errorCode;
-        Message = exception.Message ?? string.Empty;
+        Message = exception?.Message ?? string.Empty;
     }
 
     public Error(Exception exception, string message, TErrorCode? errorCode = default)
@@ -28,7 +28,7 @@ public sealed class Error<TErrorCode> where TErrorCode : Enum
     public Exception? Exception { get; set; }
     public TErrorCode? ErrorCode { get; set; }
 
-    public static Error<TErrorCode> FromException(Exception exception, TErrorCode? errorCode = default)
+    public static Error<TErrorCode> FromException(Exception? exception, TErrorCode? errorCode = default)
     {
         return new Error<TErrorCode>(exception, errorCode);
     }

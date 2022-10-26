@@ -31,7 +31,7 @@ public sealed class ResultErrorHandler
 
             return result;
         }
-        catch (Exception e)
+        catch (Exception? e)
         {
             _logger?.LogException(e);
 
@@ -55,7 +55,7 @@ public sealed class ResultErrorHandler
 
             return result;
         }
-        catch (Exception e)
+        catch (Exception? e)
         {
             _logger?.LogException(e);
 
@@ -80,7 +80,7 @@ public sealed class ResultErrorHandler
 
             return result;
         }
-        catch (Exception e)
+        catch (Exception? e)
         {
             _logger?.LogException(e);
 

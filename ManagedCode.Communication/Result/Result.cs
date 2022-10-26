@@ -27,7 +27,7 @@ public sealed partial class Result : BaseResult<ErrorCode>
         return new Result(errors);
     }
 
-    public static implicit operator Result(Exception exception)
+    public static implicit operator Result(Exception? exception)
     {
         return new Result(Error<ErrorCode>.FromException(exception));
     }
@@ -52,7 +52,7 @@ public sealed partial class Result : BaseResult<ErrorCode>
         return new Result(errors);
     }
 
-    public static Result Fail(Exception exception)
+    public static Result Fail(Exception? exception)
     {
         return new Result(Error<ErrorCode>.FromException(exception));
     }
@@ -91,7 +91,7 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
         return new Result<T>(errors);
     }
 
-    public static implicit operator Result<T>(Exception exception)
+    public static implicit operator Result<T>(Exception? exception)
     {
         return new Result<T>(Error<ErrorCode>.FromException(exception));
     }
@@ -116,7 +116,7 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
         return new Result<T>(errors);
     }
 
-    public static Result<T> Fail(Exception exception)
+    public static Result<T> Fail(Exception? exception)
     {
         return new Result<T>(Error<ErrorCode>.FromException(exception));
     }
