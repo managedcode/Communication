@@ -67,12 +67,23 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
     internal Result(bool isSuccess) : base(isSuccess)
     {
     }
+    internal Result(bool isSuccess, T value) : base(isSuccess, value)
+    {
+    }
 
     internal Result(Error<ErrorCode> error) : base(error)
     {
     }
+    
+    internal Result(Error<ErrorCode> error, T value) : base(error, value)
+    {
+    }
 
     internal Result(List<Error<ErrorCode>> errors) : base(errors)
+    {
+    }
+    
+    internal Result(List<Error<ErrorCode>> errors, T value) : base(errors, value)
     {
     }
 
@@ -99,36 +110,5 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
     public static Result<T> Succeed(T value)
     {
         return new Result<T>(value);
-    }
-
-    public static Result<T> Fail()
-    {
-        return new Result<T>(false);
-    }
-
-    public static Result<T> Fail(Error<ErrorCode> error)
-    {
-        return new Result<T>(error);
-    }
-
-    public static Result<T> Fail(List<Error<ErrorCode>> errors)
-    {
-        return new Result<T>(errors);
-    }
-
-    public static Result<T> Fail(Exception? exception)
-    {
-        return new Result<T>(Error<ErrorCode>.FromException(exception));
-    }
-
-    public Result<T> WithError(Error<ErrorCode> error)
-    {
-        if (IsSuccess)
-        {
-            throw new InvalidOperationException("Cannot add error to success result");
-        }
-
-        Errors!.Add(error);
-        return this;
     }
 }

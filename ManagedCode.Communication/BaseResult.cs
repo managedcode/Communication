@@ -22,7 +22,7 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
         IsSuccess = false;
         Errors = errors;
     }
-
+    
     public bool IsSuccess { get; }
     public bool IsFail => !IsSuccess;
     public Error<TErrorCode>? Error => Errors?.FirstOrDefault();
@@ -39,13 +39,28 @@ public abstract class BaseResult<T, TErrorCode> : BaseResult<TErrorCode> where T
     protected BaseResult(bool isSuccess) : base(isSuccess)
     {
     }
+    
+    protected BaseResult(bool isSuccess, T value) : base(isSuccess)
+    {
+        Value = value;
+    }
 
     protected BaseResult(Error<TErrorCode> error) : base(error)
     {
     }
+    
+    protected BaseResult(Error<TErrorCode> error, T value) : base(error)
+    {
+        Value = value;
+    }
 
     protected BaseResult(List<Error<TErrorCode>> errors) : base(errors)
     {
+    }
+    
+    protected BaseResult(List<Error<TErrorCode>> errors, T value) : base(errors)
+    {
+        Value = value;
     }
 
     public T? Value { get; }
