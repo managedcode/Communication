@@ -5,6 +5,10 @@ namespace ManagedCode.Communication;
 
 public sealed partial class Result : BaseResult<ErrorCode>
 {
+    public Result(bool isSuccess, List<Error<ErrorCode>> errors) : base(isSuccess, errors)
+    {
+    }
+
     internal Result(bool isSuccess) : base(isSuccess)
     {
     }
@@ -67,6 +71,7 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
     internal Result(bool isSuccess) : base(isSuccess)
     {
     }
+
     internal Result(bool isSuccess, T value) : base(isSuccess, value)
     {
     }
@@ -74,7 +79,7 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
     internal Result(Error<ErrorCode> error) : base(error)
     {
     }
-    
+
     internal Result(Error<ErrorCode> error, T value) : base(error, value)
     {
     }
@@ -82,8 +87,12 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
     internal Result(List<Error<ErrorCode>> errors) : base(errors)
     {
     }
-    
+
     internal Result(List<Error<ErrorCode>> errors, T value) : base(errors, value)
+    {
+    }
+
+    public Result(bool isSuccess, List<Error<ErrorCode>> errors, T value) : base(isSuccess, errors, value)
     {
     }
 

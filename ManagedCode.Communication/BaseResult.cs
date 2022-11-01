@@ -14,7 +14,7 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
     protected BaseResult(Error<TErrorCode> error)
     {
         IsSuccess = false;
-        Errors = new List<Error<TErrorCode>> { error };
+        Errors = new List<Error<TErrorCode>> {error};
     }
 
     protected BaseResult(List<Error<TErrorCode>> errors)
@@ -22,7 +22,14 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
         IsSuccess = false;
         Errors = errors;
     }
-    
+
+    protected BaseResult(bool isSuccess, List<Error<TErrorCode>> errors)
+    {
+        IsSuccess = isSuccess;
+        Errors = errors;
+    }
+
+
     public bool IsSuccess { get; }
     public bool IsFail => !IsSuccess;
     public Error<TErrorCode>? Error => Errors?.FirstOrDefault();
@@ -39,7 +46,7 @@ public abstract class BaseResult<T, TErrorCode> : BaseResult<TErrorCode> where T
     protected BaseResult(bool isSuccess) : base(isSuccess)
     {
     }
-    
+
     protected BaseResult(bool isSuccess, T value) : base(isSuccess)
     {
         Value = value;
@@ -48,7 +55,7 @@ public abstract class BaseResult<T, TErrorCode> : BaseResult<TErrorCode> where T
     protected BaseResult(Error<TErrorCode> error) : base(error)
     {
     }
-    
+
     protected BaseResult(Error<TErrorCode> error, T value) : base(error)
     {
         Value = value;
@@ -57,9 +64,19 @@ public abstract class BaseResult<T, TErrorCode> : BaseResult<TErrorCode> where T
     protected BaseResult(List<Error<TErrorCode>> errors) : base(errors)
     {
     }
-    
+
     protected BaseResult(List<Error<TErrorCode>> errors, T value) : base(errors)
     {
+        Value = value;
+    }
+
+    protected BaseResult(bool isSuccess, List<Error<TErrorCode>> errors, T value) : base(isSuccess, errors)
+    {
+        if (isSuccess && value is null)
+        {
+            throw new InvalidOperationException($"{nameof(Value)} value cannot be null if the result is successful");
+        }
+
         Value = value;
     }
 

@@ -4,6 +4,11 @@ namespace ManagedCode.Communication;
 
 public sealed class Error<TErrorCode> where TErrorCode : Enum
 {
+    public Error()
+    {
+        Message = string.Empty;
+    }
+
     public Error(string message, TErrorCode? errorCode = default)
     {
         Message = message;
