@@ -56,21 +56,21 @@ public class DeserializationTests
         // Assert
         deserialized.Should().BeEquivalentTo(result);
     }
-    
+
     public static IEnumerable<object[]> GetResults()
     {
-        yield return new object[] {Result.Succeed()};
-        yield return new object[] {Result.Fail()};
-        yield return new object[] {Result.Fail(new Exception("Test exception"))};
-        yield return new object[] {Result.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState))};
+        yield return new object[] { Result.Succeed() };
+        yield return new object[] { Result.Fail() };
+        yield return new object[] { Result.Fail(new Exception("Test exception")) };
+        yield return new object[] { Result.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState)) };
     }
 
     public static IEnumerable<object[]> GetValueResults()
     {
-        yield return new object[] {Result<int>.Succeed(2)};
-        yield return new object[] {Result<string>.Succeed("Test string")};
-        yield return new object[] {Result<int>.Fail()};
-        yield return new object[] {Result<int>.Fail(new Exception("Test exception"))};
-        yield return new object[] {Result<int>.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState))};
+        yield return new object[] { Result<int>.Succeed(2) };
+        yield return new object[] { Result<string>.Succeed("Test string") };
+        yield return new object[] { Result<int>.Fail() };
+        yield return new object[] { Result<int>.Fail(new Exception("Test exception")) };
+        yield return new object[] { Result<int>.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState)) };
     }
 }

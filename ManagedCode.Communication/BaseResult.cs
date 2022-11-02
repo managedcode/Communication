@@ -14,7 +14,7 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
     protected BaseResult(Error<TErrorCode> error)
     {
         IsSuccess = false;
-        Errors = new List<Error<TErrorCode>> {error};
+        Errors = new List<Error<TErrorCode>> { error };
     }
 
     protected BaseResult(List<Error<TErrorCode>> errors)
@@ -28,7 +28,6 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
         IsSuccess = isSuccess;
         Errors = errors;
     }
-
 
     public bool IsSuccess { get; }
     public bool IsFail => !IsSuccess;
