@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
 
@@ -36,6 +37,22 @@ public sealed partial class Result<T> : BaseResult<T, ErrorCode>
     public Result(bool isSuccess, List<Error<ErrorCode>> errors, T value) : base(isSuccess, errors, value)
     {
     }
+    
+    public Task<Result<T>> AsTask()
+    {
+        return Task.FromResult(this);
+    }
+    
+    
+#if NET6_0_OR_GREATER
+    
+    public ValueTask<Result<T>> AsValueTask()
+    {
+        return ValueTask.FromResult(this);
+    }
+
+    
+#endif
 
     public static implicit operator Result<T>(T value)
     {
