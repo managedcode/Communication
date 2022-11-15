@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 
 namespace ManagedCode.Communication.Extensions;
 
+//TODO: move in into class, to avoid changing type when AsTask is called
 public static class ResultExtensions
 {
     public static Task<BaseResult<T, TErrorCode>> AsTask<T, TErrorCode>(this BaseResult<T, TErrorCode> result) where TErrorCode : Enum

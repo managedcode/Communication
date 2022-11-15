@@ -33,4 +33,14 @@ public abstract class BaseResult<TErrorCode> where TErrorCode : Enum
     public bool IsFail => !IsSuccess;
     public Error<TErrorCode>? Error => Errors?.FirstOrDefault();
     public List<Error<TErrorCode>>? Errors { get; }
+    
+    public static bool operator== (BaseResult<TErrorCode> obj1, bool obj2)
+    {
+        return obj1.IsSuccess == obj2;
+    }
+    
+    public static bool operator!= (BaseResult<TErrorCode> obj1, bool obj2)
+    {
+        return obj1.IsSuccess != obj2;
+    }
 }

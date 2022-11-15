@@ -54,4 +54,14 @@ public abstract class BaseResult<T, TErrorCode> : BaseResult<TErrorCode> where T
     {
         return Value ?? defaultValue;
     }
+    
+    public static bool operator== (BaseResult<T, TErrorCode> obj1, bool obj2)
+    {
+        return obj1.IsSuccess == obj2;
+    }
+    
+    public static bool operator!= (BaseResult<T, TErrorCode> obj1, bool obj2)
+    {
+        return obj1.IsSuccess != obj2;
+    }
 }
