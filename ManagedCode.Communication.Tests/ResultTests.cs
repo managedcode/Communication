@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FluentAssertions;
+using ManagedCode.Communication.ZALIPA.Result;
 using Newtonsoft.Json;
 using Xunit;
 using JsonSerializer = System.Text.Json.JsonSerializer;

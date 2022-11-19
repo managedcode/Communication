@@ -1,6 +1,6 @@
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.ZALIPA;
 
-public enum ErrorCode
+public enum ErrorCodes
 {
     Unknown,
     InvalidArguments,

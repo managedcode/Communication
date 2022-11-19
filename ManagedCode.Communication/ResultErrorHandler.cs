@@ -1,10 +1,11 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.ZALIPA.Extensions;
+using ManagedCode.Communication.ZALIPA.Result;
 using Microsoft.Extensions.Logging;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.ZALIPA;
 
 public sealed class ResultErrorHandler
 {
@@ -15,7 +16,7 @@ public sealed class ResultErrorHandler
         _logger = logger;
     }
 
-    public async Task<Result> ExecuteAsync(Func<Task<Result>> func,
+    public async Task<Result.Result> ExecuteAsync(Func<Task<Result.Result>> func,
         [CallerMemberName] string memberName = "",
         [CallerFilePath] string sourceFilePath = "",
         [CallerLineNumber] int sourceLineNumber = 0)
@@ -35,7 +36,7 @@ public sealed class ResultErrorHandler
         {
             _logger?.LogException(e);
 
-            return Result.Fail(Error<ErrorCode>.FromException(e));
+            return Result.Result.Fail(Error.FromException(e));
         }
     }
 
@@ -59,14 +60,14 @@ public sealed class ResultErrorHandler
         {
             _logger?.LogException(e);
 
-            return Result<TValue>.Fail(Error<ErrorCode>.FromException(e));
+            return Result<TValue>.Fail(Error.FromException(e));
         }
     }
 
     public async Task<TResult> ExecuteAsync<TResult, TErrorCode>(Func<Task<TResult>> func,
         [CallerMemberName] string memberName = "",
         [CallerFilePath] string sourceFilePath = "",
-        [CallerLineNumber] int sourceLineNumber = 0) where TErrorCode : Enum where TResult : BaseResult<TErrorCode>
+        [CallerLineNumber] int sourceLineNumber = 0) where TErrorCode : Enum where TResult : Result.Result
     {
         try
         {
@@ -84,9 +85,9 @@ public sealed class ResultErrorHandler
         {
             _logger?.LogException(e);
 
-            var constructor = typeof(TResult).GetConstructor(new[] { typeof(Error<TErrorCode>) })!;
+            var constructor = typeof(TResult).GetConstructor(new[] { typeof(Error) })!;
 
-            var obj = constructor.Invoke(new object[] { Error<TErrorCode>.FromException(e) }) as TResult;
+            var obj = constructor.Invoke(new object[] { Error.FromException(e) }) as TResult;
 
             return obj!;
         }

@@ -1,25 +1,48 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.ZALIPA.Result;
 
-public sealed partial class Result : BaseResult<ErrorCode>
+public partial class Result
 {
-    public Result(bool isSuccess, List<Error<ErrorCode>> errors) : base(isSuccess, errors)
+    internal Result(bool isSuccess)
     {
+        IsSuccess = isSuccess;
     }
 
-    internal Result(bool isSuccess) : base(isSuccess)
+    internal Result(Error error)
     {
+        IsSuccess = false;
+        Errors = new List<Error> { error };
     }
 
-    internal Result(Error<ErrorCode> error) : base(error)
+    internal Result(List<Error> errors)
     {
+        IsSuccess = false;
+        Errors = errors;
     }
 
-    internal Result(List<Error<ErrorCode>> errors) : base(errors)
+    internal Result(bool isSuccess, List<Error> errors)
     {
+        IsSuccess = isSuccess;
+        Errors = errors;
+    }
+
+    public bool IsSuccess { get; }
+    public bool IsFail => !IsSuccess;
+    public Error? Error => Errors?.FirstOrDefault();
+    public List<Error>? Errors { get; }
+    
+    public static bool operator== (Result obj1, bool obj2)
+    {
+        return obj1.IsSuccess == obj2;
+    }
+    
+    public static bool operator!= (Result obj1, bool obj2)
+    {
+        return obj1.IsSuccess != obj2;
     }
     
     public Task<Result> AsTask()
@@ -38,19 +61,19 @@ public sealed partial class Result : BaseResult<ErrorCode>
     
 #endif
 
-    public static implicit operator Result(Error<ErrorCode> error)
+    public static implicit operator Result(Error error)
     {
         return new Result(error);
     }
 
-    public static implicit operator Result(List<Error<ErrorCode>> errors)
+    public static implicit operator Result(List<Error> errors)
     {
         return new Result(errors);
     }
 
     public static implicit operator Result(Exception? exception)
     {
-        return new Result(Error<ErrorCode>.FromException(exception));
+        return new Result(Error.FromException(exception));
     }
 
     public static Result Succeed()
@@ -63,18 +86,18 @@ public sealed partial class Result : BaseResult<ErrorCode>
         return new Result(false);
     }
 
-    public static Result Fail(Error<ErrorCode> error)
+    public static Result Fail(Error error)
     {
         return new Result(error);
     }
 
-    public static Result Fail(List<Error<ErrorCode>> errors)
+    public static Result Fail(List<Error> errors)
     {
         return new Result(errors);
     }
 
     public static Result Fail(Exception? exception)
     {
-        return new Result(Error<ErrorCode>.FromException(exception));
+        return new Result(Error.FromException(exception));
     }
 }

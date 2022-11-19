@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using FluentAssertions;
+using ManagedCode.Communication.ZALIPA;
+using ManagedCode.Communication.ZALIPA.Result;
 using Newtonsoft.Json;
 using Xunit;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -62,7 +64,7 @@ public class DeserializationTests
         yield return new object[] { Result.Succeed() };
         yield return new object[] { Result.Fail() };
         yield return new object[] { Result.Fail(new Exception("Test exception")) };
-        yield return new object[] { Result.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState)) };
+        yield return new object[] { Result.Fail(new Error("Test error", ErrorCodes.InvalidState)) };
     }
 
     public static IEnumerable<object[]> GetValueResults()
@@ -71,6 +73,6 @@ public class DeserializationTests
         yield return new object[] { Result<string>.Succeed("Test string") };
         yield return new object[] { Result<int>.Fail() };
         yield return new object[] { Result<int>.Fail(new Exception("Test exception")) };
-        yield return new object[] { Result<int>.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState)) };
+        yield return new object[] { Result<int>.Fail(new Error("Test error", ErrorCodes.InvalidState)) };
     }
 }

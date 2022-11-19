@@ -1,28 +1,28 @@
 using System;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.ZALIPA;
 
-public sealed class Error<TErrorCode> where TErrorCode : Enum
+public sealed class Error
 {
     public Error()
     {
         Message = string.Empty;
     }
 
-    public Error(string message, TErrorCode? errorCode = default)
+    public Error(string message, Enum? errorCode = default)
     {
         Message = message;
         ErrorCode = errorCode;
     }
 
-    public Error(Exception? exception, TErrorCode? errorCode = default)
+    public Error(Exception? exception, Enum? errorCode = default)
     {
         Exception = exception;
         ErrorCode = errorCode;
         Message = exception?.Message ?? string.Empty;
     }
 
-    public Error(Exception exception, string message, TErrorCode? errorCode = default)
+    public Error(Exception exception, string message, Enum? errorCode = default)
     {
         Exception = exception;
         ErrorCode = errorCode;
@@ -31,10 +31,10 @@ public sealed class Error<TErrorCode> where TErrorCode : Enum
 
     public string Message { get; set; }
     public Exception? Exception { get; set; }
-    public TErrorCode? ErrorCode { get; set; }
+    public Enum? ErrorCode { get; set; }
 
-    public static Error<TErrorCode> FromException(Exception? exception, TErrorCode? errorCode = default)
+    public static Error FromException(Exception? exception, Enum? errorCode = default)
     {
-        return new Error<TErrorCode>(exception, errorCode);
+        return new Error(exception, errorCode);
     }
 }

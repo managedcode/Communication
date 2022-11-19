@@ -2,9 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.ZALIPA.Result;
 
-public sealed partial class Result
+public partial class Result
 {
     public static Result Execute(Action action)
     {
@@ -15,7 +15,7 @@ public sealed partial class Result
         }
         catch (Exception e)
         {
-            return new Result(Error<ErrorCode>.FromException(e));
+            return new Result(Error.FromException(e));
         }
     }
 
@@ -27,7 +27,7 @@ public sealed partial class Result
         }
         catch (Exception e)
         {
-            return new Result(Error<ErrorCode>.FromException(e));
+            return new Result(Error.FromException(e));
         }
     }
 
@@ -40,7 +40,7 @@ public sealed partial class Result
 
         if (task.IsCanceled || task.IsFaulted)
         {
-            return new Result(Error<ErrorCode>.FromException(task.Exception));
+            return new Result(Error.FromException(task.Exception));
         }
 
         try
@@ -50,7 +50,7 @@ public sealed partial class Result
         }
         catch (Exception e)
         {
-            return new Result(Error<ErrorCode>.FromException(e));
+            return new Result(Error.FromException(e));
         }
     }
 
@@ -62,7 +62,7 @@ public sealed partial class Result
         }
         catch (Exception e)
         {
-            return new Result(Error<ErrorCode>.FromException(e));
+            return new Result(Error.FromException(e));
         }
     }
 }
