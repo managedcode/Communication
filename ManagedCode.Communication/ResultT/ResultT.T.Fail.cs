@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace ManagedCode.Communication.ZALIPA.Result;
+namespace ManagedCode.Communication;
 
 public sealed partial class Result<T> 
 {

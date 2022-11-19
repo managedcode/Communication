@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ManagedCode.Communication.ZALIPA.Result;
+namespace ManagedCode.Communication;
 
 public partial class Result
 {
+    internal Result()
+    {
+    }
+    
     internal Result(bool isSuccess)
     {
         IsSuccess = isSuccess;

@@ -1,4 +1,4 @@
-namespace ManagedCode.Communication.ZALIPA;
+namespace ManagedCode.Communication;
 
 public enum ErrorCodes
 {

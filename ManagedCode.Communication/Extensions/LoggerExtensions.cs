@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Extensions.Logging;
 
-namespace ManagedCode.Communication.ZALIPA.Extensions;
+namespace ManagedCode.Communication.Extensions;
 
 internal static class LoggerExtensions
 {

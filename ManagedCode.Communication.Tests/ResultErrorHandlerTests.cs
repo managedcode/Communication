@@ -1,8 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using ManagedCode.Communication.ZALIPA;
-using ManagedCode.Communication.ZALIPA.Result;
+using ManagedCode.Communication;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 

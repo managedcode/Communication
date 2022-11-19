@@ -1,6 +1,6 @@
 using System;
 
-namespace ManagedCode.Communication.ZALIPA;
+namespace ManagedCode.Communication;
 
 public sealed class Error
 {

@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ManagedCode.Communication.ZALIPA.Result;
+namespace ManagedCode.Communication;
 
 public partial class Result
 {

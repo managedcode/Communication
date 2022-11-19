@@ -3,11 +3,30 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 
 
-namespace ManagedCode.Communication.ZALIPA.Result;
+namespace ManagedCode.Communication;
 
 public partial class Result<T> : Result
 {
-    public Task<Result<T>> AsTask()
+    private bool Equals(Result<T> other)
+    {
+        return EqualityComparer<T?>.Default.Equals(Value, other.Value);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return ReferenceEquals(this, obj) || obj is Result<T> other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return EqualityComparer<T?>.Default.GetHashCode(Value);
+    }
+
+    internal Result()
+    {
+    }
+    
+    public new Task<Result<T>> AsTask()
     {
         return Task.FromResult(this);
     }
@@ -15,7 +34,7 @@ public partial class Result<T> : Result
     
 #if NET6_0_OR_GREATER
     
-    public ValueTask<Result<T>> AsValueTask()
+    public new ValueTask<Result<T>> AsValueTask()
     {
         return ValueTask.FromResult(this);
     }
