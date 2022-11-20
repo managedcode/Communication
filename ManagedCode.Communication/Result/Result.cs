@@ -1,9 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
 
@@ -15,7 +10,7 @@ public partial class Result
 
     public Result(bool isSuccess)
     {
-        ResultCode = ResultCodes.Ok;
+        ResultCode = isSuccess ? ResultCodes.Ok : ResultCodes.Unknown;
         IsSuccess = isSuccess;
     }
     
@@ -28,25 +23,36 @@ public partial class Result
     public Result(Error error)
     {
         IsSuccess = false;
-        Errors = new List<Error> { error };
+        Errors = new [] { error };
     }
 
-    public Result(List<Error> errors)
+    public Result(Error[] errors)
     {
         IsSuccess = false;
         Errors = errors;
     }
 
-    public Result(bool isSuccess, List<Error> errors)
+    public Result(bool isSuccess, Error[] errors)
     {
         IsSuccess = isSuccess;
         Errors = errors;
     }
 
-    public bool IsSuccess { get; }
-    public Enum ResultCode { get; set; } = ResultCodes.Unknown;
+    public bool IsSuccess { get; protected set; }
+    public Enum ResultCode { get; protected set; } = ResultCodes.Unknown;
+    
     public bool IsFail => !IsSuccess;
-    public Error? Error => Errors?.FirstOrDefault();
-    public List<Error>? Errors { get; }
+
+    public Error? Error
+    {
+        get
+        {
+            if (Errors == null || Errors.Length == 0)
+                return null;
+
+            return Errors[0];
+        }
+    }
+    public Error[]? Errors { get; protected set; }
     
 }

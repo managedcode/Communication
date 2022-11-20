@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
 
@@ -32,7 +29,7 @@ public partial class Result
         return new Result(error);
     }
 
-    public static implicit operator Result(List<Error> errors)
+    public static implicit operator Result(Error[] errors)
     {
         return new Result(errors);
     }

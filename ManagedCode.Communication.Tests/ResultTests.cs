@@ -29,5 +29,30 @@ public class ResultTests
         Assert.True(ok == true);
         Assert.True(ok);
     }
+    
+    [Fact]
+    public void Fail()
+    {
+        var ok = Result.Fail();
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFail.Should().BeTrue();
+        ok.ResultCode.Should().Be(ResultCodes.Unknown);
+        
+        Assert.True(ok == false);
+        Assert.False(ok);
+
+    }
+    
+    [Fact]
+    public void FailEnum()
+    {
+        var ok = Result.Fail(ResultCodes.NoResult);
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFail.Should().BeTrue();
+        ok.ResultCode.Should().Be(ResultCodes.NoResult);
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
 }
 

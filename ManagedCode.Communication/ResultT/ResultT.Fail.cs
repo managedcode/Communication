@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ManagedCode.Communication;
 
@@ -25,12 +26,12 @@ public sealed partial class Result<T>
         return new Result<T>(error, value);
     }
 
-    public static Result<T> Fail(List<Error> errors)
+    public static Result<T> Fail(Error[] errors)
     {
         return new Result<T>(errors);
     }
 
-    public static Result<T> Fail(List<Error> errors, T value)
+    public static Result<T> Fail(Error[] errors, T value)
     {
         return new Result<T>(errors, value);
     }
@@ -52,7 +53,10 @@ public sealed partial class Result<T>
             throw new InvalidOperationException("Cannot add error to success result");
         }
 
-        Errors!.Add(error);
+        Errors = Errors != null
+            ? Errors.Concat(new[] { error }).ToArray() 
+            : new[] { error };
+
         return this;
     }
 }

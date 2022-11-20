@@ -11,13 +11,18 @@ public partial class Result
     {
         return new Result(false);
     }
+    
+    public static Result Fail(Enum code)
+    {
+        return new Result(false, code);
+    }
 
     public static Result Fail(Error error)
     {
         return new Result(error);
     }
 
-    public static Result Fail(List<Error> errors)
+    public static Result Fail(Error[] errors)
     {
         return new Result(errors);
     }
@@ -25,5 +30,18 @@ public partial class Result
     public static Result Fail(Exception? exception)
     {
         return new Result(Error.FromException(exception));
+    }
+
+    public void ThrowException()
+    {
+        if (IsSuccess)
+            return;
+
+        if (Error is { Exception: { } })
+        {
+            throw Error.Exception;
+        }
+
+        throw new Exception(Error?.Message ?? "Result is Failed.");
     }
 }

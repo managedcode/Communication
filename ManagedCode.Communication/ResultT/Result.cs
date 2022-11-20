@@ -29,16 +29,16 @@ public partial class Result<T> : Result
         Value = value;
     }
 
-    protected Result(List<Error> errors) : base(errors)
+    protected Result(Error[] errors) : base(errors)
     {
     }
 
-    protected Result(List<Error> errors, T value) : base(errors)
+    protected Result(Error[] errors, T value) : base(errors)
     {
         Value = value;
     }
 
-    protected Result(bool isSuccess, List<Error> errors, T value) : base(isSuccess, errors)
+    protected Result(bool isSuccess, Error[] errors, T value) : base(isSuccess, errors)
     {
         if (isSuccess && value is null)
         {
@@ -89,7 +89,7 @@ public partial class Result<T> : Result
         return new Result<T>(error);
     }
 
-    public static implicit operator Result<T>(List<Error> errors)
+    public static implicit operator Result<T>(Error[] errors)
     {
         return new Result<T>(errors);
     }
