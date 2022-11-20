@@ -62,7 +62,7 @@ public class DeserializationTests
         yield return new object[] { Result.Succeed() };
         yield return new object[] { Result.Fail() };
         yield return new object[] { Result.Fail(new Exception("Test exception")) };
-        yield return new object[] { Result.Fail(new Error("Test error", ErrorCodes.InvalidState)) };
+        yield return new object[] { Result.Fail(new Error("Test error", ResultCodes.InvalidState)) };
     }
 
     public static IEnumerable<object[]> GetValueResults()
@@ -71,6 +71,6 @@ public class DeserializationTests
         yield return new object[] { Result<string>.Succeed("Test string") };
         yield return new object[] { Result<int>.Fail() };
         yield return new object[] { Result<int>.Fail(new Exception("Test exception")) };
-        yield return new object[] { Result<int>.Fail(new Error("Test error", ErrorCodes.InvalidState)) };
+        yield return new object[] { Result<int>.Fail(new Error("Test error", ResultCodes.InvalidState)) };
     }
 }

@@ -13,6 +13,6 @@ public partial class Result
     }
     public static Result Succeed(Enum code)
     {
-        return new Result(true);
+        return new Result(true, code);
     }
 }
