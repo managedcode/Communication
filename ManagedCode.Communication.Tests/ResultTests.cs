@@ -1,26 +1,31 @@
-using System;
-using System.Collections.Generic;
 using FluentAssertions;
-using ManagedCode.Communication;
-using Newtonsoft.Json;
 using Xunit;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace ManagedCode.Communication.Tests;
 
 public class ResultTests
 {
     [Fact]
-    public void Compare()
+    public void Succeed()
     {
         var ok = Result.Succeed();
-        var error = Result.Fail();
-
-        Assert.True(ok == true);
-        Assert.False(error == false);
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFail.Should().BeFalse();
         
+        Assert.True(ok == true);
+        Assert.True(ok);
 
     }
+    
+    [Fact]
+    public void SucceedEnum()
+    {
+        var ok = Result.Succeed(ErrorCodes.AlreadyExists);
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFail.Should().BeFalse();
 
-   
+        Assert.True(ok == true);
+        Assert.True(ok);
+    }
 }
+

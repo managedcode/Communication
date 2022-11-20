@@ -13,13 +13,13 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <EnablePackageValidation>true</EnablePackageValidation>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        
+
         <RepositoryUrl>https://github.com/managedcode/Communication</RepositoryUrl>
         <PackageProjectUrl>https://github.com/managedcode/Communication</PackageProjectUrl>
         <Product>Managed Code - Communication</Product>
         <Version>1.0.3</Version>
         <PackageVersion>1.0.3</PackageVersion>
-        
+
     </PropertyGroup>
     <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
         <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>

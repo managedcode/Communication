@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using ManagedCode.Communication;
 using ManagedCode.Communication.Extensions;
 using Microsoft.Extensions.Logging;
 

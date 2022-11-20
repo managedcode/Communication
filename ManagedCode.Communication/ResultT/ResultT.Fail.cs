@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ManagedCode.Communication;
 
-public sealed partial class Result<T> 
+public sealed partial class Result<T>
 {
     public static Result<T> Fail()
     {

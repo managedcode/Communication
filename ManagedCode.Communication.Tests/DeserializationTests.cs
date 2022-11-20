@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using FluentAssertions;
-using ManagedCode.Communication;
 using Newtonsoft.Json;
 using Xunit;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -16,7 +15,7 @@ public class DeserializationTests
     {
         // Act 
         var serialized = JsonConvert.SerializeObject(result);
-        var deserialized = JsonConvert.DeserializeObject<Result<int>>(serialized);
+        var deserialized = JsonConvert.DeserializeObject<Result>(serialized);
 
         // Assert
         deserialized.Should().BeEquivalentTo(result);

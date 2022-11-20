@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using ManagedCode.Communication;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
