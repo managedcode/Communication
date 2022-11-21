@@ -3,12 +3,9 @@ using System.Net;
 
 namespace ManagedCode.Communication;
 
-public partial struct Result
+public partial struct Result : IResult
 {
-    public Result()
-    {
-    }
-
+    
     public Result(bool isSuccess)
     {
         ResultType = isSuccess ? Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.OK) : Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError);
@@ -38,16 +35,24 @@ public partial struct Result
         IsSuccess = isSuccess;
         Errors = errors;
     }
-
-    public readonly bool IsSuccess;
-
-    public readonly string? ResultType;
-
+    
     public TEnum ResultCode<TEnum>() where TEnum : Enum
     {
         return (TEnum)Enum.Parse(typeof(TEnum), ResultType);
     }
+    
+    public bool IsResultCode(Enum value)
+    {
+        return Enum.GetName(value.GetType(), value) == ResultType;
+    }
+    
+    public bool IsNotResultCode(Enum value)
+    {
+        return Enum.GetName(value.GetType(), value) != ResultType;
+    }
 
+    public bool IsSuccess { get; }
+    public string ResultType { get; }
     public bool IsFail => !IsSuccess;
 
     public Error? Error

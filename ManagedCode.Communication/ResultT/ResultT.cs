@@ -3,12 +3,8 @@ using System.Net;
 
 namespace ManagedCode.Communication;
 
-public partial struct Result<T>
+public partial struct Result<T> : IResult
 {
-    public Result()
-    {
-    }
-
     public Result(T value)
     {
         ResultType = Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.OK);
@@ -60,15 +56,23 @@ public partial struct Result<T>
         Errors = errors;
     }
 
-    public readonly bool IsSuccess;
-
-    public readonly string? ResultType;
-    
     public TEnum ResultCode<TEnum>() where TEnum : Enum
     {
         return (TEnum)Enum.Parse(typeof(TEnum), ResultType);
     }
     
+    public bool IsResultCode(Enum value)
+    {
+        return Enum.GetName(value.GetType(), value) == ResultType;
+    }
+    
+    public bool IsNotResultCode(Enum value)
+    {
+        return Enum.GetName(value.GetType(), value) != ResultType;
+    }
+
+    public bool IsSuccess { get; }
+    public string ResultType { get; }
     public bool IsFail => !IsSuccess;
     
     public T? Value { get; private set; }

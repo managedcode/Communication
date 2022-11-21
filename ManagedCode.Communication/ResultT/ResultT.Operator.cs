@@ -7,8 +7,8 @@ public partial struct Result<T>
 {
     public bool Equals(Result<T> other)
     {
-        return IsSuccess == other.IsSuccess && ResultType.Equals(other.ResultType, StringComparison.InvariantCultureIgnoreCase) 
-                                            && EqualityComparer<T?>.Default.Equals(Value, other.Value) && Equals(Errors, other.Errors);
+        return ResultType != null && IsSuccess == other.IsSuccess && ResultType.Equals(other.ResultType, StringComparison.InvariantCultureIgnoreCase) 
+               && EqualityComparer<T?>.Default.Equals(Value, other.Value) && Equals(Errors, other.Errors);
     }
 
     public override bool Equals(object? obj)

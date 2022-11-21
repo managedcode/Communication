@@ -6,7 +6,7 @@ public partial struct Result
 {
     public bool Equals(Result other)
     {
-        return IsSuccess == other.IsSuccess && ResultType.Equals(other.ResultType, StringComparison.InvariantCultureIgnoreCase) && Equals(Errors, other.Errors);
+        return ResultType != null && IsSuccess == other.IsSuccess && ResultType.Equals(other.ResultType, StringComparison.InvariantCultureIgnoreCase) && Equals(Errors, other.Errors);
     }
 
     public override bool Equals(object? obj)
