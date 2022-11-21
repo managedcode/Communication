@@ -29,7 +29,7 @@ public partial struct Result<T>
 
     public static Result<T> Fail(Exception? exception)
     {
-        return new Result<T>(Error.FromException(exception));
+        return new Result<T>(ManagedCode.Communication.Error.FromException(exception));
     }
 
     public void ThrowException()
@@ -39,7 +39,7 @@ public partial struct Result<T>
 
         if (Error is { Exception: { } })
         {
-            throw Error.Exception;
+            throw Error.Value.Exception;
         }
 
         throw new Exception(Error?.Message ?? "Result is failed.");

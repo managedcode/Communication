@@ -6,7 +6,9 @@ public partial struct Result
 {
     public bool Equals(Result other)
     {
-        return ResultType != null && IsSuccess == other.IsSuccess && ResultType.Equals(other.ResultType, StringComparison.InvariantCultureIgnoreCase) && Equals(Errors, other.Errors);
+        return IsSuccess == other.IsSuccess && ResultType == other.ResultType
+                                            && Error?.Message == other.Error?.Message
+                                            && Error?.ErrorCode == other.Error?.ErrorCode;
     }
 
     public override bool Equals(object? obj)
@@ -51,6 +53,6 @@ public partial struct Result
 
     public static implicit operator Result(Exception? exception)
     {
-        return new Result(Error.FromException(exception));
+        return new Result(ManagedCode.Communication.Error.FromException(exception));
     }
 }
