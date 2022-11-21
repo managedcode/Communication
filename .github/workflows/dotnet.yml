@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+        
+env:
+  TEST_PROJECT: ManagedCode.Communication.Tests
     
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -14,9 +17,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     
-    env:
-      TEST_PROJECT: ManagedCode.Communication.Tests
-      
     steps:
     - uses: actions/checkout@v3
     - name: Setup .NET
