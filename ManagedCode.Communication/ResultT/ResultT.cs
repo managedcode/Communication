@@ -9,6 +9,7 @@ public partial struct Result<T> : IResult
     {
         ResultType = Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.OK);
         IsSuccess = true;
+        IsFail = false;
         Value = value;
     }
     
@@ -16,6 +17,7 @@ public partial struct Result<T> : IResult
     {
         ResultType = isSuccess ? Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.OK) : Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError);
         IsSuccess = isSuccess;
+        IsFail = !isSuccess;
         Value = value;
     }
     
@@ -23,12 +25,14 @@ public partial struct Result<T> : IResult
     {
         ResultType = isSuccess ? Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.OK) : Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError);
         IsSuccess = isSuccess;
+        IsFail = !isSuccess;
     }
     
     public Result(bool isSuccess, Enum resultCode, T value)
     {
         ResultType = Enum.GetName(resultCode.GetType(), resultCode);
         IsSuccess = isSuccess;
+        IsFail = !isSuccess;
         Value = value;
     }
     
@@ -36,23 +40,27 @@ public partial struct Result<T> : IResult
     {
         ResultType = Enum.GetName(resultCode.GetType(), resultCode);
         IsSuccess = isSuccess;
+        IsFail = !isSuccess;
     }
 
     public Result(Error error)
     {
         IsSuccess = false;
+        IsFail = true;
         Errors = new [] { error };
     }
 
     public Result(Error[] errors)
     {
         IsSuccess = false;
+        IsFail = true;
         Errors = errors;
     }
 
     public Result(bool isSuccess, Error[] errors)
     {
         IsSuccess = isSuccess;
+        IsFail = !isSuccess;
         Errors = errors;
     }
 
@@ -71,11 +79,12 @@ public partial struct Result<T> : IResult
         return Enum.GetName(value.GetType(), value) != ResultType;
     }
 
-    public bool IsSuccess { get; }
-    public string ResultType { get; }
-    public bool IsFail => !IsSuccess;
+    public bool IsSuccess { get; set; }
+    public bool IsFail { get; set; }
+    public string ResultType { get; set; }
+
     
-    public T? Value { get; private set; }
+    public T? Value { get; set; }
     
     public Error? Error
     {
@@ -88,6 +97,6 @@ public partial struct Result<T> : IResult
         }
     }
     
-    public Error[]? Errors { get; private set; }
+    public Error[]? Errors { get; set; }
     
 }
