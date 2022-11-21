@@ -5,8 +5,8 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-        
-    
+  
+  
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -16,33 +16,33 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 7.0.x
-        
-      # run build and test           
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --logger 'trx;LogFileName=test-results.trx'
 
-    - name: Collect Code Coverage
-      run: dotnet test --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=lcov.info
+      - uses: actions/checkout@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.x
+      
+        # run build and test           
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore
+      - name: Test
+        run: dotnet test --no-build --logger 'trx;LogFileName=test-results.trx'
+      
+      - name: Collect Code Coverage
+        run: dotnet test --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=ManagedCode.Communication.Tests/lcov.info
 
-    - name: coverlet
-      uses: b3b00/coverlet-action@1.1.9
-      with:
-        testProject: 'ManagedCode.Communication.sln'
-        output: 'lcov.info'
-        outputFormat: 'lcov'
-        excludes: '[program]*,[test]test.*'
-        
-    - name: coveralls
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{secrets.GITHUB_TOKEN }}
-        path-to-lcov: 'lcov.info'
+      - name : coverlet
+        uses: b3b00/coverlet-action@1.1.9
+        with:
+          testProject: 'ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj' 
+          output: 'lcov.info'
+          outputFormat: 'lcov'
+          excludes: '[program]*,[test]test.*'
+      - name: coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN }}
+          path-to-lcov: ManagedCode.Communication.Tests/lcov.info
