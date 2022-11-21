@@ -3,7 +3,7 @@ using System.Net;
 
 namespace ManagedCode.Communication;
 
-public partial struct Result<T> : IResult
+public partial struct Result<T> : IResult<T>
 {
     public Result(T value)
     {

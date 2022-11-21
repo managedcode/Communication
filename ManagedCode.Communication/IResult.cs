@@ -13,3 +13,8 @@ public interface IResult
 
     bool IsNotResultCode(Enum value);
 }
+
+public interface IResult<T> : IResult
+{
+    T? Value { get; set; }
+}
