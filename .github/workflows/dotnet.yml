@@ -31,18 +31,18 @@ jobs:
       run: dotnet test --no-build --logger 'trx;LogFileName=test-results.trx'
 
     - name: Collect Code Coverage
-      run: dotnet test --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=coverage/lcov.info
-    
-    #    - name: test-reports
-    #      uses: dorny/test-reporter@v1.5.0
-    #      with:
-    #        name: Test Reporter
-    #        reporter: dotnet-trx
-    #        path: ManagedCode.Keda.Tests/test-results.trx
+      run: dotnet test --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=lcov.info
 
-
+    - name: coverlet
+      uses: b3b00/coverlet-action@1.1.9
+      with:
+        testProject: 'ManagedCode.Communication.sln'
+        output: 'lcov.info'
+        outputFormat: 'lcov'
+        excludes: '[program]*,[test]test.*'
+        
     - name: coveralls
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{secrets.GITHUB_TOKEN }}
-        path-to-lcov: 'coverage/lcov.info'
+        path-to-lcov: 'lcov.info'
