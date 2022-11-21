@@ -32,11 +32,11 @@ jobs:
     - name: Test
       run: dotnet test --no-build --logger 'trx;LogFileName=test-results.trx'
     - name: Collect Code Coverage
-      run: dotnet test --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=${TEST_PROJECT}/lcov.info
+      run: dotnet test --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=$TEST_PROJECT/lcov.info
     - name : coverlet
       uses: b3b00/coverlet-action@1.1.9
       with:
-        testProject: ${TEST_PROJECT}/${TEST_PROJECT}.csproj
+        testProject: $TEST_PROJECT/$TEST_PROJECT.csproj
         output: 'lcov.info'
         outputFormat: 'lcov'
         excludes: '[program]*,[test]test.*'
@@ -44,4 +44,4 @@ jobs:
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{secrets.GITHUB_TOKEN }}
-        path-to-lcov: ${TEST_PROJECT}/lcov.info   
+        path-to-lcov: $TEST_PROJECT/lcov.info   
