@@ -40,13 +40,7 @@ jobs:
     #        reporter: dotnet-trx
     #        path: ManagedCode.Keda.Tests/test-results.trx
 
-    - name: coverlet
-      uses: b3b00/coverlet-action@1.1.9
-      with:
-        testProject: 'ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj'
-        output: 'coverage/lcov.info'
-        outputFormat: 'lcov'
-        excludes: '[program]*,[test]test.*'
+
     - name: coveralls
       uses: coverallsapp/github-action@master
       with:
