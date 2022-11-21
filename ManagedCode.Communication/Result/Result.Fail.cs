@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
 
-public partial class Result
+public partial struct Result
 {
     public static Result Fail()
     {
@@ -42,6 +42,6 @@ public partial class Result
             throw Error.Exception;
         }
 
-        throw new Exception(Error?.Message ?? "Result is Failed.");
+        throw new Exception(Error?.Message ?? "Result is failed.");
     }
 }

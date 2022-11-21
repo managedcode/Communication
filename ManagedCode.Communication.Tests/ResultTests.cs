@@ -1,7 +1,14 @@
+using System.Net;
 using FluentAssertions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests;
+
+public enum MyTestEnum
+{
+    Option1,
+    Option2
+}
 
 public class ResultTests
 {
@@ -11,7 +18,7 @@ public class ResultTests
         var ok = Result.Succeed();
         ok.IsSuccess.Should().BeTrue();
         ok.IsFail.Should().BeFalse();
-        ok.ResultCode.Should().Be(ResultCodes.Ok);
+        ok.ResultCode<HttpStatusCode>().Should().Be(HttpStatusCode.OK);
         
         Assert.True(ok == true);
         Assert.True(ok);
@@ -21,10 +28,10 @@ public class ResultTests
     [Fact]
     public void SucceedEnum()
     {
-        var ok = Result.Succeed(ResultCodes.NoResult);
+        var ok = Result.Succeed(MyTestEnum.Option1);
         ok.IsSuccess.Should().BeTrue();
         ok.IsFail.Should().BeFalse();
-        ok.ResultCode.Should().Be(ResultCodes.NoResult);
+        ok.ResultCode<MyTestEnum>().Should().Be(MyTestEnum.Option1);
 
         Assert.True(ok == true);
         Assert.True(ok);
@@ -36,7 +43,7 @@ public class ResultTests
         var ok = Result.Fail();
         ok.IsSuccess.Should().BeFalse();
         ok.IsFail.Should().BeTrue();
-        ok.ResultCode.Should().Be(ResultCodes.Unknown);
+        ok.ResultCode<HttpStatusCode>().Should().Be(HttpStatusCode.InternalServerError);
         
         Assert.True(ok == false);
         Assert.False(ok);
@@ -46,10 +53,10 @@ public class ResultTests
     [Fact]
     public void FailEnum()
     {
-        var ok = Result.Fail(ResultCodes.NoResult);
+        var ok = Result.Fail(HttpStatusCode.Unauthorized);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFail.Should().BeTrue();
-        ok.ResultCode.Should().Be(ResultCodes.NoResult);
+        ok.ResultCode<HttpStatusCode>().Should().Be(HttpStatusCode.Unauthorized);
 
         Assert.True(ok == false);
         Assert.False(ok);

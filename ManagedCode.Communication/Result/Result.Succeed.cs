@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
 
-public partial class Result
+public partial struct Result
 {
     public static Result Succeed()
     {

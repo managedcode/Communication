@@ -2,8 +2,23 @@ using System;
 
 namespace ManagedCode.Communication;
 
-public partial class Result
+public partial struct Result
 {
+    public bool Equals(Result other)
+    {
+        return IsSuccess == other.IsSuccess && ResultType.Equals(other.ResultType, StringComparison.InvariantCultureIgnoreCase) && Equals(Errors, other.Errors);
+    }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is Result other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(IsSuccess, ResultType, Errors);
+    }
+
     public static bool operator ==(Result obj1, bool obj2)
     {
         return obj1.IsSuccess == obj2;
