@@ -12,7 +12,7 @@ public class DeserializationTests
 {
     [Theory]
     [MemberData(nameof(GetResults))]
-    public void DeserializeResult_WithNewtonsoftJson(Result result)
+    public void DeserializeResult_WithNewtonsoftJson(IResult result)
     {
         // Act 
         var serialized = JsonConvert.SerializeObject(result);
@@ -24,7 +24,7 @@ public class DeserializationTests
 
     [Theory]
     [MemberData(nameof(GetValueResults))]
-    public void DeserializeValueResult_WithNewtonsoftJson<T>(Result<T> result)
+    public void DeserializeValueResult_WithNewtonsoftJson<T>(IResult result)
     {
         // Act 
         var serialized = JsonConvert.SerializeObject(result);
@@ -36,7 +36,7 @@ public class DeserializationTests
 
     [Theory]
     [MemberData(nameof(GetResults))]
-    public void DeserializeResult_WithTextJson(Result result)
+    public void DeserializeResult_WithTextJson(IResult result)
     {
         // Act 
         var serialized = JsonSerializer.Serialize(result);
@@ -48,7 +48,7 @@ public class DeserializationTests
 
     [Theory]
     [MemberData(nameof(GetValueResults))]
-    public void DeserializeValueResult_WithTextJson<T>(Result<T> result)
+    public void DeserializeValueResult_WithTextJson<T>(IResult result)
     {
         // Act 
         var serialized = JsonSerializer.Serialize(result);
