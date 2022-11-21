@@ -15,7 +15,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return new Result(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -27,7 +27,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return new Result(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -42,7 +42,7 @@ public partial struct Result
 
             if (task.IsCanceled || task.IsFaulted)
             {
-                return new Result(ManagedCode.Communication.Error.FromException(task.Exception));
+                return Fail(ManagedCode.Communication.Error.FromException(task.Exception));
             }
             
             await task;
@@ -50,7 +50,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return new Result(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -63,7 +63,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return new Result(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -88,7 +88,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return new Result(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -101,7 +101,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return new Result(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
 

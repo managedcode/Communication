@@ -7,8 +7,8 @@ public partial struct Result
     public bool Equals(Result other)
     {
         return IsSuccess == other.IsSuccess && ResultType == other.ResultType
-                                            && Error?.Message == other.Error?.Message
-                                            && Error?.ErrorCode == other.Error?.ErrorCode;
+                                            && GetError()?.Message == other.GetError()?.Message
+                                            && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
     }
 
     public override bool Equals(object? obj)
@@ -38,21 +38,21 @@ public partial struct Result
     
     public static implicit operator Exception?(Result result)
     {
-        return result.Error?.Exception;
+        return result.GetError()?.Exception;
     }
     
     public static implicit operator Result(Error error)
     {
-        return new Result(error);
+        return Fail(error);
     }
 
     public static implicit operator Result(Error[] errors)
     {
-        return new Result(errors);
+        return Fail(errors);
     }
 
     public static implicit operator Result(Exception? exception)
     {
-        return new Result(ManagedCode.Communication.Error.FromException(exception));
+        return Fail(ManagedCode.Communication.Error.FromException(exception));
     }
 }

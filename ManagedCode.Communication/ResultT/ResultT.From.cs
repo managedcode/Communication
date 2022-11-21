@@ -15,7 +15,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return new Result<T>(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -27,7 +27,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return new Result<T>(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -39,7 +39,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return new Result<T>(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -51,7 +51,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return new Result<T>(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -65,7 +65,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return new Result<T>(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
     
@@ -77,7 +77,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return new Result<T>(ManagedCode.Communication.Error.FromException(e));
+            return Fail(ManagedCode.Communication.Error.FromException(e));
         }
     }
 

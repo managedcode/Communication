@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
@@ -9,27 +10,28 @@ public partial struct Result
 {
     public static Result Fail()
     {
-        return new Result(false);
+        return new Result(false, Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), null);
     }
     
     public static Result Fail(Enum code)
     {
-        return new Result(false, code);
+        return new Result(false,  Enum.GetName(code.GetType(),code), null);
     }
 
     public static Result Fail(Error error)
     {
-        return new Result(error);
+        return new Result(false,  Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), new[] {error});
     }
 
     public static Result Fail(Error[] errors)
     {
-        return new Result(errors);
+        return new Result(false,  Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), errors);
     }
 
     public static Result Fail(Exception? exception)
     {
-        return new Result(ManagedCode.Communication.Error.FromException(exception));
+        return new Result(false, Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), 
+            new[] {Error.FromException(exception)});
     }
 
     public void ThrowException()
@@ -37,11 +39,11 @@ public partial struct Result
         if (IsSuccess)
             return;
 
-        if (Error is { Exception: { } })
+        if (GetError() is { Exception: { } })
         {
-            throw Error.Value.Exception;
+            throw GetError().Value.Exception;
         }
 
-        throw new Exception(Error?.Message ?? "Result is failed.");
+        throw new Exception(GetError().Value.Message ?? nameof(HttpStatusCode.InternalServerError));
     }
 }

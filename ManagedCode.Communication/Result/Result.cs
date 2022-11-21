@@ -6,38 +6,11 @@ namespace ManagedCode.Communication;
 public partial struct Result : IResult
 {
     
-    public Result(bool isSuccess)
-    {
-        ResultType = isSuccess ? Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.OK) : Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError);
-        IsSuccess = isSuccess;
-        IsFail = !isSuccess;
-    }
-    
-    public Result(bool isSuccess, Enum resultCode)
-    {
-        ResultType = Enum.GetName(resultCode.GetType(), resultCode);
-        IsSuccess = isSuccess;
-        IsFail = !isSuccess;
-    }
-
-    public Result(Error error)
-    {
-        IsSuccess = false;
-        IsFail = true;
-        Errors = new [] { error };
-    }
-
-    public Result(Error[] errors)
-    {
-        IsSuccess = false;
-        IsFail = true;
-        Errors = errors;
-    }
-
-    public Result(bool isSuccess, Error[] errors)
+    private Result(bool isSuccess, string resultType, Error[] errors)
     {
         IsSuccess = isSuccess;
         IsFail = !isSuccess;
+        ResultType = resultType;
         Errors = errors;
     }
     
@@ -61,15 +34,12 @@ public partial struct Result : IResult
     public string ResultType { get; set; }
    
 
-    public Error? Error
+    public Error? GetError()
     {
-        get
-        {
-            if (Errors == null || Errors.Length == 0)
+        if (Errors == null || Errors.Length == 0)
                 return null;
 
-            return Errors[0];
-        }
+        return Errors[0];
     }
     public Error[]? Errors { get; set; }
     
