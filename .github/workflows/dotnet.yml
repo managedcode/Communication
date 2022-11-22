@@ -13,7 +13,7 @@ on:
 jobs:
   
   build-and-test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     
     steps:
 
@@ -28,19 +28,10 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --no-restore
-      - name: Test
-        run: dotnet test --no-build --logger 'trx;LogFileName=test-results.trx'
-      
-      - name: Collect Code Coverage
-        run: dotnet test --no-build --verbosity normal /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=ManagedCode.Communication.Tests/lcov.info
-
-      - name : coverlet
-        uses: b3b00/coverlet-action@1.1.9
-        with:
-          testProject: 'ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj' 
-          output: 'lcov.info'
-          outputFormat: 'lcov'
-          excludes: '[program]*,[test]test.*'
+      - name: Test and Collect Code Coverage
+        run: dotnet test -p:CollectCoverage=true -p:CoverletOutputFormat=lcov -p:CoverletOutput=ManagedCode.Communication.Tests/
+    
+          
       - name: coveralls
         uses: coverallsapp/github-action@master
         with:
