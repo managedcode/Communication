@@ -11,6 +11,13 @@
         <VSTestLogger>trx%3bLogFileName=$(MSBuildProjectName).trx</VSTestLogger>
         <VSTestResultsDirectory>$(MSBuildThisFileDirectory)</VSTestResultsDirectory>
     </PropertyGroup>
+    <PropertyGroup>
+        <CollectCoverage>true</CollectCoverage>
+        <ExcludeByAttribute>GeneratedCodeAttribute</ExcludeByAttribute>
+        <Exclude>[*]*.Migrations.*</Exclude>
+        <ExcludeByFile>**/MyFile.cs</ExcludeByFile>
+        <CoverletOutputFormat>lcov</CoverletOutputFormat>
+    </PropertyGroup>
     <ItemGroup>
         <None Update="xunit.runner.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
