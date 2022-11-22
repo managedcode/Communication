@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Xunit;
@@ -11,11 +12,11 @@ public class DeserializationTests
 {
     [Theory]
     [MemberData(nameof(GetResults))]
-    public void DeserializeResult_WithNewtonsoftJson(Result result)
+    public void DeserializeResult_WithNewtonsoftJson(IResult result)
     {
         // Act 
         var serialized = JsonConvert.SerializeObject(result);
-        var deserialized = JsonConvert.DeserializeObject<Result<int>>(serialized);
+        var deserialized = JsonConvert.DeserializeObject<Result>(serialized);
 
         // Assert
         deserialized.Should().BeEquivalentTo(result);
@@ -23,7 +24,7 @@ public class DeserializationTests
 
     [Theory]
     [MemberData(nameof(GetValueResults))]
-    public void DeserializeValueResult_WithNewtonsoftJson<T>(Result<T> result)
+    public void DeserializeValueResult_WithNewtonsoftJson<T>(IResult result)
     {
         // Act 
         var serialized = JsonConvert.SerializeObject(result);
@@ -35,7 +36,7 @@ public class DeserializationTests
 
     [Theory]
     [MemberData(nameof(GetResults))]
-    public void DeserializeResult_WithTextJson(Result result)
+    public void DeserializeResult_WithTextJson(IResult result)
     {
         // Act 
         var serialized = JsonSerializer.Serialize(result);
@@ -47,7 +48,7 @@ public class DeserializationTests
 
     [Theory]
     [MemberData(nameof(GetValueResults))]
-    public void DeserializeValueResult_WithTextJson<T>(Result<T> result)
+    public void DeserializeValueResult_WithTextJson<T>(IResult result)
     {
         // Act 
         var serialized = JsonSerializer.Serialize(result);
@@ -62,7 +63,7 @@ public class DeserializationTests
         yield return new object[] { Result.Succeed() };
         yield return new object[] { Result.Fail() };
         yield return new object[] { Result.Fail(new Exception("Test exception")) };
-        yield return new object[] { Result.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState)) };
+        yield return new object[] { Result.Fail(new Error("Test error", HttpStatusCode.Found)) };
     }
 
     public static IEnumerable<object[]> GetValueResults()
@@ -71,6 +72,6 @@ public class DeserializationTests
         yield return new object[] { Result<string>.Succeed("Test string") };
         yield return new object[] { Result<int>.Fail() };
         yield return new object[] { Result<int>.Fail(new Exception("Test exception")) };
-        yield return new object[] { Result<int>.Fail(new Error<ErrorCode>("Test error", ErrorCode.InvalidState)) };
+        yield return new object[] { Result<int>.Fail(new Error("Test error", HttpStatusCode.Found)) };
     }
 }
