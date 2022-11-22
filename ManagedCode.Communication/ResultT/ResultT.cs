@@ -7,7 +7,7 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result<T> : IResult<T>
 {
-    private Result(bool isSuccess, T value, Error[]? errors)
+    private Result(bool isSuccess, T? value, Error[]? errors)
     {
         IsSuccess = isSuccess;
         IsFail = !isSuccess;
@@ -18,7 +18,7 @@ public partial struct Result<T> : IResult<T>
     public bool IsSuccess { get; set; }
     public bool IsFail { get; set; }
 
-    public T Value { get; set; }
+    public T? Value { get; set; }
     
     public Error? GetError()
     {
