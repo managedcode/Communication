@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 
 namespace ManagedCode.Communication;
 
+[DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result<T> : IResult<T>
 {
     private Result(bool isSuccess, T value, Error[]? errors)

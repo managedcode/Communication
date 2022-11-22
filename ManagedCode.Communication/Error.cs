@@ -25,6 +25,7 @@ public struct Error
         {
             ErrorCode = Enum.GetName(errorCode.GetType(), errorCode);
         }
+
         Message = exception?.Message ?? string.Empty;
     }
 
@@ -35,6 +36,7 @@ public struct Error
         {
             ErrorCode = Enum.GetName(errorCode.GetType(), errorCode);
         }
+
         Message = message;
     }
 
@@ -78,5 +80,45 @@ public struct Error
     public static Error FromException(Exception? exception, Enum? errorCode = default)
     {
         return new Error(exception, errorCode);
+    }
+
+    public static bool operator ==(Error? error, Enum errorCode)
+    {
+        if (error.HasValue)
+        {
+            return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
+        }
+
+        return false;
+    }
+
+    public static bool operator !=(Error? error, Enum errorCode)
+    {
+        if (error.HasValue)
+        {
+            return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
+        }
+
+        return true;
+    }
+
+    public static bool operator ==(Enum errorCode, Error? error)
+    {
+        if (error.HasValue)
+        {
+            return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
+        }
+
+        return false;
+    }
+
+    public static bool operator !=(Enum errorCode, Error? error)
+    {
+        if (error.HasValue)
+        {
+            return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
+        }
+
+        return true;
     }
 }

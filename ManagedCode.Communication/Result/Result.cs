@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 
 namespace ManagedCode.Communication;
 
+[DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result : IResult
 {
     
@@ -20,10 +22,10 @@ public partial struct Result : IResult
     public Error? GetError()
     {
         if (Errors == null || Errors.Length == 0)
-                return null;
+            return null;
 
         return Errors[0];
     }
+
     public Error[]? Errors { get; set; }
-    
 }
