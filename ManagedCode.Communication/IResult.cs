@@ -8,7 +8,7 @@ public interface IResult
     bool IsFail { get; }
 }
 
-public interface IResult<T> : IResult
+public interface IResult<out T> : IResult
 {
-    T Value { get; }
+    T? Value { get; }
 }
