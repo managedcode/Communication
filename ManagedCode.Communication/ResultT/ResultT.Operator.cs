@@ -7,7 +7,7 @@ public partial struct Result<T>
 {
     public bool Equals(Result<T> other)
     {
-        return IsSuccess == other.IsSuccess && ResultType == other.ResultType
+        return IsSuccess == other.IsSuccess
                && EqualityComparer<T?>.Default.Equals(Value, other.Value) 
                && GetError()?.Message == other.GetError()?.Message
                && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
@@ -20,7 +20,7 @@ public partial struct Result<T>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(IsSuccess, ResultType, Value, Errors);
+        return HashCode.Combine(IsSuccess, Value, Errors);
     }
 
     public static bool operator ==(Result<T> obj1, bool obj2)
@@ -48,7 +48,7 @@ public partial struct Result<T>
         return Fail(error);
     }
 
-    public static implicit operator Result<T>(Error[] errors)
+    public static implicit operator Result<T>(Error[]? errors)
     {
         return Fail(errors);
     }

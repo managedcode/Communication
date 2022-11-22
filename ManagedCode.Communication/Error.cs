@@ -42,6 +42,21 @@ public struct Error
     public Exception? Exception { get; set; }
     public string? ErrorCode { get; set; }
     
+    public TEnum ErrorCodeAs<TEnum>() where TEnum : Enum
+    {
+        return (TEnum)Enum.Parse(typeof(TEnum), ErrorCode);
+    }
+    
+    public bool IsErrorCode(Enum value)
+    {
+        return Enum.GetName(value.GetType(), value) == ErrorCode;
+    }
+    
+    public bool IsNotErrorCode(Enum value)
+    {
+        return Enum.GetName(value.GetType(), value) != ErrorCode;
+    }
+    
     public bool Equals(Error other)
     {
         return Message == other.Message &&
@@ -53,6 +68,11 @@ public struct Error
     public override bool Equals(object? obj)
     {
         return obj is Error other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Message, Exception, ErrorCode);
     }
 
     public static Error FromException(Exception? exception, Enum? errorCode = default)

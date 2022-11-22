@@ -6,19 +6,6 @@ namespace ManagedCode.Communication;
 
 public partial struct Result<T>
 {
-    public static Result<T> From(Action action)
-    {
-        try
-        {
-            action();
-            return Succeed();
-        }
-        catch (Exception e)
-        {
-            return Fail(ManagedCode.Communication.Error.FromException(e));
-        }
-    }
-    
     public static Result<T> From(Func<T> func)
     {
         try

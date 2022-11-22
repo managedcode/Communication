@@ -14,18 +14,21 @@ public static class HttpResponseExtension
         {
             return System.Text.Json.JsonSerializer.Deserialize<Result<T>>(await responseMessage.Content.ReadAsStreamAsync());
         }
+
+        var content = await responseMessage.Content.ReadAsStringAsync();
         
-        return Result<T>.Fail(responseMessage.StatusCode);
+        return Result<T>.Fail(new Error(content, responseMessage.StatusCode));
     }
     
-    public static Result FromJsonToResult(this HttpResponseMessage responseMessage)
+    public static async Task<Result> FromJsonToResult(this HttpResponseMessage responseMessage)
     {
         if (responseMessage.IsSuccessStatusCode)
         {
-            return Result.Succeed(responseMessage.StatusCode);
+            return Result.Succeed();
         }
         
-        return Result.Fail(responseMessage.StatusCode);
+        var content = await responseMessage.Content.ReadAsStringAsync();
+        return Result.Fail(new Error(content, responseMessage.StatusCode));
     }
 
 #endif

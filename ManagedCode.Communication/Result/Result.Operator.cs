@@ -6,8 +6,7 @@ public partial struct Result
 {
     public bool Equals(Result other)
     {
-        return IsSuccess == other.IsSuccess && ResultType == other.ResultType
-                                            && GetError()?.Message == other.GetError()?.Message
+        return IsSuccess == other.IsSuccess && GetError()?.Message == other.GetError()?.Message
                                             && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
     }
 
@@ -18,7 +17,7 @@ public partial struct Result
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(IsSuccess, ResultType, Errors);
+        return HashCode.Combine(IsSuccess, Errors);
     }
 
     public static bool operator ==(Result obj1, bool obj2)
@@ -53,6 +52,6 @@ public partial struct Result
 
     public static implicit operator Result(Exception? exception)
     {
-        return Fail(ManagedCode.Communication.Error.FromException(exception));
+        return Fail(Error.FromException(exception));
     }
 }

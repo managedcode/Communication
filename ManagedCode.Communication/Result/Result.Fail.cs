@@ -10,28 +10,27 @@ public partial struct Result
 {
     public static Result Fail()
     {
-        return new Result(false, Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), null);
+        return new Result(false, null);
     }
     
     public static Result Fail(Enum code)
     {
-        return new Result(false,  Enum.GetName(code.GetType(),code), null);
+        return new Result(false, null);
     }
 
     public static Result Fail(Error error)
     {
-        return new Result(false,  Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), new[] {error});
+        return new Result(false, new[] {error});
     }
 
     public static Result Fail(Error[] errors)
     {
-        return new Result(false,  Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), errors);
+        return new Result(false, errors);
     }
 
     public static Result Fail(Exception? exception)
     {
-        return new Result(false, Enum.GetName(typeof(HttpStatusCode),HttpStatusCode.InternalServerError), 
-            new[] {Error.FromException(exception)});
+        return new Result(false, new[] {Error.FromException(exception)});
     }
 
     public void ThrowException()

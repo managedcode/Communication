@@ -10,6 +10,12 @@ public enum MyTestEnum
     Option2
 }
 
+class MyResultObj
+{
+    public string Message;
+    public int Number;
+}
+
 public class ResultTests
 {
     [Fact]
@@ -18,7 +24,23 @@ public class ResultTests
         var ok = Result.Succeed();
         ok.IsSuccess.Should().BeTrue();
         ok.IsFail.Should().BeFalse();
-        ok.ResultCode<HttpStatusCode>().Should().Be(HttpStatusCode.OK);
+
+        Assert.True(ok == true);
+        Assert.True(ok);
+
+    }
+    
+    
+    [Fact]
+    public void SucceedT()
+    {
+        var ok = Result<MyResultObj>.Succeed(new MyResultObj()
+        {
+            Message = "msg"
+        });
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFail.Should().BeFalse();
+        ok.Value.Message.Should().Be("msg");
         
         Assert.True(ok == true);
         Assert.True(ok);
@@ -26,12 +48,15 @@ public class ResultTests
     }
     
     [Fact]
-    public void SucceedEnum()
+    public void SucceedTEnum()
     {
-        var ok = Result.Succeed(MyTestEnum.Option1);
+        var ok = Result<MyResultObj>.Succeed(new MyResultObj()
+        {
+            Message = "msg"
+        }, MyTestEnum.Option1);
         ok.IsSuccess.Should().BeTrue();
         ok.IsFail.Should().BeFalse();
-        ok.ResultCode<MyTestEnum>().Should().Be(MyTestEnum.Option1);
+        ok.Value.Message.Should().Be("msg");
 
         Assert.True(ok == true);
         Assert.True(ok);
@@ -43,8 +68,7 @@ public class ResultTests
         var ok = Result.Fail();
         ok.IsSuccess.Should().BeFalse();
         ok.IsFail.Should().BeTrue();
-        ok.ResultCode<HttpStatusCode>().Should().Be(HttpStatusCode.InternalServerError);
-        
+
         Assert.True(ok == false);
         Assert.False(ok);
 
@@ -56,7 +80,29 @@ public class ResultTests
         var ok = Result.Fail(HttpStatusCode.Unauthorized);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFail.Should().BeTrue();
-        ok.ResultCode<HttpStatusCode>().Should().Be(HttpStatusCode.Unauthorized);
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+    
+    [Fact]
+    public void FailT()
+    {
+        var ok = Result<MyResultObj>.Fail();
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFail.Should().BeTrue();
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+
+    }
+    
+    [Fact]
+    public void FailTEnum()
+    {
+        var ok = Result<MyResultObj>.Fail(HttpStatusCode.Unauthorized);
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFail.Should().BeTrue();
 
         Assert.True(ok == false);
         Assert.False(ok);
