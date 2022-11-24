@@ -168,13 +168,16 @@ public class ResultSucceedTests
     [Fact]
     public void SucceedResultFromResult()
     {
-        var ok = Result<MyResultObj>.From(() => new MyResultObj
+        var obj = new MyResultObj
         {
             Message = "msg"
-        });
+        };
+        var ok = Result<MyResultObj>.From(() => obj);
         
         Result result1 = Result.From(Result.Succeed());
-        Result<MyResultObj> result2 = Result<MyResultObj>.From(Result<MyResultObj>.Succeed(new MyResultObj()));
+        Result<MyResultObj> result2 = Result<MyResultObj>.From(Result<MyResultObj>.From(Result<MyResultObj>.Succeed(obj)));
+
+        result2.Value.Message.Should().Be(obj.Message);
         
         Assert.True(ok == true);
         Assert.True(result1);

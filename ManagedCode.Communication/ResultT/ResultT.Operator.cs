@@ -38,6 +38,11 @@ public partial struct Result<T>
         return result.IsSuccess;
     }
 
+    public static implicit operator Result(Result<T> result)
+    {
+        return result.IsSuccess ? Result.Succeed() : Result.Fail(result);
+    }
+    
     public static implicit operator Exception?(Result<T> result)
     {
         return result.GetError()?.Exception;
