@@ -135,4 +135,49 @@ public class ResultSucceedTests
         Assert.True(ok == true);
         Assert.True(ok);
     }
+    
+    [Fact]
+    public void SucceedTFromResult()
+    {
+        var ok = Result<MyResultObj>.From(() => new MyResultObj
+        {
+            Message = "msg"
+        });
+
+
+        Result result = Result.From(ok);
+        
+        Assert.True(ok == true);
+        Assert.True(result);
+    }
+    
+    [Fact]
+    public void SucceedFromResult()
+    {
+        var ok = Result<MyResultObj>.From(() => new MyResultObj
+        {
+            Message = "msg"
+        });
+        
+        Result<MyResultObj> result = Result<MyResultObj>.From(ok);
+        
+        Assert.True(ok == true);
+        Assert.True(result);
+    }
+    
+    [Fact]
+    public void SucceedResultFromResult()
+    {
+        var ok = Result<MyResultObj>.From(() => new MyResultObj
+        {
+            Message = "msg"
+        });
+        
+        Result result1 = Result.From(Result.Succeed());
+        Result<MyResultObj> result2 = Result<MyResultObj>.From(Result<MyResultObj>.Succeed(new MyResultObj()));
+        
+        Assert.True(ok == true);
+        Assert.True(result1);
+        Assert.True(result2);
+    }
 }

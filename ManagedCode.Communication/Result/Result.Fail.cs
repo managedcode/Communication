@@ -34,7 +34,7 @@ public partial struct Result
     {
         return new Result(false, new[] { error });
     }
-
+    
     public static Result Fail(Error[] errors)
     {
         return new Result(false, errors);

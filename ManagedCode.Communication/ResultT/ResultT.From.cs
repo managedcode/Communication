@@ -41,6 +41,19 @@ public partial struct Result<T>
             return Fail(Error.FromException(e));
         }
     }
+    
+    public static Result<T> From(Result<T> result)
+    {
+        return result ? result : Fail(result.Errors);
+    }
+    
+    public static Result From<T>(Result<T> result)
+    {
+        if (result)
+            return Result.Succeed();
+        
+        return Result.Fail(result.Errors);
+    }
 
 #if NET6_0_OR_GREATER
 
