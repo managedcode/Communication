@@ -1,7 +1,9 @@
+using System;
 using System.Diagnostics;
 
 namespace ManagedCode.Communication;
 
+[Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result<T> : IResult<T>
 {
