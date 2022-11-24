@@ -5,7 +5,7 @@ namespace ManagedCode.Communication;
 public interface IResult
 {
     bool IsSuccess { get; }
-    bool IsFail { get; }
+    bool IsFailed { get; }
 }
 
 public interface IResult<out T> : IResult

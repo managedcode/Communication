@@ -10,13 +10,13 @@ public partial struct Result<T> : IResult<T>
     private Result(bool isSuccess, T? value, Error[]? errors)
     {
         IsSuccess = isSuccess;
-        IsFail = !isSuccess;
+        IsFailed = !isSuccess;
         Value = value;
         Errors = errors;
     }
     
     public bool IsSuccess { get; set; }
-    public bool IsFail { get; set; }
+    public bool IsFailed { get; set; }
 
     public T? Value { get; set; }
     

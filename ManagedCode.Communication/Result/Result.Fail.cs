@@ -33,7 +33,7 @@ public partial struct Result
         return new Result(false, new[] {Error.FromException(exception)});
     }
 
-    public void ThrowException()
+    public void ThrowExceptionIfFailed()
     {
         if (IsSuccess)
             return;

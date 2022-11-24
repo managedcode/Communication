@@ -23,14 +23,13 @@ public class ResultTests
     {
         var ok = Result.Succeed();
         ok.IsSuccess.Should().BeTrue();
-        ok.IsFail.Should().BeFalse();
+        ok.IsFailed.Should().BeFalse();
 
         Assert.True(ok == true);
         Assert.True(ok);
 
     }
-    
-    
+
     [Fact]
     public void SucceedT()
     {
@@ -39,7 +38,39 @@ public class ResultTests
             Message = "msg"
         });
         ok.IsSuccess.Should().BeTrue();
-        ok.IsFail.Should().BeFalse();
+        ok.IsFailed.Should().BeFalse();
+        ok.Value.Message.Should().Be("msg");
+        
+        Assert.True(ok == true);
+        Assert.True(ok);
+
+    }
+    
+    [Fact]
+    public void SucceedFrom()
+    {
+        var ok = Result<MyResultObj>.From(() => new MyResultObj()
+        {
+            Message = "msg"
+        });
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFailed.Should().BeFalse();
+        ok.Value.Message.Should().Be("msg");
+        
+        Assert.True(ok == true);
+        Assert.True(ok);
+
+    }
+    
+    [Fact]
+    public void SucceedTFrom()
+    {
+        var ok = Result<MyResultObj>.From(()=>new MyResultObj()
+        {
+            Message = "msg"
+        });
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFailed.Should().BeFalse();
         ok.Value.Message.Should().Be("msg");
         
         Assert.True(ok == true);
@@ -55,7 +86,7 @@ public class ResultTests
             Message = "msg"
         }, MyTestEnum.Option1);
         ok.IsSuccess.Should().BeTrue();
-        ok.IsFail.Should().BeFalse();
+        ok.IsFailed.Should().BeFalse();
         ok.Value.Message.Should().Be("msg");
 
         Assert.True(ok == true);
@@ -67,7 +98,7 @@ public class ResultTests
     {
         var ok = Result.Fail();
         ok.IsSuccess.Should().BeFalse();
-        ok.IsFail.Should().BeTrue();
+        ok.IsFailed.Should().BeTrue();
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -79,7 +110,7 @@ public class ResultTests
     {
         var ok = Result.Fail(HttpStatusCode.Unauthorized);
         ok.IsSuccess.Should().BeFalse();
-        ok.IsFail.Should().BeTrue();
+        ok.IsFailed.Should().BeTrue();
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -90,7 +121,7 @@ public class ResultTests
     {
         var ok = Result<MyResultObj>.Fail();
         ok.IsSuccess.Should().BeFalse();
-        ok.IsFail.Should().BeTrue();
+        ok.IsFailed.Should().BeTrue();
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -102,7 +133,7 @@ public class ResultTests
     {
         var ok = Result<MyResultObj>.Fail(HttpStatusCode.Unauthorized);
         ok.IsSuccess.Should().BeFalse();
-        ok.IsFail.Should().BeTrue();
+        ok.IsFailed.Should().BeTrue();
 
         Assert.True(ok == false);
         Assert.False(ok);

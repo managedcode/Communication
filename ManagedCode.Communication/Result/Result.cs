@@ -11,13 +11,13 @@ public partial struct Result : IResult
     private Result(bool isSuccess, Error[]? errors)
     {
         IsSuccess = isSuccess;
-        IsFail = !isSuccess;
+        IsFailed = !isSuccess;
         Errors = errors;
     }
     
 
     public bool IsSuccess { get; set; }
-    public bool IsFail { get; set; }
+    public bool IsFailed { get; set; }
     
     public Error? GetError()
     {
