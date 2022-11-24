@@ -1,5 +1,3 @@
-using System;
-
 namespace ManagedCode.Communication;
 
 public interface IResult
@@ -8,7 +6,7 @@ public interface IResult
     bool IsFailed { get; }
 }
 
-public interface IResult<out T> : IResult
+public interface IResult<T> : IResult
 {
     T? Value { get; }
 }

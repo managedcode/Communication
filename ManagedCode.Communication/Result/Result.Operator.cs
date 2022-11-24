@@ -6,8 +6,9 @@ public partial struct Result
 {
     public bool Equals(Result other)
     {
-        return IsSuccess == other.IsSuccess && GetError()?.Message == other.GetError()?.Message
-                                            && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
+        return IsSuccess == other.IsSuccess 
+               && GetError()?.Message == other.GetError()?.Message 
+               && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
     }
 
     public override bool Equals(object? obj)
@@ -29,17 +30,17 @@ public partial struct Result
     {
         return obj1.IsSuccess != obj2;
     }
-    
+
     public static implicit operator bool(Result result)
     {
         return result.IsSuccess;
     }
-    
+
     public static implicit operator Exception?(Result result)
     {
         return result.GetError()?.Exception;
     }
-    
+
     public static implicit operator Result(Error error)
     {
         return Fail(error);

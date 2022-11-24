@@ -7,9 +7,9 @@ public partial struct Result<T>
 {
     public bool Equals(Result<T> other)
     {
-        return IsSuccess == other.IsSuccess
+        return IsSuccess == other.IsSuccess 
                && EqualityComparer<T?>.Default.Equals(Value, other.Value) 
-               && GetError()?.Message == other.GetError()?.Message
+               && GetError()?.Message == other.GetError()?.Message 
                && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
     }
 
@@ -32,17 +32,17 @@ public partial struct Result<T>
     {
         return obj1.IsSuccess != obj2;
     }
-    
+
     public static implicit operator bool(Result<T> result)
     {
         return result.IsSuccess;
     }
-    
+
     public static implicit operator Exception?(Result<T> result)
     {
         return result.GetError()?.Exception;
     }
-    
+
     public static implicit operator Result<T>(Error error)
     {
         return Fail(error);
@@ -55,6 +55,6 @@ public partial struct Result<T>
 
     public static implicit operator Result<T>(Exception? exception)
     {
-        return Fail(ManagedCode.Communication.Error.FromException(exception));
+        return Fail(Error.FromException(exception));
     }
 }

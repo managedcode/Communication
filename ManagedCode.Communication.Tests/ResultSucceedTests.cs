@@ -1,4 +1,3 @@
-using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -11,7 +10,7 @@ public enum MyTestEnum
     Option2
 }
 
-class MyResultObj
+internal class MyResultObj
 {
     public string Message;
     public int Number;
@@ -25,76 +24,115 @@ public class ResultSucceedTests
         var ok = Result.Succeed();
         ok.IsSuccess.Should().BeTrue();
         ok.IsFailed.Should().BeFalse();
-
+        ok.GetError().Should().BeNull();
+        ok.ThrowExceptionIfFailed();
         Assert.True(ok == true);
         Assert.True(ok);
-
+        ok.AsTask().Result.IsSuccess.Should().BeTrue();
+        ok.AsValueTask().Result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
     public void SucceedT()
     {
-        var ok = Result<MyResultObj>.Succeed(new MyResultObj()
+        var ok = Result<MyResultObj>.Succeed(new MyResultObj
+        {
+            Message = "msg"
+        });
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFailed.Should().BeFalse();
+        ok.GetError().Should().BeNull();
+        ok.ThrowExceptionIfFailed();
+        ok.Value.Message.Should().Be("msg");
+
+        Assert.True(ok == true);
+        Assert.True(ok);
+        
+        ok.AsTask().Result.IsSuccess.Should().BeTrue();
+        ok.AsValueTask().Result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void SucceedGeneric()
+    {
+        var ok = Result.Succeed(new MyResultObj
         {
             Message = "msg"
         });
         ok.IsSuccess.Should().BeTrue();
         ok.IsFailed.Should().BeFalse();
         ok.Value.Message.Should().Be("msg");
-        
+
         Assert.True(ok == true);
         Assert.True(ok);
-
     }
-    
+
+    [Fact]
+    public void SucceedGenericAction()
+    {
+        var ok = Result.Succeed<MyResultObj>(a => a.Message = "msg");
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFailed.Should().BeFalse();
+        ok.Value.Message.Should().Be("msg");
+
+        Assert.True(ok == true);
+        Assert.True(ok);
+    }
+
+    [Fact]
+    public void SucceedTAction()
+    {
+        var ok = Result<MyResultObj>.Succeed(a => a.Message = "msg");
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFailed.Should().BeFalse();
+        ok.Value.Message.Should().Be("msg");
+
+        Assert.True(ok == true);
+        Assert.True(ok);
+    }
+
     [Fact]
     public void SucceedFrom()
     {
-        var ok = Result<MyResultObj>.From(() => new MyResultObj()
+        var ok = Result<MyResultObj>.From(() => new MyResultObj
         {
             Message = "msg"
         });
         ok.IsSuccess.Should().BeTrue();
         ok.IsFailed.Should().BeFalse();
         ok.Value.Message.Should().Be("msg");
-        
+
         Assert.True(ok == true);
         Assert.True(ok);
-
     }
-    
+
     [Fact]
     public async Task SucceedFromTask()
     {
-        var ok = await Result<MyResultObj>.From(() => Task.Run(() => new MyResultObj()
+        var ok = await Result<MyResultObj>.From(() => Task.Run(() => new MyResultObj
         {
             Message = "msg"
         }));
         ok.IsSuccess.Should().BeTrue();
         ok.IsFailed.Should().BeFalse();
         ok.Value.Message.Should().Be("msg");
-        
+
         Assert.True(ok == true);
         Assert.True(ok);
-
     }
-    
+
     [Fact]
     public void SucceedTFrom()
     {
-        var ok = Result<MyResultObj>.From(()=>new MyResultObj()
+        var ok = Result<MyResultObj>.From(() => new MyResultObj
         {
             Message = "msg"
         });
         ok.IsSuccess.Should().BeTrue();
         ok.IsFailed.Should().BeFalse();
         ok.Value.Message.Should().Be("msg");
-        
+
         Assert.True(ok == true);
         Assert.True(ok);
-
     }
-    
-    
 }
-

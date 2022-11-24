@@ -15,10 +15,10 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(ManagedCode.Communication.Error.FromException(e));
+            return Fail(Error.FromException(e));
         }
     }
-    
+
     public static Result From(Func<Result> func)
     {
         try
@@ -27,10 +27,10 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(ManagedCode.Communication.Error.FromException(e));
+            return Fail(Error.FromException(e));
         }
     }
-    
+
     public static async Task<Result> From(Task task)
     {
         try
@@ -42,18 +42,18 @@ public partial struct Result
 
             if (task.IsCanceled || task.IsFaulted)
             {
-                return Fail(ManagedCode.Communication.Error.FromException(task.Exception));
+                return Fail(Error.FromException(task.Exception));
             }
-            
+
             await task;
             return Succeed();
         }
         catch (Exception e)
         {
-            return Fail(ManagedCode.Communication.Error.FromException(e));
+            return Fail(Error.FromException(e));
         }
     }
-    
+
     public static async Task<Result> From(Func<Task> task, CancellationToken cancellationToken = default)
     {
         try
@@ -63,10 +63,10 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(ManagedCode.Communication.Error.FromException(e));
+            return Fail(Error.FromException(e));
         }
     }
-    
+
 #if NET6_0_OR_GREATER
 
     public static async ValueTask<Result> From(ValueTask valueTask)
@@ -80,18 +80,18 @@ public partial struct Result
 
             if (valueTask.IsCanceled || valueTask.IsFaulted)
             {
-                return Result.Fail();
+                return Fail();
             }
-            
+
             await valueTask;
             return Succeed();
         }
         catch (Exception e)
         {
-            return Fail(ManagedCode.Communication.Error.FromException(e));
+            return Fail(Error.FromException(e));
         }
     }
-    
+
     public static async Task<Result> From(Func<ValueTask> valueTask)
     {
         try
@@ -101,10 +101,9 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(ManagedCode.Communication.Error.FromException(e));
+            return Fail(Error.FromException(e));
         }
     }
 
 #endif
-    
 }

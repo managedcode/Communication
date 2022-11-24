@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
 
-public partial struct Result<T>
+public partial struct Result
 {
-    public static Result<T> From(Func<T> func)
+    public static Result<T> From<T>(Func<T> func)
     {
         try
         {
@@ -14,11 +14,11 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail<T>(Error.FromException(e));
         }
     }
 
-    public static async Task<Result<T>> From(Task<T> task)
+    public static async Task<Result<T>> From<T>(Task<T> task)
     {
         try
         {
@@ -26,11 +26,11 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail<T>(Error.FromException(e));
         }
     }
 
-    public static async Task<Result<T>> From(Func<Task<T>> task, CancellationToken cancellationToken = default)
+    public static async Task<Result<T>> From<T>(Func<Task<T>> task, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -38,13 +38,13 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail<T>(Error.FromException(e));
         }
     }
 
 #if NET6_0_OR_GREATER
 
-    public static async ValueTask<Result<T>> From(ValueTask<T> valueTask)
+    public static async ValueTask<Result<T>> From<T>(ValueTask<T> valueTask)
     {
         try
         {
@@ -52,11 +52,11 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail<T>(Error.FromException(e));
         }
     }
 
-    public static async Task<Result<T>> From(Func<ValueTask<T>> valueTask)
+    public static async Task<Result<T>> From<T>(Func<ValueTask<T>> valueTask)
     {
         try
         {
@@ -64,7 +64,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail<T>(Error.FromException(e));
         }
     }
 

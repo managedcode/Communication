@@ -3,13 +3,11 @@ using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
-using Xunit.Sdk;
 
 namespace ManagedCode.Communication.Tests;
 
 public class ResultFailTests
 {
-    
     [Fact]
     public void Fail()
     {
@@ -19,9 +17,8 @@ public class ResultFailTests
 
         Assert.True(ok == false);
         Assert.False(ok);
-
     }
-    
+
     [Fact]
     public void FailEnum()
     {
@@ -32,7 +29,7 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailString()
     {
@@ -43,20 +40,20 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailStringEnum()
     {
         var ok = Result.Fail("Oops", MyTestEnum.Option1);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
-        
+
         ok.GetError().Value.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option1);
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailEnumString()
     {
@@ -69,7 +66,7 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailThrow()
     {
@@ -78,12 +75,11 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(Exception), () => ok.ThrowExceptionIfFailed());
-            
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailExceptionThrow()
     {
@@ -92,12 +88,11 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArithmeticException), () => ok.ThrowExceptionIfFailed());
-            
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailFrom()
     {
@@ -106,15 +101,13 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
-            
 
         Assert.True(ok == false);
         Assert.False(ok);
-
     }
-    
+
     // T
-    
+
     [Fact]
     public void FailT()
     {
@@ -124,9 +117,8 @@ public class ResultFailTests
 
         Assert.True(ok == false);
         Assert.False(ok);
-
     }
-    
+
     [Fact]
     public void FailTEnum()
     {
@@ -137,7 +129,7 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailTString()
     {
@@ -148,20 +140,20 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailTStringEnum()
     {
         var ok = Result<MyResultObj>.Fail("Oops", MyTestEnum.Option1);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
-        
+
         ok.GetError().Value.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option1);
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailTEnumString()
     {
@@ -174,7 +166,7 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailTThrow()
     {
@@ -183,12 +175,11 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(Exception), () => ok.ThrowExceptionIfFailed());
-            
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void FailTExceptionThrow()
     {
@@ -197,12 +188,11 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArithmeticException), () => ok.ThrowExceptionIfFailed());
-            
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public void SucceedTFrom()
     {
@@ -215,13 +205,11 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
-            
 
         Assert.True(ok == false);
         Assert.False(ok);
-
     }
-    
+
     [Fact]
     public async Task SucceedFromTask()
     {
@@ -234,12 +222,129 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
-            
 
         Assert.True(ok == false);
         Assert.False(ok);
+    }
+    
+    // T Generic
 
+    [Fact]
+    public void FailGeneric()
+    {
+        var ok = Result.Fail<MyResultObj>();
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        Assert.True(ok == false);
+        Assert.False(ok);
     }
 
-}
+    [Fact]
+    public void FailGenericEnum()
+    {
+        var ok = Result.Fail<MyResultObj,HttpStatusCode>(HttpStatusCode.Unauthorized);
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
 
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void FailGenericString()
+    {
+        var ok = Result.Fail<MyResultObj>("Oops");
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void FailGenericStringEnum()
+    {
+        var ok = Result.Fail<MyResultObj,MyTestEnum>("Oops", MyTestEnum.Option1);
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        ok.GetError().Value.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option1);
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void FailGenericEnumString()
+    {
+        var ok = Result.Fail<MyResultObj,MyTestEnum>(MyTestEnum.Option2, "Oops");
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        ok.GetError().Value.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void FailGenericThrow()
+    {
+        var ok = Result.Fail<MyResultObj>("Oops");
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        Assert.Throws(typeof(Exception), () => ok.ThrowExceptionIfFailed());
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void FailGenericExceptionThrow()
+    {
+        var ok = Result.Fail<MyResultObj>(new ArithmeticException());
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowExceptionIfFailed());
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void SucceedGenericFrom()
+    {
+        var ok = Result.From<MyResultObj>(() =>
+        {
+            throw new ArgumentException();
+            return new MyResultObj();
+        });
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public async Task SucceedFromGenericTask()
+    {
+        var ok = await Result.From<MyResultObj>(() => Task.Run(() =>
+        {
+            throw new ArgumentException();
+            return new MyResultObj();
+        }));
+        ok.IsSuccess.Should().BeFalse();
+        ok.IsFailed.Should().BeTrue();
+
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
+
+        Assert.True(ok == false);
+        Assert.False(ok);
+    }
+}
