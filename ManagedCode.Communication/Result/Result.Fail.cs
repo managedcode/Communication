@@ -13,9 +13,24 @@ public partial struct Result
         return new Result(false, null);
     }
     
+    public static Result Fail(string message)
+    {
+        return new Result(false, new[] { Error.Create(message) });
+    }
+    
     public static Result Fail<TEnum>(TEnum code) where TEnum : Enum
     {
-        return new Result(false, new[] { new Error(Enum.GetName(typeof(TEnum), code)) });
+        return new Result(false, new[] { Error.Create(code) });
+    }
+
+    public static Result Fail<TEnum>(string message, TEnum code) where TEnum : Enum
+    {
+        return new Result(false, new[] { Error.Create(message, code) });
+    }
+    
+    public static Result Fail<TEnum>(TEnum code, string message) where TEnum : Enum
+    {
+        return new Result(false, new[] { Error.Create(message, code) });
     }
 
     public static Result Fail(Error error)

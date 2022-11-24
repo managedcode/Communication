@@ -112,17 +112,33 @@ public struct Error
         return true;
     }
     
+    public static Error Create(string errorCode)
+    {
+        return new Error(string.Empty, errorCode);
+    }
+    
+    public static Error Create<TEnum>(TEnum errorCode) where TEnum : Enum
+    {
+        return new Error(string.Empty, Enum.GetName(typeof(TEnum), errorCode));
+    }
+    
     public static Error Create<TEnum>(string message, TEnum errorCode) where TEnum : Enum
     {
         return new Error(message, Enum.GetName(typeof(TEnum), errorCode));
     }
 
-    public static Error Create<TEnum>(Exception? exception, TEnum errorCode = default) where TEnum : Enum
+    public static Error Create<TEnum>(Exception? exception) where TEnum : Enum
+    {
+        return new Error(exception, string.Empty);
+    }
+    
+    public static Error Create<TEnum>(Exception? exception, TEnum errorCode) where TEnum : Enum
     {
         return new Error(exception, Enum.GetName(typeof(TEnum), errorCode));
     }
-
-    public static Error Create<TEnum>(Exception exception, string message, TEnum errorCode) where TEnum : Enum
+    
+    
+    public static Error Create<TEnum>(string message, Exception exception, TEnum errorCode) where TEnum : Enum
     {
         return new Error(exception, message, Enum.GetName(typeof(TEnum), errorCode));
     }

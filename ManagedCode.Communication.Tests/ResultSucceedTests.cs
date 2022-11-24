@@ -1,4 +1,5 @@
 using System.Net;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
@@ -16,7 +17,7 @@ class MyResultObj
     public int Number;
 }
 
-public class ResultTests
+public class ResultSucceedTests
 {
     [Fact]
     public void Succeed()
@@ -63,6 +64,22 @@ public class ResultTests
     }
     
     [Fact]
+    public async Task SucceedFromTask()
+    {
+        var ok = await Result<MyResultObj>.From(() => Task.Run(() => new MyResultObj()
+        {
+            Message = "msg"
+        }));
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFailed.Should().BeFalse();
+        ok.Value.Message.Should().Be("msg");
+        
+        Assert.True(ok == true);
+        Assert.True(ok);
+
+    }
+    
+    [Fact]
     public void SucceedTFrom()
     {
         var ok = Result<MyResultObj>.From(()=>new MyResultObj()
@@ -78,65 +95,6 @@ public class ResultTests
 
     }
     
-    [Fact]
-    public void SucceedTEnum()
-    {
-        var ok = Result<MyResultObj>.Succeed(new MyResultObj()
-        {
-            Message = "msg"
-        }, MyTestEnum.Option1);
-        ok.IsSuccess.Should().BeTrue();
-        ok.IsFailed.Should().BeFalse();
-        ok.Value.Message.Should().Be("msg");
-
-        Assert.True(ok == true);
-        Assert.True(ok);
-    }
     
-    [Fact]
-    public void Fail()
-    {
-        var ok = Result.Fail();
-        ok.IsSuccess.Should().BeFalse();
-        ok.IsFailed.Should().BeTrue();
-
-        Assert.True(ok == false);
-        Assert.False(ok);
-
-    }
-    
-    [Fact]
-    public void FailEnum()
-    {
-        var ok = Result.Fail(HttpStatusCode.Unauthorized);
-        ok.IsSuccess.Should().BeFalse();
-        ok.IsFailed.Should().BeTrue();
-
-        Assert.True(ok == false);
-        Assert.False(ok);
-    }
-    
-    [Fact]
-    public void FailT()
-    {
-        var ok = Result<MyResultObj>.Fail();
-        ok.IsSuccess.Should().BeFalse();
-        ok.IsFailed.Should().BeTrue();
-
-        Assert.True(ok == false);
-        Assert.False(ok);
-
-    }
-    
-    [Fact]
-    public void FailTEnum()
-    {
-        var ok = Result<MyResultObj>.Fail(HttpStatusCode.Unauthorized);
-        ok.IsSuccess.Should().BeFalse();
-        ok.IsFailed.Should().BeTrue();
-
-        Assert.True(ok == false);
-        Assert.False(ok);
-    }
 }
 

@@ -13,14 +13,24 @@ public partial struct Result<T>
         return new Result<T>(false, default, null);
     }
     
-    public static Result<T> Fail(Enum code)
-    {
-        return new Result<T>(false, default,  null);
-    }
-    
     public static Result<T> Fail<TEnum>(TEnum code) where TEnum : Enum
     {
-        return new Result<T>(false, default, new[] { new Error(Enum.GetName(typeof(TEnum), code)) });
+        return new Result<T>(false, default, new[] { Error.Create(code) });
+    }
+    
+    public static Result<T> Fail(string message)
+    {
+        return new Result<T>(false, default, new[] { Error.Create(message) });
+    }
+    
+    public static Result<T> Fail<TEnum>(string message, TEnum code) where TEnum : Enum
+    {
+        return new Result<T>(false, default, new[] { Error.Create(message, code) });
+    }
+    
+    public static Result<T> Fail<TEnum>(TEnum code, string message) where TEnum : Enum
+    {
+        return new Result<T>(false, default , new[] { Error.Create(message, code) });
     }
 
     public static Result<T> Fail(Error error)
