@@ -9,34 +9,24 @@ public struct Error
         Message = string.Empty;
     }
 
-    public Error(string message, Enum? errorCode = default)
+    public Error(string message, string? errorCode = default)
     {
         Message = message;
-        if (errorCode != null)
-        {
-            ErrorCode = Enum.GetName(errorCode.GetType(), errorCode);
-        }
+        ErrorCode = errorCode;
     }
 
-    public Error(Exception? exception, Enum? errorCode = default)
+    public Error(Exception? exception, string? errorCode = default)
     {
         Exception = exception;
-        if (errorCode != null)
-        {
-            ErrorCode = Enum.GetName(errorCode.GetType(), errorCode);
-        }
+        ErrorCode = errorCode;
 
         Message = exception?.Message ?? string.Empty;
     }
 
-    public Error(Exception exception, string message, Enum? errorCode = default)
+    public Error(Exception exception, string message, string? errorCode = default)
     {
         Exception = exception;
-        if (errorCode != null)
-        {
-            ErrorCode = Enum.GetName(errorCode.GetType(), errorCode);
-        }
-
+        ErrorCode = errorCode;
         Message = message;
     }
 
@@ -77,7 +67,7 @@ public struct Error
         return HashCode.Combine(Message, Exception, ErrorCode);
     }
 
-    public static Error FromException(Exception? exception, Enum? errorCode = default)
+    public static Error FromException(Exception? exception, string? errorCode = default)
     {
         return new Error(exception, errorCode);
     }
@@ -120,5 +110,20 @@ public struct Error
         }
 
         return true;
+    }
+    
+    public static Error Create<TEnum>(string message, TEnum errorCode) where TEnum : Enum
+    {
+        return new Error(message, Enum.GetName(typeof(TEnum), errorCode));
+    }
+
+    public static Error Create<TEnum>(Exception? exception, TEnum errorCode = default) where TEnum : Enum
+    {
+        return new Error(exception, Enum.GetName(typeof(TEnum), errorCode));
+    }
+
+    public static Error Create<TEnum>(Exception exception, string message, TEnum errorCode) where TEnum : Enum
+    {
+        return new Error(exception, message, Enum.GetName(typeof(TEnum), errorCode));
     }
 }

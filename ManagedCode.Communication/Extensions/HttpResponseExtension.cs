@@ -17,7 +17,7 @@ public static class HttpResponseExtension
 
         var content = await responseMessage.Content.ReadAsStringAsync();
         
-        return Result<T>.Fail(new Error(content, responseMessage.StatusCode));
+        return Result<T>.Fail(Error.Create(content, responseMessage.StatusCode));
     }
     
     public static async Task<Result> FromJsonToResult(this HttpResponseMessage responseMessage)
@@ -28,7 +28,7 @@ public static class HttpResponseExtension
         }
         
         var content = await responseMessage.Content.ReadAsStringAsync();
-        return Result.Fail(new Error(content, responseMessage.StatusCode));
+        return Result.Fail(Error.Create(content, responseMessage.StatusCode));
     }
 
 #endif

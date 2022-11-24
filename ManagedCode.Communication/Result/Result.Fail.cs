@@ -13,9 +13,9 @@ public partial struct Result
         return new Result(false, null);
     }
     
-    public static Result Fail(Enum code)
+    public static Result Fail<TEnum>(TEnum code) where TEnum : Enum
     {
-        return new Result(false, null);
+        return new Result(false, new[] { new Error(Enum.GetName(typeof(TEnum), code)) });
     }
 
     public static Result Fail(Error error)
