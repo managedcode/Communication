@@ -47,7 +47,7 @@ public class ResultSucceedTests
 
         Assert.True(ok == true);
         Assert.True(ok);
-
+        
         ok.AsTask().Result.IsSuccess.Should().BeTrue();
         ok.AsValueTask().Result.IsSuccess.Should().BeTrue();
     }
@@ -135,7 +135,7 @@ public class ResultSucceedTests
         Assert.True(ok == true);
         Assert.True(ok);
     }
-
+    
     [Fact]
     public void SucceedTFromResult()
     {
@@ -144,12 +144,13 @@ public class ResultSucceedTests
             Message = "msg"
         });
 
-        var result = Result.From(ok);
 
+        Result result = Result.From(ok);
+        
         Assert.True(ok == true);
         Assert.True(result);
     }
-
+    
     [Fact]
     public void SucceedFromResult()
     {
@@ -157,13 +158,13 @@ public class ResultSucceedTests
         {
             Message = "msg"
         });
-
-        var result = Result<MyResultObj>.From(ok);
-
+        
+        Result<MyResultObj> result = Result<MyResultObj>.From(ok);
+        
         Assert.True(ok == true);
         Assert.True(result);
     }
-
+    
     [Fact]
     public void SucceedResultFromResult()
     {
@@ -172,12 +173,12 @@ public class ResultSucceedTests
             Message = "msg"
         };
         var ok = Result<MyResultObj>.From(() => obj);
-
-        var result1 = Result.From(Result.Succeed());
-        var result2 = Result<MyResultObj>.From(Result<MyResultObj>.From(Result<MyResultObj>.Succeed(obj)));
+        
+        Result result1 = Result.From(Result.Succeed());
+        Result<MyResultObj> result2 = Result<MyResultObj>.From(Result<MyResultObj>.From(Result<MyResultObj>.Succeed(obj)));
 
         result2.Value.Message.Should().Be(obj.Message);
-
+        
         Assert.True(ok == true);
         Assert.True(result1);
         Assert.True(result2);
