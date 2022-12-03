@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <LangVersion>11</LangVersion>
+        <Nullable>enable</Nullable>
+        <IsPackable>true</IsPackable>
+        <TargetFrameworks>net6.0;net7.0;</TargetFrameworks>
+        <RootNamespace>ManagedCode.Communication</RootNamespace>
+    </PropertyGroup>
+
+    <!--NuGet-->
+    <PropertyGroup>
+        <Title>ManagedCode.Communication.Orleans</Title>
+        <PackageId>ManagedCode.Communication.Orleans</PackageId>
+        <Description>Communication for .NET</Description>
+        <PackageTags>managedcode, Communication, Result</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Orleans.Sdk" Version="7.0.0" />
+        <PackageReference Include="Microsoft.Orleans.Serialization.Abstractions" Version="7.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
+    </ItemGroup>
+
+</Project>

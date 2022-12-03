@@ -17,7 +17,7 @@ public partial struct Result
             return Fail<T>(Error.FromException(e));
         }
     }
-    
+
     public static Result<T> From<T>(Func<Result<T>> func)
     {
         try
@@ -41,7 +41,7 @@ public partial struct Result
             return Fail<T>(Error.FromException(e));
         }
     }
-    
+
     public static async Task<Result<T>> From<T>(Task<Result<T>> task)
     {
         try
@@ -65,7 +65,7 @@ public partial struct Result
             return Fail<T>(Error.FromException(e));
         }
     }
-    
+
     public static async Task<Result<T>> From<T>(Func<Task<Result<T>>> task, CancellationToken cancellationToken = default)
     {
         try
@@ -91,7 +91,7 @@ public partial struct Result
             return Fail<T>(Error.FromException(e));
         }
     }
-    
+
     public static async ValueTask<Result<T>> From<T>(ValueTask<Result<T>> valueTask)
     {
         try
@@ -115,7 +115,7 @@ public partial struct Result
             return Fail<T>(Error.FromException(e));
         }
     }
-    
+
     public static async Task<Result<T>> From<T>(Func<ValueTask<Result<T>>> valueTask)
     {
         try

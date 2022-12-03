@@ -6,9 +6,7 @@ public partial struct Result
 {
     public bool Equals(Result other)
     {
-        return IsSuccess == other.IsSuccess 
-               && GetError()?.Message == other.GetError()?.Message 
-               && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
+        return IsSuccess == other.IsSuccess && GetError()?.Message == other.GetError()?.Message && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
     }
 
     public override bool Equals(object? obj)

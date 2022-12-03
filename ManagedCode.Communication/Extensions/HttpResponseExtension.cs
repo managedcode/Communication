@@ -1,7 +1,7 @@
 #if NET6_0_OR_GREATER
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace ManagedCode.Communication.Extensions;
 

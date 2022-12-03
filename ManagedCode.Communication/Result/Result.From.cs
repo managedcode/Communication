@@ -53,20 +53,24 @@ public partial struct Result
             return Fail(Error.FromException(e));
         }
     }
-    
+
     public static Result From(Result result)
     {
         if (result)
+        {
             return result;
-        
+        }
+
         return Fail(result.Errors);
     }
-    
+
     public static Result From<T>(Result<T> result)
     {
         if (result)
+        {
             return Succeed();
-        
+        }
+
         return Fail(result.Errors);
     }
 

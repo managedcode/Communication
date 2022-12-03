@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication;
 
@@ -7,15 +8,16 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result : IResult
 {
-    private Result(bool isSuccess, Error[]? errors)
+    internal Result(bool isSuccess, Error[]? errors)
     {
         IsSuccess = isSuccess;
-        IsFailed = !isSuccess;
         Errors = errors;
     }
 
     public bool IsSuccess { get; set; }
-    public bool IsFailed { get; set; }
+
+    [JsonIgnore]
+    public bool IsFailed => !IsSuccess;
 
     public Error? GetError()
     {

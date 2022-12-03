@@ -1,21 +1,15 @@
 using System;
 
 namespace ManagedCode.Communication;
-
 public struct Error
 {
-    public Error()
-    {
-        Message = string.Empty;
-    }
-
-    public Error(string message, string? errorCode = default)
+    internal Error(string message, string? errorCode = default)
     {
         Message = message;
         ErrorCode = errorCode;
     }
 
-    public Error(Exception? exception, string? errorCode = default)
+    internal Error(Exception? exception, string? errorCode = default)
     {
         Exception = exception;
         ErrorCode = errorCode;
@@ -23,16 +17,16 @@ public struct Error
         Message = exception?.Message ?? string.Empty;
     }
 
-    public Error(Exception exception, string message, string? errorCode = default)
+    internal Error(Exception? exception, string message, string? errorCode = default)
     {
         Exception = exception;
         ErrorCode = errorCode;
         Message = message;
     }
-
+    
+    public string? ErrorCode { get; set; }
     public string Message { get; set; }
     public Exception? Exception { get; set; }
-    public string? ErrorCode { get; set; }
 
     public TEnum ErrorCodeAs<TEnum>() where TEnum : Enum
     {
