@@ -34,6 +34,16 @@ public partial struct Result<T>
     {
         return new Result<T>(false, default, new[] { error });
     }
+    
+    public static Result<T> Fail(Error? error)
+    {
+        if (error.HasValue)
+        {
+            return new Result<T>(false, default, new[] { error.Value });
+        }
+        
+        return new Result<T>(false, default, default);
+    }
 
     public static Result<T> Fail(Error[]? errors)
     {
