@@ -21,8 +21,8 @@ Instead of throwing exceptions, the Communication library allows you to return a
 This makes it easy to handle and process the results of these operations in a consistent, reliable way.
 
 ## Features
--  Wraps the result of a function in an object, eliminating the need to handle exceptions.
-- Makes it easy to check whether the function was successful or not. -
+- Wraps the result of a function in an object, eliminating the need to handle exceptions.
+- Makes it easy to check whether the function was successful or not. 
 - Provides access to the function's output via simple property accessors.
 
 ## Getting Started
