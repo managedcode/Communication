@@ -7,7 +7,7 @@
 [![NuGet Package](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication) 
 
 
-The Communication library is a convenient wrapper for handling the results of functions that do not return exceptions. 
+The Communication library is a convenient wrapper for handling the results of functions that do not throw exceptions. 
 Instead of throwing exceptions, these functions return an object that contains the result of the operation. 
 This makes it easy to handle and process the results of these operations in a consistent, reliable way.
 
