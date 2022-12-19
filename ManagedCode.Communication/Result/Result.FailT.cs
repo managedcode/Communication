@@ -13,20 +13,35 @@ public partial struct Result
     {
         return Result<T>.Fail(message);
     }
-
+    
     public static Result<T> Fail<T, TEnum>(TEnum code) where TEnum : Enum
     {
         return Result<T>.Fail(code);
+    }
+    
+    public static Result<T> Fail<T, TEnum>(TEnum code, T value) where TEnum : Enum
+    {
+        return Result<T>.Fail(code, value);
     }
 
     public static Result<T> Fail<T, TEnum>(string message, TEnum code) where TEnum : Enum
     {
         return Result<T>.Fail(message, code);
     }
+    
+    public static Result<T> Fail<T, TEnum>(string message, TEnum code, T value) where TEnum : Enum
+    {
+        return Result<T>.Fail(message, code, value);
+    }
 
     public static Result<T> Fail<T, TEnum>(TEnum code, string message) where TEnum : Enum
     {
         return Result<T>.Fail(code, message);
+    }
+    
+    public static Result<T> Fail<T, TEnum>(TEnum code, string message, T value) where TEnum : Enum
+    {
+        return Result<T>.Fail(code, message, value);
     }
 
     public static Result<T> Fail<T>(Error error)
@@ -52,5 +67,10 @@ public partial struct Result
     public static Result<T> Fail<T>(Exception? exception)
     {
         return Result<T>.Fail(exception);
+    }
+    
+    public static Result<T> Fail<T>(Exception? exception, T value)
+    {
+        return Result<T>.Fail(exception, value);
     }
 }

@@ -79,6 +79,11 @@ public partial struct Result<T>
     {
         return new Result<T>(false, default, new[] { Error.FromException(exception) });
     }
+    
+    public static Result<T> Fail(Exception? exception, T value)
+    {
+        return new Result<T>(false, value, new[] { Error.FromException(exception) });
+    }
 
     public void ThrowExceptionIfFailed()
     {

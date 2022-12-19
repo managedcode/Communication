@@ -32,8 +32,8 @@ jobs:
         run: dotnet test -p:CollectCoverage=true -p:CoverletOutput=coverage/
     
           
-      - name: coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN }}
-          path-to-lcov: coverage/coverage.info
+#      - name: coveralls
+#        uses: coverallsapp/github-action@master
+#        with:
+#          github-token: ${{secrets.GITHUB_TOKEN }}
+#          path-to-lcov: coverage/coverage.info
