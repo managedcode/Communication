@@ -29,11 +29,11 @@ jobs:
       - name: Build
         run: dotnet build --no-restore
       - name: Test and Collect Code Coverage
-        run: dotnet test -p:CollectCoverage=true -p:CoverletOutput=ManagedCode.Communication.Tests/
+        run: dotnet test -p:CollectCoverage=true -p:CoverletOutput=coverage/
     
           
       - name: coveralls
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{secrets.GITHUB_TOKEN }}
-          path-to-lcov: ManagedCode.Communication.Tests/coverage.info
+          path-to-lcov: coverage/*.info
