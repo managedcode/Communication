@@ -8,7 +8,7 @@ public partial struct Result
     {
         return Result<T>.Fail();
     }
-
+    
     public static Result<T> Fail<T>(string message)
     {
         return Result<T>.Fail(message);

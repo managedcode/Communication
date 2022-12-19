@@ -9,25 +9,50 @@ public partial struct Result<T>
     {
         return new Result<T>(false, default, null);
     }
+    
+    public static Result<T> Fail(T value)
+    {
+        return new Result<T>(false, value, null);
+    }
 
     public static Result<T> Fail<TEnum>(TEnum code) where TEnum : Enum
     {
         return new Result<T>(false, default, new[] { Error.Create(code) });
     }
 
+    public static Result<T> Fail<TEnum>(TEnum code, T value) where TEnum : Enum
+    {
+        return new Result<T>(false, value, new[] { Error.Create(code) });
+    }
+    
     public static Result<T> Fail(string message)
     {
         return new Result<T>(false, default, new[] { Error.Create(message) });
+    }
+    
+    public static Result<T> Fail(string message, T value)
+    {
+        return new Result<T>(false, value, new[] { Error.Create(message) });
     }
 
     public static Result<T> Fail<TEnum>(string message, TEnum code) where TEnum : Enum
     {
         return new Result<T>(false, default, new[] { Error.Create(message, code) });
     }
+    
+    public static Result<T> Fail<TEnum>(string message, TEnum code, T value) where TEnum : Enum
+    {
+        return new Result<T>(false, value, new[] { Error.Create(message, code) });
+    }
 
     public static Result<T> Fail<TEnum>(TEnum code, string message) where TEnum : Enum
     {
         return new Result<T>(false, default, new[] { Error.Create(message, code) });
+    }
+    
+    public static Result<T> Fail<TEnum>(TEnum code, string message, T value) where TEnum : Enum
+    {
+        return new Result<T>(false, value, new[] { Error.Create(message, code) });
     }
 
     public static Result<T> Fail(Error error)
