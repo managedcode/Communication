@@ -62,4 +62,10 @@ public partial struct Result<T>
     {
         return Fail(Error.FromException(exception));
     }
+
+    public static implicit operator Result<T>(Result result)
+    {
+        var error = result.GetError();
+        return error is null ? Fail() : Fail(error);
+    }
 }
