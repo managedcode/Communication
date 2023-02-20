@@ -26,6 +26,9 @@ public class CreateInstanceFailBenchmark
     public Result ActivatorCreateInstanceGeneric() => Activator.CreateInstance<Result>();
     
     [Benchmark]
+    public Result ActivatorCreateInstanceGenericInt() => Activator.CreateInstance<Result<int>>();
+    
+    [Benchmark]
     public object? ActivatorCreateInstanceType() => Activator.CreateInstance(typeof(Result));
     
     [Benchmark]
@@ -47,23 +50,6 @@ public class CreateInstanceFailBenchmark
         result.Errors = new[] { Error.Create("oops") };
         return result;
     }
-
-    [Benchmark]
-    public object? DynamicModuleLambdaCompilerTypeError()
-    {
-        var result = (Result)DynamicModuleLambdaCompiler.GenerateFactory(typeof(Result))();
-        result.Errors = new[] { Error.Create("oops") };
-        return result;
-    }
-    
-    [Benchmark]
-    public object? DynamicModuleLambdaCompilerTypeIntError()
-    {
-        var result = (Result<int>)DynamicModuleLambdaCompiler.GenerateFactory(typeof(Result<int>))();
-        result.Errors = new[] { Error.Create("oops") };
-        return result;
-    }
-    
     
 }
 
