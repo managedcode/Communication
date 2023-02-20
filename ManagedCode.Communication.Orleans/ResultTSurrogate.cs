@@ -22,6 +22,15 @@ public struct ResultTSurrogate<T>
 
     [Id(2)]
     public T? Value { get; set; }
+
+    public static implicit operator ResultTSurrogate<T>(ResultSurrogate result)
+    {
+        return new ResultTSurrogate<T>()
+        {
+            Errors = result.Errors,
+            IsSuccess = result.IsSuccess
+        };
+    }
 }
 
 // This is a converter which converts between the surrogate and the foreign type.
