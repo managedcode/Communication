@@ -1,12 +1,12 @@
 using System.Reflection;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Engines;
+using BenchmarkDotNet.Jobs;
 
 namespace ManagedCode.Communication.Benchmark;
 
 
 [SimpleJob]
-[MemoryDiagnoser]
 public class CreateInstanceFailBenchmark
 {
     
@@ -14,11 +14,13 @@ public class CreateInstanceFailBenchmark
     public Result ResultFail() => Result.Fail();
     
     [Benchmark]
-    public Result ResultFailInt() => Result.Fail<int>();
-
-    [Benchmark]
-    public Result ResultSucceedInt() => Result.Succeed<int>(5);
+    public Result ResultFailMessage() => Result.Fail("oops");
     
+    [Benchmark]
+    public Result ResultFailInt() => Result.Fail<int>();
+    
+    [Benchmark]
+    public Result ResultFailIntMessage() => Result.Fail<int>("oops");
     
     [Benchmark]
     public Result ActivatorCreateInstanceGeneric() => Activator.CreateInstance<Result>();
@@ -46,5 +48,22 @@ public class CreateInstanceFailBenchmark
         return result;
     }
 
+    [Benchmark]
+    public object? DynamicModuleLambdaCompilerTypeError()
+    {
+        var result = (Result)DynamicModuleLambdaCompiler.GenerateFactory(typeof(Result))();
+        result.Errors = new[] { Error.Create("oops") };
+        return result;
+    }
+    
+    [Benchmark]
+    public object? DynamicModuleLambdaCompilerTypeIntError()
+    {
+        var result = (Result<int>)DynamicModuleLambdaCompiler.GenerateFactory(typeof(Result<int>))();
+        result.Errors = new[] { Error.Create("oops") };
+        return result;
+    }
+    
+    
 }
 
