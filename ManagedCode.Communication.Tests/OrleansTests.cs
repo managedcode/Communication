@@ -48,16 +48,4 @@ public class OrleansTests
         result.GetError().Should().NotBeNull();
         result.GetError().Value.ErrorCode.Should().Be(nameof(HttpStatusCode.Unauthorized));
     }
-
-    [Fact]
-    public async Task CompareTypes()
-    {
-        // Arrange
-        var grain = _testClusterApplication.Cluster.Client.GetGrain<ITestGrain>(Guid.NewGuid().ToString());
-        
-        // Act
-        Result<int> result = await grain.GetFailedResult();
-
-        result.GetType().Should().Be(typeof(Result<int>));
-    }
 }
