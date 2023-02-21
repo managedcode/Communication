@@ -1,12 +1,13 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication;
 
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
-public partial struct Result<T> : IResult<T>
+public partial struct Result<T> : IResult<T>, IErrorAdder
 {
     internal Result(bool isSuccess, T? value, Error[]? errors)
     {
@@ -15,10 +16,18 @@ public partial struct Result<T> : IResult<T>
         Errors = errors;
     }
     
-    internal Result(Error error)
+    public void AddError(Error error)
     {
-        IsSuccess = false;
-        Errors = new []{error};
+        if (Errors == null)
+        {
+            Errors = new[] { error };
+        }
+        else
+        {
+            var list = Errors.ToList();
+            list.Add(error);
+            Errors = list.ToArray();
+        }
     }
 
     public bool IsSuccess { get; set; }

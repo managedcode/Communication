@@ -52,16 +52,19 @@ public class CreateInstanceFailBenchmark
     }
     
     [Benchmark]
-    public object? ActivatorCreateInstanceCtorTypeError()
+    public object? ActivatorCreateInstanceTypeErrorInterface()
     {
-        return Activator.CreateInstance(typeof(Result), BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] {Error.Create("oops")}, null);;
+        var result = Activator.CreateInstance(typeof(Result));
+        (result as IErrorAdder).AddError(Error.Create("oops"));
+        return result;
     }
-
     
     [Benchmark]
-    public object? ActivatorCreateInstanceCtorTypeIntError()
+    public object? ActivatorCreateInstanceTypeIntErrorInterface()
     {
-        return Activator.CreateInstance(typeof(Result<int>), BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] {Error.Create("oops")}, null);;
+        var result = Activator.CreateInstance(typeof(Result<int>));
+        (result as IErrorAdder).AddError(Error.Create("oops"));
+        return result;
     }
     
 }
