@@ -13,6 +13,12 @@ public partial struct Result : IResult
         IsSuccess = isSuccess;
         Errors = errors;
     }
+    
+    internal Result(Error error)
+    {
+        IsSuccess = false;
+        Errors = new []{error};
+    }
 
     public bool IsSuccess { get; set; }
 

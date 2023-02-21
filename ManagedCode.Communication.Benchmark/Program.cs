@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Globalization;
+using System.Reflection;
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 using ManagedCode.Communication;

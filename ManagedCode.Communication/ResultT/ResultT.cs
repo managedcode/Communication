@@ -14,6 +14,12 @@ public partial struct Result<T> : IResult<T>
         Value = value;
         Errors = errors;
     }
+    
+    internal Result(Error error)
+    {
+        IsSuccess = false;
+        Errors = new []{error};
+    }
 
     public bool IsSuccess { get; set; }
 

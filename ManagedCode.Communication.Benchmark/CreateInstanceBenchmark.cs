@@ -51,5 +51,21 @@ public class CreateInstanceFailBenchmark
         return result;
     }
     
+    [Benchmark]
+    public object? ActivatorCreateInstanceCtorTypeError()
+    {
+        return Activator.CreateInstance(typeof(Result), BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] {Error.Create("oops")}, null);;
+    }
+
+    
+    [Benchmark]
+    public object? ActivatorCreateInstanceCtorTypeIntError()
+    {
+        return Activator.CreateInstance(typeof(Result<int>), BindingFlags.NonPublic | BindingFlags.Instance, null, new object[] {Error.Create("oops")}, null);;
+    }
+    
 }
+
+
+
 
