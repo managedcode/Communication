@@ -55,7 +55,7 @@ public class CreateInstanceFailBenchmark
     public object? ActivatorCreateInstanceTypeErrorInterface()
     {
         var result = Activator.CreateInstance(typeof(Result));
-        (result as IErrorAdder).AddError(Error.Create("oops"));
+        (result as IResultError).AddError(Error.Create("oops"));
         return result;
     }
     
@@ -63,7 +63,7 @@ public class CreateInstanceFailBenchmark
     public object? ActivatorCreateInstanceTypeIntErrorInterface()
     {
         var result = Activator.CreateInstance(typeof(Result<int>));
-        (result as IErrorAdder).AddError(Error.Create("oops"));
+        (result as IResultError).AddError(Error.Create("oops"));
         return result;
     }
     

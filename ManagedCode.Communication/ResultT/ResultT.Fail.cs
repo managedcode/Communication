@@ -84,19 +84,4 @@ public partial struct Result<T>
     {
         return new Result<T>(false, value, new[] { Error.FromException(exception) });
     }
-
-    public void ThrowExceptionIfFailed()
-    {
-        if (IsSuccess)
-        {
-            return;
-        }
-
-        if (GetError() is { Exception: { } })
-        {
-            throw GetError().Value.Exception;
-        }
-
-        throw new Exception(GetError().Value.Message ?? nameof(HttpStatusCode.InternalServerError));
-    }
 }

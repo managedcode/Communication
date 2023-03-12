@@ -1,10 +1,9 @@
 namespace ManagedCode.Communication;
 
-public interface IResult
+public interface IResult 
 {
     bool IsSuccess { get; }
     bool IsFailed { get; }
-    void AddError(Error error);
 }
 
 public interface IResult<T> : IResult
@@ -12,7 +11,10 @@ public interface IResult<T> : IResult
     T? Value { get; }
 }
 
-public interface IErrorAdder
+public interface IResultError
 {
     void AddError(Error error);
+    Error? GetError();
+    void ThrowIfFail();
+    
 }

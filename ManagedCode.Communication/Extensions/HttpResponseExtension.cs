@@ -19,7 +19,7 @@ public static class HttpResponseExtension
         return Result<T>.Fail(Error.Create(content, responseMessage.StatusCode));
     }
 
-    public static async Task<Result> FromJsonToResult(this HttpResponseMessage responseMessage)
+    public static async Task<Result> FromRequestToResult(this HttpResponseMessage responseMessage)
     {
         if (responseMessage.IsSuccessStatusCode)
         {

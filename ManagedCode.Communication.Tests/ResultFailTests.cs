@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
+using AggregateException = System.AggregateException;
 
 namespace ManagedCode.Communication.Tests;
 
@@ -74,7 +75,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(Exception), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(Exception), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -87,7 +88,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -100,7 +101,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -174,7 +175,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(Exception), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(Exception), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -187,7 +188,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -204,7 +205,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -221,7 +222,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -295,7 +296,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(Exception), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(Exception), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -308,7 +309,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -325,7 +326,7 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -342,9 +343,28 @@ public class ResultFailTests
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
-        Assert.Throws(typeof(ArgumentException), () => ok.ThrowExceptionIfFailed());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
 
         Assert.True(ok == false);
         Assert.False(ok);
+    }
+    
+    [Fact]
+    public async Task SeveralErrors()
+    {
+        var result = Result.Fail();
+        result.AddError(Error.Create("oops1"));
+        result.AddError(Error.Create("oops2"));
+        result.AddError(Error.Create("oops3"));
+
+        try
+        {
+            result.ThrowIfFail();
+        }
+        catch (AggregateException e)
+        {
+            e.Message.Should().Be("One or more errors occurred. (oops1) (oops2) (oops3)");
+            e.InnerExceptions.Count.Should().Be(3);
+        }
     }
 }
