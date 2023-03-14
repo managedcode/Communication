@@ -367,4 +367,21 @@ public class ResultFailTests
             e.InnerExceptions.Count.Should().Be(3);
         }
     }
+    
+    [Fact]
+    public void ExceptionParse()
+    {
+        var exception = Error.FromException(new Exception("oops"));
+        var argumentException = Error.FromException(new ArgumentException("oops"));
+
+        exception.Exception().Message.Should().Be("oops");
+        argumentException.Exception().Message.Should().Be("oops");
+
+        exception.Exception().GetType().Should().Be(typeof(Exception));
+        argumentException.Exception().GetType().Should().Be(typeof(ArgumentException));
+        
+        exception.Exception<ArgumentException>().Should().BeNull();
+        argumentException.Exception<Exception>().Should().NotBeNull();
+
+    }
 }

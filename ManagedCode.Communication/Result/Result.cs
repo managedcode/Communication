@@ -39,7 +39,7 @@ public partial struct Result : IResult, IResultError
         if (Errors?.Any() is not true) 
             return;
         
-        var exceptions = Errors.Select(s => s.Exception ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message) ));
+        var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message) ));
         if (Errors.Length == 1)
             throw exceptions.First();
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -8,12 +9,24 @@ namespace ManagedCode.Communication;
 
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
-public partial struct Result<T> : IResult<T>, IResultError
+public partial struct CollectionResult<T> : IResult, IResultError
 {
-    internal Result(bool isSuccess, T? value, Error[]? errors)
+    internal CollectionResult(bool isSuccess, IEnumerable<T>? value, 
+        int pageNumber, int pageSize, int totalItems,
+        Error[]? errors) : this(isSuccess, value?.ToArray(), pageNumber, pageSize, totalItems, errors)
+    {
+    }
+    
+    internal CollectionResult(bool isSuccess, T[]? value, 
+        int pageNumber, int pageSize, int totalItems,
+        Error[]? errors)
     {
         IsSuccess = isSuccess;
-        Value = value;
+        Collection = value ?? Array.Empty<T>();
+        PageNumber = pageNumber;
+        PageSize = pageSize;
+        TotalItems = totalItems;
+        TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
         Errors = errors;
     }
     
@@ -45,11 +58,17 @@ public partial struct Result<T> : IResult<T>, IResultError
     }
 
     public bool IsSuccess { get; set; }
+    public T[]? Collection { get; set; }
+    
+    public int PageNumber { get; set;}
+    public int PageSize { get; set;}
+    public int TotalItems { get; set;}
+    public int TotalPages { get; set;}
 
+    
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;
-
-    public T? Value { get; set; }
+    
 
     public Error? GetError()
     {

@@ -11,7 +11,7 @@ public struct Error
 
     internal Error(Exception? exception, string? errorCode = default)
     {
-        Exception = exception;
+        ExceptionObject = exception;
         ErrorCode = errorCode;
 
         Message = exception?.Message ?? string.Empty;
@@ -19,15 +19,32 @@ public struct Error
 
     internal Error(Exception? exception, string message, string? errorCode = default)
     {
-        Exception = exception;
+        ExceptionObject = exception;
         ErrorCode = errorCode;
         Message = message;
     }
     
     public string? ErrorCode { get; set; }
     public string Message { get; set; }
-    public Exception? Exception { get; set; }
+    
+    public Exception? Exception()
+    {
+        if(ExceptionObject is Exception exception)
+            return exception;
 
+        return ExceptionObject as Exception;
+    }
+    
+    public T? Exception<T>() where  T : class
+    {
+        if(ExceptionObject is T exception)
+            return exception;
+
+        return ExceptionObject as T;
+    }
+
+    public object? ExceptionObject { get; set; }
+    
     public TEnum ErrorCodeAs<TEnum>() where TEnum : Enum
     {
         return (TEnum)Enum.Parse(typeof(TEnum), ErrorCode);
@@ -45,10 +62,12 @@ public struct Error
 
     public bool Equals(Error other)
     {
+        var exception = Exception();
+        var otherException = other.Exception();
         return Message == other.Message &&
                ErrorCode == other.ErrorCode &&
-               Exception?.GetType() == other.Exception?.GetType() &&
-               Exception?.Message == other.Exception?.Message;
+               exception?.GetType() == otherException?.GetType() &&
+               exception?.Message == otherException?.Message;
     }
 
     public override bool Equals(object? obj)
@@ -58,7 +77,7 @@ public struct Error
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Message, Exception, ErrorCode);
+        return HashCode.Combine(Message, Exception(), ErrorCode);
     }
 
     public static Error FromException(Exception? exception, string? errorCode = default)

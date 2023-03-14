@@ -6,9 +6,14 @@ public interface IResult
     bool IsFailed { get; }
 }
 
-public interface IResult<T> : IResult
+public interface IResult<out T> : IResult
 {
     T? Value { get; }
+}
+
+public interface ICollectionResult<out T> : IResult
+{
+    T[]? Collection { get; }
 }
 
 public interface IResultError

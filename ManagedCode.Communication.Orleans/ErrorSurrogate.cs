@@ -36,6 +36,6 @@ public sealed class ErrorSurrogateConverter : IConverter<Error, ErrorSurrogate>
 
     public ErrorSurrogate ConvertToSurrogate(in Error value)
     {
-        return new(value.Exception, value.Message, value.ErrorCode);
+        return new(value.Exception(), value.Message, value.ErrorCode);
     }
 }

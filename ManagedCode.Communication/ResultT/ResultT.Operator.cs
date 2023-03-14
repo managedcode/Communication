@@ -45,7 +45,7 @@ public partial struct Result<T>
 
     public static implicit operator Exception?(Result<T> result)
     {
-        return result.GetError()?.Exception;
+        return result.GetError()?.Exception();
     }
 
     public static implicit operator Result<T>(Error error)
