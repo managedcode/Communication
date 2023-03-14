@@ -36,7 +36,7 @@ public partial struct Result
 
     public static implicit operator Exception?(Result result)
     {
-        return result.GetError()?.Exception;
+        return result.GetError()?.Exception();
     }
 
     public static implicit operator Result(Error error)
