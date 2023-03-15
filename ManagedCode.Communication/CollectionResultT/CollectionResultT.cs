@@ -11,18 +11,18 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct CollectionResult<T> : IResult, IResultError
 {
-    internal CollectionResult(bool isSuccess, IEnumerable<T>? value, 
+    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, 
         int pageNumber, int pageSize, int totalItems,
-        Error[]? errors) : this(isSuccess, value?.ToArray(), pageNumber, pageSize, totalItems, errors)
+        Error[]? errors) : this(isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, errors)
     {
     }
     
-    internal CollectionResult(bool isSuccess, T[]? value, 
+    internal CollectionResult(bool isSuccess, T[]? collection, 
         int pageNumber, int pageSize, int totalItems,
         Error[]? errors)
     {
         IsSuccess = isSuccess;
-        Collection = value ?? Array.Empty<T>();
+        Collection = collection ?? Array.Empty<T>();
         PageNumber = pageNumber;
         PageSize = pageSize;
         TotalItems = totalItems;
@@ -64,6 +64,8 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public int PageSize { get; set;}
     public int TotalItems { get; set;}
     public int TotalPages { get; set;}
+    
+    public Error[]? Errors { get; set; }
 
     
     [JsonIgnore]
@@ -79,6 +81,4 @@ public partial struct CollectionResult<T> : IResult, IResultError
 
         return Errors[0];
     }
-
-    public Error[]? Errors { get; set; }
 }
