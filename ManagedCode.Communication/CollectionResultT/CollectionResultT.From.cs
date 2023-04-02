@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -181,7 +182,10 @@ public partial struct CollectionResult<T>
         }
     }
 
-    public static async Task<CollectionResult<T>> From(Func<ValueTask<IEnumerable<T>>> valueTask)
+    public static async Task<CollectionResult<T>> From(Func<ValueTask<IEnumerable<T>>> valueTask,
+        [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string caller = null,
+        [CallerFilePath] string path = null)
     {
         try
         {
@@ -189,6 +193,8 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
+            ILoggerFactory logfactory = (ILoggerFactory)new LoggerFactory();
+            ILogger logger1 = new Logger<ClientHub>(logfactory);
             return Fail(Error.FromException(e));
         }
     }

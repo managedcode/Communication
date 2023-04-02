@@ -51,6 +51,24 @@ public class ResultSucceedTests
         ok.AsTask().Result.IsSuccess.Should().BeTrue();
         ok.AsValueTask().Result.IsSuccess.Should().BeTrue();
     }
+    
+    [Fact]
+    public void SucceedTEnum()
+    {
+        var ok = Result<MyTestEnum>.Succeed(MyTestEnum.Option1);
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsFailed.Should().BeFalse();
+        ok.GetError().Should().BeNull();
+        ok.ThrowIfFail();
+
+        Assert.True(ok == true);
+        Assert.True(ok);
+
+        ok.Value.Should().Be(MyTestEnum.Option1);
+        
+        ok.AsTask().Result.IsSuccess.Should().BeTrue();
+        ok.AsValueTask().Result.IsSuccess.Should().BeTrue();
+    }
 
     [Fact]
     public void SucceedGeneric()

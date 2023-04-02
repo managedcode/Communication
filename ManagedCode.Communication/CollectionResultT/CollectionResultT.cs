@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Extensions;
@@ -58,15 +59,16 @@ public partial struct CollectionResult<T> : IResult, IResultError
     }
 
     public bool IsSuccess { get; set; }
+    
+    [MemberNotNullWhen(true, nameof(IsSuccess))]
     public T[]? Collection { get; set; }
     
     public int PageNumber { get; set;}
     public int PageSize { get; set;}
     public int TotalItems { get; set;}
     public int TotalPages { get; set;}
-    
-    public Error[]? Errors { get; set; }
 
+    public Error[]? Errors { get; set; }
     
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;

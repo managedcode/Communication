@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Extensions;
@@ -49,6 +50,7 @@ public partial struct Result<T> : IResult<T>, IResultError
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;
 
+    [MemberNotNullWhen(true, nameof(IsSuccess))]
     public T? Value { get; set; }
 
     public Error? GetError()
