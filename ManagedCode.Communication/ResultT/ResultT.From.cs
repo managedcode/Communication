@@ -93,8 +93,6 @@ public partial struct Result<T>
         return Result.Fail(result.Errors);
     }
 
-#if NET6_0_OR_GREATER
-
     public static async ValueTask<Result<T>> From(ValueTask<T> valueTask)
     {
         try
@@ -142,6 +140,4 @@ public partial struct Result<T>
             return Fail(Error.FromException(e));
         }
     }
-
-#endif
 }

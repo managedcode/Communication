@@ -9,12 +9,9 @@ public partial struct CollectionResult<T>
         return Task.FromResult(this);
     }
 
-#if NET6_0_OR_GREATER
-
     public ValueTask<CollectionResult<T>> AsValueTask()
     {
         return ValueTask.FromResult(this);
     }
-
-#endif
+    
 }

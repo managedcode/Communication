@@ -1,4 +1,3 @@
-#if NET6_0_OR_GREATER
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -30,4 +29,3 @@ public static class HttpResponseExtension
         return Result.Fail(Error.Create(content, responseMessage.StatusCode));
     }
 }
-#endif

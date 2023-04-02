@@ -8,13 +8,9 @@ public partial struct Result
     {
         return Task.FromResult(this);
     }
-
-#if NET6_0_OR_GREATER
-
+    
     public ValueTask<Result> AsValueTask()
     {
         return ValueTask.FromResult(this);
     }
-
-#endif
 }

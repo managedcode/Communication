@@ -87,8 +87,6 @@ public partial struct Result
         }
     }
 
-#if NET6_0_OR_GREATER
-
     public static async ValueTask<Result> From(ValueTask valueTask)
     {
         try
@@ -124,6 +122,5 @@ public partial struct Result
             return Fail(Error.FromException(e));
         }
     }
-
-#endif
+    
 }
