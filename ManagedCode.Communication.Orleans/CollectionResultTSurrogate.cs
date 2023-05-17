@@ -6,6 +6,7 @@ namespace ManagedCode.Communication;
 
 // This is the surrogate which will act as a stand-in for the foreign type.
 // Surrogates should use plain fields instead of properties for better perfomance.
+[Immutable]
 [GenerateSerializer]
 public struct CollectionResultTSurrogate<T>
 {
