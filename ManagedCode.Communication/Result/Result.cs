@@ -49,6 +49,21 @@ public partial struct Result : IResult
         throw new AggregateException(exceptions);
     }
 
+    public TEnum? ErrorCodeAs<TEnum>() where TEnum : Enum
+    {
+        return GetError().HasValue ? GetError()!.Value.ErrorCodeAs<TEnum>() : default;
+    }
+
+    public bool IsErrorCode(Enum value)
+    {
+        return GetError()?.IsErrorCode(value) ?? false;
+    }
+
+    public bool IsNotErrorCode(Enum value)
+    {
+        return GetError()?.IsNotErrorCode(value) ?? false;
+    }
+
     public Error? GetError()
     {
         if (Errors == null || Errors.Length == 0)

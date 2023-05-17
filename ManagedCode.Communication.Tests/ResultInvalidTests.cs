@@ -13,6 +13,15 @@ public class ResultInvalidTests
         invalid.IsSuccess.Should().BeFalse();
         invalid.IsInvalid.Should().BeTrue();
     }
+    
+    [Fact]
+    public void InvalidEnum()
+    {
+        var invalid = Result.Invalid(MyTestEnum.Option2);
+        invalid.IsSuccess.Should().BeFalse();
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
+    }
 
     [Fact]
     public void InvalidMessage()
@@ -23,11 +32,30 @@ public class ResultInvalidTests
     }
 
     [Fact]
+    public void InvalidMessageEnum()
+    {
+        var invalid = Result.Invalid(MyTestEnum.Option2,"message");
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
+    }
+    
+    
+    [Fact]
     public void InvalidKeyValue()
     {
         var invalid = Result.Invalid("key", "value");
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
+    }
+    
+    [Fact]
+    public void InvalidKeyValueEnum()
+    {
+        var invalid = Result.Invalid(MyTestEnum.Option2,"key", "value");
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
     }
 
     [Fact]
@@ -42,6 +70,20 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
     }
+    
+    [Fact]
+    public void InvalidDictionaryEnum()
+    {
+        var dictionary = new Dictionary<string, string>
+        {
+            { "key1", "value1" },
+            { "key2", "value2" }
+        };
+        var invalid = Result.Invalid(MyTestEnum.Option2, dictionary);
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
+    }
 
     [Fact]
     public void InvalidGenericMethod()
@@ -49,6 +91,15 @@ public class ResultInvalidTests
         var invalid = Result.Invalid<MyResultObj>();
         invalid.IsSuccess.Should().BeFalse();
         invalid.IsInvalid.Should().BeTrue();
+    }
+    
+    [Fact]
+    public void InvalidGenericMethodEnum()
+    {
+        var invalid = Result.Invalid<MyResultObj,MyTestEnum>(MyTestEnum.Option2);
+        invalid.IsSuccess.Should().BeFalse();
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
     }
 
     [Fact]
@@ -58,6 +109,15 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
     }
+    
+    [Fact]
+    public void InvalidGenericMethodMessageEnum()
+    {
+        var invalid = Result.Invalid<MyResultObj, MyTestEnum>(MyTestEnum.Option2, "message");
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
+    }
 
     [Fact]
     public void InvalidGenericMethodKeyValue()
@@ -65,6 +125,15 @@ public class ResultInvalidTests
         var invalid = Result.Invalid<MyResultObj>("key", "value");
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
+    }
+    
+    [Fact]
+    public void InvalidGenericMethodKeyValueEnum()
+    {
+        var invalid = Result.Invalid<MyResultObj, MyTestEnum>(MyTestEnum.Option2,"key", "value");
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
     }
 
     [Fact]
@@ -79,6 +148,20 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
     }
+    
+    [Fact]
+    public void InvalidGenericMethodDictionaryEnum()
+    {
+        var dictionary = new Dictionary<string, string>
+        {
+            { "key1", "value1" },
+            { "key2", "value2" }
+        };
+        var invalid = Result.Invalid<MyResultObj, MyTestEnum>(MyTestEnum.Option2,dictionary);
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
+    }
 
     [Fact]
     public void InvalidGeneric()
@@ -86,6 +169,16 @@ public class ResultInvalidTests
         var invalid = Result<MyResultObj>.Invalid();
         invalid.IsSuccess.Should().BeFalse();
         invalid.IsInvalid.Should().BeTrue();
+    }
+    
+    
+    [Fact]
+    public void InvalidGenericEnum()
+    {
+        var invalid = Result<MyResultObj>.Invalid(MyTestEnum.Option2);
+        invalid.IsSuccess.Should().BeFalse();
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
     }
 
     [Fact]
@@ -95,13 +188,31 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
     }
+    
+    [Fact]
+    public void InvalidGenericMessageEnum()
+    {
+        var invalid = Result<MyResultObj>.Invalid(MyTestEnum.Option2, "message");
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
+    }
 
     [Fact]
-    public void InvalidGenericeyValue()
+    public void InvalidGenericValue()
     {
         var invalid = Result<MyResultObj>.Invalid("key", "value");
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
+    }
+    
+    [Fact]
+    public void InvalidGenericValueEnum()
+    {
+        var invalid = Result<MyResultObj>.Invalid(MyTestEnum.Option2, "key", "value");
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
     }
 
     [Fact]
@@ -115,5 +226,19 @@ public class ResultInvalidTests
         var invalid = Result<MyResultObj>.Invalid(dictionary);
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
+    }
+    
+    [Fact]
+    public void InvalidGenericDictionaryEnum()
+    {
+        var dictionary = new Dictionary<string, string>
+        {
+            { "key1", "value1" },
+            { "key2", "value2" }
+        };
+        var invalid = Result<MyResultObj>.Invalid(MyTestEnum.Option2, dictionary);
+        invalid.IsInvalid.Should().BeTrue();
+        invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
+        invalid.ErrorCodeAs<MyTestEnum>().Should().Be(MyTestEnum.Option2);
     }
 }

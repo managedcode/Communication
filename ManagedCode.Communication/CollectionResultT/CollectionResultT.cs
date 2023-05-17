@@ -80,6 +80,21 @@ public partial struct CollectionResult<T> : IResult, IResultError
 
         return Errors[0];
     }
+    
+    public TEnum? ErrorCodeAs<TEnum>() where TEnum : Enum
+    {
+        return GetError().HasValue ? GetError()!.Value.ErrorCodeAs<TEnum>() : default;
+    }
+
+    public bool IsErrorCode(Enum value)
+    {
+        return GetError()?.IsErrorCode(value) ?? false;
+    }
+
+    public bool IsNotErrorCode(Enum value)
+    {
+        return GetError()?.IsNotErrorCode(value) ?? false;
+    }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, string>? InvalidObject { get; set; }

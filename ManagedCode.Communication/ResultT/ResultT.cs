@@ -72,6 +72,21 @@ public partial struct Result<T> : IResult<T>
 
     [JsonIgnore]
     public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
+    
+    public TEnum? ErrorCodeAs<TEnum>() where TEnum : Enum
+    {
+        return GetError().HasValue ? GetError()!.Value.ErrorCodeAs<TEnum>() : default;
+    }
+
+    public bool IsErrorCode(Enum value)
+    {
+        return GetError()?.IsErrorCode(value) ?? false;
+    }
+
+    public bool IsNotErrorCode(Enum value)
+    {
+        return GetError()?.IsNotErrorCode(value) ?? false;
+    }
 
     public void AddInvalidMessage(string message)
     {
