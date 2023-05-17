@@ -36,14 +36,10 @@ public partial struct Result
         try
         {
             if (task.IsCompleted)
-            {
                 return Succeed();
-            }
 
             if (task.IsCanceled || task.IsFaulted)
-            {
                 return Fail(Error.FromException(task.Exception));
-            }
 
             await task;
             return Succeed();
@@ -57,9 +53,7 @@ public partial struct Result
     public static Result From(Result result)
     {
         if (result)
-        {
             return result;
-        }
 
         return Fail(result.Errors);
     }
@@ -67,9 +61,7 @@ public partial struct Result
     public static Result From<T>(Result<T> result)
     {
         if (result)
-        {
             return Succeed();
-        }
 
         return Fail(result.Errors);
     }
@@ -92,14 +84,10 @@ public partial struct Result
         try
         {
             if (valueTask.IsCompleted)
-            {
                 return Succeed();
-            }
 
             if (valueTask.IsCanceled || valueTask.IsFaulted)
-            {
                 return Fail();
-            }
 
             await valueTask;
             return Succeed();
@@ -122,5 +110,4 @@ public partial struct Result
             return Fail(Error.FromException(e));
         }
     }
-    
 }

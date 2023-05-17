@@ -12,15 +12,12 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct CollectionResult<T> : IResult, IResultError
 {
-    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, 
-        int pageNumber, int pageSize, int totalItems,
-        Error[]? errors) : this(isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, errors)
+    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string,string>? invalidObject) : this(isSuccess,
+        collection?.ToArray(), pageNumber, pageSize, totalItems, errors, invalidObject)
     {
     }
-    
-    internal CollectionResult(bool isSuccess, T[]? collection, 
-        int pageNumber, int pageSize, int totalItems,
-        Error[]? errors)
+
+    internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string,string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Collection = collection ?? Array.Empty<T>();
@@ -29,8 +26,9 @@ public partial struct CollectionResult<T> : IResult, IResultError
         TotalItems = totalItems;
         TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
         Errors = errors;
+        InvalidObject = invalidObject;
     }
-    
+
     public void AddError(Error error)
     {
         if (Errors == null)
@@ -47,11 +45,11 @@ public partial struct CollectionResult<T> : IResult, IResultError
 
     public void ThrowIfFail()
     {
-        if (Errors?.Any() is not true) 
+        if (Errors?.Any() is not true)
             return;
-        
-        var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message) ));
-        
+
+        var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
+
         if (Errors.Length == 1)
             throw exceptions.First();
 
@@ -59,28 +57,45 @@ public partial struct CollectionResult<T> : IResult, IResultError
     }
 
     public bool IsSuccess { get; set; }
-    
-    [MemberNotNullWhen(true, nameof(IsSuccess))]
-    public T[]? Collection { get; set; }
-    
-    public int PageNumber { get; set;}
-    public int PageSize { get; set;}
-    public int TotalItems { get; set;}
-    public int TotalPages { get; set;}
 
+    [MemberNotNullWhen(true, nameof(IsSuccess))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public T[]? Collection { get; set; }
+
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
+    public int TotalItems { get; set; }
+    public int TotalPages { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Error[]? Errors { get; set; }
-    
+
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;
     
-
     public Error? GetError()
     {
         if (Errors == null || Errors.Length == 0)
-        {
             return null;
-        }
 
         return Errors[0];
+    }
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string,string>? InvalidObject { get; set; }
+
+    [JsonIgnore]
+    public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
+
+    public void AddInvalidMessage(string message)
+    {
+        InvalidObject ??= new();
+        InvalidObject[nameof(message)] = message;
+    }
+
+    public void AddInvalidMessage(string key, string value)
+    {
+        InvalidObject ??= new();
+        InvalidObject[key] = value;
     }
 }

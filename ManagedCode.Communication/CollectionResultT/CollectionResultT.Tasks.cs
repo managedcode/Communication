@@ -13,5 +13,4 @@ public partial struct CollectionResult<T>
     {
         return ValueTask.FromResult(this);
     }
-    
 }

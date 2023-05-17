@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Orleans;
 
 namespace ManagedCode.Communication;
@@ -8,9 +9,7 @@ namespace ManagedCode.Communication;
 [GenerateSerializer]
 public struct CollectionResultTSurrogate<T>
 {
-    public CollectionResultTSurrogate(bool isSuccess, T[]? collection, 
-        int pageNumber, int pageSize, int totalItems,
-        Error[]? errors)
+    public CollectionResultTSurrogate(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string,string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Collection = collection ?? Array.Empty<T>();
@@ -18,25 +17,29 @@ public struct CollectionResultTSurrogate<T>
         PageSize = pageSize;
         TotalItems = totalItems;
         Errors = errors;
+        InvalidObject = invalidObject;
     }
-    
+
     [Id(0)]
     public bool IsSuccess { get; set; }
-    
+
     [Id(1)]
     public T[]? Collection { get; set; }
-    
+
     [Id(2)]
-    public int PageNumber { get; set;}
-    
+    public int PageNumber { get; set; }
+
     [Id(3)]
-    public int PageSize { get; set;}
-    
+    public int PageSize { get; set; }
+
     [Id(4)]
-    public int TotalItems { get; set;}
+    public int TotalItems { get; set; }
 
     [Id(5)]
     public Error[]? Errors { get; set; }
+    
+    [Id(6)]
+    public Dictionary<string,string>? InvalidObject { get; set; }
 }
 
 // This is a converter which converts between the surrogate and the foreign type.
@@ -45,11 +48,11 @@ public sealed class CollectionResultTSurrogateConverter<T> : IConverter<Collecti
 {
     public CollectionResult<T> ConvertFromSurrogate(in CollectionResultTSurrogate<T> surrogate)
     {
-        return new(surrogate.IsSuccess, surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems, surrogate.Errors);
+        return new CollectionResult<T>(surrogate.IsSuccess, surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems, surrogate.Errors, surrogate.InvalidObject);
     }
 
     public CollectionResultTSurrogate<T> ConvertToSurrogate(in CollectionResult<T> value)
     {
-        return new(value.IsSuccess, value.Collection, value.PageNumber, value.PageSize, value.TotalItems, value.Errors);
+        return new CollectionResultTSurrogate<T>(value.IsSuccess, value.Collection, value.PageNumber, value.PageSize, value.TotalItems, value.Errors, value.InvalidObject);
     }
 }

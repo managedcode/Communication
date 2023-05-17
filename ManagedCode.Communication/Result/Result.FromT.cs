@@ -77,7 +77,7 @@ public partial struct Result
             return Fail<T>(Error.FromException(e));
         }
     }
-    
+
     public static async ValueTask<Result<T>> From<T>(ValueTask<T> valueTask)
     {
         try

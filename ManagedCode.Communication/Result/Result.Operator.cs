@@ -44,7 +44,7 @@ public partial struct Result
         return Fail(error);
     }
 
-    public static implicit operator Result(Error[] errors)
+    public static implicit operator Result(Error[]? errors)
     {
         return Fail(errors);
     }

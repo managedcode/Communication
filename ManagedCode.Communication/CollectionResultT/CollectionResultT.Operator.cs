@@ -7,9 +7,7 @@ public partial struct CollectionResult<T>
 {
     public bool Equals(CollectionResult<T> other)
     {
-        return IsSuccess == other.IsSuccess &&
-               EqualityComparer<T[]?>.Default.Equals(Collection, other.Collection) &&
-               GetError()?.Message == other.GetError()?.Message &&
+        return IsSuccess == other.IsSuccess && EqualityComparer<T[]?>.Default.Equals(Collection, other.Collection) && GetError()?.Message == other.GetError()?.Message &&
                GetError()?.ErrorCode == other.GetError()?.ErrorCode;
     }
 

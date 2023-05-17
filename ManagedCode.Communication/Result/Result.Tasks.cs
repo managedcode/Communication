@@ -8,7 +8,7 @@ public partial struct Result
     {
         return Task.FromResult(this);
     }
-    
+
     public ValueTask<Result> AsValueTask()
     {
         return ValueTask.FromResult(this);

@@ -9,17 +9,18 @@ internal static class StringExtension
     {
         return string.Join(separator, strings.Where(s => !string.IsNullOrEmpty(s)));
     }
-    
+
     public static string JoinFilter(char separator, IEnumerable<string> strings)
     {
         return string.Join(separator, strings.Where(s => !string.IsNullOrEmpty(s)));
     }
+
     public static string JoinFilter(string separator, params string[] str)
     {
         return string.Join(separator, str.Where(s => !string.IsNullOrEmpty(s)));
     }
-    
-    public static string JoinFilter(char separator, params string[] str)
+
+    public static string JoinFilter(char separator, params string?[] str)
     {
         return string.Join(separator, str.Where(s => !string.IsNullOrEmpty(s)));
     }

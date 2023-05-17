@@ -1,6 +1,7 @@
 using System;
 
 namespace ManagedCode.Communication;
+
 public struct Error
 {
     internal Error(string message, string? errorCode = default)
@@ -23,30 +24,33 @@ public struct Error
         ErrorCode = errorCode;
         Message = message;
     }
-    
+
     public string? ErrorCode { get; set; }
     public string Message { get; set; }
-    
+
     public Exception? Exception()
     {
-        if(ExceptionObject is Exception exception)
+        if (ExceptionObject is Exception exception)
             return exception;
 
         return ExceptionObject as Exception;
     }
-    
-    public T? Exception<T>() where  T : class
+
+    public T? Exception<T>() where T : class
     {
-        if(ExceptionObject is T exception)
+        if (ExceptionObject is T exception)
             return exception;
 
         return ExceptionObject as T;
     }
 
     public object? ExceptionObject { get; set; }
-    
-    public TEnum ErrorCodeAs<TEnum>() where TEnum : Enum
+
+    public TEnum? ErrorCodeAs<TEnum>() where TEnum : Enum
     {
+        if (ErrorCode is null)
+            return default;
+        
         return (TEnum)Enum.Parse(typeof(TEnum), ErrorCode);
     }
 
@@ -64,9 +68,7 @@ public struct Error
     {
         var exception = Exception();
         var otherException = other.Exception();
-        return Message == other.Message &&
-               ErrorCode == other.ErrorCode &&
-               exception?.GetType() == otherException?.GetType() &&
+        return Message == other.Message && ErrorCode == other.ErrorCode && exception?.GetType() == otherException?.GetType() &&
                exception?.Message == otherException?.Message;
     }
 
@@ -88,9 +90,7 @@ public struct Error
     public static bool operator ==(Error? error, Enum errorCode)
     {
         if (error.HasValue)
-        {
             return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
-        }
 
         return false;
     }
@@ -98,9 +98,7 @@ public struct Error
     public static bool operator !=(Error? error, Enum errorCode)
     {
         if (error.HasValue)
-        {
             return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
-        }
 
         return true;
     }
@@ -108,9 +106,7 @@ public struct Error
     public static bool operator ==(Enum errorCode, Error? error)
     {
         if (error.HasValue)
-        {
             return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
-        }
 
         return false;
     }
@@ -118,9 +114,7 @@ public struct Error
     public static bool operator !=(Enum errorCode, Error? error)
     {
         if (error.HasValue)
-        {
             return error.Value.ErrorCode == Enum.GetName(errorCode.GetType(), errorCode);
-        }
 
         return true;
     }

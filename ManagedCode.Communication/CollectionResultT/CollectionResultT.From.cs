@@ -21,7 +21,7 @@ public partial struct CollectionResult<T>
             return Fail(Error.FromException(e));
         }
     }
-    
+
     public static CollectionResult<T> From(Func<IEnumerable<T>> func)
     {
         try
@@ -57,7 +57,7 @@ public partial struct CollectionResult<T>
             return Fail(Error.FromException(e));
         }
     }
-    
+
     public static async Task<CollectionResult<T>> From(Task<IEnumerable<T>> task)
     {
         try
@@ -94,7 +94,7 @@ public partial struct CollectionResult<T>
             return Fail(Error.FromException(e));
         }
     }
-    
+
     public static async Task<CollectionResult<T>> From(Func<Task<IEnumerable<T>>> task, CancellationToken cancellationToken = default)
     {
         try
@@ -127,14 +127,12 @@ public partial struct CollectionResult<T>
     public static Result From<T>(CollectionResult<T> result)
     {
         if (result)
-        {
             return Result.Succeed();
-        }
 
         return Result.Fail(result.Errors);
     }
 
-    
+
     public static async ValueTask<CollectionResult<T>> From(ValueTask<T[]> valueTask)
     {
         try
@@ -146,7 +144,7 @@ public partial struct CollectionResult<T>
             return Fail(Error.FromException(e));
         }
     }
-    
+
     public static async ValueTask<CollectionResult<T>> From(ValueTask<IEnumerable<T>> valueTask)
     {
         try
@@ -183,10 +181,8 @@ public partial struct CollectionResult<T>
         }
     }
 
-    public static async Task<CollectionResult<T>> From(Func<ValueTask<IEnumerable<T>>> valueTask,
-        [CallerLineNumber] int lineNumber = 0,
-        [CallerMemberName] string caller = null,
-        [CallerFilePath] string path = null)
+    public static async Task<CollectionResult<T>> From(Func<ValueTask<IEnumerable<T>>> valueTask, [CallerLineNumber] int lineNumber = 0,
+        [CallerMemberName] string caller = null!, [CallerFilePath] string path = null!)
     {
         try
         {
@@ -199,6 +195,7 @@ public partial struct CollectionResult<T>
             return Fail(Error.FromException(e));
         }
     }
+
     public static async Task<CollectionResult<T>> From(Func<ValueTask<CollectionResult<T>>> valueTask)
     {
         try
@@ -210,5 +207,4 @@ public partial struct CollectionResult<T>
             return Fail(Error.FromException(e));
         }
     }
-    
 }

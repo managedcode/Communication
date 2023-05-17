@@ -3,7 +3,6 @@ using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
-using AggregateException = System.AggregateException;
 
 namespace ManagedCode.Communication.Tests;
 
@@ -227,7 +226,7 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     // T Generic
 
     [Fact]
@@ -244,7 +243,7 @@ public class ResultFailTests
     [Fact]
     public void FailGenericEnum()
     {
-        var ok = Result.Fail<MyResultObj,HttpStatusCode>(HttpStatusCode.Unauthorized);
+        var ok = Result.Fail<MyResultObj, HttpStatusCode>(HttpStatusCode.Unauthorized);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
@@ -266,7 +265,7 @@ public class ResultFailTests
     [Fact]
     public void FailGenericStringEnum()
     {
-        var ok = Result.Fail<MyResultObj,MyTestEnum>("Oops", MyTestEnum.Option1);
+        var ok = Result.Fail<MyResultObj, MyTestEnum>("Oops", MyTestEnum.Option1);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
@@ -279,7 +278,7 @@ public class ResultFailTests
     [Fact]
     public void FailGenericEnumString()
     {
-        var ok = Result.Fail<MyResultObj,MyTestEnum>(MyTestEnum.Option2, "Oops");
+        var ok = Result.Fail<MyResultObj, MyTestEnum>(MyTestEnum.Option2, "Oops");
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
 
@@ -318,7 +317,7 @@ public class ResultFailTests
     [Fact]
     public void SucceedGenericFrom()
     {
-        var ok = Result.From<MyResultObj>(() =>
+        var ok = Result.From(() =>
         {
             throw new ArgumentException();
             return new MyResultObj();
@@ -348,7 +347,7 @@ public class ResultFailTests
         Assert.True(ok == false);
         Assert.False(ok);
     }
-    
+
     [Fact]
     public async Task SeveralErrors()
     {
@@ -367,7 +366,7 @@ public class ResultFailTests
             e.InnerExceptions.Count.Should().Be(3);
         }
     }
-    
+
     [Fact]
     public void ExceptionParse()
     {
@@ -379,9 +378,8 @@ public class ResultFailTests
 
         exception.Exception().GetType().Should().Be(typeof(Exception));
         argumentException.Exception().GetType().Should().Be(typeof(ArgumentException));
-        
+
         exception.Exception<ArgumentException>().Should().BeNull();
         argumentException.Exception<Exception>().Should().NotBeNull();
-
     }
 }

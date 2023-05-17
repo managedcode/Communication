@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json.Serialization;
@@ -8,13 +9,15 @@ namespace ManagedCode.Communication;
 
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
-public partial struct Result : IResult, IResultError
+public partial struct Result : IResult
 {
-    internal Result(bool isSuccess, Error[]? errors)
+    internal Result(bool isSuccess, Error[]? errors, Dictionary<string,string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Errors = errors;
+        InvalidObject = invalidObject;
     }
+
     public bool IsSuccess { get; set; }
 
     [JsonIgnore]
@@ -36,10 +39,10 @@ public partial struct Result : IResult, IResultError
 
     public void ThrowIfFail()
     {
-        if (Errors?.Any() is not true) 
+        if (Errors?.Any() is not true)
             return;
-        
-        var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message) ));
+
+        var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
         if (Errors.Length == 1)
             throw exceptions.First();
 
@@ -49,12 +52,30 @@ public partial struct Result : IResult, IResultError
     public Error? GetError()
     {
         if (Errors == null || Errors.Length == 0)
-        {
             return null;
-        }
 
         return Errors[0];
     }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Error[]? Errors { get; set; }
+    
+    
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string,string>? InvalidObject { get; set; }
+
+    [JsonIgnore]
+    public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
+
+    public void AddInvalidMessage(string message)
+    {
+        InvalidObject ??= new();
+        InvalidObject[nameof(message)] = message;
+    }
+
+    public void AddInvalidMessage(string key, string value)
+    {
+        InvalidObject ??= new();
+        InvalidObject[key] = value;
+    }
 }

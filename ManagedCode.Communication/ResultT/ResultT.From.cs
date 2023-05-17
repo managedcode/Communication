@@ -86,9 +86,7 @@ public partial struct Result<T>
     public static Result From<T>(Result<T> result)
     {
         if (result)
-        {
             return Result.Succeed();
-        }
 
         return Result.Fail(result.Errors);
     }

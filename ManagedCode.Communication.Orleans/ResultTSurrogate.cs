@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Orleans;
 
 namespace ManagedCode.Communication;
@@ -7,11 +8,12 @@ namespace ManagedCode.Communication;
 [GenerateSerializer]
 public struct ResultTSurrogate<T>
 {
-    public ResultTSurrogate(bool isSuccess, T? value, Error[]? errors)
+    public ResultTSurrogate(bool isSuccess, T? value, Error[]? errors, Dictionary<string,string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Value = value;
         Errors = errors;
+        InvalidObject = invalidObject;
     }
 
     [Id(0)]
@@ -19,8 +21,11 @@ public struct ResultTSurrogate<T>
 
     [Id(1)]
     public Error[]? Errors { get; set; }
-
+    
     [Id(2)]
+    public Dictionary<string,string>? InvalidObject { get; set; }
+
+    [Id(3)]
     public T? Value { get; set; }
 }
 
@@ -30,11 +35,11 @@ public sealed class ResultTSurrogateConverter<T> : IConverter<Result<T>, ResultT
 {
     public Result<T> ConvertFromSurrogate(in ResultTSurrogate<T> surrogate)
     {
-        return new(surrogate.IsSuccess, surrogate.Value, surrogate.Errors);
+        return new Result<T>(surrogate.IsSuccess, surrogate.Value, surrogate.Errors, surrogate.InvalidObject);
     }
 
     public ResultTSurrogate<T> ConvertToSurrogate(in Result<T> value)
     {
-        return new(value.IsSuccess, value.Value, value.Errors);
+        return new ResultTSurrogate<T>(value.IsSuccess, value.Value, value.Errors, value.InvalidObject);
     }
 }

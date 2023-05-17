@@ -1,6 +1,6 @@
 namespace ManagedCode.Communication;
 
-public interface IResult 
+public interface IResult : IResultError, IResultInvalid
 {
     bool IsSuccess { get; }
     bool IsFailed { get; }
@@ -21,5 +21,11 @@ public interface IResultError
     void AddError(Error error);
     Error? GetError();
     void ThrowIfFail();
-    
+}
+
+public interface IResultInvalid
+{
+    bool IsInvalid { get; }
+    void AddInvalidMessage(string message);
+    void AddInvalidMessage(string key, string value);
 }

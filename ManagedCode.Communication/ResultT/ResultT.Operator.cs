@@ -7,9 +7,7 @@ public partial struct Result<T>
 {
     public bool Equals(Result<T> other)
     {
-        return IsSuccess == other.IsSuccess &&
-               EqualityComparer<T?>.Default.Equals(Value, other.Value) &&
-               GetError()?.Message == other.GetError()?.Message &&
+        return IsSuccess == other.IsSuccess && EqualityComparer<T?>.Default.Equals(Value, other.Value) && GetError()?.Message == other.GetError()?.Message &&
                GetError()?.ErrorCode == other.GetError()?.ErrorCode;
     }
 
