@@ -12,12 +12,12 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct CollectionResult<T> : IResult, IResultError
 {
-    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string,string>? invalidObject) : this(isSuccess,
-        collection?.ToArray(), pageNumber, pageSize, totalItems, errors, invalidObject)
+    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors,
+        Dictionary<string, string>? invalidObject) : this(isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, errors, invalidObject)
     {
     }
 
-    internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string,string>? invalidObject)
+    internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Collection = collection ?? Array.Empty<T>();
@@ -72,7 +72,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
 
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;
-    
+
     public Error? GetError()
     {
         if (Errors == null || Errors.Length == 0)
@@ -80,22 +80,22 @@ public partial struct CollectionResult<T> : IResult, IResultError
 
         return Errors[0];
     }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string,string>? InvalidObject { get; set; }
+    public Dictionary<string, string>? InvalidObject { get; set; }
 
     [JsonIgnore]
     public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
 
     public void AddInvalidMessage(string message)
     {
-        InvalidObject ??= new();
+        InvalidObject ??= new Dictionary<string, string>();
         InvalidObject[nameof(message)] = message;
     }
 
     public void AddInvalidMessage(string key, string value)
     {
-        InvalidObject ??= new();
+        InvalidObject ??= new Dictionary<string, string>();
         InvalidObject[key] = value;
     }
 }

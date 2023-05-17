@@ -12,7 +12,7 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result<T> : IResult<T>
 {
-    internal Result(bool isSuccess, T? value, Error[]? errors, Dictionary<string,string>? invalidObject)
+    internal Result(bool isSuccess, T? value, Error[]? errors, Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Value = value;
@@ -66,22 +66,22 @@ public partial struct Result<T> : IResult<T>
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Error[]? Errors { get; set; }
-    
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Dictionary<string,string>? InvalidObject { get; set; }
+    public Dictionary<string, string>? InvalidObject { get; set; }
 
     [JsonIgnore]
     public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
 
     public void AddInvalidMessage(string message)
     {
-        InvalidObject ??= new();
+        InvalidObject ??= new Dictionary<string, string>();
         InvalidObject[nameof(message)] = message;
     }
 
     public void AddInvalidMessage(string key, string value)
     {
-        InvalidObject ??= new();
+        InvalidObject ??= new Dictionary<string, string>();
         InvalidObject[key] = value;
     }
 }

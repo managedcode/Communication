@@ -13,7 +13,7 @@ public class ResultInvalidTests
         invalid.IsSuccess.Should().BeFalse();
         invalid.IsInvalid.Should().BeTrue();
     }
-    
+
     [Fact]
     public void InvalidMessage()
     {
@@ -21,7 +21,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
     }
-    
+
     [Fact]
     public void InvalidKeyValue()
     {
@@ -29,7 +29,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
     }
-    
+
     [Fact]
     public void InvalidDictionary()
     {
@@ -42,7 +42,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
     }
-    
+
     [Fact]
     public void InvalidGenericMethod()
     {
@@ -50,7 +50,7 @@ public class ResultInvalidTests
         invalid.IsSuccess.Should().BeFalse();
         invalid.IsInvalid.Should().BeTrue();
     }
-    
+
     [Fact]
     public void InvalidGenericMethodMessage()
     {
@@ -58,7 +58,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
     }
-    
+
     [Fact]
     public void InvalidGenericMethodKeyValue()
     {
@@ -66,7 +66,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
     }
-    
+
     [Fact]
     public void InvalidGenericMethodDictionary()
     {
@@ -79,7 +79,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(dictionary);
     }
-    
+
     [Fact]
     public void InvalidGeneric()
     {
@@ -87,7 +87,7 @@ public class ResultInvalidTests
         invalid.IsSuccess.Should().BeFalse();
         invalid.IsInvalid.Should().BeTrue();
     }
-    
+
     [Fact]
     public void InvalidGenericMessage()
     {
@@ -95,7 +95,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "message", "message" } });
     }
-    
+
     [Fact]
     public void InvalidGenericeyValue()
     {
@@ -103,7 +103,7 @@ public class ResultInvalidTests
         invalid.IsInvalid.Should().BeTrue();
         invalid.InvalidObject.Should().BeEquivalentTo(new Dictionary<string, string> { { "key", "value" } });
     }
-    
+
     [Fact]
     public void InvalidGenericDictionary()
     {

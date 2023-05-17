@@ -50,7 +50,7 @@ public struct Error
     {
         if (ErrorCode is null)
             return default;
-        
+
         return (TEnum)Enum.Parse(typeof(TEnum), ErrorCode);
     }
 

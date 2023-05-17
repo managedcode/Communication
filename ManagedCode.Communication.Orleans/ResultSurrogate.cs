@@ -8,7 +8,7 @@ namespace ManagedCode.Communication;
 [GenerateSerializer]
 public struct ResultSurrogate
 {
-    public ResultSurrogate(bool isSuccess, Error[]? errors, Dictionary<string,string>? invalidObject)
+    public ResultSurrogate(bool isSuccess, Error[]? errors, Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Errors = errors;
@@ -20,9 +20,9 @@ public struct ResultSurrogate
 
     [Id(1)]
     public Error[]? Errors { get; set; }
-    
+
     [Id(2)]
-    public Dictionary<string,string>? InvalidObject { get; set; }
+    public Dictionary<string, string>? InvalidObject { get; set; }
 }
 
 // This is a converter which converts between the surrogate and the foreign type.

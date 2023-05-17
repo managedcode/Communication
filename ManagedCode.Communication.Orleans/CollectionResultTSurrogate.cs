@@ -9,7 +9,8 @@ namespace ManagedCode.Communication;
 [GenerateSerializer]
 public struct CollectionResultTSurrogate<T>
 {
-    public CollectionResultTSurrogate(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string,string>? invalidObject)
+    public CollectionResultTSurrogate(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors,
+        Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Collection = collection ?? Array.Empty<T>();
@@ -37,9 +38,9 @@ public struct CollectionResultTSurrogate<T>
 
     [Id(5)]
     public Error[]? Errors { get; set; }
-    
+
     [Id(6)]
-    public Dictionary<string,string>? InvalidObject { get; set; }
+    public Dictionary<string, string>? InvalidObject { get; set; }
 }
 
 // This is a converter which converts between the surrogate and the foreign type.
@@ -48,11 +49,13 @@ public sealed class CollectionResultTSurrogateConverter<T> : IConverter<Collecti
 {
     public CollectionResult<T> ConvertFromSurrogate(in CollectionResultTSurrogate<T> surrogate)
     {
-        return new CollectionResult<T>(surrogate.IsSuccess, surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems, surrogate.Errors, surrogate.InvalidObject);
+        return new CollectionResult<T>(surrogate.IsSuccess, surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems, surrogate.Errors,
+            surrogate.InvalidObject);
     }
 
     public CollectionResultTSurrogate<T> ConvertToSurrogate(in CollectionResult<T> value)
     {
-        return new CollectionResultTSurrogate<T>(value.IsSuccess, value.Collection, value.PageNumber, value.PageSize, value.TotalItems, value.Errors, value.InvalidObject);
+        return new CollectionResultTSurrogate<T>(value.IsSuccess, value.Collection, value.PageNumber, value.PageSize, value.TotalItems, value.Errors,
+            value.InvalidObject);
     }
 }

@@ -8,7 +8,7 @@ namespace ManagedCode.Communication;
 [GenerateSerializer]
 public struct ResultTSurrogate<T>
 {
-    public ResultTSurrogate(bool isSuccess, T? value, Error[]? errors, Dictionary<string,string>? invalidObject)
+    public ResultTSurrogate(bool isSuccess, T? value, Error[]? errors, Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Value = value;
@@ -21,9 +21,9 @@ public struct ResultTSurrogate<T>
 
     [Id(1)]
     public Error[]? Errors { get; set; }
-    
+
     [Id(2)]
-    public Dictionary<string,string>? InvalidObject { get; set; }
+    public Dictionary<string, string>? InvalidObject { get; set; }
 
     [Id(3)]
     public T? Value { get; set; }
