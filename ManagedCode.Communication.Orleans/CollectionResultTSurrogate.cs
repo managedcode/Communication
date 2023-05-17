@@ -21,26 +21,13 @@ public struct CollectionResultTSurrogate<T>
         InvalidObject = invalidObject;
     }
 
-    [Id(0)]
-    public bool IsSuccess { get; set; }
-
-    [Id(1)]
-    public T[]? Collection { get; set; }
-
-    [Id(2)]
-    public int PageNumber { get; set; }
-
-    [Id(3)]
-    public int PageSize { get; set; }
-
-    [Id(4)]
-    public int TotalItems { get; set; }
-
-    [Id(5)]
-    public Error[]? Errors { get; set; }
-
-    [Id(6)]
-    public Dictionary<string, string>? InvalidObject { get; set; }
+    [Id(0)] public bool IsSuccess;
+    [Id(1)] public T[]? Collection;
+    [Id(2)] public int PageNumber;
+    [Id(3)] public int PageSize;
+    [Id(4)] public int TotalItems;
+    [Id(5)] public Error[]? Errors;
+    [Id(6)] public Dictionary<string, string>? InvalidObject;
 }
 
 // This is a converter which converts between the surrogate and the foreign type.

@@ -15,14 +15,9 @@ public struct ErrorSurrogate
         Message = message;
     }
 
-    [Id(0)]
-    public string? ErrorCode { get; set; }
-
-    [Id(1)]
-    public string Message { get; set; }
-
-    [Id(2)]
-    public Exception? Exception { get; set; }
+    [Id(0)] public string? ErrorCode;
+    [Id(1)] public string Message;
+    [Id(2)] public Exception? Exception;
 }
 
 // This is a converter which converts between the surrogate and the foreign type.

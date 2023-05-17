@@ -15,14 +15,11 @@ public struct ResultSurrogate
         InvalidObject = invalidObject;
     }
 
-    [Id(0)]
-    public bool IsSuccess { get; set; }
+    [Id(0)] public bool IsSuccess;
 
-    [Id(1)]
-    public Error[]? Errors { get; set; }
+    [Id(1)] public Error[]? Errors;
 
-    [Id(2)]
-    public Dictionary<string, string>? InvalidObject { get; set; }
+    [Id(2)] public Dictionary<string, string>? InvalidObject;
 }
 
 // This is a converter which converts between the surrogate and the foreign type.
