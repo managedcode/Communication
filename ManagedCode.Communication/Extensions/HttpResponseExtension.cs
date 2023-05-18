@@ -24,4 +24,5 @@ public static class HttpResponseExtension
         var content = await responseMessage.Content.ReadAsStringAsync();
         return Result.Fail(Error.Create(content, responseMessage.StatusCode));
     }
+    
 }

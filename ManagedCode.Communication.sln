@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedCode.Communication.O
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedCode.Communication.Benchmark", "ManagedCode.Communication.Benchmark\ManagedCode.Communication.Benchmark.csproj", "{5D4F8912-B080-467C-A98D-3BADB7BD89E1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManagedCode.Communication.Extensions", "ManagedCode.Communication.Extensions\ManagedCode.Communication.Extensions.csproj", "{63DCDAE6-F337-4A36-9589-3391D195C4D7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,5 +36,9 @@ Global
 		{5D4F8912-B080-467C-A98D-3BADB7BD89E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D4F8912-B080-467C-A98D-3BADB7BD89E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D4F8912-B080-467C-A98D-3BADB7BD89E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63DCDAE6-F337-4A36-9589-3391D195C4D7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63DCDAE6-F337-4A36-9589-3391D195C4D7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63DCDAE6-F337-4A36-9589-3391D195C4D7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63DCDAE6-F337-4A36-9589-3391D195C4D7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

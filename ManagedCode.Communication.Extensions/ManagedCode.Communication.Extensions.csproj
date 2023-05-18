@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <LangVersion>11</LangVersion>
+        <Nullable>enable</Nullable>
+        <IsPackable>true</IsPackable>
+        <TargetFrameworks>net6.0;net7.0;</TargetFrameworks>
+        <RootNamespace>ManagedCode.Communication.Extensions</RootNamespace>
+        <OutputType>Library</OutputType>
+    </PropertyGroup>
+
+    <!--NuGet-->
+    <PropertyGroup>
+        <Title>ManagedCode.Communication.Extensions</Title>
+        <PackageId>ManagedCode.Communication.Extensions</PackageId>
+        <Description>Communication for .NET</Description>
+        <PackageTags>managedcode, Communication, Result</PackageTags>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
+    </ItemGroup>
+
+</Project>
