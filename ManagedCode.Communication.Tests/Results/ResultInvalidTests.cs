@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using FluentAssertions;
 using Xunit;
 
-namespace ManagedCode.Communication.Tests;
+namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultInvalidTests
 {

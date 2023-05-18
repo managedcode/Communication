@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Orleans;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.Surrogates;
 
 // This is the surrogate which will act as a stand-in for the foreign type.
 // Surrogates should use plain fields instead of properties for better perfomance.
@@ -24,16 +24,3 @@ public struct ResultSurrogate
 }
 
 // This is a converter which converts between the surrogate and the foreign type.
-[RegisterConverter]
-public sealed class ResultSurrogateConverter : IConverter<Result, ResultSurrogate>
-{
-    public Result ConvertFromSurrogate(in ResultSurrogate surrogate)
-    {
-        return new Result(surrogate.IsSuccess, surrogate.Errors, surrogate.InvalidObject);
-    }
-
-    public ResultSurrogate ConvertToSurrogate(in Result value)
-    {
-        return new ResultSurrogate(value.IsSuccess, value.Errors, value.InvalidObject);
-    }
-}

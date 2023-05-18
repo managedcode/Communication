@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Orleans;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.Surrogates;
 
 // This is the surrogate which will act as a stand-in for the foreign type.
 // Surrogates should use plain fields instead of properties for better perfomance.
@@ -32,18 +32,3 @@ public struct CollectionResultTSurrogate<T>
 }
 
 // This is a converter which converts between the surrogate and the foreign type.
-[RegisterConverter]
-public sealed class CollectionResultTSurrogateConverter<T> : IConverter<CollectionResult<T>, CollectionResultTSurrogate<T>>
-{
-    public CollectionResult<T> ConvertFromSurrogate(in CollectionResultTSurrogate<T> surrogate)
-    {
-        return new CollectionResult<T>(surrogate.IsSuccess, surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems, surrogate.Errors,
-            surrogate.InvalidObject);
-    }
-
-    public CollectionResultTSurrogate<T> ConvertToSurrogate(in CollectionResult<T> value)
-    {
-        return new CollectionResultTSurrogate<T>(value.IsSuccess, value.Collection, value.PageNumber, value.PageSize, value.TotalItems, value.Errors,
-            value.InvalidObject);
-    }
-}

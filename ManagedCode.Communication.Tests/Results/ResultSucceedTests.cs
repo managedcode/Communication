@@ -2,19 +2,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
-namespace ManagedCode.Communication.Tests;
-
-public enum MyTestEnum
-{
-    Option1,
-    Option2
-}
-
-internal class MyResultObj
-{
-    public string Message;
-    public int Number;
-}
+namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultSucceedTests
 {

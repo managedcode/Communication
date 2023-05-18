@@ -2,7 +2,7 @@ using System.Linq;
 using FluentAssertions;
 using Xunit;
 
-namespace ManagedCode.Communication.Tests;
+namespace ManagedCode.Communication.Tests.Collections;
 
 public class CollectionResultSucceedTests
 {

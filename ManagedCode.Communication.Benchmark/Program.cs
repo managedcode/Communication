@@ -1,6 +1,8 @@
 ﻿using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 
+namespace ManagedCode.Communication.Benchmark;
+
 public class Program
 {
     public static void Main(string[] args)
