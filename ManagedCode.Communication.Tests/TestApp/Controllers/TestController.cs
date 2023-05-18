@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.Tests.TestApp.Controllers;
 
+[Route("test")]
 public class TestController : ControllerBase
 {
     [HttpGet("authorize")]
