@@ -72,11 +72,11 @@ public partial struct Result : IResult
         return Errors[0];
     }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Error[]? Errors { get; set; }
 
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Dictionary<string, string>? InvalidObject { get; set; }
 
     [JsonIgnore]
