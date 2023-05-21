@@ -53,7 +53,7 @@ public partial struct Result<T> : IResult<T>
     public bool IsFailed => !IsSuccess;
 
     [MemberNotNullWhen(true, nameof(IsSuccess))]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Value { get; set; }
 
     public Error? GetError()
@@ -64,10 +64,10 @@ public partial struct Result<T> : IResult<T>
         return Errors[0];
     }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Error[]? Errors { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Dictionary<string, string>? InvalidObject { get; set; }
 
     [JsonIgnore]

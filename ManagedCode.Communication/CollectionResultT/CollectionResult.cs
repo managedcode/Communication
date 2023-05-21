@@ -59,7 +59,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public bool IsSuccess { get; set; }
 
     [MemberNotNullWhen(true, nameof(IsSuccess))]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T[]? Collection { get; set; }
 
     public int PageNumber { get; set; }
@@ -67,7 +67,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public int TotalItems { get; set; }
     public int TotalPages { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Error[]? Errors { get; set; }
 
     [JsonIgnore]
@@ -96,7 +96,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
         return GetError()?.IsNotErrorCode(value) ?? false;
     }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Dictionary<string, string>? InvalidObject { get; set; }
 
     [JsonIgnore]
