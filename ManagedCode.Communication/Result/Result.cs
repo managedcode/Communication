@@ -80,7 +80,7 @@ public partial struct Result : IResult
     public Dictionary<string, string>? InvalidObject { get; set; }
 
     [JsonIgnore]
-    public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
+    public bool IsInvalid => !IsSuccess && InvalidObject?.Any() is true;
 
     public void AddInvalidMessage(string message)
     {
