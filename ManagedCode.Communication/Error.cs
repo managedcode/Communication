@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication;
 
@@ -43,7 +44,7 @@ public struct Error
 
         return ExceptionObject as T;
     }
-
+    
     public object? ExceptionObject { get; set; }
 
     public TEnum? ErrorCodeAs<TEnum>() where TEnum : Enum

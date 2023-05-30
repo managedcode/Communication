@@ -1,3 +1,4 @@
+using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Tests.TestApp.Controllers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,8 @@ public class HttpHostProgram
 
         app.MapControllers();
         app.MapHub<TestHub>(nameof(TestHub));
+        
+        app.UseCommunication();
 
         app.Run();
     }

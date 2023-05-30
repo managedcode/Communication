@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace ManagedCode.Communication;
 
@@ -66,4 +67,14 @@ public partial struct Result<T>
         var error = result.GetError();
         return error is null ? Fail() : Fail(error);
     }
+    
+    // public static implicit operator string(Result<T> result)
+    // {
+    //     return JsonSerializer.Serialize(result);
+    // }
+    //
+    // public static implicit operator Result<T>(string result)
+    // {
+    //     return JsonSerializer.Deserialize<Result<T>>(result);
+    // }
 }

@@ -1,0 +1,18 @@
+using ManagedCode.Communication.Surrogates;
+using Orleans;
+
+namespace ManagedCode.Communication.Converters;
+
+[RegisterConverter]
+public sealed class CommandTSurrogateConverter<T> : IConverter<Command<T>, CommandTSurrogate<T>>
+{
+    public Command<T> ConvertFromSurrogate(in CommandTSurrogate<T> surrogate)
+    {
+        return new Command<T>(surrogate.Id, surrogate.Value);
+    }
+
+    public CommandTSurrogate<T> ConvertToSurrogate(in Command<T> value)
+    {
+        return new CommandTSurrogate<T>(value.Id, value.Value);
+    }
+}

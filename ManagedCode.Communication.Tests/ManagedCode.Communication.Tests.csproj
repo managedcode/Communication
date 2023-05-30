@@ -50,6 +50,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\ManagedCode.Communication.Extensions\ManagedCode.Communication.Extensions.csproj" />
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
     </ItemGroup>
 
