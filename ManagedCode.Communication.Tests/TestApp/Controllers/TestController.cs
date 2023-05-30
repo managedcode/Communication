@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.IO;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.Tests.TestApp.Controllers;
@@ -7,9 +8,15 @@ namespace ManagedCode.Communication.Tests.TestApp.Controllers;
 public class TestController : ControllerBase
 {
     [HttpGet("test1")]
-    public ActionResult<string> Authorize()
+    public ActionResult<string> Test1()
     {
         throw new ValidationException();
+    }
+    
+    [HttpGet("test2")]
+    public ActionResult<string> Test2()
+    {
+        throw new InvalidDataException();
     }
     
 }

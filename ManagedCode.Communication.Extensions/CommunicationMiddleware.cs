@@ -34,25 +34,25 @@ public class CommunicationMiddleware
                                    ex is InvalidDataContractException)
         {
             _logger.LogError("Request throw an error", ex);
-            //httpContext.Response.Clear();
             httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            var json = JsonSerializer.Serialize(Result.Fail(HttpStatusCode.InternalServerError, ex));
+            var result = Result.Fail(HttpStatusCode.InternalServerError, ex);
+            var json = JsonSerializer.Serialize(result);
             await httpContext.Response.WriteAsJsonAsync(json);
         }
         catch (Exception ex) when (ex is ValidationException)
         {
             _logger.LogError("Request throw an error", ex);
-            //httpContext.Response.Clear();
             httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            var json = JsonSerializer.Serialize(Result.Fail(HttpStatusCode.InternalServerError, ex));
+            var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
+            var json = JsonSerializer.Serialize(result);
             await httpContext.Response.WriteAsJsonAsync(json);
         }
         catch (Exception ex)
         {
             _logger.LogError("Request throw an error", ex);
-            //httpContext.Response.Clear();
             httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            var json = JsonSerializer.Serialize(Result.Fail(HttpStatusCode.InternalServerError, ex));
+            var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
+            var json = JsonSerializer.Serialize(result);
             await httpContext.Response.WriteAsJsonAsync(json);
         }
         sw.Stop();
