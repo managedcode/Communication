@@ -1,8 +1,7 @@
-using System.Linq;
 using FluentAssertions;
 using Xunit;
 
-namespace ManagedCode.Communication.Tests.Collections;
+namespace ManagedCode.Communication.Tests.Commands;
 
 public class CommandTests
 {

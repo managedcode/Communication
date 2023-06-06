@@ -17,6 +17,10 @@ public partial struct Result : IResult
         Errors = errors;
         InvalidObject = invalidObject;
     }
+    
+    internal Result(Exception exception) : this(false, new[] { Error.FromException(exception) }, default)
+    {
+    }
 
     public bool IsSuccess { get; set; }
 

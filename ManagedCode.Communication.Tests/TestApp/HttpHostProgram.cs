@@ -14,14 +14,14 @@ public class HttpHostProgram
         builder.Services.AddControllers();
         builder.Services.AddSignalR();
 
-        // AddProperty it for using Orleans Identity
-        //builder.Services.AddOrleansIdentity();
-
+        
         var app = builder.Build();
 
 
         app.MapControllers();
         app.MapHub<TestHub>(nameof(TestHub));
+        
+        app.UseExceptionHandler("/error");
         
         app.UseCommunication();
 

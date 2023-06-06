@@ -4,7 +4,7 @@
         <LangVersion>11</LangVersion>
         <Nullable>enable</Nullable>
         <IsPackable>true</IsPackable>
-        <TargetFrameworks>net6.0;net7.0;</TargetFrameworks>
+        <TargetFramework>net7.0</TargetFramework>
         <RootNamespace>ManagedCode.Communication</RootNamespace>
     </PropertyGroup>
 
@@ -18,11 +18,12 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" Version="7.1.0" />
+        <PackageReference Include="Microsoft.Orleans.Runtime" Version="7.1.0" />
         <PackageReference Include="Microsoft.Orleans.Serialization.Abstractions" Version="7.1.0" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
     </ItemGroup>
-
+    
 </Project>

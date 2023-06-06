@@ -10,13 +10,13 @@ public class TestController : ControllerBase
     [HttpGet("test1")]
     public ActionResult<string> Test1()
     {
-        throw new ValidationException();
+        throw new ValidationException("ValidationException");
     }
     
     [HttpGet("test2")]
     public ActionResult<string> Test2()
     {
-        throw new InvalidDataException();
+        throw new InvalidDataException("InvalidDataException");
     }
     
 }

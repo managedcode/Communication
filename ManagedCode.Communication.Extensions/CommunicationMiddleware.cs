@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
@@ -25,12 +26,31 @@ public class CommunicationMiddleware
     public async Task Invoke(HttpContext httpContext)
     {
         var sw = Stopwatch.StartNew();
+
         try
         {
             await _next(httpContext);
-
+            sw.Stop();
+            httpContext.Response.Headers.Add("executionTime", sw.Elapsed.ToString());
         }
-        catch (Exception ex) when (ex is InvalidDataException ||
+        catch (Exception ex)
+        {
+            sw.Stop();
+     
+            httpContext.Response.Headers.Add("executionTime", sw.Elapsed.ToString());
+            httpContext.Response.Headers.CacheControl = "no-cache,no-store";
+            httpContext.Response.Headers.Pragma = "no-cache";
+            httpContext.Response.Headers.Expires = "-1";
+            httpContext.Response.Headers.ETag = default;
+            
+            httpContext.Response.ContentType = "application/json; charset=utf-8";
+            httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            
+            var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
+            await httpContext.Response.WriteAsJsonAsync(result);
+        }
+
+        /*catch (Exception ex) when (ex is InvalidDataException ||
                                    ex is InvalidDataContractException)
         {
             _logger.LogError("Request throw an error", ex);
@@ -42,10 +62,19 @@ public class CommunicationMiddleware
         catch (Exception ex) when (ex is ValidationException)
         {
             _logger.LogError("Request throw an error", ex);
-            httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            //httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
             var json = JsonSerializer.Serialize(result);
-            await httpContext.Response.WriteAsJsonAsync(json);
+            //await httpContext.Response.WriteAsJsonAsync(json);
+            
+
+            var response = httpContext.Response;
+            response.ContentType = "application/json";
+            
+            // get the response code and message
+  
+            response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            await response.WriteAsync(json);
         }
         catch (Exception ex)
         {
@@ -54,8 +83,6 @@ public class CommunicationMiddleware
             var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
             var json = JsonSerializer.Serialize(result);
             await httpContext.Response.WriteAsJsonAsync(json);
-        }
-        sw.Stop();
-        httpContext.Response.Headers.Add("executionTime", sw.Elapsed.ToString());
+        }*/
     }
 }

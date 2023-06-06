@@ -19,6 +19,10 @@ public partial struct Result<T> : IResult<T>
         Errors = errors;
         InvalidObject = invalidObject;
     }
+    
+    internal Result(Exception exception) : this(false, default, new[] { Error.FromException(exception) }, default)
+    {
+    }
 
     public void AddError(Error error)
     {

@@ -1,15 +1,13 @@
-using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Net.Http.Json;
-using System.Net.Mime;
 using System.Threading.Tasks;
 using FluentAssertions;
 using ManagedCode.Communication.Tests.TestApp;
+using ManagedCode.Communication.Tests.TestApp.Grains;
 using Xunit;
 using Xunit.Abstractions;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace ManagedCode.Communication.Tests;
+namespace ManagedCode.Communication.Tests.ControllerTests;
 
 [Collection(nameof(TestClusterApplication))]
 public class MiddlewareTests 
@@ -30,6 +28,8 @@ public class MiddlewareTests
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         var content = await response.Content.ReadAsStringAsync();
         var result = await response.Content.ReadFromJsonAsync<Result>();
+        result.IsFailed.Should().BeTrue();
+        result.GetError().Value.Message.Should().Be("ValidationException");
     }
     
     [Fact]
@@ -38,6 +38,8 @@ public class MiddlewareTests
         var response = await _application.CreateClient().GetAsync($"test/test2");
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         var content = await response.Content.ReadAsStringAsync();
-        var result = await response.Content.ReadFromJsonAsync<Result>();
+        var result = await response.Content.ReadFromJsonAsync<Result<int>>();
+        result.IsFailed.Should().BeTrue();
+        result.GetError().Value.Message.Should().Be("InvalidDataException");
     }
 }
