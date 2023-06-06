@@ -25,19 +25,15 @@ public class CommunicationMiddleware
 
     public async Task Invoke(HttpContext httpContext)
     {
-        var sw = Stopwatch.StartNew();
-
         try
         {
             await _next(httpContext);
-            sw.Stop();
-            httpContext.Response.Headers.Add("executionTime", sw.Elapsed.ToString());
         }
         catch (Exception ex)
         {
-            sw.Stop();
-     
-            httpContext.Response.Headers.Add("executionTime", sw.Elapsed.ToString());
+            if (httpContext.Response.HasStarted)
+                throw; 
+            
             httpContext.Response.Headers.CacheControl = "no-cache,no-store";
             httpContext.Response.Headers.Pragma = "no-cache";
             httpContext.Response.Headers.Expires = "-1";

@@ -3,7 +3,9 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using ManagedCode.Communication.Tests.TestApp;
+using ManagedCode.Communication.Tests.TestApp.Controllers;
 using ManagedCode.Communication.Tests.TestApp.Grains;
+using Microsoft.AspNetCore.SignalR.Client;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,6 +41,28 @@ public class MiddlewareTests
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         var content = await response.Content.ReadAsStringAsync();
         var result = await response.Content.ReadFromJsonAsync<Result<int>>();
+        result.IsFailed.Should().BeTrue();
+        result.GetError().Value.Message.Should().Be("InvalidDataException");
+    }
+    
+    [Fact]
+    public async Task ValidationExceptionSginalR()
+    {
+        var connection = _application.CreateSignalRClient(nameof(TestHub));
+        await connection.StartAsync();
+        connection.State.Should().Be(HubConnectionState.Connected);
+        var result = await connection.InvokeAsync<Result<int>>("DoTest");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(5);
+    }
+    
+    [Fact]
+    public async Task InvalidDataExceptionSignalR()
+    {
+        var connection = _application.CreateSignalRClient(nameof(TestHub));
+        await connection.StartAsync();
+        connection.State.Should().Be(HubConnectionState.Connected);
+        var result = await connection.InvokeAsync<Result<int>>("Throw");
         result.IsFailed.Should().BeTrue();
         result.GetError().Value.Message.Should().Be("InvalidDataException");
     }

@@ -1,6 +1,7 @@
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Tests.TestApp.Controllers;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ManagedCode.Communication.Tests.TestApp;
@@ -12,7 +13,7 @@ public class HttpHostProgram
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddControllers();
-        builder.Services.AddSignalR();
+        builder.Services.AddSignalR(options => options.AddCommunicationHubFilter());
 
         
         var app = builder.Build();
@@ -20,8 +21,6 @@ public class HttpHostProgram
 
         app.MapControllers();
         app.MapHub<TestHub>(nameof(TestHub));
-        
-        app.UseExceptionHandler("/error");
         
         app.UseCommunication();
 
