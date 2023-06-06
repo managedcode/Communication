@@ -18,20 +18,16 @@ public class CommunicationOutgoingGrainCallFilter : IOutgoingGrainCallFilter
         {
             Type type;
             if (context.InterfaceMethod.ReturnType.IsAssignableFrom(typeof(IResult)))
-            {
                 type = typeof(Result);
-            }
             else
-            {
-                type = context.InterfaceMethod.ReturnType.IsGenericType 
+                type = context.InterfaceMethod.ReturnType.IsGenericType
                     ? context.InterfaceMethod.ReturnType.GetGenericArguments()[0]
                     : context.InterfaceMethod.ReturnType;
-            }
 
-            
-            var resultType = Activator.CreateInstance(type, BindingFlags.NonPublic | BindingFlags.Instance, 
-                null, new object[] { exception }, CultureInfo.CurrentCulture);
-            
+
+            var resultType = Activator.CreateInstance(type, BindingFlags.NonPublic | BindingFlags.Instance, null,
+                new object[] { exception }, CultureInfo.CurrentCulture);
+
             context.Result = resultType;
         }
     }

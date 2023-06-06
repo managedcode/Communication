@@ -1,4 +1,5 @@
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Extensions.Extensions;
 using ManagedCode.Communication.Tests.TestApp.Controllers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
@@ -12,6 +13,11 @@ public class HttpHostProgram
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        builder.Services.AddCommunication(option =>
+        {
+            option.ShowErrorDetails = true;
+        });
+        
         builder.Services.AddControllers();
         builder.Services.AddSignalR(options => options.AddCommunicationHubFilter());
 

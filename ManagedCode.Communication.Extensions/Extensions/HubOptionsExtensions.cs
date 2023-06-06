@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication.Extensions.Extensions;
 
 public static class HubOptionsExtensions
 {

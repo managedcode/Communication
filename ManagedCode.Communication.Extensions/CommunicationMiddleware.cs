@@ -1,14 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
-using System.IO;
 using System.Net;
-using System.Runtime.Serialization;
-using System.Text.Json;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Extensions.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ManagedCode.Communication.Extensions;
 
@@ -16,11 +12,14 @@ public class CommunicationMiddleware
 {
     private readonly ILogger<CommunicationMiddleware> _logger;
     private readonly RequestDelegate _next;
+    private readonly IOptions<CommunicationOptions> _options;
 
-    public CommunicationMiddleware(ILogger<CommunicationMiddleware> logger, RequestDelegate next)
+    public CommunicationMiddleware(ILogger<CommunicationMiddleware> logger, RequestDelegate next,
+        IOptions<CommunicationOptions> options)
     {
         _logger = logger;
         _next = next;
+        _options = options;
     }
 
     public async Task Invoke(HttpContext httpContext)
@@ -32,55 +31,24 @@ public class CommunicationMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, httpContext.Request.Method + "::" + httpContext.Request.Path);
-            
+
             if (httpContext.Response.HasStarted)
-                throw; 
-            
+                throw;
+
             httpContext.Response.Headers.CacheControl = "no-cache,no-store";
             httpContext.Response.Headers.Pragma = "no-cache";
             httpContext.Response.Headers.Expires = "-1";
             httpContext.Response.Headers.ETag = default;
-            
+
             httpContext.Response.ContentType = "application/json; charset=utf-8";
             httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            
-            var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
-            await httpContext.Response.WriteAsJsonAsync(result);
-        }
 
-        /*catch (Exception ex) when (ex is InvalidDataException ||
-                                   ex is InvalidDataContractException)
-        {
-            _logger.LogError("Request throw an error", ex);
-            httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            var result = Result.Fail(HttpStatusCode.InternalServerError, ex);
-            var json = JsonSerializer.Serialize(result);
-            await httpContext.Response.WriteAsJsonAsync(json);
+            if (_options.Value.ShowErrorDetails)
+                await httpContext.Response.WriteAsJsonAsync(Result.Fail(HttpStatusCode.InternalServerError,
+                    ex.Message));
+            else
+                await httpContext.Response.WriteAsJsonAsync(Result.Fail(HttpStatusCode.InternalServerError,
+                    nameof(HttpStatusCode.InternalServerError)));
         }
-        catch (Exception ex) when (ex is ValidationException)
-        {
-            _logger.LogError("Request throw an error", ex);
-            //httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
-            var json = JsonSerializer.Serialize(result);
-            //await httpContext.Response.WriteAsJsonAsync(json);
-            
-
-            var response = httpContext.Response;
-            response.ContentType = "application/json";
-            
-            // get the response code and message
-  
-            response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            await response.WriteAsync(json);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Request throw an error", ex);
-            httpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            var result = Result.Fail(HttpStatusCode.InternalServerError, ex.Message);
-            var json = JsonSerializer.Serialize(result);
-            await httpContext.Response.WriteAsJsonAsync(json);
-        }*/
     }
 }

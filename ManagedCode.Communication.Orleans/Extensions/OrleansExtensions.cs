@@ -1,4 +1,3 @@
-using System;
 using ManagedCode.Communication.Filters;
 using Orleans.Hosting;
 
@@ -10,6 +9,7 @@ public static class OrleansExtensions
     {
         return builder.AddIncomingGrainCallFilter<CommunicationIncomingGrainCallFilter>();
     }
+
     public static IClientBuilder UseOrleansCommunication(this IClientBuilder builder)
     {
         return builder.AddOutgoingGrainCallFilter<CommunicationOutgoingGrainCallFilter>();

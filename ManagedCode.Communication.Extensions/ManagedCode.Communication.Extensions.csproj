@@ -16,9 +16,9 @@
         <Description>Communication for .NET</Description>
         <PackageTags>managedcode, Communication, Result</PackageTags>
     </PropertyGroup>
-    
+
     <ItemGroup>
-        <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
+        <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj"/>
     </ItemGroup>
 
 </Project>
