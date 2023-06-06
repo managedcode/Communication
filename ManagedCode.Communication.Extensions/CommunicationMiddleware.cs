@@ -31,6 +31,8 @@ public class CommunicationMiddleware
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, httpContext.Request.Method + "::" + httpContext.Request.Path);
+            
             if (httpContext.Response.HasStarted)
                 throw; 
             
