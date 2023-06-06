@@ -67,7 +67,13 @@ if(fail.IsFailed)
 }
 ```
 
-From
+Collection Result:
+
+```csharp
+var collection = CollectionResult<int>.Succeed(Enumerable.Repeat(4, 100), 5, 100, 15000);
+```
+
+From:
 
 ```csharp
 var succeed = await Result<MyObject>.From(() => GetMyResult());
@@ -76,6 +82,44 @@ if(succeed.IsSuccess)
     succeed.Value // <-- this is the result
     // do some
 }
+```
+
+## Global handlers
+
+Also we have global handlers for WebApi and SignalR
+
+```csharp
+builder.Services.AddCommunication(option =>
+{
+    option.ShowErrorDetails = true;
+});
+        
+```
+
+SignalR global hub filter
+
+```csharp
+builder.Services.AddSignalR(options => options.AddCommunicationHubFilter());
+```
+
+WebApi middleware
+
+```csharp
+app.UseCommunication();
+```
+
+Orleans
+
+silo:
+
+```csharp
+siloBuilder.UseOrleansCommunication();
+```
+
+client:
+
+```csharp
+clientBuilder.UseOrleansCommunication();
 ```
 
 ## Conclusion

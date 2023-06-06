@@ -5,13 +5,14 @@ namespace ManagedCode.Communication.Extensions;
 
 public static class OrleansExtensions
 {
-    public static ISiloBuilder UseOrleansCommunication(this ISiloBuilder builder)
+    public static ISiloBuilder UseOrleansCommunication(this ISiloBuilder siloBuilder)
     {
-        return builder.AddIncomingGrainCallFilter<CommunicationIncomingGrainCallFilter>();
+        return siloBuilder.AddIncomingGrainCallFilter<CommunicationIncomingGrainCallFilter>();
     }
 
-    public static IClientBuilder UseOrleansCommunication(this IClientBuilder builder)
+    public static IClientBuilder UseOrleansCommunication(this IClientBuilder clientBuilder)
     {
-        return builder.AddOutgoingGrainCallFilter<CommunicationOutgoingGrainCallFilter>();
+        return clientBuilder.AddOutgoingGrainCallFilter<CommunicationOutgoingGrainCallFilter>();
     }
 }
+
