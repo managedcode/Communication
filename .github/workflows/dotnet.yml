@@ -46,7 +46,7 @@ jobs:
         with:
           args: >
             -Dsonar.organization=managedcode
-            -Dsonar.projectKey=managedcode_Storage
+            -Dsonar.projectKey=managedcode_Communication
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
             -Dsonar.cs.opencover.reportsPaths=${{ github.workspace }}/coverage/
         env:
