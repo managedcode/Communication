@@ -4,7 +4,7 @@
         <LangVersion>11</LangVersion>
         <Nullable>enable</Nullable>
         <IsPackable>true</IsPackable>
-        <TargetFrameworks>net6.0;net7.0;</TargetFrameworks>
+        <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
         <RootNamespace>ManagedCode.Communication.Extensions</RootNamespace>
         <OutputType>Library</OutputType>
     </PropertyGroup>
