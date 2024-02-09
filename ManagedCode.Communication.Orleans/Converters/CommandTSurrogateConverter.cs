@@ -8,11 +8,11 @@ public sealed class CommandTSurrogateConverter<T> : IConverter<Command<T>, Comma
 {
     public Command<T> ConvertFromSurrogate(in CommandTSurrogate<T> surrogate)
     {
-        return new Command<T>(surrogate.Id, surrogate.Value);
+        return new Command<T>(surrogate.Id, surrogate.CommandType, surrogate.Value);
     }
 
     public CommandTSurrogate<T> ConvertToSurrogate(in Command<T> value)
     {
-        return new CommandTSurrogate<T>(value.Id, value.Value);
+        return new CommandTSurrogate<T>(value.Id, value.CommandType, value.Value);
     }
 }

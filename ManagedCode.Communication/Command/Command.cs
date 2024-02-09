@@ -8,12 +8,12 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("Id: {Id}")]
 public partial struct Command : ICommand
 { 
-    internal Command(string? id)
+    internal Command(string id, string commandType)
     {
         Id = id;
+        CommandType = commandType;
     }
     
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? Id { get; set; }
-    
+    public string Id { get; set; }
+    public string CommandType { get; set; }
 }

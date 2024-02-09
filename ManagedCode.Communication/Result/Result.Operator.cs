@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.Json;
 
 namespace ManagedCode.Communication;
@@ -17,7 +18,8 @@ public partial struct Result
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(IsSuccess, Errors);
+        var errorsHashCode = Errors?.Aggregate(0, (current, error) => HashCode.Combine(current, error.GetHashCode())) ?? 0;
+        return HashCode.Combine(IsSuccess, errorsHashCode);
     }
 
     public static bool operator ==(Result obj1, bool obj2)

@@ -6,7 +6,7 @@ public partial struct Result
 {
     public static Result Succeed()
     {
-        return new Result(true, null, default);
+        return new Result(true, default, default);
     }
 
     public static Result<T> Succeed<T>(T value)

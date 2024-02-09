@@ -11,12 +11,12 @@ public class ResultFailTests
     [Fact]
     public void Fail()
     {
-        var ok = Result.Fail();
-        ok.IsSuccess.Should().BeFalse();
-        ok.IsFailed.Should().BeTrue();
-
-        Assert.True(ok == false);
-        Assert.False(ok);
+        var fail = Result.Fail();
+        fail.IsSuccess.Should().BeFalse();
+        fail.IsFailed.Should().BeTrue();
+        Assert.Throws<Exception>(() => fail.ThrowIfFail());
+        Assert.True(fail == false);
+        Assert.False(fail);
     }
 
     [Fact]
@@ -33,12 +33,11 @@ public class ResultFailTests
     [Fact]
     public void FailString()
     {
-        var ok = Result.Fail("Oops");
-        ok.IsSuccess.Should().BeFalse();
-        ok.IsFailed.Should().BeTrue();
-
-        Assert.True(ok == false);
-        Assert.False(ok);
+        var fail = Result.Fail("Oops");
+        fail.IsSuccess.Should().BeFalse();
+        fail.IsFailed.Should().BeTrue();
+        Assert.True(fail == false);
+        Assert.False(fail);
     }
 
     [Fact]
@@ -111,12 +110,12 @@ public class ResultFailTests
     [Fact]
     public void FailT()
     {
-        var ok = Result<MyResultObj>.Fail();
-        ok.IsSuccess.Should().BeFalse();
-        ok.IsFailed.Should().BeTrue();
-
-        Assert.True(ok == false);
-        Assert.False(ok);
+        var fail = Result<MyResultObj>.Fail();
+        fail.IsSuccess.Should().BeFalse();
+        fail.IsFailed.Should().BeTrue();
+        Assert.Throws<Exception>(() => fail.ThrowIfFail());
+        Assert.True(fail == false);
+        Assert.False(fail);
     }
 
     [Fact]
@@ -125,10 +124,12 @@ public class ResultFailTests
         var ok = Result<MyResultObj>.Fail(HttpStatusCode.Unauthorized);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
+        ok.IsEmpty.Should().BeTrue();
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
+    
 
     [Fact]
     public void FailTString()

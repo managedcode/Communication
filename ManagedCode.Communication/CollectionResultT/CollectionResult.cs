@@ -20,7 +20,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
-        Collection = collection ?? Array.Empty<T>();
+        Collection = collection ?? [];
         PageNumber = pageNumber;
         PageSize = pageSize;
         TotalItems = totalItems;
@@ -46,7 +46,12 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public void ThrowIfFail()
     {
         if (Errors?.Any() is not true)
+        {
+            if(IsFailed)
+                throw new Exception(nameof(IsFailed));
+            
             return;
+        }
 
         var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
 
@@ -56,19 +61,21 @@ public partial struct CollectionResult<T> : IResult, IResultError
         throw new AggregateException(exceptions);
     }
 
+    [MemberNotNullWhen(true, nameof(Collection))]
     public bool IsSuccess { get; set; }
-
-    [MemberNotNullWhen(true, nameof(IsSuccess))]
+    
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T[]? Collection { get; set; }
+    public T[] Collection { get; set; } = [];
 
+    public bool IsEmpty => Collection is null || Collection.Length != 0;
+    
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public int TotalItems { get; set; }
     public int TotalPages { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Error[]? Errors { get; set; }
+    public Error[]? Errors { get; set; } = [];
 
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;

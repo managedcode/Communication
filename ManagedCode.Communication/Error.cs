@@ -67,10 +67,9 @@ public struct Error
 
     public bool Equals(Error other)
     {
-        var exception = Exception();
-        var otherException = other.Exception();
-        return Message == other.Message && ErrorCode == other.ErrorCode && exception?.GetType() == otherException?.GetType() &&
-               exception?.Message == otherException?.Message;
+        var exceptionMessage = Exception()?.Message;
+        var otherExceptionMessage = other.Exception()?.Message;
+        return Message == other.Message && ErrorCode == other.ErrorCode && exceptionMessage == otherExceptionMessage;
     }
 
     public override bool Equals(object? obj)
@@ -80,7 +79,7 @@ public struct Error
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Message, Exception(), ErrorCode);
+        return HashCode.Combine(Message, ErrorCode);
     }
 
     public static Error FromException(Exception? exception, string? errorCode = default)
@@ -120,9 +119,9 @@ public struct Error
         return true;
     }
 
-    public static Error Create(string errorCode)
+    public static Error Create(string message)
     {
-        return new Error(string.Empty, errorCode);
+        return new Error(message);
     }
 
     public static Error Create<TEnum>(TEnum errorCode) where TEnum : Enum

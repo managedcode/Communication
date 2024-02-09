@@ -5,11 +5,11 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <IsPackable>false</IsPackable>
-        <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="BenchmarkDotNet" Version="0.13.10" />
+        <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
     </ItemGroup>
 
     <ItemGroup>

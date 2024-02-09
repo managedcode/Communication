@@ -39,6 +39,20 @@ public class ResultSucceedTests
         ok.AsTask().Result.IsSuccess.Should().BeTrue();
         ok.AsValueTask().Result.IsSuccess.Should().BeTrue();
     }
+    
+    [Fact]
+    public void SucceedTNullCondition()
+    {
+        var ok = Result<MyResultObj>.Succeed(new MyResultObj
+        {
+            Message = "msg"
+        });
+
+        if (ok.IsSuccess)
+        {
+            ok.Value.Message.Should().Be("msg");
+        }
+    }
 
     [Fact]
     public void SucceedTEnum()
@@ -141,6 +155,17 @@ public class ResultSucceedTests
         Assert.True(ok == true);
         Assert.True(ok);
     }
+    
+    [Fact]
+    public void SucceedTFromButNull()
+    {
+        var ok = Result<MyResultObj>.From(()=> null as  MyResultObj);
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsEmpty.Should().BeTrue();
+
+        Assert.True(ok == true);
+        Assert.True(ok);
+    }
 
     [Fact]
     public void SucceedTFromResult()
@@ -164,7 +189,7 @@ public class ResultSucceedTests
         {
             Message = "msg"
         });
-
+        
         var result = Result<MyResultObj>.From(ok);
 
         Assert.True(ok == true);

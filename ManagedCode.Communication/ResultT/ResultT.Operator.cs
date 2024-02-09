@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 
 namespace ManagedCode.Communication;
@@ -19,7 +20,8 @@ public partial struct Result<T>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(IsSuccess, Value, Errors);
+        var errorsHashCode = Errors?.Aggregate(0, (current, error) => HashCode.Combine(current, error.GetHashCode())) ?? 0;
+        return HashCode.Combine(IsSuccess, errorsHashCode);
     }
 
     public static bool operator ==(Result<T> obj1, bool obj2)
