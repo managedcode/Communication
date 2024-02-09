@@ -39,6 +39,20 @@ public class ResultSucceedTests
         ok.AsTask().Result.IsSuccess.Should().BeTrue();
         ok.AsValueTask().Result.IsSuccess.Should().BeTrue();
     }
+    
+    [Fact]
+    public void SucceedTNullCondition()
+    {
+        var ok = Result<MyResultObj>.Succeed(new MyResultObj
+        {
+            Message = "msg"
+        });
+
+        if (ok.IsSuccess)
+        {
+            ok.Value.Message.Should().Be("msg");
+        }
+    }
 
     [Fact]
     public void SucceedTEnum()

@@ -12,7 +12,7 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result<T> : IResult<T>
 {
-    internal Result(bool isSuccess, T? value, Error[]? errors, Dictionary<string, string>? invalidObject)
+    internal Result(bool isSuccess, T value, Error[] errors, Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
         Value = value;
@@ -40,7 +40,7 @@ public partial struct Result<T> : IResult<T>
 
     public void ThrowIfFail()
     {
-        if (Errors?.Any() is not true)
+        if (Errors.Any() is not true)
             return;
 
         var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
@@ -57,8 +57,10 @@ public partial struct Result<T> : IResult<T>
     public bool IsFailed => !IsSuccess;
 
     [MemberNotNullWhen(true, nameof(IsSuccess))]
+    [MemberNotNullWhen(false, nameof(IsFailed))]
+    [MemberNotNullWhen(false, nameof(IsInvalid))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T? Value { get; set; }
+    public T Value { get; set; }
 
     public Error? GetError()
     {
@@ -69,7 +71,7 @@ public partial struct Result<T> : IResult<T>
     }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Error[]? Errors { get; set; }
+    public Error[]? Errors { get; set; } = Array.Empty<Error>();
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public Dictionary<string, string>? InvalidObject { get; set; }

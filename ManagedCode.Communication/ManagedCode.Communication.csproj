@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <LangVersion>11</LangVersion>
+        <LangVersion>12</LangVersion>
         <Nullable>enable</Nullable>
         <IsPackable>true</IsPackable>
-        <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
     <!--NuGet-->
