@@ -20,7 +20,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string, string>? invalidObject)
     {
         IsSuccess = isSuccess;
-        Collection = collection ?? Array.Empty<T>();
+        Collection = collection ?? [];
         PageNumber = pageNumber;
         PageSize = pageSize;
         TotalItems = totalItems;
