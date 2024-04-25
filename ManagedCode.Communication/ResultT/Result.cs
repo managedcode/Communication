@@ -58,7 +58,7 @@ public partial struct Result<T> : IResult<T>
     public bool IsFailed => !IsSuccess;
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T Value { get; set; }
+    public T? Value { get; set; }
 
     public Error? GetError()
     {

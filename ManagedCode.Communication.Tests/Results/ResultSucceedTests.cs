@@ -178,7 +178,7 @@ public class ResultSucceedTests
         {
             Message = "msg"
         });
-
+        
         var result = Result<MyResultObj>.From(ok);
 
         Assert.True(ok == true);

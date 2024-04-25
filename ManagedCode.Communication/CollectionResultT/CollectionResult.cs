@@ -60,7 +60,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public bool IsSuccess { get; set; }
     
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T[] Collection { get; set; } = Array.Empty<T>();
+    public T[] Collection { get; set; } = [];
 
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
@@ -68,7 +68,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public int TotalPages { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Error[]? Errors { get; set; } = Array.Empty<Error>();
+    public Error[]? Errors { get; set; } = [];
 
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;
