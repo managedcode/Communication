@@ -56,11 +56,9 @@ public partial struct CollectionResult<T> : IResult, IResultError
         throw new AggregateException(exceptions);
     }
 
+    [MemberNotNullWhen(true, nameof(Collection))]
     public bool IsSuccess { get; set; }
-
-    [MemberNotNullWhen(true, nameof(IsSuccess))]
-    [MemberNotNullWhen(false, nameof(IsFailed))]
-    [MemberNotNullWhen(false, nameof(IsInvalid))]
+    
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T[] Collection { get; set; } = Array.Empty<T>();
 

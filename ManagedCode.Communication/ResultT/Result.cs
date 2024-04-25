@@ -51,14 +51,12 @@ public partial struct Result<T> : IResult<T>
         throw new AggregateException(exceptions);
     }
 
+    [MemberNotNullWhen(true, nameof(Value))]
     public bool IsSuccess { get; set; }
 
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;
-
-    [MemberNotNullWhen(true, nameof(IsSuccess))]
-    [MemberNotNullWhen(false, nameof(IsFailed))]
-    [MemberNotNullWhen(false, nameof(IsInvalid))]
+    
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T Value { get; set; }
 
