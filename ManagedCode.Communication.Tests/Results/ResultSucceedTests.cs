@@ -155,6 +155,17 @@ public class ResultSucceedTests
         Assert.True(ok == true);
         Assert.True(ok);
     }
+    
+    [Fact]
+    public void SucceedTFromButNull()
+    {
+        var ok = Result<MyResultObj>.From(()=> null as  MyResultObj);
+        ok.IsSuccess.Should().BeTrue();
+        ok.IsEmpty.Should().BeTrue();
+
+        Assert.True(ok == true);
+        Assert.True(ok);
+    }
 
     [Fact]
     public void SucceedTFromResult()

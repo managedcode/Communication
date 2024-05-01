@@ -125,10 +125,12 @@ public class ResultFailTests
         var ok = Result<MyResultObj>.Fail(HttpStatusCode.Unauthorized);
         ok.IsSuccess.Should().BeFalse();
         ok.IsFailed.Should().BeTrue();
+        ok.IsEmpty.Should().BeTrue();
 
         Assert.True(ok == false);
         Assert.False(ok);
     }
+    
 
     [Fact]
     public void FailTString()
