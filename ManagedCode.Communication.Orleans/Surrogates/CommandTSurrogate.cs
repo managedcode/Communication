@@ -6,10 +6,10 @@ namespace ManagedCode.Communication.Surrogates;
 [GenerateSerializer]
 public struct CommandTSurrogate<T>
 {
-    [Id(0)] public string? Id;
+    [Id(0)] public string Id;
     [Id(1)] public T? Value;
 
-    public CommandTSurrogate(string? id, T? value)
+    public CommandTSurrogate(string id, T? value)
     {
         Id = id;
         Value = value;

@@ -6,9 +6,9 @@ namespace ManagedCode.Communication.Surrogates;
 [GenerateSerializer]
 public struct CommandSurrogate
 {
-    [Id(0)] public string? Id;
+    [Id(0)] public string Id;
 
-    public CommandSurrogate(string? id)
+    public CommandSurrogate(string id)
     {
         Id = id;
     }
