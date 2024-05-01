@@ -53,6 +53,8 @@ public partial struct Result<T> : IResult<T>
 
     [MemberNotNullWhen(true, nameof(Value))]
     public bool IsSuccess { get; set; }
+    
+    public bool IsEmpty => Value is null;
 
     [JsonIgnore]
     public bool IsFailed => !IsSuccess;

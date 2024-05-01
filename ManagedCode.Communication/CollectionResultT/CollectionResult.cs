@@ -62,6 +62,8 @@ public partial struct CollectionResult<T> : IResult, IResultError
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T[] Collection { get; set; } = [];
 
+    public bool IsEmpty => Collection is null || Collection.Length != 0;
+    
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public int TotalItems { get; set; }

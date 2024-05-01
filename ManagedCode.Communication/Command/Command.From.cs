@@ -13,6 +13,6 @@ public partial struct Command
     
     public static Command<T> From<T>(T value)
     {
-        return new Command<T>(default,value);
+        return new Command<T>(Guid.NewGuid().ToString("N"), value);
     }
 }
