@@ -1,5 +1,7 @@
 using Xunit;
 using System;
+using FluentAssertions;
+using ManagedCode.Communication.Tests.Results;
 
 namespace ManagedCode.Communication.Tests
 {
@@ -102,5 +104,80 @@ namespace ManagedCode.Communication.Tests
 
             Assert.True(result.IsFailed);
         }
+        
+          [Fact]
+        public void Succeed_ShouldSetIsSuccessToTrue()
+        {
+            var result = Result<int>.Succeed(5);
+            result.IsSuccess.Should().BeTrue();
+        }
+
+        [Fact]
+        public void Fail_ShouldSetIsSuccessToFalse()
+        {
+            var result = Result<int>.Fail();
+            result.IsSuccess.Should().BeFalse();
+        }
+
+        [Fact]
+        public void Fail_WithErrorCode_ShouldSetErrorCodeCorrectly()
+        {
+            var result = Result<int>.Fail("TestError");
+            result.GetError().Value.ErrorCode.Should().Be("TestError");
+        }
+
+        [Fact]
+        public void AddError_ShouldAddErrorToList()
+        {
+            var result = Result<int>.Succeed(5);
+            result.AddError(Error.Create("TestError"));
+            result.Errors.Should().HaveCount(1);
+            result.Errors[0].ErrorCode.Should().Be("TestError");
+        }
+
+        [Fact]
+        public void ThrowIfFail_ShouldThrowException_WhenErrorsExist()
+        {
+            var result = Result<int>.Fail("TestError");
+            Assert.Throws<Exception>(() => result.ThrowIfFail());
+        }
+
+        [Fact]
+        public void ThrowIfFail_ShouldNotThrowException_WhenNoErrorsExist()
+        {
+            var result = Result<int>.Succeed(5);
+            result.Invoking(r => r.ThrowIfFail()).Should().NotThrow();
+        }
+
+        [Fact]
+        public void IsErrorCode_ShouldReturnTrue_WhenErrorCodeMatches()
+        {
+            var result = Result<int>.Fail("TestError",MyTestEnum.Option2);
+            result.IsErrorCode(MyTestEnum.Option2).Should().BeTrue();
+        }
+
+        [Fact]
+        public void IsErrorCode_ShouldReturnFalse_WhenErrorCodeDoesNotMatch()
+        {
+            var result = Result<int>.Fail(MyTestEnum.Option2, "TestError");
+            result.IsNotErrorCode(MyTestEnum.Option1).Should().BeFalse();
+        }
+        
+        [Fact]
+        public void IsNotErrorCode_ShouldReturnTrue_WhenErrorCodeDoesNotMatch()
+        {
+            var result = Result<int>.Fail(MyTestEnum.Option2, "TestError");
+            result.IsNotErrorCode(MyTestEnum.Option1).Should().BeTrue();
+        }
+
+        [Fact]
+        public void AddInvalidMessage_ShouldAddMessageToInvalidObject()
+        {
+            var result = Result<int>.Succeed(5);
+            result.AddInvalidMessage("TestKey", "TestValue");
+            result.InvalidObject.Should().ContainKey("TestKey");
+            result.InvalidObject["TestKey"].Should().Be("TestValue");
+        }
+        
     }
 }
