@@ -7,9 +7,11 @@ namespace ManagedCode.Communication.Surrogates;
 public struct CommandSurrogate
 {
     [Id(0)] public string Id;
+    [Id(1)] public string CommandType;
 
-    public CommandSurrogate(string id)
+    public CommandSurrogate(string id, string commandType)
     {
         Id = id;
+        CommandType = commandType;
     }
 }
