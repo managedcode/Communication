@@ -9,8 +9,9 @@ using ManagedCode.Communication.Extensions;
 namespace ManagedCode.Communication;
 
 /// <summary>
-/// Represents a result of an operation that can either succeed or fail.
+/// Represents a result from an operation that can either succeed or fail.
 /// </summary>
+/// <typeparam name="T">The type of the result value.</typeparam>
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
 public partial struct Result<T> : IResult<T>
