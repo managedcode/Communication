@@ -89,7 +89,7 @@ namespace ManagedCode.Communication.Tests
         public void ImplicitOperatorResultFromErrors_ReturnsFailure_WhenErrorsAreProvided()
         {
             var errors = new Error[] { new Error { Message = "Error1", ErrorCode = "E001" }, new Error { Message = "Error2", ErrorCode = "E002" } };
-
+            
             Result result = errors;
 
             Assert.True(result.IsFailed);
@@ -123,7 +123,7 @@ namespace ManagedCode.Communication.Tests
         public void Fail_WithErrorCode_ShouldSetErrorCodeCorrectly()
         {
             var result = Result<int>.Fail("TestError");
-            result.GetError().Value.ErrorCode.Should().Be("TestError");
+            result.GetError().Value.Message.Should().Be("TestError");
         }
 
         [Fact]
@@ -132,7 +132,7 @@ namespace ManagedCode.Communication.Tests
             var result = Result<int>.Succeed(5);
             result.AddError(Error.Create("TestError"));
             result.Errors.Should().HaveCount(1);
-            result.Errors[0].ErrorCode.Should().Be("TestError");
+            result.Errors[0].Message.Should().Be("TestError");
         }
 
         [Fact]
@@ -160,7 +160,7 @@ namespace ManagedCode.Communication.Tests
         public void IsErrorCode_ShouldReturnFalse_WhenErrorCodeDoesNotMatch()
         {
             var result = Result<int>.Fail(MyTestEnum.Option2, "TestError");
-            result.IsNotErrorCode(MyTestEnum.Option1).Should().BeFalse();
+            result.IsErrorCode(MyTestEnum.Option1).Should().BeFalse();
         }
         
         [Fact]

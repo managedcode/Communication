@@ -40,8 +40,13 @@ public partial struct Result<T> : IResult<T>
 
     public void ThrowIfFail()
     {
-        if (Errors is null || Errors.Any() is not true)
+        if (Errors?.Any() is not true)
+        {
+            if(IsFailed)
+                throw new Exception(nameof(IsFailed));
+            
             return;
+        }
 
         var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
 

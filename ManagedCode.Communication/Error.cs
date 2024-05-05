@@ -119,9 +119,9 @@ public struct Error
         return true;
     }
 
-    public static Error Create(string errorCode)
+    public static Error Create(string message)
     {
-        return new Error(string.Empty, errorCode);
+        return new Error(message);
     }
 
     public static Error Create<TEnum>(TEnum errorCode) where TEnum : Enum
