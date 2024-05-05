@@ -17,4 +17,5 @@ public interface ICollectionResult<out T> : IResult
     /// </summary>
     /// <value>true if the collection is empty; otherwise, false.</value>
     bool IsEmpty { get; }
+    
 }

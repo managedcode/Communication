@@ -179,5 +179,72 @@ namespace ManagedCode.Communication.Tests
             result.InvalidObject["TestKey"].Should().Be("TestValue");
         }
         
+        
+        [Fact]
+        public void Fail_WithException_ShouldSetExceptionCorrectly()
+        {
+            var exception = new Exception("TestException");
+            var result = Result<int>.Fail(exception);
+            result.GetError().Value.Exception().Message.Should().Be("TestException");
+        }
+
+        [Fact]
+        public void Fail_WithValue_ShouldSetValueCorrectly()
+        {
+            var result = Result<int>.Fail(5);
+            result.Value.Should().Be(5);
+        }
+        
+        [Fact]
+        public void From_ShouldReturnSuccessResult_WhenFuncDoesNotThrow()
+        {
+            var result = Result<int>.From(() => 5);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().Be(5);
+        }
+
+        [Fact]
+        public void From_ShouldReturnFailedResult_WhenFuncThrows()
+        {
+            var result = Result<int>.From(() =>
+            {
+                throw new Exception("TestException");
+                return 5;
+            });
+            result.IsFailed.Should().BeTrue();
+            result.GetError().Value.Exception().Message.Should().Be("TestException");
+        }
+
+        [Fact]
+        public void Invalid_ShouldReturnFailedResult_WithInvalidObject()
+        {
+            var result = Result<int>.Invalid("TestKey", "TestValue");
+            result.IsInvalid.Should().BeTrue();
+            result.InvalidObject.Should().ContainKey("TestKey");
+            result.InvalidObject["TestKey"].Should().Be("TestValue");
+        }
+
+        [Fact]
+        public void Succeed_ShouldReturnSuccessResult_WithValue()
+        {
+            var result = Result<int>.Succeed(5);
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().Be(5);
+        }
+
+        [Fact]
+        public void OperatorEquals_ShouldReturnTrue_WhenResultIsSuccessAndBooleanIsTrue()
+        {
+            var result = Result<int>.Succeed(5);
+            (result == true).Should().BeTrue();
+        }
+
+        [Fact]
+        public void OperatorNotEquals_ShouldReturnTrue_WhenResultIsSuccessAndBooleanIsFalse()
+        {
+            var result = Result<int>.Succeed(5);
+            (result != false).Should().BeTrue();
+        }
+        
     }
 }

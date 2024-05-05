@@ -3,8 +3,6 @@ using Orleans;
 
 namespace ManagedCode.Communication.Surrogates;
 
-// This is the surrogate which will act as a stand-in for the foreign type.
-// Surrogates should use plain fields instead of properties for better perfomance.
 [Immutable]
 [GenerateSerializer]
 public struct ResultTSurrogate<T>
@@ -25,5 +23,3 @@ public struct ResultTSurrogate<T>
 
     [Id(3)] public T? Value;
 }
-
-// This is a converter which converts between the surrogate and the foreign type.
