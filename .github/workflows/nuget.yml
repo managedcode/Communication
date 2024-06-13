@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build_and_publish:
+  nuget-pack:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,10 +27,7 @@ jobs:
         run: dotnet test --configuration Release 
 
       - name: Pack
-        run: dotnet pack --configuration Release -o "packages"
+        run: dotnet pack --configuration Release -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -output "packages"
 
       - name: Push
-        run: dotnet nuget push "packages/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
-
-      - name: Push Symbols
-        run: dotnet nuget push "packages/*.snupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push "packages/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
