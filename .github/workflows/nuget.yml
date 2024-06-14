@@ -27,7 +27,7 @@ jobs:
         run: dotnet test --configuration Release 
 
       - name: Pack
-        run: dotnet pack --configuration Release -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -o "packages"
+        run: dotnet pack --configuration Release -p:IncludeSymbols=false -p:SymbolPackageFormat=snupkg -o "packages"
 
       - name: Push
         run: dotnet nuget push "packages/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
