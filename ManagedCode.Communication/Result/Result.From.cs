@@ -110,4 +110,24 @@ public partial struct Result
             return Fail(Error.FromException(e));
         }
     }
+    
+    public static Result From(bool condition)
+    {
+        return condition ? Succeed() : Fail();
+    }
+    
+    public static Result From(bool condition, Error error)
+    {
+        return condition ? Succeed() : Fail(error);
+    }
+    
+    public static Result From(Func<bool> condition)
+    {
+        return condition() ? Succeed() : Fail();
+    }
+    
+    public static Result From(Func<bool> condition, Error error)
+    {
+        return condition() ? Succeed() : Fail(error);
+    }
 }
