@@ -16,7 +16,7 @@ public class CommandTests
     public void FromIdValue()
     {
         var command = Command<string>.From(nameof(CommandTests), nameof(Command));
-        command.Id.Should().Be(nameof(CommandTests));
+        command.CommandId.Should().Be(nameof(CommandTests));
         command.Value.Should().Be(nameof(Command));
     }
 }

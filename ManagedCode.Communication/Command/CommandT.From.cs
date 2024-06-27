@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication;
 
-public partial struct Command<T>
+public partial class Command<T>
 {
     public static Command<T> From(string id, T value)
     {

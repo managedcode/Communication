@@ -1,3 +1,4 @@
+using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Surrogates;
 using Orleans;
 
@@ -13,6 +14,6 @@ public sealed class CommandSurrogateConverter : IConverter<Command, CommandSurro
 
     public CommandSurrogate ConvertToSurrogate(in Command value)
     {
-        return new CommandSurrogate(value.Id, value.CommandType);
+        return new CommandSurrogate(value.CommandId, value.CommandType);
     }
 }

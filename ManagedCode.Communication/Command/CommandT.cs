@@ -6,24 +6,24 @@ using System.Text.Json.Serialization;
 namespace ManagedCode.Communication;
 
 [Serializable]
-[DebuggerDisplay("Id: {Id}; {Value?.ToString()}")]
-public partial struct Command<T> : ICommand<T>
+[DebuggerDisplay("CommandId: {CommandId}; {Value?.ToString()}")]
+public partial class Command<T> : ICommand<T>
 { 
-    internal Command(string id, T? value)
+    internal Command(string commandId, T? value)
     {
-        Id = id;
+        CommandId = commandId;
         Value = value;
         CommandType = Value?.GetType().Name ?? string.Empty;
     }
     
-    internal Command(string id, string commandType, T? value)
+    internal Command(string commandId, string commandType, T? value)
     {
-        Id = id;
+        CommandId = commandId;
         Value = value;
         CommandType = commandType;
     }
     
-    public string Id { get; set; }
+    public string CommandId { get; set; }
     public string CommandType { get; set; }
 
     public T? Value { get; set; }

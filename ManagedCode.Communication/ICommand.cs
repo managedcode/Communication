@@ -9,7 +9,7 @@ public interface ICommand
     /// Gets the unique identifier for the command.
     /// </summary>
     /// <value>The unique identifier for the command.</value>
-    string Id { get; }
+    string CommandId { get; }
 
     /// <summary>
     /// Gets the type of the command.

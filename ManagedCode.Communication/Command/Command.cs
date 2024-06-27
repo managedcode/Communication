@@ -5,15 +5,15 @@ using System.Text.Json.Serialization;
 namespace ManagedCode.Communication;
 
 [Serializable]
-[DebuggerDisplay("Id: {Id}")]
-public partial struct Command : ICommand
+[DebuggerDisplay("CommandId: {CommandId}")]
+public partial class Command : ICommand
 { 
-    internal Command(string id, string commandType)
+    internal Command(string commandId, string commandType)
     {
-        Id = id;
+        CommandId = commandId;
         CommandType = commandType;
     }
     
-    public string Id { get; set; }
+    public string CommandId { get; set; }
     public string CommandType { get; set; }
 }

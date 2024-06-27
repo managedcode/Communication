@@ -13,6 +13,6 @@ public sealed class CommandTSurrogateConverter<T> : IConverter<Command<T>, Comma
 
     public CommandTSurrogate<T> ConvertToSurrogate(in Command<T> value)
     {
-        return new CommandTSurrogate<T>(value.Id, value.CommandType, value.Value);
+        return new CommandTSurrogate<T>(value.CommandId, value.CommandType, value.Value);
     }
 }
