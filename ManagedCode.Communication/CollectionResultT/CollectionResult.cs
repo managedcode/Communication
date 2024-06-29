@@ -78,6 +78,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public Error[]? Errors { get; set; } = [];
 
     [JsonIgnore]
+    [MemberNotNullWhen(false, nameof(Collection))]
     public bool IsFailed => !IsSuccess;
 
     public Error? GetError()
@@ -107,6 +108,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     public Dictionary<string, string>? InvalidObject { get; set; }
 
     [JsonIgnore]
+    [MemberNotNullWhen(false, nameof(Collection))]
     public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
 
     public void AddInvalidMessage(string message)

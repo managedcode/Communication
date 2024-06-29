@@ -88,6 +88,7 @@ public partial struct Result<T> : IResult<T>
     /// Gets a value indicating whether the result is a failure.
     /// </summary>
     [JsonIgnore]
+    [MemberNotNullWhen(false, nameof(Value))]
     public bool IsFailed => !IsSuccess;
 
     /// <summary>
@@ -123,6 +124,7 @@ public partial struct Result<T> : IResult<T>
     /// Gets a value indicating whether the result is invalid.
     /// </summary>
     [JsonIgnore]
+    [MemberNotNullWhen(false, nameof(Value))]
     public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
 
     /// <summary>
