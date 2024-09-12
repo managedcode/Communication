@@ -25,6 +25,11 @@ public interface IResultError
     void ThrowIfFail();
 
     /// <summary>
+    /// Throws an exception with stack trace preserved if the result indicates a failure.
+    /// </summary>
+    void ThrowIfFailWithStackPreserved();
+
+    /// <summary>
     /// Gets the error code as a specific enumeration type.
     /// </summary>
     /// <typeparam name="TEnum">The type of the enumeration.</typeparam>

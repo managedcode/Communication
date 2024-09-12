@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.ExceptionServices;
 using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication;
@@ -35,6 +36,16 @@ public struct Error
             return exception;
 
         return ExceptionObject as Exception;
+    }
+
+    public ExceptionDispatchInfo? ExceptionInfo()
+    {
+        if (ExceptionObject is Exception exception)
+        {
+            return ExceptionDispatchInfo.Capture(exception);
+        }
+
+        return null;
     }
 
     public T? Exception<T>() where T : class

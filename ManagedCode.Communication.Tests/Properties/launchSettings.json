@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "ManagedCode.Communication.Tests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:7104;http://localhost:7105"
+    }
+  }
+}

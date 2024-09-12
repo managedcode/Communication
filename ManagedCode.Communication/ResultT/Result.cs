@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.ExceptionServices;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Extensions;
 
@@ -70,6 +71,29 @@ public partial struct Result<T> : IResult<T>
             throw exceptions.First();
 
         throw new AggregateException(exceptions);
+    }
+
+    /// <summary>
+    /// Throws an exception with stack trace preserved if the result indicates a failure.
+    /// </summary>
+    public void ThrowIfFailWithStackPreserved()
+    {
+        if (Errors?.Any() is not true)
+        {
+            if (IsFailed)
+                throw new Exception(nameof(IsFailed));
+
+            return;
+        }
+
+        var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(string.Join(';', s.ErrorCode, s.Message))));
+
+        if (Errors.Length == 1)
+        {
+            exceptions.First().Throw();
+        }
+
+        throw new AggregateException(exceptions.Select(e => e.SourceException));
     }
 
     /// <summary>

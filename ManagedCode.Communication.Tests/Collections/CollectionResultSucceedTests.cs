@@ -17,6 +17,7 @@ public class CollectionResultSucceedTests
         ok.IsFailed.Should().BeFalse();
         ok.GetError().Should().BeNull();
         ok.ThrowIfFail();
+        ok.ThrowIfFailWithStackPreserved();
         Assert.True(ok == true);
         Assert.True(ok);
         ok.AsTask().Result.IsSuccess.Should().BeTrue();
@@ -38,6 +39,7 @@ public class CollectionResultSucceedTests
         ok.IsFailed.Should().BeFalse();
         ok.GetError().Should().BeNull();
         ok.ThrowIfFail();
+        ok.ThrowIfFailWithStackPreserved();
         Assert.True(ok == true);
         Assert.True(ok);
         ok.AsTask().Result.IsSuccess.Should().BeTrue();
@@ -59,6 +61,7 @@ public class CollectionResultSucceedTests
         fail.IsFailed.Should().BeTrue();
         fail.GetError().Should().BeNull();
         Assert.Throws<Exception>(() => fail.ThrowIfFail());
+        Assert.Throws<Exception>(() => fail.ThrowIfFailWithStackPreserved());
         Assert.True(fail == false);
         Assert.False(fail);
         fail.AsTask().Result.IsSuccess.Should().BeFalse();
@@ -74,6 +77,7 @@ public class CollectionResultSucceedTests
         fail.GetError().Should().NotBeNull();
         fail.GetError()?.Message.Should().Be("Test Error");
         Assert.Throws<Exception>(() => fail.ThrowIfFail());
+        Assert.Throws<Exception>(() => fail.ThrowIfFailWithStackPreserved());
         Assert.True(fail == false);
         Assert.False(fail);
         fail.AsTask().Result.IsSuccess.Should().BeFalse();
