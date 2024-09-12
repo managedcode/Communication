@@ -72,7 +72,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
             return;
         }
 
-        var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(string.Join(';', s.ErrorCode, s.Message))));
+        var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message))));
 
         if (Errors.Length == 1)
         {

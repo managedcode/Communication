@@ -15,6 +15,7 @@ public class ResultFailTests
         fail.IsSuccess.Should().BeFalse();
         fail.IsFailed.Should().BeTrue();
         Assert.Throws<Exception>(() => fail.ThrowIfFail());
+        Assert.Throws<Exception>(() => fail.ThrowIfFailWithStackPreserved());
         Assert.True(fail == false);
         Assert.False(fail);
     }
@@ -74,6 +75,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(Exception), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(Exception), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -87,6 +89,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -100,6 +103,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -114,6 +118,7 @@ public class ResultFailTests
         fail.IsSuccess.Should().BeFalse();
         fail.IsFailed.Should().BeTrue();
         Assert.Throws<Exception>(() => fail.ThrowIfFail());
+        Assert.Throws<Exception>(() => fail.ThrowIfFailWithStackPreserved());
         Assert.True(fail == false);
         Assert.False(fail);
     }
@@ -176,6 +181,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(Exception), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(Exception), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -189,6 +195,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -206,6 +213,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -223,6 +231,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -297,6 +306,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(Exception), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(Exception), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -310,6 +320,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArithmeticException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -327,6 +338,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -344,6 +356,7 @@ public class ResultFailTests
         ok.IsFailed.Should().BeTrue();
 
         Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFail());
+        Assert.Throws(typeof(ArgumentException), () => ok.ThrowIfFailWithStackPreserved());
 
         Assert.True(ok == false);
         Assert.False(ok);
@@ -360,6 +373,25 @@ public class ResultFailTests
         try
         {
             result.ThrowIfFail();
+        }
+        catch (AggregateException e)
+        {
+            e.Message.Should().Be("One or more errors occurred. (oops1) (oops2) (oops3)");
+            e.InnerExceptions.Count.Should().Be(3);
+        }
+    }
+
+    [Fact]
+    public async Task SeveralErrorsWithStackPreserved()
+    {
+        var result = Result.Fail();
+        result.AddError(Error.Create("oops1"));
+        result.AddError(Error.Create("oops2"));
+        result.AddError(Error.Create("oops3"));
+
+        try
+        {
+            result.ThrowIfFailWithStackPreserved();
         }
         catch (AggregateException e)
         {

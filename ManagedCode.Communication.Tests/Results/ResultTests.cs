@@ -143,10 +143,24 @@ namespace ManagedCode.Communication.Tests
         }
 
         [Fact]
+        public void ThrowIfFailWithStackPreserved_ShouldThrowException_WhenErrorsExist()
+        {
+            var result = Result<int>.Fail("TestError");
+            Assert.Throws<Exception>(() => result.ThrowIfFailWithStackPreserved());
+        }
+
+        [Fact]
         public void ThrowIfFail_ShouldNotThrowException_WhenNoErrorsExist()
         {
             var result = Result<int>.Succeed(5);
             result.Invoking(r => r.ThrowIfFail()).Should().NotThrow();
+        }
+
+        [Fact]
+        public void ThrowIfFailWithStackPreserved_ShouldNotThrowException_WhenNoErrorsExist()
+        {
+            var result = Result<int>.Succeed(5);
+            result.Invoking(r => r.ThrowIfFailWithStackPreserved()).Should().NotThrow();
         }
 
         [Fact]

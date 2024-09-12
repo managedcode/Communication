@@ -14,6 +14,7 @@ public class ResultSucceedTests
         ok.IsFailed.Should().BeFalse();
         ok.GetError().Should().BeNull();
         ok.ThrowIfFail();
+        ok.ThrowIfFailWithStackPreserved();
         Assert.True(ok == true);
         Assert.True(ok);
         ok.AsTask().Result.IsSuccess.Should().BeTrue();
@@ -31,6 +32,7 @@ public class ResultSucceedTests
         ok.IsFailed.Should().BeFalse();
         ok.GetError().Should().BeNull();
         ok.ThrowIfFail();
+        ok.ThrowIfFailWithStackPreserved();
         ok.Value.Message.Should().Be("msg");
 
         Assert.True(ok == true);
@@ -62,6 +64,7 @@ public class ResultSucceedTests
         ok.IsFailed.Should().BeFalse();
         ok.GetError().Should().BeNull();
         ok.ThrowIfFail();
+        ok.ThrowIfFailWithStackPreserved();
 
         Assert.True(ok == true);
         Assert.True(ok);
