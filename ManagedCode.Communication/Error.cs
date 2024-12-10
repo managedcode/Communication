@@ -4,6 +4,8 @@ using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication;
 
+
+
 public struct Error
 {
     internal Error(string message, string? errorCode = default)

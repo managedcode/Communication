@@ -23,3 +23,5 @@ public struct ResultTSurrogate<T>
 
     [Id(3)] public T? Value;
 }
+
+
