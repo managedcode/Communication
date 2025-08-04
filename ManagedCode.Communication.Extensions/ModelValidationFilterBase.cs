@@ -1,10 +1,10 @@
 using System;
 using System.Linq;
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
-using ManagedCode.Communication;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
+using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions;
 
@@ -20,12 +20,12 @@ public abstract class ModelValidationFilterBase(ILogger<ModelValidationFilterBas
 
             var problem = new Problem
             {
-                Title = "Validation failed",
-                Status = 400,
+                Title = Titles.ValidationFailed,
+                Status = HttpStatusCode.BadRequest,
                 Instance = context.HttpContext.Request.Path,
                 Extensions =
                 {
-                    ["validationErrors"] = context.ModelState
+                    [ExtensionKeys.ValidationErrors] = context.ModelState
                         .Where(x => x.Value?.Errors.Count > 0)
                         .ToDictionary(
                             kvp => kvp.Key,

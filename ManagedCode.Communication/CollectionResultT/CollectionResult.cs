@@ -47,7 +47,7 @@ public partial struct CollectionResult<T> : IResult, IResultError
     [MemberNotNullWhen(false, nameof(Collection))]
     public bool ThrowIfFail()
     {
-        if(IsSuccess)
+        if (IsSuccess)
             return false;
         
         if (Errors?.Any() is not true)

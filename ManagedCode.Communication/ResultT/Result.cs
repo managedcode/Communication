@@ -58,7 +58,7 @@ public partial struct Result<T> : IResult<T>
     [MemberNotNullWhen(false, nameof(Value))]
     public bool ThrowIfFail()
     {
-        if(IsSuccess)
+        if (IsSuccess)
             return false;
         
         if (Errors?.Any() is not true)

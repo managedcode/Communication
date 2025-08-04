@@ -14,10 +14,6 @@ public static class CommunicationAppBuilderExtensions
         if (app == null)
             throw new ArgumentNullException(nameof(app));
 
-        // Note: Filters are now registered automatically via AddCommunicationFilters() in ConfigureServices
-        // This method is kept for backward compatibility but no longer performs filter registration
-        // Use AddCommunicationFilters<TExceptionFilter, TModelValidationFilter, THubExceptionFilter>() instead
-
         return app;
     }
 }

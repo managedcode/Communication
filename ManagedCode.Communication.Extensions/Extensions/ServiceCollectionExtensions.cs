@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using ManagedCode.Communication.Extensions.Constants;
 
 namespace ManagedCode.Communication.Extensions.Extensions;
 
@@ -49,7 +50,7 @@ public static class ServiceCollectionExtensions
                 context.ProblemDetails.Type ??= $"https://httpstatuses.io/{statusCode}";
                 context.ProblemDetails.Title ??= ReasonPhrases.GetReasonPhrase(statusCode);
                 context.ProblemDetails.Instance ??= context.HttpContext.Request.Path;
-                context.ProblemDetails.Extensions.TryAdd("traceId", Activity.Current?.Id ?? context.HttpContext.TraceIdentifier);
+                context.ProblemDetails.Extensions.TryAdd(ProblemConstants.ExtensionKeys.TraceId, Activity.Current?.Id ?? context.HttpContext.TraceIdentifier);
             };
         });
 

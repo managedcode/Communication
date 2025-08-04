@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ManagedCode.Communication.Extensions.Constants;
 
 namespace ManagedCode.Communication.Extensions;
 
@@ -26,13 +27,13 @@ internal class CommunicationExceptionHandler(IProblemDetailsService problemDetai
             Instance = httpContext.Request.Path,
             Extensions =
             {
-                ["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier
+                [ProblemConstants.ExtensionKeys.TraceId] = Activity.Current?.Id ?? httpContext.TraceIdentifier
             }
         };
 
         if (exception.InnerException is not null)
         {
-            problemDetails.Extensions["innerException"] = new
+            problemDetails.Extensions[ProblemConstants.ExtensionKeys.InnerException] = new
             {
                 Title = exception.InnerException.GetType().FullName,
                 Detail = exception.InnerException.Message
@@ -41,7 +42,7 @@ internal class CommunicationExceptionHandler(IProblemDetailsService problemDetai
 
         if (webHostEnvironment.IsDevelopment())
         {
-            problemDetails.Extensions["stackTrace"] = exception.StackTrace;
+            problemDetails.Extensions[ProblemConstants.ExtensionKeys.StackTrace] = exception.StackTrace;
         }
 
         await problemDetailsService.WriteAsync(new()

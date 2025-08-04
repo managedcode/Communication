@@ -1,15 +1,10 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Security;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
+using static ManagedCode.Communication.Extensions.Helpers.HttpStatusCodeHelper;
+using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions;
 
@@ -29,15 +24,16 @@ public abstract class ExceptionFilterBase(ILogger logger) : IExceptionFilter
                 controllerName, actionName);
 
             var statusCode = GetStatusCodeForException(exception);
+            
             var problem = new Problem()
             {
                 Title = exception.GetType().Name,
                 Detail = exception.Message,
-                Status = (int)statusCode,
+                Status = statusCode,
                 Instance = context.HttpContext.Request.Path,
                 Extensions =
                 {
-                    ["traceId"] = context.HttpContext.TraceIdentifier
+                    [ExtensionKeys.TraceId] = context.HttpContext.TraceIdentifier
                 }
             };
 
@@ -59,51 +55,16 @@ public abstract class ExceptionFilterBase(ILogger logger) : IExceptionFilter
             
             var fallbackProblem = new Problem
             {
-                Title = "An unexpected error occurred",
-                Status = (int)HttpStatusCode.InternalServerError,
+                Title = Titles.UnexpectedError,
+                Status = HttpStatusCode.InternalServerError,
                 Instance = context.HttpContext.Request.Path
             };
             
-            context.Result = new ObjectResult(Result<Problem>.Fail("An unexpected error occurred", fallbackProblem))
+            context.Result = new ObjectResult(Result<Problem>.Fail(Titles.UnexpectedError, fallbackProblem))
             {
                 StatusCode = (int)HttpStatusCode.InternalServerError
             };
             context.ExceptionHandled = true;
         }
-    }
-    
-    protected virtual HttpStatusCode GetStatusCodeForException(Exception exception)
-    {
-        return exception switch
-        {
-            ArgumentException => HttpStatusCode.BadRequest,
-            InvalidOperationException => HttpStatusCode.BadRequest,
-            NotSupportedException => HttpStatusCode.BadRequest,
-            FormatException => HttpStatusCode.BadRequest,
-            JsonException => HttpStatusCode.BadRequest,
-            XmlException => HttpStatusCode.BadRequest,
-            
-            UnauthorizedAccessException => HttpStatusCode.Unauthorized,
-            
-            SecurityException => HttpStatusCode.Forbidden,
-            
-            FileNotFoundException => HttpStatusCode.NotFound,
-            DirectoryNotFoundException => HttpStatusCode.NotFound,
-            KeyNotFoundException => HttpStatusCode.NotFound,
-            
-            TimeoutException => HttpStatusCode.RequestTimeout,
-            TaskCanceledException => HttpStatusCode.RequestTimeout,
-            OperationCanceledException => HttpStatusCode.RequestTimeout,
-            
-            InvalidDataException => HttpStatusCode.Conflict,
-            
-            NotImplementedException => HttpStatusCode.NotImplemented,
-            NotFiniteNumberException => HttpStatusCode.InternalServerError,
-            OutOfMemoryException => HttpStatusCode.InternalServerError,
-            StackOverflowException => HttpStatusCode.InternalServerError,
-            ThreadAbortException => HttpStatusCode.InternalServerError,
-            
-            _ => HttpStatusCode.InternalServerError
-        };
     }
 } 
