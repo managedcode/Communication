@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using ManagedCode.Communication.Extensions.Constants;
+using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions.Extensions;
 
@@ -50,19 +50,10 @@ public static class ServiceCollectionExtensions
                 context.ProblemDetails.Type ??= $"https://httpstatuses.io/{statusCode}";
                 context.ProblemDetails.Title ??= ReasonPhrases.GetReasonPhrase(statusCode);
                 context.ProblemDetails.Instance ??= context.HttpContext.Request.Path;
-                context.ProblemDetails.Extensions.TryAdd(ProblemConstants.ExtensionKeys.TraceId, Activity.Current?.Id ?? context.HttpContext.TraceIdentifier);
+                context.ProblemDetails.Extensions.TryAdd(ExtensionKeys.TraceId, Activity.Current?.Id ?? context.HttpContext.TraceIdentifier);
             };
         });
 
-        return services;
-    }
-
-    public static IServiceCollection AddCommunicationExceptionHandler(this IServiceCollection services)
-    {
-        // Ensures that the ProblemDetails service is registered.
-        services.AddProblemDetails();
-
-        services.AddExceptionHandler<CommunicationExceptionHandler>();
         return services;
     }
 
