@@ -3,14 +3,15 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using static ManagedCode.Communication.Extensions.Helpers.HttpStatusCodeHelper;
 using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions;
 
-public abstract class ExceptionFilterBase(ILogger logger) : IExceptionFilter
+public abstract class ExceptionFilterBase : IExceptionFilter
 {
-    protected readonly ILogger Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    protected readonly ILogger Logger = NullLogger<ExceptionFilterBase>.Instance;
     
     public virtual void OnException(ExceptionContext context)
     {

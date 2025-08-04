@@ -2,14 +2,15 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using static ManagedCode.Communication.Extensions.Helpers.HttpStatusCodeHelper;
 using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions;
 
-public abstract class HubExceptionFilterBase(ILogger logger) : IHubFilter
+public abstract class HubExceptionFilterBase : IHubFilter
 {
-    protected readonly ILogger Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    protected readonly ILogger Logger = NullLogger.Instance;
 
     public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext,
         Func<HubInvocationContext, ValueTask<object?>> next)
