@@ -55,14 +55,18 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     /// Throws an exception if the result is a failure.
     /// </summary>
-    public void ThrowIfFail()
+    [MemberNotNullWhen(false, nameof(Value))]
+    public bool ThrowIfFail()
     {
+        if(IsSuccess)
+            return false;
+        
         if (Errors?.Any() is not true)
         {
             if(IsFailed)
                 throw new Exception(nameof(IsFailed));
 
-            return;
+            return false;
         }
 
         var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
@@ -76,14 +80,15 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     /// Throws an exception with stack trace preserved if the result indicates a failure.
     /// </summary>
-    public void ThrowIfFailWithStackPreserved()
+    [MemberNotNullWhen(false, nameof(Value))]
+    public bool ThrowIfFailWithStackPreserved()
     {
         if (Errors?.Any() is not true)
         {
             if (IsFailed)
                 throw new Exception(nameof(IsFailed));
 
-            return;
+            return false;
         }
 
         var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message))));
