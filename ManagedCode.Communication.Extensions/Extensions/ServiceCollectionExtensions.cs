@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,11 +28,11 @@ public static class HostApplicationBuilderExtensions
 public static class ServiceCollectionExtensions
 {
     
-    public static IServiceCollection AddCommunication(this IServiceCollection services, Action<CommunicationOptions> options)
+    public static IServiceCollection AddCommunication(this IServiceCollection services, Action<CommunicationOptions>? configure = null)
     {
-        services.AddOptions<CommunicationOptions>()
-            .Configure(options);
-        
+        if (configure != null)
+            services.Configure(configure);
+
         return services;
     }
     
@@ -61,6 +62,30 @@ public static class ServiceCollectionExtensions
         services.AddProblemDetails();
 
         services.AddExceptionHandler<CommunicationExceptionHandler>();
+        return services;
+    }
+
+    public static IServiceCollection AddCommunicationFilters<TExceptionFilter, TModelValidationFilter, THubExceptionFilter>(
+        this IServiceCollection services)
+        where TExceptionFilter : ExceptionFilterBase
+        where TModelValidationFilter : ModelValidationFilterBase
+        where THubExceptionFilter : HubExceptionFilterBase
+    {
+        services.AddScoped<TExceptionFilter>();
+        services.AddScoped<TModelValidationFilter>();
+        services.AddScoped<THubExceptionFilter>();
+
+        services.AddControllers(options => 
+        { 
+            options.Filters.Add<TExceptionFilter>();
+            options.Filters.Add<TModelValidationFilter>();
+        });
+
+        services.Configure<HubOptions>(options =>
+        {
+            options.AddFilter<THubExceptionFilter>();
+        });
+
         return services;
     }
 }

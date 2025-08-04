@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using FluentAssertions;
+using ManagedCode.Communication.Tests.Common.TestApp;
 using ManagedCode.Communication.Tests.TestApp;
 using ManagedCode.Communication.Tests.TestApp.Grains;
 using Xunit;
