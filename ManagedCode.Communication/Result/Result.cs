@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text.Json.Serialization;
@@ -68,14 +69,17 @@ public partial struct Result : IResult
     /// <summary>
     /// Throws an exception if the result indicates a failure.
     /// </summary>
-    public void ThrowIfFail()
+    public bool ThrowIfFail()
     {
+        if (IsSuccess)
+            return false;
+        
         if (Errors?.Any() is not true)
         {
             if(IsFailed)
                 throw new Exception(nameof(IsFailed));
             
-            return;
+            return false;
         }
 
         var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
@@ -88,14 +92,14 @@ public partial struct Result : IResult
     /// <summary>
     /// Throws an exception with stack trace preserved if the result indicates a failure.
     /// </summary>
-    public void ThrowIfFailWithStackPreserved()
+    public bool ThrowIfFailWithStackPreserved()
     {
         if (Errors?.Any() is not true)
         {
             if (IsFailed)
                 throw new Exception(nameof(IsFailed));
 
-            return;
+            return false;
         }
 
         var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message))));

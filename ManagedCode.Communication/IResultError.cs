@@ -22,12 +22,12 @@ public interface IResultError
     /// <summary>
     /// Throws an exception if the result indicates a failure.
     /// </summary>
-    void ThrowIfFail();
+    bool ThrowIfFail();
 
     /// <summary>
     /// Throws an exception with stack trace preserved if the result indicates a failure.
     /// </summary>
-    void ThrowIfFailWithStackPreserved();
+    bool ThrowIfFailWithStackPreserved();
 
     /// <summary>
     /// Gets the error code as a specific enumeration type.

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
+using ManagedCode.Communication.Tests.Common.TestApp;
 using ManagedCode.Communication.Tests.TestApp;
 using ManagedCode.Communication.Tests.TestApp.Controllers;
 using ManagedCode.Communication.Tests.TestApp.Grains;
@@ -12,43 +13,36 @@ using Xunit.Abstractions;
 namespace ManagedCode.Communication.Tests.ControllerTests;
 
 [Collection(nameof(TestClusterApplication))]
-public class MiddlewareTests 
+public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplication application)
 {
-    private readonly ITestOutputHelper _outputHelper;
-    private readonly TestClusterApplication _application;
-
-    public MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplication application)
-    {
-        _outputHelper = outputHelper;
-        _application = application;
-    }
+    private readonly ITestOutputHelper _outputHelper = outputHelper;
 
     [Fact]
     public async Task ValidationException()
     {
-        var response = await _application.CreateClient().GetAsync($"test/test1");
+        var response = await application.CreateClient().GetAsync($"test/test1");
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         var content = await response.Content.ReadAsStringAsync();
-        var result = await response.Content.ReadFromJsonAsync<Result>();
+        var result = await response.Content.ReadFromJsonAsync<Result<Problem>>();
         result.IsFailed.Should().BeTrue();
-        result.GetError().Value.Message.Should().Be("ValidationException");
+        result.GetError()?.Message.Should().Be("ValidationException");
     }
     
     [Fact]
     public async Task InvalidDataException()
     {
-        var response = await _application.CreateClient().GetAsync($"test/test2");
-        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        var response = await application.CreateClient().GetAsync($"test/test2");
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var content = await response.Content.ReadAsStringAsync();
-        var result = await response.Content.ReadFromJsonAsync<Result<int>>();
+        var result = await response.Content.ReadFromJsonAsync<Result<Problem>>();
         result.IsFailed.Should().BeTrue();
-        result.GetError().Value.Message.Should().Be("InvalidDataException");
+        result.GetError()?.Message.Should().Be("InvalidDataException");
     }
     
     [Fact]
     public async Task ValidationExceptionSginalR()
     {
-        var connection = _application.CreateSignalRClient(nameof(TestHub));
+        var connection = application.CreateSignalRClient(nameof(TestHub));
         await connection.StartAsync();
         connection.State.Should().Be(HubConnectionState.Connected);
         var result = await connection.InvokeAsync<Result<int>>("DoTest");
@@ -59,11 +53,12 @@ public class MiddlewareTests
     [Fact]
     public async Task InvalidDataExceptionSignalR()
     {
-        var connection = _application.CreateSignalRClient(nameof(TestHub));
+        var connection = application.CreateSignalRClient(nameof(TestHub));
         await connection.StartAsync();
         connection.State.Should().Be(HubConnectionState.Connected);
-        var result = await connection.InvokeAsync<Result<int>>("Throw");
+        var result = await connection.InvokeAsync<Result<Problem>>("Throw");
         result.IsFailed.Should().BeTrue();
-        result.GetError().Value.Message.Should().Be("InvalidDataException");
+        result.GetError().Should().NotBeNull();
+        result.GetError()!.Value.Message.Should().Be("InvalidDataException");
     }
 }

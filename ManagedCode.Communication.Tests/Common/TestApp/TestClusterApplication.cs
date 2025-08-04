@@ -5,13 +5,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans.Hosting;
 using Orleans.TestingHost;
 using Xunit;
 
-namespace ManagedCode.Communication.Tests.TestApp;
+namespace ManagedCode.Communication.Tests.Common.TestApp;
 
 [CollectionDefinition(nameof(TestClusterApplication))]
 public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, ICollectionFixture<TestClusterApplication>

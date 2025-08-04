@@ -1,10 +1,7 @@
 using System;
 using System.Runtime.ExceptionServices;
-using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication;
-
-
 
 public struct Error
 {

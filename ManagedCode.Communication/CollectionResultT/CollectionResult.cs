@@ -44,14 +44,18 @@ public partial struct CollectionResult<T> : IResult, IResultError
         }
     }
 
-    public void ThrowIfFail()
+    [MemberNotNullWhen(false, nameof(Collection))]
+    public bool ThrowIfFail()
     {
+        if (IsSuccess)
+            return false;
+        
         if (Errors?.Any() is not true)
         {
             if(IsFailed)
                 throw new Exception(nameof(IsFailed));
             
-            return;
+            return false;
         }
 
         var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
@@ -62,14 +66,15 @@ public partial struct CollectionResult<T> : IResult, IResultError
         throw new AggregateException(exceptions);
     }
 
-    public void ThrowIfFailWithStackPreserved()
+    [MemberNotNullWhen(false, nameof(Collection))]
+    public bool ThrowIfFailWithStackPreserved()
     {
         if (Errors?.Any() is not true)
         {
             if (IsFailed)
                 throw new Exception(nameof(IsFailed));
 
-            return;
+            return false;
         }
 
         var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message))));

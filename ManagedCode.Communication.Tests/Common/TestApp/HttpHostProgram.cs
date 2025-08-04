@@ -1,11 +1,10 @@
-using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Extensions.Extensions;
+using ManagedCode.Communication.Tests.TestApp;
 using ManagedCode.Communication.Tests.TestApp.Controllers;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ManagedCode.Communication.Tests.TestApp;
+namespace ManagedCode.Communication.Tests.Common.TestApp;
 
 public class HttpHostProgram
 {
@@ -18,8 +17,12 @@ public class HttpHostProgram
             option.ShowErrorDetails = true;
         });
         
+        builder.Services.AddCommunicationFilters<TestExceptionFilter, TestModelValidationFilter, TestHubExceptionFilter>();
+        
         builder.Services.AddControllers();
-        builder.Services.AddSignalR(options => options.AddCommunicationHubFilter());
+        builder.Services.AddSignalR(options => 
+        {
+        });
 
         
         var app = builder.Build();
