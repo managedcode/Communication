@@ -14,13 +14,9 @@ public static class CommunicationAppBuilderExtensions
         if (app == null)
             throw new ArgumentNullException(nameof(app));
 
-        var serviceProvider = app.ApplicationServices;
-        var exceptionFilter = serviceProvider.GetRequiredService<ExceptionFilterBase>();
-        var modelValidationFilter = serviceProvider.GetRequiredService<ModelValidationFilterBase>();
-        
-        var mvcOptions = serviceProvider.GetRequiredService<IOptions<MvcOptions>>();
-        mvcOptions.Value.Filters.Add(exceptionFilter);
-        mvcOptions.Value.Filters.Add(modelValidationFilter);
+        // Note: Filters are now registered automatically via AddCommunicationFilters() in ConfigureServices
+        // This method is kept for backward compatibility but no longer performs filter registration
+        // Use AddCommunicationFilters<TExceptionFilter, TModelValidationFilter, THubExceptionFilter>() instead
 
         return app;
     }
