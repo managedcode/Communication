@@ -55,5 +55,20 @@ public static class ProblemConstants
         /// Key for stack trace in problem extensions
         /// </summary>
         public const string StackTrace = "stackTrace";
+        
+        /// <summary>
+        /// Key for error type (enum type name) in problem extensions
+        /// </summary>
+        public const string ErrorType = "errorType";
+        
+        /// <summary>
+        /// Key for error code name (enum value name) in problem extensions
+        /// </summary>
+        public const string ErrorCodeName = "errorCodeName";
+        
+        /// <summary>
+        /// Key for error code value (enum numeric value) in problem extensions
+        /// </summary>
+        public const string ErrorCodeValue = "errorCodeValue";
     }
 } 

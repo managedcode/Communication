@@ -4,6 +4,7 @@
         <LangVersion>13</LangVersion>
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
         <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
     
     <!--NuGet-->
@@ -24,8 +25,8 @@
         <RepositoryUrl>https://github.com/managedcode/Communication</RepositoryUrl>
         <PackageProjectUrl>https://github.com/managedcode/Communication</PackageProjectUrl>
         <Product>Managed Code - Communication</Product>
-        <Version>9.0.1</Version>
-        <PackageVersion>9.0.1</PackageVersion>
+        <Version>9.5.0</Version>
+        <PackageVersion>9.5.0</PackageVersion>
 
     </PropertyGroup>
     <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">

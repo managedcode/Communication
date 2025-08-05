@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.ExceptionServices;
+using System.Net;
 using System.Text.Json.Serialization;
-using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication;
 
@@ -13,183 +13,122 @@ namespace ManagedCode.Communication;
 /// Represents a result of an operation.
 /// </summary>
 [Serializable]
-[DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
+[DebuggerDisplay("IsSuccess: {IsSuccess}; Problem: {Problem?.Title}")]
 public partial struct Result : IResult
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="Result"/> struct.
     /// </summary>
-    /// <param name="isSuccess">Indicates whether the operation was successful.</param>
-    /// <param name="errors">The errors that occurred during the operation.</param>
-    /// <param name="invalidObject">The invalid object that caused the operation to fail.</param>
-    internal Result(bool isSuccess, Error[]? errors, Dictionary<string, string>? invalidObject)
+    internal Result(bool isSuccess, Problem? problem = null)
     {
         IsSuccess = isSuccess;
-        Errors = errors;
-        InvalidObject = invalidObject;
-    }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Result"/> struct with an exception.
-    /// </summary>
-    /// <param name="exception">The exception that caused the operation to fail.</param>
-    internal Result(Exception exception) : this(false, new[] { Error.FromException(exception) }, default)
-    {
+        Problem = problem;
     }
 
     /// <summary>
     /// Gets or sets a value indicating whether the operation was successful.
     /// </summary>
+    [JsonPropertyName("isSuccess")]
+    [JsonPropertyOrder(1)]
     public bool IsSuccess { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the operation failed.
     /// </summary>
     [JsonIgnore]
-    public bool IsFailed => !IsSuccess;
+    public bool IsFailed => !IsSuccess || HasProblem;
 
     /// <summary>
-    /// Adds an error to the result.
+    /// Gets or sets the problem that occurred during the operation.
     /// </summary>
-    /// <param name="error">The error to add.</param>
-    public void AddError(Error error)
-    {
-        if (Errors == null)
-        {
-            Errors = new[] { error };
-        }
-        else
-        {
-            var list = Errors.ToList();
-            list.Add(error);
-            Errors = list.ToArray();
-        }
-    }
+    [JsonPropertyName("problem")]
+    [JsonPropertyOrder(2)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Problem? Problem { get; set; }
+
+    
+    /// <summary>
+    /// Gets a value indicating whether the result has a problem.
+    /// </summary>
+    [JsonIgnore]
+    public bool HasProblem => Problem != null;
+
 
     /// <summary>
     /// Throws an exception if the result indicates a failure.
     /// </summary>
     public bool ThrowIfFail()
     {
-        if (IsSuccess)
+        if (IsSuccess && !HasProblem)
             return false;
         
-        if (Errors?.Any() is not true)
+        if (Problem != null)
         {
-            if(IsFailed)
-                throw new Exception(nameof(IsFailed));
+            throw new ProblemException(Problem);
+        }
+        
+        if (IsFailed)
+            throw new Exception("Operation failed");
             
-            return false;
-        }
-
-        var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
-        if (Errors.Length == 1)
-            throw exceptions.First();
-
-        throw new AggregateException(exceptions);
+        return false;
     }
 
-    /// <summary>
-    /// Throws an exception with stack trace preserved if the result indicates a failure.
-    /// </summary>
-    public bool ThrowIfFailWithStackPreserved()
+
+    #region IResultInvalid Implementation
+
+    public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
+
+    public bool IsNotInvalid => !IsInvalid;
+
+    public bool InvalidField(string fieldName)
     {
-        if (Errors?.Any() is not true)
-        {
-            if (IsFailed)
-                throw new Exception(nameof(IsFailed));
-
-            return false;
-        }
-
-        var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message))));
-
-        if (Errors.Length == 1)
-        {
-            exceptions.First().Throw();
-        }
-
-        throw new AggregateException(exceptions.Select(e => e.SourceException));
+        var errors = Problem?.GetValidationErrors();
+        return errors?.ContainsKey(fieldName) ?? false;
     }
 
-    /// <summary>
-    /// Gets the error code as a specific enumeration type.
-    /// </summary>
-    /// <typeparam name="TEnum">The type of the enumeration.</typeparam>
-    /// <returns>The error code as the specified enumeration type, or null if the result does not contain an error code.</returns>
-    public TEnum? ErrorCodeAs<TEnum>() where TEnum : Enum
+    public string? InvalidFieldError(string fieldName)
     {
-        return GetError().HasValue ? GetError()!.Value.ErrorCodeAs<TEnum>() : default;
+        var errors = Problem?.GetValidationErrors();
+        return errors?.TryGetValue(fieldName, out var fieldErrors) == true 
+            ? string.Join(", ", fieldErrors) 
+            : null;
     }
-
-    /// <summary>
-    /// Determines whether the error code is a specific value.
-    /// </summary>
-    /// <param name="value">The value to compare with the error code.</param>
-    /// <returns>true if the error code is the specified value; otherwise, false.</returns>
-    public bool IsErrorCode(Enum value)
-    {
-        return GetError()?.IsErrorCode(value) ?? false;
-    }
-
-    /// <summary>
-    /// Determines whether the error code is not a specific value.
-    /// </summary>
-    /// <param name="value">The value to compare with the error code.</param>
-    /// <returns>true if the error code is not the specified value; otherwise, false.</returns>
-    public bool IsNotErrorCode(Enum value)
-    {
-        return GetError()?.IsNotErrorCode(value) ?? false;
-    }
-
-    /// <summary>
-    /// Gets the first error from the result.
-    /// </summary>
-    /// <returns>The first error, or null if the result does not contain any errors.</returns>
-    public Error? GetError()
-    {
-        if (Errors == null || Errors.Length == 0)
-            return null;
-
-        return Errors[0];
-    }
-
-    /// <summary>
-    /// Gets or sets the errors that occurred during the operation.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Error[]? Errors { get; set; }
-
-    /// <summary>
-    /// Gets or sets the invalid object that caused the operation to fail.
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Dictionary<string, string>? InvalidObject { get; set; }
-
-    /// <summary>
-    /// Gets a value indicating whether the result is invalid.
-    /// </summary>
-    [JsonIgnore]
-    public bool IsInvalid => !IsSuccess && InvalidObject?.Any() is true;
-
-    /// <summary>
-    /// Adds an invalid message to the result.
-    /// </summary>
-    /// <param name="message">The invalid message to add.</param>
+    
     public void AddInvalidMessage(string message)
     {
-        InvalidObject ??= new Dictionary<string, string>();
-        InvalidObject[nameof(message)] = message;
+        if (Problem == null)
+        {
+            Problem = Problem.Validation(("_general", message));
+        }
+        else
+        {
+            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            {
+                if (!errors.ContainsKey("_general"))
+                    errors["_general"] = new List<string>();
+                errors["_general"].Add(message);
+            }
+        }
     }
-
-    /// <summary>
-    /// Adds an invalid message to the result with a specific key.
-    /// </summary>
-    /// <param name="key">The key of the invalid message.</param>
-    /// <param name="value">The value of the invalid message.</param>
+    
     public void AddInvalidMessage(string key, string value)
     {
-        InvalidObject ??= new Dictionary<string, string>();
-        InvalidObject[key] = value;
+        if (Problem == null)
+        {
+            Problem = Problem.Validation((key, value));
+        }
+        else
+        {
+            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            {
+                if (!errors.ContainsKey(key))
+                    errors[key] = new List<string>();
+                errors[key].Add(value);
+            }
+        }
     }
+
+    #endregion
 }

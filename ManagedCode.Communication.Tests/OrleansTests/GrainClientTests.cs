@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using ManagedCode.Communication.Tests.Common.TestApp;
+using ManagedCode.Communication.Tests.Common.TestApp.Models;
 using ManagedCode.Communication.Tests.TestApp;
 using ManagedCode.Communication.Tests.TestApp.Grains;
 using Xunit;
@@ -47,5 +48,56 @@ public class GrainClientTests
     {
         var intResult = await _application.Cluster.Client.GetGrain<ITestGrain>(0).TestResultError();
         intResult.IsFailed.Should().Be(true);
+    }
+    
+    [Fact]
+    public async Task ValueTaskResult()
+    {
+        var result = await _application.Cluster.Client.GetGrain<ITestGrain>(0).TestValueTaskResult();
+        result.IsSuccess.Should().Be(true);
+    }
+    
+    [Fact]
+    public async Task ValueTaskResultString()
+    {
+        var result = await _application.Cluster.Client.GetGrain<ITestGrain>(0).TestValueTaskResultString();
+        result.IsSuccess.Should().Be(true);
+        result.Value.Should().Be("test");
+    }
+    
+    [Fact]
+    public async Task ValueTaskResultError()
+    {
+        var result = await _application.Cluster.Client.GetGrain<ITestGrain>(0).TestValueTaskResultError();
+        result.IsFailed.Should().Be(true);
+    }
+    
+    [Fact]
+    public async Task ValueTaskResultStringError()
+    {
+        var result = await _application.Cluster.Client.GetGrain<ITestGrain>(0).TestValueTaskResultStringError();
+        result.IsFailed.Should().Be(true);
+    }
+    
+    [Fact]
+    public async Task ValueTaskResultComplexObject()
+    {
+        var result = await _application.Cluster.Client.GetGrain<ITestGrain>(0).TestValueTaskResultComplexObject();
+        result.IsSuccess.Should().Be(true);
+        result.Value.Should().NotBeNull();
+        result.Value!.Id.Should().Be(123);
+        result.Value.Name.Should().Be("Test Model");
+        result.Value.Tags.Should().HaveCount(3);
+        result.Value.Properties.Should().HaveCount(3);
+        result.Value.Nested.Should().NotBeNull();
+        result.Value.Nested!.Value.Should().Be("nested value");
+        result.Value.Nested.Score.Should().Be(95.5);
+    }
+    
+    [Fact]
+    public async Task ValueTaskResultComplexObjectError()
+    {
+        var result = await _application.Cluster.Client.GetGrain<ITestGrain>(0).TestValueTaskResultComplexObjectError();
+        result.IsFailed.Should().Be(true);
     }
 }

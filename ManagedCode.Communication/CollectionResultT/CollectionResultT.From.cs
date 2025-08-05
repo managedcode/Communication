@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +19,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -30,7 +31,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -42,7 +43,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -54,7 +55,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -66,7 +67,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -79,7 +80,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -91,7 +92,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -103,7 +104,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -115,21 +116,30 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
     public static CollectionResult<T> From(CollectionResult<T> result)
     {
-        return result ? result : Fail(result.Errors);
+        if (result.IsSuccess)
+            return result;
+            
+        if (result.Problem != null)
+            return Fail(result.Problem);
+            
+        return Fail();
     }
 
-    public static Result From<T>(CollectionResult<T> result)
+    public static Result From<U>(CollectionResult<U> result)
     {
-        if (result)
+        if (result.IsSuccess)
             return Result.Succeed();
 
-        return Result.Fail(result.Errors);
+        if (result.Problem != null)
+            return Result.Fail(result.Problem);
+            
+        return Result.Fail();
     }
 
 
@@ -141,7 +151,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -153,7 +163,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -165,7 +175,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -177,7 +187,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -192,7 +202,7 @@ public partial struct CollectionResult<T>
         {
             ILogger logger = new Logger<CollectionResult<T>>(new LoggerFactory());
             logger.LogError(e, $"Error {e.Message} in {Path.GetFileName(path)} at line {lineNumber} in {caller}");
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -204,7 +214,7 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 }

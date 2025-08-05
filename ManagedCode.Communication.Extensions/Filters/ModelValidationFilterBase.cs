@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
@@ -6,9 +5,9 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication.Extensions.Filters;
 
-public abstract class ModelValidationFilterBase(ILogger<ModelValidationFilterBase> logger) : IActionFilter
+public abstract class ModelValidationFilterBase(ILogger logger) : IActionFilter
 {
 
     public void OnActionExecuting(ActionExecutingContext context)
@@ -18,10 +17,10 @@ public abstract class ModelValidationFilterBase(ILogger<ModelValidationFilterBas
             logger.LogWarning("Model validation failed for {ActionName}", 
                 context.ActionDescriptor.DisplayName);
 
-            var problem = new Problem
+            var problem = new ManagedCode.Communication.Problem
             {
                 Title = Titles.ValidationFailed,
-                Status = HttpStatusCode.BadRequest,
+                StatusCode = (int)HttpStatusCode.BadRequest,
                 Instance = context.HttpContext.Request.Path,
                 Extensions =
                 {
@@ -34,7 +33,7 @@ public abstract class ModelValidationFilterBase(ILogger<ModelValidationFilterBas
                 }
             };
 
-            var result = Result<Problem>.Fail(problem);
+            var result = ManagedCode.Communication.Result.Fail(problem);
 
             context.Result = new BadRequestObjectResult(result);
         }

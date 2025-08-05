@@ -8,11 +8,11 @@ public sealed class ResultSurrogateConverter : IConverter<Result, ResultSurrogat
 {
     public Result ConvertFromSurrogate(in ResultSurrogate surrogate)
     {
-        return new Result(surrogate.IsSuccess, surrogate.Errors, surrogate.InvalidObject);
+        return new Result(surrogate.IsSuccess, surrogate.Problem);
     }
 
     public ResultSurrogate ConvertToSurrogate(in Result value)
     {
-        return new ResultSurrogate(value.IsSuccess, value.Errors, value.InvalidObject);
+        return new ResultSurrogate(value.IsSuccess, value.Problem);
     }
 }

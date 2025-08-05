@@ -3,22 +3,22 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.ExceptionServices;
+using System.Net;
 using System.Text.Json.Serialization;
-using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication;
 
 [Serializable]
-[DebuggerDisplay("IsSuccess: {IsSuccess}; {GetError().HasValue ? \" Error code: \" + GetError()!.Value.ErrorCode : string.Empty}")]
-public partial struct CollectionResult<T> : IResult, IResultError
+[DebuggerDisplay("IsSuccess: {IsSuccess}; Count: {Collection?.Length ?? 0}; Problem: {Problem?.Title}")]
+public partial struct CollectionResult<T> : IResult, IResultProblem
 {
-    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors,
-        Dictionary<string, string>? invalidObject) : this(isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, errors, invalidObject)
+    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Problem? problem) 
+        : this(isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, problem)
     {
     }
 
-    internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Error[]? errors, Dictionary<string, string>? invalidObject)
+    internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Problem? problem = null)
     {
         IsSuccess = isSuccess;
         Collection = collection ?? [];
@@ -26,126 +26,149 @@ public partial struct CollectionResult<T> : IResult, IResultError
         PageSize = pageSize;
         TotalItems = totalItems;
         TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
-        Errors = errors;
-        InvalidObject = invalidObject;
+        Problem = problem;
     }
 
-    public void AddError(Error error)
-    {
-        if (Errors == null)
-        {
-            Errors = new[] { error };
-        }
-        else
-        {
-            var list = Errors.ToList();
-            list.Add(error);
-            Errors = list.ToArray();
-        }
-    }
-
-    [MemberNotNullWhen(false, nameof(Collection))]
-    public bool ThrowIfFail()
-    {
-        if (IsSuccess)
-            return false;
-        
-        if (Errors?.Any() is not true)
-        {
-            if(IsFailed)
-                throw new Exception(nameof(IsFailed));
-            
-            return false;
-        }
-
-        var exceptions = Errors.Select(s => s.Exception() ?? new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message)));
-
-        if (Errors.Length == 1)
-            throw exceptions.First();
-
-        throw new AggregateException(exceptions);
-    }
-
-    [MemberNotNullWhen(false, nameof(Collection))]
-    public bool ThrowIfFailWithStackPreserved()
-    {
-        if (Errors?.Any() is not true)
-        {
-            if (IsFailed)
-                throw new Exception(nameof(IsFailed));
-
-            return false;
-        }
-
-        var exceptions = Errors.Select(s => s.ExceptionInfo() ?? ExceptionDispatchInfo.Capture(new Exception(StringExtension.JoinFilter(';', s.ErrorCode, s.Message))));
-
-        if (Errors.Length == 1)
-        {
-            exceptions.First().Throw();
-        }
-
-        throw new AggregateException(exceptions.Select(e => e.SourceException));
-    }
-
+    [JsonPropertyName("isSuccess")]
+    [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Collection))]
     public bool IsSuccess { get; set; }
     
+    [JsonIgnore]
+    public bool IsFailed => !IsSuccess || HasProblem;
+    
+    [JsonPropertyName("collection")]
+    [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T[] Collection { get; set; } = [];
 
-    public bool IsEmpty => Collection is null || Collection.Length != 0;
-    
+    [JsonPropertyName("pageNumber")]
+    [JsonPropertyOrder(3)]
     public int PageNumber { get; set; }
+    
+    [JsonPropertyName("pageSize")]
+    [JsonPropertyOrder(4)]
     public int PageSize { get; set; }
+    
+    [JsonPropertyName("totalItems")]
+    [JsonPropertyOrder(5)]
     public int TotalItems { get; set; }
+    
+    [JsonPropertyName("totalPages")]
+    [JsonPropertyOrder(6)]
     public int TotalPages { get; set; }
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Error[]? Errors { get; set; } = [];
+    [JsonPropertyName("problem")]
+    [JsonPropertyOrder(7)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Problem? Problem { get; set; }
 
+    
     [JsonIgnore]
-    [MemberNotNullWhen(false, nameof(Collection))]
-    public bool IsFailed => !IsSuccess;
+    public bool IsEmpty => Collection is null || Collection.Length == 0;
+    
+    [JsonIgnore]
+    public bool HasItems => Collection?.Length > 0;
+    
+    [JsonIgnore]
+    public bool HasProblem => Problem != null;
 
-    public Error? GetError()
+    #region IResultProblem Implementation
+
+    public bool ThrowIfFail()
     {
-        if (Errors == null || Errors.Length == 0)
-            return null;
+        if (IsSuccess && !HasProblem)
+            return false;
+        
+        if (Problem != null)
+        {
+            throw new ProblemException(Problem);
+        }
+        
+        if (IsFailed)
+            throw new Exception("Operation failed");
+            
+        return false;
+    }
 
-        return Errors[0];
+    #endregion
+
+
+    #region IResultInvalid Implementation
+
+    public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
+
+    public bool IsNotInvalid => !IsInvalid;
+
+    public bool InvalidField(string fieldName)
+    {
+        var errors = Problem?.GetValidationErrors();
+        return errors?.ContainsKey(fieldName) ?? false;
+    }
+
+    public string? InvalidFieldError(string fieldName)
+    {
+        var errors = Problem?.GetValidationErrors();
+        return errors?.TryGetValue(fieldName, out var fieldErrors) == true 
+            ? string.Join(", ", fieldErrors) 
+            : null;
     }
     
-    public TEnum? ErrorCodeAs<TEnum>() where TEnum : Enum
-    {
-        return GetError().HasValue ? GetError()!.Value.ErrorCodeAs<TEnum>() : default;
-    }
-
-    public bool IsErrorCode(Enum value)
-    {
-        return GetError()?.IsErrorCode(value) ?? false;
-    }
-
-    public bool IsNotErrorCode(Enum value)
-    {
-        return GetError()?.IsNotErrorCode(value) ?? false;
-    }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public Dictionary<string, string>? InvalidObject { get; set; }
-
-    [JsonIgnore]
-    [MemberNotNullWhen(false, nameof(Collection))]
-    public bool IsInvalid => !IsSuccess || InvalidObject?.Any() is true;
-
     public void AddInvalidMessage(string message)
     {
-        InvalidObject ??= new Dictionary<string, string>();
-        InvalidObject[nameof(message)] = message;
+        if (Problem == null)
+        {
+            Problem = Problem.Validation(("_general", message));
+        }
+        else
+        {
+            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            {
+                if (!errors.ContainsKey("_general"))
+                    errors["_general"] = new List<string>();
+                errors["_general"].Add(message);
+            }
+        }
     }
-
+    
     public void AddInvalidMessage(string key, string value)
     {
-        InvalidObject ??= new Dictionary<string, string>();
-        InvalidObject[key] = value;
+        if (Problem == null)
+        {
+            Problem = Problem.Validation((key, value));
+        }
+        else
+        {
+            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            {
+                if (!errors.ContainsKey(key))
+                    errors[key] = new List<string>();
+                errors[key].Add(value);
+            }
+        }
     }
+
+    #endregion
+    
+    #region Static Factory Methods
+    
+    /// <summary>
+    /// Creates an empty collection result.
+    /// </summary>
+    public static CollectionResult<T> Empty()
+    {
+        return new CollectionResult<T>(true, Array.Empty<T>(), 1, 0, 0);
+    }
+    
+    /// <summary>
+    /// Creates an empty collection result with paging information.
+    /// </summary>
+    public static CollectionResult<T> Empty(int pageNumber, int pageSize)
+    {
+        return new CollectionResult<T>(true, Array.Empty<T>(), pageNumber, pageSize, 0);
+    }
+    
+    #endregion
 }

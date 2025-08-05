@@ -10,12 +10,12 @@ public sealed class
     public CollectionResult<T> ConvertFromSurrogate(in CollectionResultTSurrogate<T> surrogate)
     {
         return new CollectionResult<T>(surrogate.IsSuccess, surrogate.Collection, surrogate.PageNumber,
-            surrogate.PageSize, surrogate.TotalItems, surrogate.Errors, surrogate.InvalidObject);
+            surrogate.PageSize, surrogate.TotalItems, surrogate.Problem);
     }
 
     public CollectionResultTSurrogate<T> ConvertToSurrogate(in CollectionResult<T> value)
     {
         return new CollectionResultTSurrogate<T>(value.IsSuccess, value.Collection, value.PageNumber, value.PageSize,
-            value.TotalItems, value.Errors, value.InvalidObject);
+            value.TotalItems, value.Problem);
     }
 }

@@ -1,264 +1,211 @@
-using Xunit;
 using System;
+using System.Net;
 using FluentAssertions;
-using ManagedCode.Communication.Tests.Results;
+using Xunit;
 
-namespace ManagedCode.Communication.Tests
+namespace ManagedCode.Communication.Tests.Results;
+
+public class ResultTests
 {
-    public class ResultTests
+    [Fact]
+    public void Succeed_ShouldCreateSuccessfulResult()
     {
-        [Fact]
-        public void Equals_ReturnsTrue_WhenResultsAreIdentical()
-        {
-            var error = new Error { Message = "Error", ErrorCode = "E001" };
-            var result1 = Result.Fail(error);
-            var result2 = Result.Fail(error);
+        // Act
+        var result = Result.Succeed();
 
-            Assert.True(result1.Equals(result2));
-        }
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.IsFailed.Should().BeFalse();
+        result.Problem.Should().BeNull();
+    }
 
-        [Fact]
-        public void Equals_ReturnsFalse_WhenResultsAreDifferent()
-        {
-            var error1 = new Error { Message = "Error1", ErrorCode = "E001" };
-            var error2 = new Error { Message = "Error2", ErrorCode = "E002" };
-            var result1 = Result.Fail(error1);
-            var result2 = Result.Fail(error2);
+    [Fact]
+    public void Fail_WithMessage_ShouldCreateFailedResult()
+    {
+        // Arrange
+        const string title = "Operation failed";
+        const string detail = "Something went wrong";
 
-            Assert.False(result1.Equals(result2));
-        }
+        // Act
+        var result = Result.Fail(title, detail, HttpStatusCode.BadRequest);
 
-        [Fact]
-        public void GetHashCode_ReturnsSameHashCode_WhenResultsAreIdentical()
-        {
-            var error = new Error { Message = "Error", ErrorCode = "E001" };
-            var result1 = Result.Fail(error);
-            var result2 = Result.Fail(error);
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.IsFailed.Should().BeTrue();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.Title.Should().Be(title);
+        result.Problem.Detail.Should().Be(detail);
+        result.Problem.StatusCode.Should().Be(400);
+    }
 
-            Assert.Equal(result1.GetHashCode(), result2.GetHashCode());
-        }
+    [Fact]
+    public void Fail_WithProblem_ShouldCreateFailedResult()
+    {
+        // Arrange
+        var problem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input");
 
-        [Fact]
-        public void OperatorEquals_ReturnsTrue_WhenResultIsSuccessAndBooleanIsTrue()
-        {
-            var result = Result.Succeed();
+        // Act
+        var result = Result.Fail(problem);
 
-            Assert.True(result == true);
-        }
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.IsFailed.Should().BeTrue();
+        result.Problem.Should().Be(problem);
+    }
 
-        [Fact]
-        public void OperatorNotEquals_ReturnsTrue_WhenResultIsSuccessAndBooleanIsFalse()
-        {
-            var result = Result.Succeed();
+    [Fact]
+    public void FailValidation_ShouldCreateValidationResult()
+    {
+        // Act
+        var result = Result.FailValidation(
+            ("email", "Email is required"),
+            ("age", "Age must be greater than 0")
+        );
 
-            Assert.True(result != false);
-        }
-
-        [Fact]
-        public void ImplicitOperatorBool_ReturnsTrue_WhenResultIsSuccess()
-        {
-            var result = Result.Succeed();
-
-            bool isSuccess = result;
-
-            Assert.True(isSuccess);
-        }
-
-        [Fact]
-        public void ImplicitOperatorException_ReturnsException_WhenResultIsFailure()
-        {
-            var exception = new Exception("Error");
-            var result = Result.Fail(Error.FromException(exception));
-
-            Exception resultException = result;
-
-            Assert.Equal(exception, resultException);
-        }
-
-        [Fact]
-        public void ImplicitOperatorResultFromError_ReturnsFailure_WhenErrorIsProvided()
-        {
-            var error = new Error { Message = "Error", ErrorCode = "E001" };
-
-            Result result = error;
-
-            Assert.True(result.IsFailed);
-        }
-
-        [Fact]
-        public void ImplicitOperatorResultFromErrors_ReturnsFailure_WhenErrorsAreProvided()
-        {
-            var errors = new Error[] { new Error { Message = "Error1", ErrorCode = "E001" }, new Error { Message = "Error2", ErrorCode = "E002" } };
-            
-            Result result = errors;
-
-            Assert.True(result.IsFailed);
-        }
-
-        [Fact]
-        public void ImplicitOperatorResultFromException_ReturnsFailure_WhenExceptionIsProvided()
-        {
-            var exception = new Exception("Error");
-
-            Result result = exception;
-
-            Assert.True(result.IsFailed);
-        }
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be(400);
+        result.Problem.Title.Should().Be("Validation Failed");
         
-          [Fact]
-        public void Succeed_ShouldSetIsSuccessToTrue()
-        {
-            var result = Result<int>.Succeed(5);
-            result.IsSuccess.Should().BeTrue();
-        }
+        var validationErrors = result.Problem.GetValidationErrors();
+        validationErrors.Should().NotBeNull();
+        validationErrors!["email"].Should().Contain("Email is required");
+        validationErrors["age"].Should().Contain("Age must be greater than 0");
+    }
 
-        [Fact]
-        public void Fail_ShouldSetIsSuccessToFalse()
-        {
-            var result = Result<int>.Fail();
-            result.IsSuccess.Should().BeFalse();
-        }
+    [Fact]
+    public void FailNotFound_ShouldCreateNotFoundResult()
+    {
+        // Act
+        var result = Result.FailNotFound("Resource not found");
 
-        [Fact]
-        public void Fail_WithErrorCode_ShouldSetErrorCodeCorrectly()
-        {
-            var result = Result<int>.Fail("TestError");
-            result.GetError().Value.Message.Should().Be("TestError");
-        }
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be(404);
+        result.Problem.Detail.Should().Be("Resource not found");
+    }
 
-        [Fact]
-        public void AddError_ShouldAddErrorToList()
-        {
-            var result = Result<int>.Succeed(5);
-            result.AddError(Error.Create("TestError"));
-            result.Errors.Should().HaveCount(1);
-            result.Errors[0].Message.Should().Be("TestError");
-        }
+    [Fact]
+    public void FailUnauthorized_ShouldCreateUnauthorizedResult()
+    {
+        // Act
+        var result = Result.FailUnauthorized("Authentication required");
 
-        [Fact]
-        public void ThrowIfFail_ShouldThrowException_WhenErrorsExist()
-        {
-            var result = Result<int>.Fail("TestError");
-            Assert.Throws<Exception>(() => result.ThrowIfFail());
-        }
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be(401);
+        result.Problem.Detail.Should().Be("Authentication required");
+    }
 
-        [Fact]
-        public void ThrowIfFailWithStackPreserved_ShouldThrowException_WhenErrorsExist()
-        {
-            var result = Result<int>.Fail("TestError");
-            Assert.Throws<Exception>(() => result.ThrowIfFailWithStackPreserved());
-        }
+    [Fact]
+    public void FailForbidden_ShouldCreateForbiddenResult()
+    {
+        // Act
+        var result = Result.FailForbidden("Access denied");
 
-        [Fact]
-        public void ThrowIfFail_ShouldNotThrowException_WhenNoErrorsExist()
-        {
-            var result = Result<int>.Succeed(5);
-            result.Invoking(r => r.ThrowIfFail()).Should().NotThrow();
-        }
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be(403);
+        result.Problem.Detail.Should().Be("Access denied");
+    }
 
-        [Fact]
-        public void ThrowIfFailWithStackPreserved_ShouldNotThrowException_WhenNoErrorsExist()
-        {
-            var result = Result<int>.Succeed(5);
-            result.Invoking(r => r.ThrowIfFailWithStackPreserved()).Should().NotThrow();
-        }
+    [Fact]
+    public void ThrowIfFail_WithSuccessfulResult_ShouldNotThrow()
+    {
+        // Arrange
+        var result = Result.Succeed();
 
-        [Fact]
-        public void IsErrorCode_ShouldReturnTrue_WhenErrorCodeMatches()
-        {
-            var result = Result<int>.Fail("TestError",MyTestEnum.Option2);
-            result.IsErrorCode(MyTestEnum.Option2).Should().BeTrue();
-        }
+        // Act & Assert
+        result.Invoking(r => r.ThrowIfFail()).Should().NotThrow();
+    }
 
-        [Fact]
-        public void IsErrorCode_ShouldReturnFalse_WhenErrorCodeDoesNotMatch()
-        {
-            var result = Result<int>.Fail(MyTestEnum.Option2, "TestError");
-            result.IsErrorCode(MyTestEnum.Option1).Should().BeFalse();
-        }
-        
-        [Fact]
-        public void IsNotErrorCode_ShouldReturnTrue_WhenErrorCodeDoesNotMatch()
-        {
-            var result = Result<int>.Fail(MyTestEnum.Option2, "TestError");
-            result.IsNotErrorCode(MyTestEnum.Option1).Should().BeTrue();
-        }
+    [Fact]
+    public void ThrowIfFail_WithFailedResult_ShouldThrow()
+    {
+        // Arrange
+        var result = Result.Fail("Operation failed", "Something went wrong", HttpStatusCode.BadRequest);
 
-        [Fact]
-        public void AddInvalidMessage_ShouldAddMessageToInvalidObject()
-        {
-            var result = Result<int>.Succeed(5);
-            result.AddInvalidMessage("TestKey", "TestValue");
-            result.InvalidObject.Should().ContainKey("TestKey");
-            result.InvalidObject["TestKey"].Should().Be("TestValue");
-        }
-        
-        
-        [Fact]
-        public void Fail_WithException_ShouldSetExceptionCorrectly()
-        {
-            var exception = new Exception("TestException");
-            var result = Result<int>.Fail(exception);
-            result.GetError().Value.Exception().Message.Should().Be("TestException");
-        }
+        // Act & Assert
+        result.Invoking(r => r.ThrowIfFail())
+            .Should().Throw<Exception>()
+            .WithMessage("Operation failed - Something went wrong - (HTTP 400)");
+    }
 
-        [Fact]
-        public void Fail_WithValue_ShouldSetValueCorrectly()
-        {
-            var result = Result<int>.Fail(5);
-            result.Value.Should().Be(5);
-        }
-        
-        [Fact]
-        public void From_ShouldReturnSuccessResult_WhenFuncDoesNotThrow()
-        {
-            var result = Result<int>.From(() => 5);
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Should().Be(5);
-        }
+    [Fact]
+    public void ImplicitOperator_FromBool_True_ShouldCreateSuccessfulResult()
+    {
+        // Act
+        Result result = true;
 
-        [Fact]
-        public void From_ShouldReturnFailedResult_WhenFuncThrows()
-        {
-            var result = Result<int>.From(() =>
-            {
-                throw new Exception("TestException");
-                return 5;
-            });
-            result.IsFailed.Should().BeTrue();
-            result.GetError().Value.Exception().Message.Should().Be("TestException");
-        }
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+    }
 
-        [Fact]
-        public void Invalid_ShouldReturnFailedResult_WithInvalidObject()
-        {
-            var result = Result<int>.Invalid("TestKey", "TestValue");
-            result.IsInvalid.Should().BeTrue();
-            result.InvalidObject.Should().ContainKey("TestKey");
-            result.InvalidObject["TestKey"].Should().Be("TestValue");
-        }
+    [Fact]
+    public void ImplicitOperator_FromBool_False_ShouldCreateFailedResult()
+    {
+        // Act
+        Result result = false;
 
-        [Fact]
-        public void Succeed_ShouldReturnSuccessResult_WithValue()
-        {
-            var result = Result<int>.Succeed(5);
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Should().Be(5);
-        }
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+    }
 
-        [Fact]
-        public void OperatorEquals_ShouldReturnTrue_WhenResultIsSuccessAndBooleanIsTrue()
-        {
-            var result = Result<int>.Succeed(5);
-            (result == true).Should().BeTrue();
-        }
+    [Fact]
+    public void ImplicitOperator_ToBool_ShouldReturnIsSuccess()
+    {
+        // Arrange
+        var successResult = Result.Succeed();
+        var failResult = Result.Fail("Failed", "Failed");
 
-        [Fact]
-        public void OperatorNotEquals_ShouldReturnTrue_WhenResultIsSuccessAndBooleanIsFalse()
-        {
-            var result = Result<int>.Succeed(5);
-            (result != false).Should().BeTrue();
-        }
-        
+        // Act & Assert
+        ((bool)successResult).Should().BeTrue();
+        ((bool)failResult).Should().BeFalse();
+    }
+
+    [Fact]
+    public void From_WithException_ShouldCreateFailedResult()
+    {
+        // Arrange
+        var exception = new InvalidOperationException("Test exception");
+
+        // Act
+        Func<Result> func = () => throw exception;
+        var result = Result.From(func);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.Detail.Should().Be("Test exception");
+    }
+
+    [Fact]
+    public void Try_WithSuccessfulAction_ShouldCreateSuccessfulResult()
+    {
+        // Arrange
+        var executed = false;
+
+        // Act
+        var result = Result.Try(() => executed = true);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        executed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Try_WithExceptionThrowingAction_ShouldCreateFailedResult()
+    {
+        // Act
+        var result = Result.Try(() => throw new InvalidOperationException("Test exception"));
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.Detail.Should().Be("Test exception");
     }
 }

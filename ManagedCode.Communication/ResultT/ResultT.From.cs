@@ -14,7 +14,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -26,7 +26,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -38,7 +38,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -50,7 +50,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -62,7 +62,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -74,21 +74,21 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
     public static Result<T> From(Result<T> result)
     {
-        return result ? result : Fail(result.Errors);
+        return result.IsSuccess ? result : (result.Problem != null ? Fail(result.Problem) : Fail());
     }
 
-    public static Result From<T>(Result<T> result)
+    public static Result From<U>(Result<U> result)
     {
         if (result)
             return Result.Succeed();
 
-        return Result.Fail(result.Errors);
+        return result.Problem != null ? Result.Fail(result.Problem) : Result.Fail();
     }
 
     public static async ValueTask<Result<T>> From(ValueTask<T> valueTask)
@@ -99,7 +99,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -111,7 +111,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -123,7 +123,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -135,7 +135,7 @@ public partial struct Result<T>
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 }

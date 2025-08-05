@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Net;
 
 namespace ManagedCode.Communication;
 
@@ -13,7 +15,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail()
     {
-        return new Result<T>(false, default, null, default);
+        return new Result<T>(false, default);
     }
 
     /// <summary>
@@ -21,113 +23,129 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(T value)
     {
-        return new Result<T>(false, value, null, default);
+        return new Result<T>(false, value);
     }
 
     /// <summary>
-    /// Creates a failed result with a specific error code.
+    /// Creates a failed result with a problem.
     /// </summary>
-    public static Result<T> Fail<TEnum>(TEnum code) where TEnum : Enum
+    public static Result<T> Fail(Problem problem)
     {
-        return new Result<T>(false, default, new[] { Error.Create(code) }, default);
+        return new Result<T>(false, default, problem);
+    }
+
+
+    /// <summary>
+    /// Creates a failed result with a title and optional detail.
+    /// </summary>
+    public static Result<T> Fail(string title, string? detail = null, HttpStatusCode status = HttpStatusCode.InternalServerError)
+    {
+        var problem = new Problem
+        {
+            Title = title,
+            Detail = detail,
+            StatusCode = (int)status
+        };
+        return new Result<T>(false, default, problem);
     }
 
     /// <summary>
-    /// Creates a failed result with a specific error code and value.
+    /// Creates a failed result from an exception.
     /// </summary>
-    public static Result<T> Fail<TEnum>(TEnum code, T value) where TEnum : Enum
+    public static Result<T> Fail(Exception exception, HttpStatusCode status = HttpStatusCode.InternalServerError)
     {
-        return new Result<T>(false, value, new[] { Error.Create(code) }, default);
+        var problem = new Problem
+        {
+            Type = $"https://httpstatuses.io/{(int)status}",
+            Title = exception.GetType().Name,
+            Detail = exception.Message,
+            StatusCode = (int)status
+        };
+        
+        if (exception.Data.Count > 0)
+        {
+            foreach (var key in exception.Data.Keys)
+            {
+                if (key != null)
+                {
+                    problem.Extensions[key.ToString()!] = exception.Data[key];
+                }
+            }
+        }
+        
+        return new Result<T>(false, default, problem);
     }
 
     /// <summary>
-    /// Creates a failed result with a specific message.
+    /// Creates a failed result with validation errors.
     /// </summary>
-    public static Result<T> Fail(string message)
+    public static Result<T> FailValidation(params (string field, string message)[] errors)
     {
-        return new Result<T>(false, default, new[] { Error.Create(message) }, default);
+        return new Result<T>(false, default, Problem.Validation(errors));
     }
 
     /// <summary>
-    /// Creates a failed result with a specific message and value.
+    /// Creates a failed result for unauthorized access.
     /// </summary>
-    public static Result<T> Fail(string message, T value)
+    public static Result<T> FailUnauthorized(string? detail = null)
     {
-        return new Result<T>(false, value, new[] { Error.Create(message) }, default);
+        var problem = new Problem
+        {
+            Type = "https://httpstatuses.io/401",
+            Title = "Unauthorized",
+            StatusCode = (int)HttpStatusCode.Unauthorized,
+            Detail = detail ?? "Authentication is required to access this resource."
+        };
+        
+        return new Result<T>(false, default, problem);
     }
 
     /// <summary>
-    /// Creates a failed result with a specific message and error code.
+    /// Creates a failed result for forbidden access.
     /// </summary>
-    public static Result<T> Fail<TEnum>(string message, TEnum code) where TEnum : Enum
+    public static Result<T> FailForbidden(string? detail = null)
     {
-        return new Result<T>(false, default, new[] { Error.Create(message, code) }, default);
+        var problem = new Problem
+        {
+            Type = "https://httpstatuses.io/403",
+            Title = "Forbidden",
+            StatusCode = (int)HttpStatusCode.Forbidden,
+            Detail = detail ?? "You do not have permission to access this resource."
+        };
+        
+        return new Result<T>(false, default, problem);
     }
 
     /// <summary>
-    /// Creates a failed result with a specific message, error code, and value.
+    /// Creates a failed result for not found.
     /// </summary>
-    public static Result<T> Fail<TEnum>(string message, TEnum code, T value) where TEnum : Enum
+    public static Result<T> FailNotFound(string? detail = null)
     {
-        return new Result<T>(false, value, new[] { Error.Create(message, code) }, default);
+        var problem = new Problem
+        {
+            Type = "https://httpstatuses.io/404",
+            Title = "Not Found",
+            StatusCode = (int)HttpStatusCode.NotFound,
+            Detail = detail ?? "The requested resource was not found."
+        };
+        
+        return new Result<T>(false, default, problem);
     }
-
+    
     /// <summary>
-    /// Creates a failed result with a specific error code and message.
+    /// Creates a failed result from a custom error enum.
     /// </summary>
-    public static Result<T> Fail<TEnum>(TEnum code, string message) where TEnum : Enum
+    public static Result<T> Fail<TEnum>(TEnum errorCode, string? detail = null) where TEnum : Enum
     {
-        return new Result<T>(false, default, new[] { Error.Create(message, code) }, default);
+        return new Result<T>(false, default, Problem.FromEnum(errorCode, detail));
     }
-
+    
     /// <summary>
-    /// Creates a failed result with a specific error code, message, and value.
+    /// Creates a failed result from a custom error enum with specific HTTP status.
     /// </summary>
-    public static Result<T> Fail<TEnum>(TEnum code, string message, T value) where TEnum : Enum
+    public static Result<T> Fail<TEnum>(TEnum errorCode, HttpStatusCode status, string? detail = null) where TEnum : Enum
     {
-        return new Result<T>(false, value, new[] { Error.Create(message, code) }, default);
-    }
-
-    /// <summary>
-    /// Creates a failed result with a specific error.
-    /// </summary>
-    public static Result<T> Fail(Error error)
-    {
-        return new Result<T>(false, default, new[] { error }, default);
-    }
-
-    /// <summary>
-    /// Creates a failed result with a specific error.
-    /// </summary>
-    public static Result<T> Fail(Error? error)
-    {
-        if (error.HasValue)
-            return new Result<T>(false, default, new[] { error.Value }, default);
-
-        return new Result<T>(false, default, default, default);
-    }
-
-    /// <summary>
-    /// Creates a failed result with a specific array of errors.
-    /// </summary>
-    public static Result<T> Fail(Error[]? errors)
-    {
-        return new Result<T>(false, default, errors, default);
-    }
-
-    /// <summary>
-    /// Creates a failed result with a specific exception.
-    /// </summary>
-    public static Result<T> Fail(Exception? exception)
-    {
-        return new Result<T>(false, default, new[] { Error.FromException(exception) }, default);
-    }
-
-    /// <summary>
-    /// Creates a failed result with a specific exception and value.
-    /// </summary>
-    public static Result<T> Fail(Exception? exception, T value)
-    {
-        return new Result<T>(false, value, new[] { Error.FromException(exception) }, default);
+        var problem = Problem.FromEnum(errorCode, detail, (int)status);
+        return new Result<T>(false, default, problem);
     }
 }

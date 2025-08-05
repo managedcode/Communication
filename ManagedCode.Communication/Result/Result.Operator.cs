@@ -8,7 +8,7 @@ public partial struct Result
 {
     public bool Equals(Result other)
     {
-        return IsSuccess == other.IsSuccess && GetError()?.Message == other.GetError()?.Message && GetError()?.ErrorCode == other.GetError()?.ErrorCode;
+        return IsSuccess == other.IsSuccess && Problem?.Title == other.Problem?.Title && Problem?.Detail == other.Problem?.Detail;
     }
 
     public override bool Equals(object? obj)
@@ -18,8 +18,7 @@ public partial struct Result
 
     public override int GetHashCode()
     {
-        var errorsHashCode = Errors?.Aggregate(0, (current, error) => HashCode.Combine(current, error.GetHashCode())) ?? 0;
-        return HashCode.Combine(IsSuccess, errorsHashCode);
+        return HashCode.Combine(IsSuccess, Problem?.GetHashCode() ?? 0);
     }
 
     public static bool operator ==(Result obj1, bool obj2)
@@ -39,22 +38,22 @@ public partial struct Result
 
     public static implicit operator Exception?(Result result)
     {
-        return result.GetError()?.Exception();
+        return result.Problem != null ? new ProblemException(result.Problem) : null;
     }
 
-    public static implicit operator Result(Error error)
+    public static implicit operator Result(Problem problem)
     {
-        return Fail(error);
-    }
-
-    public static implicit operator Result(Error[]? errors)
-    {
-        return Fail(errors);
+        return Fail(problem);
     }
 
     public static implicit operator Result(Exception? exception)
     {
-        return Fail(Error.FromException(exception));
+        return exception != null ? Fail(exception) : Succeed();
+    }
+
+    public static implicit operator Result(bool success)
+    {
+        return success ? Succeed() : Fail();
     }
     
     // public static implicit operator string(Result result)

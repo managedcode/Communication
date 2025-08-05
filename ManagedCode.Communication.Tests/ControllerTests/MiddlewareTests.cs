@@ -23,9 +23,10 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
         var response = await application.CreateClient().GetAsync($"test/test1");
         response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
         var content = await response.Content.ReadAsStringAsync();
-        var result = await response.Content.ReadFromJsonAsync<Result<Problem>>();
+        var result = await response.Content.ReadFromJsonAsync<Result>();
         result.IsFailed.Should().BeTrue();
-        result.GetError()?.Message.Should().Be("ValidationException");
+        result.Problem.Should().NotBeNull();
+        result.Problem!.Detail.Should().Be("ValidationException");
     }
     
     [Fact]
@@ -34,9 +35,10 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
         var response = await application.CreateClient().GetAsync($"test/test2");
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var content = await response.Content.ReadAsStringAsync();
-        var result = await response.Content.ReadFromJsonAsync<Result<Problem>>();
+        var result = await response.Content.ReadFromJsonAsync<Result>();
         result.IsFailed.Should().BeTrue();
-        result.GetError()?.Message.Should().Be("InvalidDataException");
+        result.Problem.Should().NotBeNull();
+        result.Problem!.Detail.Should().Be("InvalidDataException");
     }
     
     [Fact]
@@ -56,9 +58,94 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
         var connection = application.CreateSignalRClient(nameof(TestHub));
         await connection.StartAsync();
         connection.State.Should().Be(HubConnectionState.Connected);
-        var result = await connection.InvokeAsync<Result<Problem>>("Throw");
+        var result = await connection.InvokeAsync<Result>("Throw");
         result.IsFailed.Should().BeTrue();
-        result.GetError().Should().NotBeNull();
-        result.GetError()!.Value.Message.Should().Be("InvalidDataException");
+        result.Problem.Should().NotBeNull();
+        result.Problem!.Detail.Should().Be("InvalidDataException");
+    }
+    
+    [Fact]
+    public async Task UnauthorizedAccess()
+    {
+        var response = await application.CreateClient().GetAsync($"test/test3");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        
+        // Authorization attribute returns empty 401 by default in ASP.NET Core
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().BeEmpty();
+    }
+    
+    [Fact]
+    public async Task UnauthorizedResult()
+    {
+        // Test endpoint that returns Result.FailUnauthorized()
+        var response = await application.CreateClient().GetAsync($"test/result-unauthorized");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        
+        var result = await response.Content.ReadFromJsonAsync<Result>();
+        result.Should().NotBeNull();
+        result!.IsFailed.Should().BeTrue();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be((int)HttpStatusCode.Unauthorized);
+        result.Problem.Detail.Should().Be("You need to log in to access this resource");
+    }
+    
+    [Fact]
+    public async Task ForbiddenResult()
+    {
+        // Test endpoint that returns Result.FailForbidden()
+        var response = await application.CreateClient().GetAsync($"test/result-forbidden");
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        
+        var result = await response.Content.ReadFromJsonAsync<Result>();
+        result.Should().NotBeNull();
+        result!.IsFailed.Should().BeTrue();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be((int)HttpStatusCode.Forbidden);
+        result.Problem.Detail.Should().Be("You don't have permission to perform this action");
+    }
+    
+    [Fact]
+    public async Task NotFoundResult()
+    {
+        // Test endpoint that returns Result<string>.FailNotFound()
+        var response = await application.CreateClient().GetAsync($"test/result-not-found");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        
+        var result = await response.Content.ReadFromJsonAsync<Result<string>>();
+        result.Should().NotBeNull();
+        result!.IsFailed.Should().BeTrue();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be((int)HttpStatusCode.NotFound);
+        result.Problem.Detail.Should().Be("User with ID 123 not found");
+    }
+    
+    [Fact]
+    public async Task SuccessResult()
+    {
+        // Test endpoint that returns Result.Succeed()
+        var response = await application.CreateClient().GetAsync($"test/result-success");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        
+        var result = await response.Content.ReadFromJsonAsync<Result>();
+        result.Should().NotBeNull();
+        result!.IsSuccess.Should().BeTrue();
+        result.Problem.Should().BeNull();
+    }
+    
+    [Fact]
+    public async Task FailResult()
+    {
+        // Test endpoint that returns Result.Fail()
+        var response = await application.CreateClient().GetAsync($"test/result-fail");
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        
+        var result = await response.Content.ReadFromJsonAsync<Result>();
+        result.Should().NotBeNull();
+        result!.IsFailed.Should().BeTrue();
+        result.Problem.Should().NotBeNull();
+        result.Problem!.StatusCode.Should().Be((int)HttpStatusCode.BadRequest);
+        result.Problem.Title.Should().Be("Operation failed");
+        result.Problem.Detail.Should().Be("Something went wrong");
     }
 }

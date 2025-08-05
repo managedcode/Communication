@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using ManagedCode.Communication.Extensions.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.WebUtilities;
@@ -66,11 +67,13 @@ public static class ServiceCollectionExtensions
         services.AddScoped<TExceptionFilter>();
         services.AddScoped<TModelValidationFilter>();
         services.AddScoped<THubExceptionFilter>();
+        services.AddScoped<ResultToActionResultFilter>();
 
         services.AddControllers(options => 
         { 
             options.Filters.Add<TExceptionFilter>();
             options.Filters.Add<TModelValidationFilter>();
+            options.Filters.Add<ResultToActionResultFilter>();
         });
 
         services.Configure<HubOptions>(options =>

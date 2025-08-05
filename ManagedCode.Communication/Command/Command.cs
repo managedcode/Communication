@@ -14,6 +14,11 @@ public partial class Command : ICommand
         CommandType = commandType;
     }
     
+    [JsonPropertyName("commandId")]
+    [JsonPropertyOrder(1)]
     public string CommandId { get; set; }
+    
+    [JsonPropertyName("commandType")]
+    [JsonPropertyOrder(2)]
     public string CommandType { get; set; }
 }

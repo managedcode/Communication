@@ -9,8 +9,8 @@ public partial struct Result<T>
 {
     public bool Equals(Result<T> other)
     {
-        return IsSuccess == other.IsSuccess && EqualityComparer<T?>.Default.Equals(Value, other.Value) && GetError()?.Message == other.GetError()?.Message &&
-               GetError()?.ErrorCode == other.GetError()?.ErrorCode;
+        return IsSuccess == other.IsSuccess && EqualityComparer<T?>.Default.Equals(Value, other.Value) && 
+               Problem?.Title == other.Problem?.Title && Problem?.Detail == other.Problem?.Detail;
     }
 
     public override bool Equals(object? obj)
@@ -20,8 +20,7 @@ public partial struct Result<T>
 
     public override int GetHashCode()
     {
-        var errorsHashCode = Errors?.Aggregate(0, (current, error) => HashCode.Combine(current, error.GetHashCode())) ?? 0;
-        return HashCode.Combine(IsSuccess, errorsHashCode);
+        return HashCode.Combine(IsSuccess, Value?.GetHashCode() ?? 0, Problem?.GetHashCode() ?? 0);
     }
 
     public static bool operator ==(Result<T> obj1, bool obj2)
@@ -41,33 +40,38 @@ public partial struct Result<T>
 
     public static implicit operator Result(Result<T> result)
     {
-        return result.IsSuccess ? Result.Succeed() : Result.Fail(result);
+        if (result.IsSuccess)
+            return Result.Succeed();
+            
+        if (result.Problem != null)
+            return Result.Fail(result.Problem);
+            
+        return Result.Fail();
     }
 
     public static implicit operator Exception?(Result<T> result)
     {
-        return result.GetError()?.Exception();
+        return result.Problem != null ? new ProblemException(result.Problem) : null;
     }
 
-    public static implicit operator Result<T>(Error error)
+    public static implicit operator Result<T>(Problem problem)
     {
-        return Fail(error);
-    }
-
-    public static implicit operator Result<T>(Error[]? errors)
-    {
-        return Fail(errors);
+        return Fail(problem);
     }
 
     public static implicit operator Result<T>(Exception? exception)
     {
-        return Fail(Error.FromException(exception));
+        return exception != null ? Fail(exception) : Fail();
     }
 
     public static implicit operator Result<T>(Result result)
     {
-        var error = result.GetError();
-        return error is null ? Fail() : Fail(error);
+        return result.Problem != null ? Fail(result.Problem) : Fail();
+    }
+
+    public static implicit operator Result<T>(T value)
+    {
+        return Succeed(value);
     }
     
     // public static implicit operator string(Result<T> result)

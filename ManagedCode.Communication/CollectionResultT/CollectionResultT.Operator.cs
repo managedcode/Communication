@@ -7,8 +7,8 @@ public partial struct CollectionResult<T>
 {
     public bool Equals(CollectionResult<T> other)
     {
-        return IsSuccess == other.IsSuccess && EqualityComparer<T[]?>.Default.Equals(Collection, other.Collection) && GetError()?.Message == other.GetError()?.Message &&
-               GetError()?.ErrorCode == other.GetError()?.ErrorCode;
+        return IsSuccess == other.IsSuccess && EqualityComparer<T[]?>.Default.Equals(Collection, other.Collection) && 
+               Problem?.Title == other.Problem?.Title && Problem?.Detail == other.Problem?.Detail;
     }
 
     public override bool Equals(object? obj)
@@ -18,7 +18,7 @@ public partial struct CollectionResult<T>
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(IsSuccess, Collection, Errors);
+        return HashCode.Combine(IsSuccess, Collection?.GetHashCode() ?? 0, Problem?.GetHashCode() ?? 0);
     }
 
     public static bool operator ==(CollectionResult<T> obj1, bool obj2)
@@ -38,32 +38,26 @@ public partial struct CollectionResult<T>
 
     public static implicit operator Result(CollectionResult<T> result)
     {
-        return result.IsSuccess ? Result.Succeed() : Result.Fail(result);
+        return result.IsSuccess ? Result.Succeed() : (result.Problem != null ? Result.Fail(result.Problem) : Result.Fail());
     }
 
     public static implicit operator Exception?(CollectionResult<T> result)
     {
-        return result.GetError()?.Exception();
+        return result.Problem != null ? new ProblemException(result.Problem) : null;
     }
 
-    public static implicit operator CollectionResult<T>(Error error)
+    public static implicit operator CollectionResult<T>(Problem problem)
     {
-        return Fail(error);
-    }
-
-    public static implicit operator CollectionResult<T>(Error[]? errors)
-    {
-        return Fail(errors);
+        return Fail(problem);
     }
 
     public static implicit operator CollectionResult<T>(Exception? exception)
     {
-        return Fail(Error.FromException(exception));
+        return exception != null ? Fail(exception) : Fail();
     }
 
     public static implicit operator CollectionResult<T>(Result result)
     {
-        var error = result.GetError();
-        return error is null ? Fail() : Fail(error);
+        return result.Problem != null ? Fail(result.Problem) : Fail();
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -27,7 +28,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -38,32 +39,32 @@ public partial struct Result
             if (task.IsCompleted)
                 return Succeed();
 
-            if (task.IsCanceled || task.IsFaulted)
-                return Fail(Error.FromException(task.Exception));
+            if (task.IsCanceled)
+                return Fail(new TaskCanceledException());
+            
+            if (task.IsFaulted && task.Exception != null)
+                return Fail(task.Exception);
 
             await task;
             return Succeed();
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
     public static Result From(Result result)
     {
-        if (result)
-            return result;
-
-        return Fail(result.Errors);
+        return result;
     }
 
     public static Result From<T>(Result<T> result)
     {
-        if (result)
+        if (result.IsSuccess)
             return Succeed();
 
-        return Fail(result.Errors);
+        return result.Problem != null ? Fail(result.Problem) : Fail("Operation failed", null, HttpStatusCode.InternalServerError);
     }
 
     public static async Task<Result> From(Func<Task> task, CancellationToken cancellationToken = default)
@@ -75,7 +76,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -94,7 +95,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
 
@@ -107,7 +108,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail(Error.FromException(e));
+            return Fail(e);
         }
     }
     
@@ -116,9 +117,9 @@ public partial struct Result
         return condition ? Succeed() : Fail();
     }
     
-    public static Result From(bool condition, Error error)
+    public static Result From(bool condition, Problem problem)
     {
-        return condition ? Succeed() : Fail(error);
+        return condition ? Succeed() : Fail(problem);
     }
     
     public static Result From(Func<bool> condition)
@@ -126,8 +127,8 @@ public partial struct Result
         return condition() ? Succeed() : Fail();
     }
     
-    public static Result From(Func<bool> condition, Error error)
+    public static Result From(Func<bool> condition, Problem problem)
     {
-        return condition() ? Succeed() : Fail(error);
+        return condition() ? Succeed() : Fail(problem);
     }
 }

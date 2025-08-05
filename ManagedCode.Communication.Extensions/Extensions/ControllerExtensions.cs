@@ -5,15 +5,15 @@ namespace ManagedCode.Communication.Extensions.Extensions;
 
 public static class ControllerExtensions
 {
-    public static IActionResult ToActionResult<T>(this Result<T> result)
+    public static IActionResult ToActionResult<T>(this ManagedCode.Communication.Result<T> result)
     {
         return result.IsSuccess
             ? new OkObjectResult(result.Value)
-            : new BadRequestObjectResult(result.GetError()?.Message);
+            : new BadRequestObjectResult(result.Problem?.Detail ?? "Operation failed");
     }
 
-    public static Microsoft.AspNetCore.Http.IResult ToHttpResult<T>(this Result<T> result)
+    public static Microsoft.AspNetCore.Http.IResult ToHttpResult<T>(this ManagedCode.Communication.Result<T> result)
     {
-        return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.GetError()?.Message);
+        return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.Problem?.Detail ?? "Operation failed");
     }
 }

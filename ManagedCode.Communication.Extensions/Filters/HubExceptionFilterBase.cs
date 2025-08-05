@@ -2,16 +2,13 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using static ManagedCode.Communication.Extensions.Helpers.HttpStatusCodeHelper;
 using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication.Extensions.Filters;
 
-public abstract class HubExceptionFilterBase : IHubFilter
+public abstract class HubExceptionFilterBase(ILogger logger) : IHubFilter
 {
-    protected readonly ILogger Logger = NullLogger.Instance;
-
     public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext,
         Func<HubInvocationContext, ValueTask<object?>> next)
     {
@@ -21,13 +18,13 @@ public abstract class HubExceptionFilterBase : IHubFilter
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, invocationContext.Hub.GetType().Name + "." + invocationContext.HubMethodName);
+            logger.LogError(ex, invocationContext.Hub.GetType().Name + "." + invocationContext.HubMethodName);
 
-            var problem = new Problem
+            var problem = new ManagedCode.Communication.Problem
             {
                 Title = ex.GetType().Name,
                 Detail = ex.Message,
-                Status = GetStatusCodeForException(ex),
+                StatusCode = (int)GetStatusCodeForException(ex),
                 Instance = invocationContext.Hub.Context.ConnectionId,
                 Extensions =
                 {
@@ -36,7 +33,7 @@ public abstract class HubExceptionFilterBase : IHubFilter
                 }
             };
 
-            return Result<Problem>.Fail(ex.Message, problem);
+            return ManagedCode.Communication.Result.Fail(problem);
         }
     }
 } 

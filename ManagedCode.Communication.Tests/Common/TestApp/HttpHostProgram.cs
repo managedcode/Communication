@@ -17,9 +17,12 @@ public class HttpHostProgram
             option.ShowErrorDetails = true;
         });
         
-        builder.Services.AddCommunicationFilters<TestExceptionFilter, TestModelValidationFilter, TestHubExceptionFilter>();
+        builder.Services.AddAuthentication("Test")
+            .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", options => { });
         
-        builder.Services.AddControllers();
+        builder.Services.AddAuthorization();
+        
+        builder.Services.AddCommunicationFilters<TestExceptionFilter, TestModelValidationFilter, TestHubExceptionFilter>();
         builder.Services.AddSignalR(options => 
         {
         });
@@ -27,6 +30,8 @@ public class HttpHostProgram
         
         var app = builder.Build();
 
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         app.MapControllers();
         app.MapHub<TestHub>(nameof(TestHub));

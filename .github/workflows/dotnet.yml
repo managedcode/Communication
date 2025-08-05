@@ -28,7 +28,7 @@ jobs:
         run: dotnet restore
       
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build --no-restore --warnaserror 
       
       - name: Test and Collect Code Coverage
         run: dotnet test -p:CollectCoverage=true -p:CoverletOutput=coverage/

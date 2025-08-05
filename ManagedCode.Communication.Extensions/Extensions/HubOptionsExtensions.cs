@@ -2,6 +2,7 @@ using System;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Extensions.Filters;
 
 namespace ManagedCode.Communication.Extensions.Extensions;
 

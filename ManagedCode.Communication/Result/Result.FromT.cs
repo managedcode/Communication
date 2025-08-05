@@ -14,7 +14,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -26,7 +26,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -38,7 +38,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -50,7 +50,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -62,7 +62,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -74,7 +74,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -86,7 +86,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -98,7 +98,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -110,7 +110,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 
@@ -122,7 +122,7 @@ public partial struct Result
         }
         catch (Exception e)
         {
-            return Fail<T>(Error.FromException(e));
+            return Fail<T>(e);
         }
     }
 }

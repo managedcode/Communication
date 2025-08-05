@@ -23,11 +23,20 @@ public partial class Command<T> : ICommand<T>
         CommandType = commandType;
     }
     
+    [JsonPropertyName("commandId")]
+    [JsonPropertyOrder(1)]
     public string CommandId { get; set; }
+    
+    [JsonPropertyName("commandType")]
+    [JsonPropertyOrder(2)]
     public string CommandType { get; set; }
 
+    [JsonPropertyName("value")]
+    [JsonPropertyOrder(3)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Value { get; set; }
 
+    [JsonIgnore]
     [MemberNotNullWhen(false, nameof(Value))]
     public bool IsEmpty => Value is null;
 }

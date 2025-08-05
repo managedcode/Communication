@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Orleans;
 
 namespace ManagedCode.Communication.Surrogates;
@@ -7,16 +6,13 @@ namespace ManagedCode.Communication.Surrogates;
 [GenerateSerializer]
 public struct ResultSurrogate
 {
-    public ResultSurrogate(bool isSuccess, Error[]? errors, Dictionary<string, string>? invalidObject)
+    public ResultSurrogate(bool isSuccess, Problem? problem)
     {
         IsSuccess = isSuccess;
-        Errors = errors;
-        InvalidObject = invalidObject;
+        Problem = problem;
     }
 
     [Id(0)] public bool IsSuccess;
 
-    [Id(1)] public Error[]? Errors;
-
-    [Id(2)] public Dictionary<string, string>? InvalidObject;
+    [Id(1)] public Problem? Problem;
 }
