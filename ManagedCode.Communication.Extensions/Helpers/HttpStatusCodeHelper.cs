@@ -1,12 +1,11 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Security;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.SignalR;
 
 namespace ManagedCode.Communication.Extensions.Helpers;
 
@@ -14,36 +13,33 @@ public static class HttpStatusCodeHelper
 {
     public static HttpStatusCode GetStatusCodeForException(Exception exception)
     {
-        return exception switch
+        // First check ASP.NET/SignalR-specific exceptions
+        var aspNetStatusCode = exception switch
         {
-            ArgumentException => HttpStatusCode.BadRequest,
-            InvalidOperationException => HttpStatusCode.BadRequest,
-            NotSupportedException => HttpStatusCode.BadRequest,
-            FormatException => HttpStatusCode.BadRequest,
-            JsonException => HttpStatusCode.BadRequest,
-            XmlException => HttpStatusCode.BadRequest,
+            // ASP.NET Core specific exceptions
+            BadHttpRequestException => HttpStatusCode.BadRequest,
+            ConnectionAbortedException => HttpStatusCode.BadRequest,
+            ConnectionResetException => HttpStatusCode.BadRequest,
+            AmbiguousActionException => HttpStatusCode.InternalServerError,
+            AuthenticationFailureException => HttpStatusCode.Unauthorized,
 
-            UnauthorizedAccessException => HttpStatusCode.Unauthorized,
+            // SignalR specific exceptions
+            HubException => HttpStatusCode.BadRequest,
 
-            SecurityException => HttpStatusCode.Forbidden,
+            // Antiforgery
+            AntiforgeryValidationException => HttpStatusCode.BadRequest,
 
-            FileNotFoundException => HttpStatusCode.NotFound,
-            DirectoryNotFoundException => HttpStatusCode.NotFound,
-            KeyNotFoundException => HttpStatusCode.NotFound,
 
-            TimeoutException => HttpStatusCode.RequestTimeout,
-            TaskCanceledException => HttpStatusCode.RequestTimeout,
-            OperationCanceledException => HttpStatusCode.RequestTimeout,
-
-            InvalidDataException => HttpStatusCode.Conflict,
-
-            NotImplementedException => HttpStatusCode.NotImplemented,
-            NotFiniteNumberException => HttpStatusCode.InternalServerError,
-            OutOfMemoryException => HttpStatusCode.InternalServerError,
-            StackOverflowException => HttpStatusCode.InternalServerError,
-            ThreadAbortException => HttpStatusCode.InternalServerError,
-
-            _ => HttpStatusCode.InternalServerError
+            _ => (HttpStatusCode?)null
         };
+
+        // If we found an ASP.NET-specific status code, return it
+        if (aspNetStatusCode.HasValue)
+        {
+            return aspNetStatusCode.Value;
+        }
+
+        // Otherwise, use the base helper for standard .NET exceptions
+        return Communication.Helpers.HttpStatusCodeHelper.GetStatusCodeForException(exception);
     }
 }

@@ -1,3 +1,4 @@
+using System.Net;
 using BenchmarkDotNet.Attributes;
 
 namespace ManagedCode.Communication.Benchmark;
@@ -55,34 +56,26 @@ public class CreateInstanceFailBenchmark
 
 
     [Benchmark]
-    public object? ActivatorCreateInstanceTypeError()
+    public Result CreateInstanceTypeError()
     {
-        var result = (Result)Activator.CreateInstance(typeof(Result));
-        result.Errors = new[] { Error.Create("oops") };
-        return result;
+        return Result.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 
     [Benchmark]
-    public object? ActivatorCreateInstanceTypeIntError()
+    public Result<int> CreateInstanceTypeIntError()
     {
-        var result = (Result<int>)Activator.CreateInstance(typeof(Result<int>));
-        result.Errors = new[] { Error.Create("oops") };
-        return result;
+        return Result<int>.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 
     [Benchmark]
-    public object? ActivatorCreateInstanceTypeErrorInterface()
+    public Result CreateInstanceTypeErrorInterface()
     {
-        var result = Activator.CreateInstance(typeof(Result));
-        (result as IResultError).AddError(Error.Create("oops"));
-        return result;
+        return Result.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 
     [Benchmark]
-    public object? ActivatorCreateInstanceTypeIntErrorInterface()
+    public Result<int> CreateInstanceTypeIntErrorInterface()
     {
-        var result = Activator.CreateInstance(typeof(Result<int>));
-        (result as IResultError).AddError(Error.Create("oops"));
-        return result;
+        return Result<int>.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 }

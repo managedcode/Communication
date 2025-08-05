@@ -1,7 +1,9 @@
 using System;
 using System.Globalization;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Helpers;
 using Orleans;
 
 namespace ManagedCode.Communication.Filters;
@@ -16,19 +18,42 @@ public class CommunicationOutgoingGrainCallFilter : IOutgoingGrainCallFilter
         }
         catch (Exception exception)
         {
-            Type type;
-            if (context.InterfaceMethod.ReturnType.IsAssignableFrom(typeof(IResult)))
-                type = typeof(Result);
-            else
-                type = context.InterfaceMethod.ReturnType.IsGenericType
-                    ? context.InterfaceMethod.ReturnType.GetGenericArguments()[0]
-                    : context.InterfaceMethod.ReturnType;
+            var returnType = context.InterfaceMethod.ReturnType;
 
+            if (returnType.IsGenericType)
+            {
+                var genericDef = returnType.GetGenericTypeDefinition();
+                if (genericDef == typeof(Task<>) || genericDef == typeof(ValueTask<>))
+                {
+                    var taskResultType = returnType.GenericTypeArguments[0];
 
-            var resultType = Activator.CreateInstance(type, BindingFlags.NonPublic | BindingFlags.Instance, null,
-                new object[] { exception }, CultureInfo.CurrentCulture);
+                    if (typeof(IResult).IsAssignableFrom(taskResultType))
+                    {
+                        var statusCode = GetOrleansStatusCode(exception);
 
-            context.Result = resultType;
+                        if (taskResultType == typeof(Result))
+                        {
+                            context.Result = Result.Fail(exception, statusCode);
+                        }
+                        else
+                        {
+                            // Result<T> - use Activator with internal constructor
+                            var resultInstance = Activator.CreateInstance(taskResultType, BindingFlags.NonPublic | BindingFlags.Instance, null,
+                                [exception], CultureInfo.CurrentCulture);
+                            context.Result = resultInstance;
+                        }
+
+                        return;
+                    }
+                }
+            }
+
+            throw;
         }
+    }
+
+    private static HttpStatusCode GetOrleansStatusCode(Exception exception)
+    {
+        return OrleansHttpStatusCodeHelper.GetStatusCodeForException(exception);
     }
 }

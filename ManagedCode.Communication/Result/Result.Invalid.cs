@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ManagedCode.Communication;
 
@@ -7,82 +8,102 @@ public partial struct Result
 {
     public static Result Invalid()
     {
-        return new Result(false, default, new Dictionary<string, string> { { "message", nameof(Invalid) } });
+        return FailValidation(("message", nameof(Invalid)));
     }
-    
+
     public static Result Invalid<TEnum>(TEnum code) where TEnum : Enum
     {
-        return new Result(false, new [] {Error.Create(code)}, new Dictionary<string, string> { { nameof(code), Enum.GetName(code.GetType(), code) ?? string.Empty }});
+        var problem = Problem.Validation(("message", nameof(Invalid)));
+        problem.ErrorCode = code.ToString();
+        return new Result(false, problem);
     }
 
     public static Result Invalid(string message)
     {
-        return new Result(false, default, new Dictionary<string, string> { { nameof(message), message } });
+        return FailValidation((nameof(message), message));
     }
-    
+
     public static Result Invalid<TEnum>(TEnum code, string message) where TEnum : Enum
     {
-        return new Result(false, new [] {Error.Create(code)}, new Dictionary<string, string> { { nameof(message), message } });
+        var problem = Problem.Validation((nameof(message), message));
+        problem.ErrorCode = code.ToString();
+        return new Result(false, problem);
     }
 
     public static Result Invalid(string key, string value)
     {
-        return new Result(false, default, new Dictionary<string, string> { { key, value } });
+        return FailValidation((key, value));
     }
 
     public static Result Invalid<TEnum>(TEnum code, string key, string value) where TEnum : Enum
     {
-        return new Result(false, new [] {Error.Create(code)}, new Dictionary<string, string> { { key, value } });
+        var problem = Problem.Validation((key, value));
+        problem.ErrorCode = code.ToString();
+        return new Result(false, problem);
     }
-    
+
     public static Result Invalid(Dictionary<string, string> values)
     {
-        return new Result(false, default, values);
+        return FailValidation(values.Select(kvp => (kvp.Key, kvp.Value))
+            .ToArray());
     }
-    
+
     public static Result Invalid<TEnum>(TEnum code, Dictionary<string, string> values) where TEnum : Enum
     {
-        return new Result(false, new [] {Error.Create(code)}, values);
+        var problem = Problem.Validation(values.Select(kvp => (kvp.Key, kvp.Value))
+            .ToArray());
+        problem.ErrorCode = code.ToString();
+        return new Result(false, problem);
     }
 
 
     public static Result<T> Invalid<T>()
     {
-        return new Result<T>(false, default, default, new Dictionary<string, string> { { "message", nameof(Invalid) } });
+        return Result<T>.FailValidation(("message", nameof(Invalid)));
     }
-    
+
     public static Result<T> Invalid<T, TEnum>(TEnum code) where TEnum : Enum
     {
-        return new Result<T>(false, default, new [] {Error.Create(code)}, new Dictionary<string, string> { { "message", nameof(Invalid) } });
+        var problem = Problem.Validation(("message", nameof(Invalid)));
+        problem.ErrorCode = code.ToString();
+        return Result<T>.Fail(problem);
     }
 
     public static Result<T> Invalid<T>(string message)
     {
-        return new Result<T>(false, default, default, new Dictionary<string, string> { { nameof(message), message } });
+        return Result<T>.FailValidation((nameof(message), message));
     }
-    
+
     public static Result<T> Invalid<T, TEnum>(TEnum code, string message) where TEnum : Enum
     {
-        return new Result<T>(false, default, new [] {Error.Create(code)}, new Dictionary<string, string> { { nameof(message), message } });
+        var problem = Problem.Validation((nameof(message), message));
+        problem.ErrorCode = code.ToString();
+        return Result<T>.Fail(problem);
     }
 
     public static Result<T> Invalid<T>(string key, string value)
     {
-        return new Result<T>(false, default, default, new Dictionary<string, string> { { key, value } });
+        return Result<T>.FailValidation((key, value));
     }
-    
+
     public static Result<T> Invalid<T, TEnum>(TEnum code, string key, string value) where TEnum : Enum
     {
-        return new Result<T>(false, default, new [] {Error.Create(code)}, new Dictionary<string, string> { { key, value } });
+        var problem = Problem.Validation((key, value));
+        problem.ErrorCode = code.ToString();
+        return Result<T>.Fail(problem);
     }
 
     public static Result<T> Invalid<T>(Dictionary<string, string> values)
     {
-        return new Result<T>(false, default, default, values);
+        return Result<T>.FailValidation(values.Select(kvp => (kvp.Key, kvp.Value))
+            .ToArray());
     }
-    
+
     public static Result<T> Invalid<T, TEnum>(TEnum code, Dictionary<string, string> values) where TEnum : Enum
     {
-        return new Result<T>(false, default, new [] {Error.Create(code)}, values);
+        var problem = Problem.Validation(values.Select(kvp => (kvp.Key, kvp.Value))
+            .ToArray());
+        problem.ErrorCode = code.ToString();
+        return Result<T>.Fail(problem);
     }
 }

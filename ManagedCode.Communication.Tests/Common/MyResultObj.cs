@@ -1,7 +1,7 @@
-namespace ManagedCode.Communication.Tests.Results;
+namespace ManagedCode.Communication.Tests.Common;
 
 internal class MyResultObj
 {
-    public string Message;
-    public int Number;
+    public string Message = "";
+    public int Number = 0;
 }

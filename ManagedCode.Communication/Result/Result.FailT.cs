@@ -14,61 +14,43 @@ public partial struct Result
         return Result<T>.Fail(message);
     }
 
+    public static Result<T> Fail<T>(Problem problem)
+    {
+        return Result<T>.Fail(problem);
+    }
+
     public static Result<T> Fail<T, TEnum>(TEnum code) where TEnum : Enum
     {
         return Result<T>.Fail(code);
     }
 
-    public static Result<T> Fail<T, TEnum>(TEnum code, T value) where TEnum : Enum
+    public static Result<T> Fail<T, TEnum>(TEnum code, string? detail) where TEnum : Enum
     {
-        return Result<T>.Fail(code, value);
-    }
-
-    public static Result<T> Fail<T, TEnum>(string message, TEnum code) where TEnum : Enum
-    {
-        return Result<T>.Fail(message, code);
-    }
-
-    public static Result<T> Fail<T, TEnum>(string message, TEnum code, T value) where TEnum : Enum
-    {
-        return Result<T>.Fail(message, code, value);
-    }
-
-    public static Result<T> Fail<T, TEnum>(TEnum code, string message) where TEnum : Enum
-    {
-        return Result<T>.Fail(code, message);
-    }
-
-    public static Result<T> Fail<T, TEnum>(TEnum code, string message, T value) where TEnum : Enum
-    {
-        return Result<T>.Fail(code, message, value);
-    }
-
-    public static Result<T> Fail<T>(Error error)
-    {
-        return Result<T>.Fail(error);
-    }
-
-    public static Result<T> Fail<T>(Error? error)
-    {
-        if (error.HasValue)
-            return new Result<T>(false, default, new[] { error.Value }, default);
-
-        return new Result<T>(false, default, default, default);
-    }
-
-    public static Result<T> Fail<T>(Error[] errors)
-    {
-        return Result<T>.Fail(errors);
+        return Result<T>.Fail(code, detail);
     }
 
     public static Result<T> Fail<T>(Exception? exception)
     {
-        return Result<T>.Fail(exception);
+        return exception != null ? Result<T>.Fail(exception) : Result<T>.Fail("Unknown error");
     }
 
-    public static Result<T> Fail<T>(Exception? exception, T value)
+    public static Result<T> FailValidation<T>(params (string field, string message)[] errors)
     {
-        return Result<T>.Fail(exception, value);
+        return Result<T>.FailValidation(errors);
+    }
+
+    public static Result<T> FailUnauthorized<T>(string? detail = null)
+    {
+        return Result<T>.FailUnauthorized(detail);
+    }
+
+    public static Result<T> FailForbidden<T>(string? detail = null)
+    {
+        return Result<T>.FailForbidden(detail);
+    }
+
+    public static Result<T> FailNotFound<T>(string? detail = null)
+    {
+        return Result<T>.FailNotFound(detail);
     }
 }
