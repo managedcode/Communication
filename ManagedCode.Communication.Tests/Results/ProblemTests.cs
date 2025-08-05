@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using FluentAssertions;
 using ManagedCode.Communication.Constants;
@@ -182,7 +183,7 @@ public class ProblemTests
         problem.ErrorCode
             .Should()
             .Be("TEST_ERROR");
-        problem.Extensions["errorCode"]
+        problem.Extensions[ProblemExtensionKeys.ErrorCode]
             .Should()
             .Be("TEST_ERROR");
     }
@@ -203,7 +204,7 @@ public class ProblemTests
             .BeNull();
         problem.Extensions
             .Should()
-            .NotContainKey("errorCode");
+            .NotContainKey(ProblemExtensionKeys.ErrorCode);
     }
 
     [Fact]
@@ -325,5 +326,106 @@ public class ProblemTests
         problem.Extensions
             .Should()
             .NotBeNull();
+    }
+
+    [Fact]
+    public void WithExtensions_ShouldCreateNewProblemWithAdditionalExtensions()
+    {
+        // Arrange
+        var originalProblem = Problem.Create("type", "title", 400, "detail");
+        originalProblem.Extensions["existing"] = "value";
+        
+        var additionalExtensions = new Dictionary<string, object?>
+        {
+            ["new"] = "newValue",
+            ["another"] = 123
+        };
+
+        // Act
+        var newProblem = originalProblem.WithExtensions(additionalExtensions);
+
+        // Assert
+        newProblem.Type.Should().Be(originalProblem.Type);
+        newProblem.Title.Should().Be(originalProblem.Title);
+        newProblem.StatusCode.Should().Be(originalProblem.StatusCode);
+        newProblem.Detail.Should().Be(originalProblem.Detail);
+        newProblem.Instance.Should().Be(originalProblem.Instance);
+        
+        newProblem.Extensions.Should().ContainKey("existing");
+        newProblem.Extensions["existing"].Should().Be("value");
+        newProblem.Extensions.Should().ContainKey("new");
+        newProblem.Extensions["new"].Should().Be("newValue");
+        newProblem.Extensions.Should().ContainKey("another");
+        newProblem.Extensions["another"].Should().Be(123);
+    }
+
+    [Fact]
+    public void WithExtensions_ShouldOverwriteExistingExtensions()
+    {
+        // Arrange
+        var originalProblem = Problem.Create("type", "title", 400, "detail");
+        originalProblem.Extensions["key"] = "originalValue";
+        
+        var additionalExtensions = new Dictionary<string, object?>
+        {
+            ["key"] = "newValue"
+        };
+
+        // Act
+        var newProblem = originalProblem.WithExtensions(additionalExtensions);
+
+        // Assert
+        newProblem.Extensions["key"].Should().Be("newValue");
+    }
+
+    [Fact]
+    public void FromEnum_WithDefaultStatusCode_ShouldUse400()
+    {
+        // Act
+        var problem = Problem.FromEnum(TestError.InvalidInput);
+
+        // Assert
+        problem.StatusCode.Should().Be(400);
+        problem.Detail.Should().Be("An error occurred: InvalidInput");
+    }
+
+    [Fact]
+    public void HasErrorCode_WithDifferentEnumType_ShouldReturnFalse()
+    {
+        // Arrange
+        var problem = Problem.FromEnum(TestError.InvalidInput);
+
+        // Act & Assert
+        problem.HasErrorCode(OtherError.SomethingElse).Should().BeFalse();
+    }
+
+    [Fact]
+    public void GetErrorCodeAs_WithNoErrorCode_ShouldReturnNull()
+    {
+        // Arrange
+        var problem = Problem.Create("type", "title", 400, "detail");
+
+        // Act
+        var errorCode = problem.GetErrorCodeAs<TestError>();
+
+        // Assert
+        errorCode.Should().BeNull();
+    }
+
+    [Fact]
+    public void ImplicitOperator_ToProblemException_ShouldCreateException()
+    {
+        // Arrange
+        var problem = Problem.Create("https://httpstatuses.io/404", "Not Found", 404, "Resource not found");
+
+        // Act
+        ProblemException exception = problem;
+
+        // Assert
+        exception.Should().NotBeNull();
+        exception.Problem.Should().Be(problem);
+        exception.StatusCode.Should().Be(404);
+        exception.Title.Should().Be("Not Found");
+        exception.Detail.Should().Be("Resource not found");
     }
 }

@@ -24,4 +24,14 @@ public static class ProblemExtensionKeys
     ///     Key for exception data prefix
     /// </summary>
     public const string ExceptionDataPrefix = "exception.";
+
+    /// <summary>
+    ///     Key for error code in problem extensions
+    /// </summary>
+    public const string ErrorCode = "errorCode";
+
+    /// <summary>
+    ///     Key for original exception type in problem extensions
+    /// </summary>
+    public const string OriginalExceptionType = "originalExceptionType";
 }

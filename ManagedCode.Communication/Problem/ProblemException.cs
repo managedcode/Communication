@@ -28,7 +28,7 @@ public class ProblemException : Exception
     /// <summary>
     ///     Initializes a new instance of the <see cref="ProblemException" /> class with an inner exception.
     /// </summary>
-    public ProblemException(string title, Exception innerException) 
+    public ProblemException(Exception innerException) 
         : this(Problem.FromException(innerException))
     {
     }

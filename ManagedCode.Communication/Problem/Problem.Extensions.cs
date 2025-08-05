@@ -14,16 +14,16 @@ public partial class Problem
     [JsonIgnore]
     public string? ErrorCode
     {
-        get => Extensions.TryGetValue("errorCode", out var code) ? code?.ToString() : null;
+        get => Extensions.TryGetValue(ProblemExtensionKeys.ErrorCode, out var code) ? code?.ToString() : null;
         set
         {
             if (value != null)
             {
-                Extensions["errorCode"] = value;
+                Extensions[ProblemExtensionKeys.ErrorCode] = value;
             }
             else
             {
-                Extensions.Remove("errorCode");
+                Extensions.Remove(ProblemExtensionKeys.ErrorCode);
             }
         }
     }
@@ -86,6 +86,9 @@ public partial class Problem
 
         problem.ErrorCode = exception.GetType()
             .FullName;
+        
+        // Store the original exception type for potential reconstruction
+        problem.Extensions[ProblemExtensionKeys.OriginalExceptionType] = exception.GetType().FullName;
 
         if (exception.Data.Count > 0)
         {
@@ -185,5 +188,57 @@ public partial class Problem
 
         return problem;
     }
-}
 
+    /// <summary>
+    ///     Converts the Problem to an exception, attempting to reconstruct the original exception type if possible.
+    /// </summary>
+    public Exception ToException()
+    {
+        // Check if we have the original exception type stored
+        if (Extensions.TryGetValue(ProblemExtensionKeys.OriginalExceptionType, out var originalTypeObj) && 
+            originalTypeObj is string originalTypeName)
+        {
+            try
+            {
+                // Try to get the type from the current app domain
+                var originalType = System.Type.GetType(originalTypeName);
+                
+                // If not found, search in all loaded assemblies
+                if (originalType == null)
+                {
+                    foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        originalType = assembly.GetType(originalTypeName.Split(',')[0]);
+                        if (originalType != null)
+                            break;
+                    }
+                }
+                
+                if (originalType != null && typeof(Exception).IsAssignableFrom(originalType))
+                {
+                    // Try to create instance of the original exception type
+                    if (Activator.CreateInstance(originalType, Detail ?? Title ?? "An error occurred") is Exception reconstructedException)
+                    {
+                        // Restore any exception data
+                        foreach (var kvp in Extensions)
+                        {
+                            if (kvp.Key.StartsWith(ProblemExtensionKeys.ExceptionDataPrefix))
+                            {
+                                var dataKey = kvp.Key.Substring(ProblemExtensionKeys.ExceptionDataPrefix.Length);
+                                reconstructedException.Data[dataKey] = kvp.Value;
+                            }
+                        }
+                        return reconstructedException;
+                    }
+                }
+            }
+            catch
+            {
+                // If reconstruction fails, fall back to ProblemException
+            }
+        }
+
+        // Default to ProblemException
+        return new ProblemException(this);
+    }
+}
