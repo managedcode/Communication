@@ -19,5 +19,3 @@ public struct ResultTSurrogate<T>
 
     [Id(2)] public T? Value;
 }
-
-

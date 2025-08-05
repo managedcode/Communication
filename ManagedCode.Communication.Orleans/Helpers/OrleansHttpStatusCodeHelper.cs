@@ -1,9 +1,8 @@
 using System;
 using System.Net;
-using ManagedCode.Communication.Helpers;
 using Orleans.Runtime;
 
-namespace ManagedCode.Communication.Orleans.Helpers;
+namespace ManagedCode.Communication.Helpers;
 
 public static class OrleansHttpStatusCodeHelper
 {
@@ -18,10 +17,10 @@ public static class OrleansHttpStatusCodeHelper
             TimeoutException => HttpStatusCode.GatewayTimeout,
             GrainExtensionNotInstalledException => HttpStatusCode.NotImplemented,
             OrleansConfigurationException => HttpStatusCode.InternalServerError,
-            
+
             OrleansException => HttpStatusCode.InternalServerError,
 
-            
+
             _ => (HttpStatusCode?)null
         };
 

@@ -1,4 +1,4 @@
-using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Surrogates;
 using Orleans;
 

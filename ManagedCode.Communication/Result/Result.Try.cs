@@ -7,7 +7,7 @@ namespace ManagedCode.Communication;
 public partial struct Result
 {
     /// <summary>
-    /// Executes a function and returns a Result, catching any exceptions.
+    ///     Executes a function and returns a Result, catching any exceptions.
     /// </summary>
     public static Result Try(Action action, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
@@ -21,9 +21,9 @@ public partial struct Result
             return Fail(ex, errorStatus);
         }
     }
-    
+
     /// <summary>
-    /// Executes a function and returns a Result<T>, catching any exceptions.
+    ///     Executes a function and returns a Result<T>, catching any exceptions.
     /// </summary>
     public static Result<T> Try<T>(Func<T> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
@@ -36,9 +36,9 @@ public partial struct Result
             return Result<T>.Fail(ex, errorStatus);
         }
     }
-    
+
     /// <summary>
-    /// Executes an async function and returns a Result, catching any exceptions.
+    ///     Executes an async function and returns a Result, catching any exceptions.
     /// </summary>
     public static async Task<Result> TryAsync(Func<Task> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
@@ -52,9 +52,9 @@ public partial struct Result
             return Fail(ex, errorStatus);
         }
     }
-    
+
     /// <summary>
-    /// Executes an async function and returns a Result<T>, catching any exceptions.
+    ///     Executes an async function and returns a Result<T>, catching any exceptions.
     /// </summary>
     public static async Task<Result<T>> TryAsync<T>(Func<Task<T>> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {

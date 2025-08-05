@@ -9,23 +9,27 @@ namespace ManagedCode.Communication;
 public partial class Problem
 {
     /// <summary>
-    /// Custom error code stored in Extensions.
+    ///     Custom error code stored in Extensions.
     /// </summary>
     [JsonIgnore]
-    public string? ErrorCode 
-    { 
+    public string? ErrorCode
+    {
         get => Extensions.TryGetValue("errorCode", out var code) ? code?.ToString() : null;
-        set 
+        set
         {
             if (value != null)
+            {
                 Extensions["errorCode"] = value;
+            }
             else
+            {
                 Extensions.Remove("errorCode");
+            }
         }
     }
 
     /// <summary>
-    /// Creates a Problem with specified values.
+    ///     Creates a Problem with specified values.
     /// </summary>
     public static Problem Create(string type, string title, int statusCode, string detail, string? instance = null)
     {
@@ -38,9 +42,9 @@ public partial class Problem
             Instance = instance
         };
     }
-    
+
     /// <summary>
-    /// Creates a Problem from an HTTP status code.
+    ///     Creates a Problem from an HTTP status code.
     /// </summary>
     public static Problem FromStatusCode(HttpStatusCode statusCode, string? detail = null)
     {
@@ -52,40 +56,37 @@ public partial class Problem
             Detail = detail
         };
     }
-    
+
     /// <summary>
-    /// Creates a Problem from a custom error enum.
+    ///     Creates a Problem from a custom error enum.
     /// </summary>
     public static Problem FromEnum<TEnum>(TEnum errorCode, string? detail = null, int status = 400) where TEnum : Enum
     {
-        var problem = Create(
-            type: $"https://httpstatuses.io/{status}",
-            title: errorCode.ToString(),
-            statusCode: status,
-            detail: detail ?? $"An error occurred: {errorCode}"
-        );
-        
+        var problem = Create($"https://httpstatuses.io/{status}", errorCode.ToString(), status, detail ?? $"An error occurred: {errorCode}");
+
         problem.ErrorCode = errorCode.ToString();
         problem.Extensions[ProblemExtensionKeys.ErrorType] = typeof(TEnum).Name;
-        
+
         return problem;
     }
-    
+
     /// <summary>
-    /// Creates a Problem from an exception.
+    ///     Creates a Problem from an exception.
     /// </summary>
     public static Problem FromException(Exception exception, int status = 500)
     {
         var problem = new Problem
         {
             Type = $"https://httpstatuses.io/{status}",
-            Title = exception.GetType().Name,
+            Title = exception.GetType()
+                .Name,
             Detail = exception.Message,
             StatusCode = status
         };
-        
-        problem.ErrorCode = exception.GetType().FullName;
-        
+
+        problem.ErrorCode = exception.GetType()
+            .FullName;
+
         if (exception.Data.Count > 0)
         {
             foreach (var key in exception.Data.Keys)
@@ -96,12 +97,12 @@ public partial class Problem
                 }
             }
         }
-        
+
         return problem;
     }
-    
+
     /// <summary>
-    /// Creates a validation Problem with errors.
+    ///     Creates a validation Problem with errors.
     /// </summary>
     public static Problem Validation(params (string field, string message)[] errors)
     {
@@ -112,29 +113,33 @@ public partial class Problem
             StatusCode = 400,
             Detail = "One or more validation errors occurred."
         };
-        
+
         var errorDict = new Dictionary<string, List<string>>();
         foreach (var (field, message) in errors)
         {
             if (!errorDict.ContainsKey(field))
+            {
                 errorDict[field] = new List<string>();
-            errorDict[field].Add(message);
+            }
+
+            errorDict[field]
+                .Add(message);
         }
-        
+
         problem.Extensions[ProblemExtensionKeys.Errors] = errorDict;
         return problem;
     }
-    
+
     /// <summary>
-    /// Checks if this problem has a specific error code.
+    ///     Checks if this problem has a specific error code.
     /// </summary>
     public bool HasErrorCode<TEnum>(TEnum errorCode) where TEnum : Enum
     {
         return ErrorCode == errorCode.ToString();
     }
-    
+
     /// <summary>
-    /// Gets error code as enum if possible.
+    ///     Gets error code as enum if possible.
     /// </summary>
     public TEnum? GetErrorCodeAs<TEnum>() where TEnum : struct, Enum
     {
@@ -142,11 +147,12 @@ public partial class Problem
         {
             return result;
         }
+
         return null;
     }
-    
+
     /// <summary>
-    /// Gets validation errors if any.
+    ///     Gets validation errors if any.
     /// </summary>
     public Dictionary<string, List<string>>? GetValidationErrors()
     {
@@ -154,63 +160,64 @@ public partial class Problem
         {
             return errors as Dictionary<string, List<string>>;
         }
+
         return null;
     }
-    
+
     /// <summary>
-    /// Creates a copy of this Problem with the specified extensions added.
+    ///     Creates a copy of this Problem with the specified extensions added.
     /// </summary>
     public Problem WithExtensions(IDictionary<string, object?> additionalExtensions)
     {
-        var problem = Problem.Create(Type ?? "about:blank", Title ?? "Error", StatusCode, Detail ?? "An error occurred", Instance);
-        
+        var problem = Create(Type ?? "about:blank", Title ?? "Error", StatusCode, Detail ?? "An error occurred", Instance);
+
         // Copy existing extensions
         foreach (var extension in Extensions)
         {
             problem.Extensions[extension.Key] = extension.Value;
         }
-        
+
         // Add new extensions
         foreach (var extension in additionalExtensions)
         {
             problem.Extensions[extension.Key] = extension.Value;
         }
-        
+
         return problem;
     }
 }
 
 /// <summary>
-/// Extension methods for creating Problems from various sources
+///     Extension methods for creating Problems from various sources
 /// </summary>
 public static class ProblemCreationExtensions
 {
     /// <summary>
-    /// Creates a Problem from an exception
+    ///     Creates a Problem from an exception
     /// </summary>
     public static Problem ToProblem(this Exception exception, int statusCode = 500)
     {
         return Problem.FromException(exception, statusCode);
     }
-    
+
     /// <summary>
-    /// Creates a Problem from an exception with HttpStatusCode
+    ///     Creates a Problem from an exception with HttpStatusCode
     /// </summary>
     public static Problem ToProblem(this Exception exception, HttpStatusCode statusCode)
     {
         return Problem.FromException(exception, (int)statusCode);
     }
-    
+
     /// <summary>
-    /// Creates a Problem from an enum
+    ///     Creates a Problem from an enum
     /// </summary>
     public static Problem ToProblem<TEnum>(this TEnum errorCode, string? detail = null, int statusCode = 400) where TEnum : Enum
     {
         return Problem.FromEnum(errorCode, detail, statusCode);
     }
-    
+
     /// <summary>
-    /// Creates a Problem from an enum with HttpStatusCode
+    ///     Creates a Problem from an enum with HttpStatusCode
     /// </summary>
     public static Problem ToProblem<TEnum>(this TEnum errorCode, string? detail, HttpStatusCode statusCode) where TEnum : Enum
     {

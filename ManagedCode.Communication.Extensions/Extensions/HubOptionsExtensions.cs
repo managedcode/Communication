@@ -1,8 +1,7 @@
 using System;
+using ManagedCode.Communication.Extensions.Filters;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
-using ManagedCode.Communication.Extensions;
-using ManagedCode.Communication.Extensions.Filters;
 
 namespace ManagedCode.Communication.Extensions.Extensions;
 

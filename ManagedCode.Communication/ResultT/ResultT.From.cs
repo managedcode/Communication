@@ -80,13 +80,15 @@ public partial struct Result<T>
 
     public static Result<T> From(Result<T> result)
     {
-        return result.IsSuccess ? result : (result.Problem != null ? Fail(result.Problem) : Fail());
+        return result.IsSuccess ? result : result.Problem != null ? Fail(result.Problem) : Fail();
     }
 
     public static Result From<U>(Result<U> result)
     {
         if (result)
+        {
             return Result.Succeed();
+        }
 
         return result.Problem != null ? Result.Fail(result.Problem) : Result.Fail();
     }

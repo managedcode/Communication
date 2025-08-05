@@ -1,10 +1,8 @@
 using System;
-using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using static ManagedCode.Communication.Extensions.Helpers.HttpStatusCodeHelper;
-using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions.Filters;
 
@@ -18,8 +16,7 @@ public class CommunicationExceptionFilter(ILogger<CommunicationExceptionFilter> 
             var actionName = context.ActionDescriptor.DisplayName;
             var controllerName = context.ActionDescriptor.RouteValues["controller"] ?? "Unknown";
 
-            logger.LogError(exception, "Unhandled exception in {ControllerName}.{ActionName}", 
-                controllerName, actionName);
+            logger.LogError(exception, "Unhandled exception in {ControllerName}.{ActionName}", controllerName, actionName);
 
             var statusCode = GetStatusCodeForException(exception);
             var result = Result.Fail(exception, statusCode);
@@ -31,18 +28,20 @@ public class CommunicationExceptionFilter(ILogger<CommunicationExceptionFilter> 
 
             context.ExceptionHandled = true;
 
-            logger.LogInformation("Exception handled by {FilterType} for {ControllerName}.{ActionName}", 
-                GetType().Name, controllerName, actionName);
+            logger.LogInformation("Exception handled by {FilterType} for {ControllerName}.{ActionName}", GetType()
+                .Name, controllerName, actionName);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error occurred while handling exception in {FilterType}", GetType().Name);
-            
-            context.Result = new ObjectResult(Result.Fail(Titles.UnexpectedError, ex.Message, HttpStatusCode.InternalServerError))
+            logger.LogError(ex, "Error occurred while handling exception in {FilterType}", GetType()
+                .Name);
+
+            var statusCode = GetStatusCodeForException(ex);
+            context.Result = new ObjectResult(Result.Fail(ex, statusCode))
             {
-                StatusCode = (int)HttpStatusCode.InternalServerError
+                StatusCode = (int)statusCode
             };
             context.ExceptionHandled = true;
         }
     }
-} 
+}

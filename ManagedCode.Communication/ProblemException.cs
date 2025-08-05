@@ -4,36 +4,36 @@ using System.Collections.Generic;
 namespace ManagedCode.Communication;
 
 /// <summary>
-/// Exception that represents a Problem Details failure.
+///     Exception that represents a Problem Details failure.
 /// </summary>
 public class ProblemException : Exception
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ProblemException"/> class.
+    ///     Initializes a new instance of the <see cref="ProblemException" /> class.
     /// </summary>
     public ProblemException(Problem problem) : base(GetMessage(problem))
     {
         Problem = problem;
-        
+
         // Add problem data to exception Data collection
         Data["Problem.Type"] = problem.Type;
         Data["Problem.Title"] = problem.Title;
         Data["Problem.StatusCode"] = problem.StatusCode;
         Data["Problem.Detail"] = problem.Detail;
         Data["Problem.Instance"] = problem.Instance;
-        
+
         // Add extensions to Data
         foreach (var extension in problem.Extensions)
         {
             Data[$"Problem.Extensions.{extension.Key}"] = extension.Value;
         }
-        
+
         // Handle error code if present
         if (problem.ErrorCode != null)
         {
             Data["Problem.ErrorCode"] = problem.ErrorCode;
         }
-        
+
         // Handle validation errors if present
         var validationErrors = problem.GetValidationErrors();
         if (validationErrors != null)
@@ -44,47 +44,47 @@ public class ProblemException : Exception
             }
         }
     }
-    
+
     /// <summary>
-    /// Gets the Problem that caused this exception.
+    ///     Gets the Problem that caused this exception.
     /// </summary>
     public Problem Problem { get; }
-    
+
     /// <summary>
-    /// Gets the HTTP status code from the problem.
+    ///     Gets the HTTP status code from the problem.
     /// </summary>
     public int StatusCode => Problem.StatusCode;
-    
+
     /// <summary>
-    /// Gets the problem type.
+    ///     Gets the problem type.
     /// </summary>
     public string? Type => Problem.Type;
-    
+
     /// <summary>
-    /// Gets the problem title.
+    ///     Gets the problem title.
     /// </summary>
     public string? Title => Problem.Title;
-    
+
     /// <summary>
-    /// Gets the problem detail.
+    ///     Gets the problem detail.
     /// </summary>
     public string? Detail => Problem.Detail;
-    
+
     /// <summary>
-    /// Gets the error code if available.
+    ///     Gets the error code if available.
     /// </summary>
     public string? ErrorCode => Problem.ErrorCode;
-    
+
     /// <summary>
-    /// Gets the validation errors if this is a validation problem.
+    ///     Gets the validation errors if this is a validation problem.
     /// </summary>
     public Dictionary<string, List<string>>? ValidationErrors => Problem.GetValidationErrors();
-    
+
     /// <summary>
-    /// Checks if this is a validation problem.
+    ///     Checks if this is a validation problem.
     /// </summary>
     public bool IsValidationProblem => Problem.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
-    
+
     private static string GetMessage(Problem problem)
     {
         // Create a detailed message based on problem type
@@ -99,30 +99,39 @@ public class ProblemException : Exception
                 {
                     errors.Add($"{error.Key}: {string.Join(", ", error.Value)}");
                 }
+
                 return $"Validation failed: {string.Join("; ", errors)}";
             }
         }
-        
+
         // Generic message construction
         var parts = new List<string>();
-        
+
         if (!string.IsNullOrEmpty(problem.Title))
+        {
             parts.Add(problem.Title);
-            
+        }
+
         if (!string.IsNullOrEmpty(problem.Detail))
+        {
             parts.Add(problem.Detail);
-            
+        }
+
         if (problem.StatusCode > 0)
+        {
             parts.Add($"(HTTP {problem.StatusCode})");
-            
+        }
+
         if (!string.IsNullOrEmpty(problem.ErrorCode))
+        {
             parts.Add($"[{problem.ErrorCode}]");
-        
+        }
+
         return parts.Count > 0 ? string.Join(" - ", parts) : "An error occurred";
     }
-    
+
     /// <summary>
-    /// Creates a ProblemException from a Problem.
+    ///     Creates a ProblemException from a Problem.
     /// </summary>
     public static ProblemException FromProblem(Problem problem)
     {

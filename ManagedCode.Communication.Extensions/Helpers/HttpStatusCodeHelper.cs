@@ -1,6 +1,11 @@
 using System;
 using System.Net;
-using ManagedCode.Communication.Helpers;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.SignalR;
 
 namespace ManagedCode.Communication.Extensions.Helpers;
 
@@ -11,9 +16,20 @@ public static class HttpStatusCodeHelper
         // First check ASP.NET/SignalR-specific exceptions
         var aspNetStatusCode = exception switch
         {
-            // ASP.NET Core specific exceptions could go here
-            // For now, we don't have any specific ones, but this is where they would be added
-            
+            // ASP.NET Core specific exceptions
+            BadHttpRequestException => HttpStatusCode.BadRequest,
+            ConnectionAbortedException => HttpStatusCode.BadRequest,
+            ConnectionResetException => HttpStatusCode.BadRequest,
+            AmbiguousActionException => HttpStatusCode.InternalServerError,
+            AuthenticationFailureException => HttpStatusCode.Unauthorized,
+
+            // SignalR specific exceptions
+            HubException => HttpStatusCode.BadRequest,
+
+            // Antiforgery
+            AntiforgeryValidationException => HttpStatusCode.BadRequest,
+
+
             _ => (HttpStatusCode?)null
         };
 
@@ -24,6 +40,6 @@ public static class HttpStatusCodeHelper
         }
 
         // Otherwise, use the base helper for standard .NET exceptions
-        return ManagedCode.Communication.Helpers.HttpStatusCodeHelper.GetStatusCodeForException(exception);
+        return Communication.Helpers.HttpStatusCodeHelper.GetStatusCodeForException(exception);
     }
 }

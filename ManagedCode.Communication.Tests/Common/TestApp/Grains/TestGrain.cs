@@ -4,28 +4,30 @@ using System.Threading.Tasks;
 using ManagedCode.Communication.Tests.Common.TestApp.Models;
 using Orleans;
 
-namespace ManagedCode.Communication.Tests.TestApp.Grains;
+namespace ManagedCode.Communication.Tests.Common.TestApp.Grains;
 
 public class TestGrain : Grain, ITestGrain
 {
     public Task<Result> TestResult()
     {
-        return Result.Succeed().AsTask();
+        return Result.Succeed()
+            .AsTask();
     }
 
     public Task<Result<int>> TestResultInt()
     {
-        return Result<int>.Succeed(5).AsTask();
+        return Result<int>.Succeed(5)
+            .AsTask();
     }
 
     public Task<Result> TestResultError()
     {
-        throw new System.Exception("result error");
+        throw new Exception("result error");
     }
 
     public Task<Result<int>> TestResultIntError()
     {
-        throw new System.Exception("result int error");
+        throw new Exception("result int error");
     }
 
     public ValueTask<Result> TestValueTaskResult()
@@ -58,22 +60,22 @@ public class TestGrain : Grain, ITestGrain
                 Score = 95.5
             }
         };
-        
+
         return ValueTask.FromResult(Result<ComplexTestModel>.Succeed(model));
     }
 
     public ValueTask<Result> TestValueTaskResultError()
     {
-        throw new System.Exception("valuetask result error");
+        throw new Exception("valuetask result error");
     }
 
     public ValueTask<Result<string>> TestValueTaskResultStringError()
     {
-        throw new System.Exception("valuetask result string error");
+        throw new Exception("valuetask result string error");
     }
 
     public ValueTask<Result<ComplexTestModel>> TestValueTaskResultComplexObjectError()
     {
-        throw new System.Exception("valuetask result complex object error");
+        throw new Exception("valuetask result complex object error");
     }
 }

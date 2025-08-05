@@ -8,12 +8,12 @@ public static class ResultExtension
     {
         return Result<T>.Succeed(result);
     }
-    
+
     public static Result<T> AsResult<T>(this Exception exception)
     {
         return Result<T>.Fail(exception);
     }
-    
+
     public static Result AsResult(this Exception exception)
     {
         return Result.Fail(exception);

@@ -15,4 +15,3 @@ public static class OrleansExtensions
         return clientBuilder.AddOutgoingGrainCallFilter<CommunicationOutgoingGrainCallFilter>();
     }
 }
-

@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
@@ -9,8 +8,8 @@ namespace ManagedCode.Communication.Tests.Common.TestApp;
 
 public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    public TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger,
-        UrlEncoder encoder) : base(options, logger, encoder)
+    public TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder) : base(options,
+        logger, encoder)
     {
     }
 

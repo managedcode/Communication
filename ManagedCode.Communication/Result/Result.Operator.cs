@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using System.Text.Json;
 
 namespace ManagedCode.Communication;
 
@@ -55,7 +53,7 @@ public partial struct Result
     {
         return success ? Succeed() : Fail();
     }
-    
+
     // public static implicit operator string(Result result)
     // {
     //     return JsonSerializer.Serialize(result);

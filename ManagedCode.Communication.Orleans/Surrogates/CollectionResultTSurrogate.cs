@@ -7,8 +7,7 @@ namespace ManagedCode.Communication.Surrogates;
 [GenerateSerializer]
 public struct CollectionResultTSurrogate<T>
 {
-    public CollectionResultTSurrogate(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems,
-        Problem? problem)
+    public CollectionResultTSurrogate(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Problem? problem)
     {
         IsSuccess = isSuccess;
         Collection = collection ?? Array.Empty<T>();

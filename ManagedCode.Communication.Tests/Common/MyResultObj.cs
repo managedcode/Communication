@@ -1,4 +1,4 @@
-namespace ManagedCode.Communication.Tests.Results;
+namespace ManagedCode.Communication.Tests.Common;
 
 internal class MyResultObj
 {

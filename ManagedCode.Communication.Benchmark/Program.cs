@@ -7,11 +7,12 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args
+        BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly)
+            .Run(args
 
 #if DEBUG
-            , new DebugInProcessConfig()
+                , new DebugInProcessConfig()
 #endif
-        );
+            );
     }
 }

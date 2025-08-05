@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.CollectionResultT;
 
 public partial struct CollectionResult<T>
 {
@@ -43,11 +43,12 @@ public partial struct CollectionResult<T>
         var problem = new Problem
         {
             Type = $"https://httpstatuses.io/{(int)status}",
-            Title = exception.GetType().Name,
+            Title = exception.GetType()
+                .Name,
             Detail = exception.Message,
             StatusCode = (int)status
         };
-        
+
         if (exception.Data.Count > 0)
         {
             foreach (var key in exception.Data.Keys)
@@ -58,7 +59,7 @@ public partial struct CollectionResult<T>
                 }
             }
         }
-        
+
         return new CollectionResult<T>(false, default, 0, 0, 0, problem);
     }
 
@@ -76,7 +77,7 @@ public partial struct CollectionResult<T>
             StatusCode = (int)HttpStatusCode.Unauthorized,
             Detail = detail ?? "Authentication is required to access this resource."
         };
-        
+
         return new CollectionResult<T>(false, default, 0, 0, 0, problem);
     }
 
@@ -89,7 +90,7 @@ public partial struct CollectionResult<T>
             StatusCode = (int)HttpStatusCode.Forbidden,
             Detail = detail ?? "You do not have permission to access this resource."
         };
-        
+
         return new CollectionResult<T>(false, default, 0, 0, 0, problem);
     }
 
@@ -102,15 +103,15 @@ public partial struct CollectionResult<T>
             StatusCode = (int)HttpStatusCode.NotFound,
             Detail = detail ?? "The requested resource was not found."
         };
-        
+
         return new CollectionResult<T>(false, default, 0, 0, 0, problem);
     }
-    
+
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, string? detail = null) where TEnum : Enum
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.FromEnum(errorCode, detail));
     }
-    
+
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, HttpStatusCode status, string? detail = null) where TEnum : Enum
     {
         var problem = Problem.FromEnum(errorCode, detail, (int)status);

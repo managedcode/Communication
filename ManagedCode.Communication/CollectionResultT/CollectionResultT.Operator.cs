@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.CollectionResultT;
 
 public partial struct CollectionResult<T>
 {
     public bool Equals(CollectionResult<T> other)
     {
-        return IsSuccess == other.IsSuccess && EqualityComparer<T[]?>.Default.Equals(Collection, other.Collection) && 
+        return IsSuccess == other.IsSuccess && EqualityComparer<T[]?>.Default.Equals(Collection, other.Collection) &&
                Problem?.Title == other.Problem?.Title && Problem?.Detail == other.Problem?.Detail;
     }
 
@@ -38,7 +38,7 @@ public partial struct CollectionResult<T>
 
     public static implicit operator Result(CollectionResult<T> result)
     {
-        return result.IsSuccess ? Result.Succeed() : (result.Problem != null ? Result.Fail(result.Problem) : Result.Fail());
+        return result.IsSuccess ? Result.Succeed() : result.Problem != null ? Result.Fail(result.Problem) : Result.Fail();
     }
 
     public static implicit operator Exception?(CollectionResult<T> result)

@@ -1,3 +1,4 @@
+using System.Net;
 using BenchmarkDotNet.Attributes;
 
 namespace ManagedCode.Communication.Benchmark;
@@ -57,24 +58,24 @@ public class CreateInstanceFailBenchmark
     [Benchmark]
     public Result CreateInstanceTypeError()
     {
-        return Result.Fail("about:blank", "Error", System.Net.HttpStatusCode.BadRequest);
+        return Result.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 
     [Benchmark]
     public Result<int> CreateInstanceTypeIntError()
     {
-        return Result<int>.Fail("about:blank", "Error", System.Net.HttpStatusCode.BadRequest);
+        return Result<int>.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 
     [Benchmark]
     public Result CreateInstanceTypeErrorInterface()
     {
-        return Result.Fail("about:blank", "Error", System.Net.HttpStatusCode.BadRequest);
+        return Result.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 
     [Benchmark]
     public Result<int> CreateInstanceTypeIntErrorInterface()
     {
-        return Result<int>.Fail("about:blank", "Error", System.Net.HttpStatusCode.BadRequest);
+        return Result<int>.Fail("about:blank", "Error", HttpStatusCode.BadRequest);
     }
 }

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.CollectionResultT;
 
 public partial struct CollectionResult<T>
 {

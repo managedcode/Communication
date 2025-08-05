@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text.Json;
 
 namespace ManagedCode.Communication;
 
@@ -9,8 +7,8 @@ public partial struct Result<T>
 {
     public bool Equals(Result<T> other)
     {
-        return IsSuccess == other.IsSuccess && EqualityComparer<T?>.Default.Equals(Value, other.Value) && 
-               Problem?.Title == other.Problem?.Title && Problem?.Detail == other.Problem?.Detail;
+        return IsSuccess == other.IsSuccess && EqualityComparer<T?>.Default.Equals(Value, other.Value) && Problem?.Title == other.Problem?.Title &&
+               Problem?.Detail == other.Problem?.Detail;
     }
 
     public override bool Equals(object? obj)
@@ -41,11 +39,15 @@ public partial struct Result<T>
     public static implicit operator Result(Result<T> result)
     {
         if (result.IsSuccess)
+        {
             return Result.Succeed();
-            
+        }
+
         if (result.Problem != null)
+        {
             return Result.Fail(result.Problem);
-            
+        }
+
         return Result.Fail();
     }
 
@@ -73,7 +75,7 @@ public partial struct Result<T>
     {
         return Succeed(value);
     }
-    
+
     // public static implicit operator string(Result<T> result)
     // {
     //     return JsonSerializer.Serialize(result);

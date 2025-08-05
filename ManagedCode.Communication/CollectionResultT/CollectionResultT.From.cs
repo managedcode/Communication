@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.CollectionResultT;
 
 public partial struct CollectionResult<T>
 {
@@ -123,22 +122,30 @@ public partial struct CollectionResult<T>
     public static CollectionResult<T> From(CollectionResult<T> result)
     {
         if (result.IsSuccess)
+        {
             return result;
-            
+        }
+
         if (result.Problem != null)
+        {
             return Fail(result.Problem);
-            
+        }
+
         return Fail();
     }
 
     public static Result From<U>(CollectionResult<U> result)
     {
         if (result.IsSuccess)
+        {
             return Result.Succeed();
+        }
 
         if (result.Problem != null)
+        {
             return Result.Fail(result.Problem);
-            
+        }
+
         return Result.Fail();
     }
 

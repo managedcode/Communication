@@ -25,7 +25,7 @@ public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, IC
     }
 
     public TestCluster Cluster { get; }
-    
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -53,8 +53,8 @@ public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, IC
     {
         await base.DisposeAsync();
     }
-    
-    class TestSiloConfigurations : ISiloConfigurator
+
+    private class TestSiloConfigurations : ISiloConfigurator
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
@@ -62,7 +62,7 @@ public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, IC
         }
     }
 
-    class TestClientConfigurations : IClientBuilderConfigurator
+    private class TestClientConfigurations : IClientBuilderConfigurator
     {
         public void Configure(IConfiguration configuration, IClientBuilder clientBuilder)
         {

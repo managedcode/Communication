@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
@@ -14,11 +13,11 @@ public class ResultCreationBenchmark
     private static readonly Exception TestException = new InvalidOperationException("Benchmark test");
     private static readonly Type ResultIntType = typeof(Result<int>);
     private static readonly ConcurrentDictionary<Type, MethodInfo> MethodCache = new();
-    
-    private MethodInfo _cachedMethod = null!;
-    private readonly object[] _exceptionArray = new object[1];
     private readonly Exception _exception = TestException;
-    
+    private readonly object[] _exceptionArray = new object[1];
+
+    private MethodInfo _cachedMethod = null!;
+
     [GlobalSetup]
     public void Setup()
     {
@@ -56,8 +55,7 @@ public class ResultCreationBenchmark
     [Benchmark]
     public object Reflection_ConcurrentDictionary()
     {
-        var method = MethodCache.GetOrAdd(ResultIntType, type => 
-            type.GetMethod(nameof(Result.Fail), [typeof(Exception), typeof(HttpStatusCode)])!);
+        var method = MethodCache.GetOrAdd(ResultIntType, type => type.GetMethod(nameof(Result.Fail), [typeof(Exception), typeof(HttpStatusCode)])!);
         return method.Invoke(null, [TestException, HttpStatusCode.InternalServerError])!;
     }
 
@@ -67,15 +65,13 @@ public class ResultCreationBenchmark
         var result = Activator.CreateInstance(ResultIntType);
         return result!;
     }
-    
+
     [Benchmark]
     public object Activator_WithPropertySet()
     {
-        var resultType = Activator.CreateInstance(ResultIntType, 
-            BindingFlags.NonPublic | BindingFlags.Instance, 
-            null, [TestException], 
+        var resultType = Activator.CreateInstance(ResultIntType, BindingFlags.NonPublic | BindingFlags.Instance, null, [TestException],
             CultureInfo.CurrentCulture);
-        
+
         return resultType!;
     }
 }

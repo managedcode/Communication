@@ -3,14 +3,14 @@ using Microsoft.AspNetCore.Mvc;
 namespace ManagedCode.Communication.Extensions;
 
 /// <summary>
-/// Extension methods for Problem and ProblemDetails conversion.
+///     Extension methods for Problem and ProblemDetails conversion.
 /// </summary>
 public static class ProblemExtensions
 {
     /// <summary>
-    /// Converts Problem to ProblemDetails.
+    ///     Converts Problem to ProblemDetails.
     /// </summary>
-    public static ProblemDetails ToProblemDetails(this ManagedCode.Communication.Problem problem)
+    public static ProblemDetails ToProblemDetails(this Problem problem)
     {
         var problemDetails = new ProblemDetails
         {
@@ -20,21 +20,21 @@ public static class ProblemExtensions
             Detail = problem.Detail,
             Instance = problem.Instance
         };
-        
+
         foreach (var kvp in problem.Extensions)
         {
             problemDetails.Extensions[kvp.Key] = kvp.Value;
         }
-        
+
         return problemDetails;
     }
-    
+
     /// <summary>
-    /// Creates a Problem from ProblemDetails.
+    ///     Creates a Problem from ProblemDetails.
     /// </summary>
-    public static ManagedCode.Communication.Problem FromProblemDetails(ProblemDetails problemDetails)
+    public static Problem FromProblemDetails(ProblemDetails problemDetails)
     {
-        var problem = new ManagedCode.Communication.Problem
+        var problem = new Problem
         {
             Type = problemDetails.Type,
             Title = problemDetails.Title,
@@ -42,60 +42,60 @@ public static class ProblemExtensions
             Detail = problemDetails.Detail,
             Instance = problemDetails.Instance
         };
-        
+
         foreach (var kvp in problemDetails.Extensions)
         {
             problem.Extensions[kvp.Key] = kvp.Value;
         }
-        
+
         return problem;
     }
-    
+
     /// <summary>
-    /// Converts Problem to ProblemDetails.
+    ///     Converts Problem to ProblemDetails.
     /// </summary>
-    public static ProblemDetails AsProblemDetails(this ManagedCode.Communication.Problem problem)
+    public static ProblemDetails AsProblemDetails(this Problem problem)
     {
         return problem.ToProblemDetails();
     }
-    
+
     /// <summary>
-    /// Converts ProblemDetails to Problem.
+    ///     Converts ProblemDetails to Problem.
     /// </summary>
-    public static ManagedCode.Communication.Problem AsProblem(this ProblemDetails problemDetails)
+    public static Problem AsProblem(this ProblemDetails problemDetails)
     {
         return FromProblemDetails(problemDetails);
     }
-    
+
     /// <summary>
-    /// Creates a failed Result from ProblemDetails.
+    ///     Creates a failed Result from ProblemDetails.
     /// </summary>
-    public static ManagedCode.Communication.Result ToFailedResult(this ProblemDetails problemDetails)
+    public static Result ToFailedResult(this ProblemDetails problemDetails)
     {
-        return ManagedCode.Communication.Result.Fail(problemDetails.AsProblem());
+        return Result.Fail(problemDetails.AsProblem());
     }
-    
+
     /// <summary>
-    /// Creates a failed Result<T> from ProblemDetails.
+    ///     Creates a failed Result<T> from ProblemDetails.
     /// </summary>
-    public static ManagedCode.Communication.Result<T> ToFailedResult<T>(this ProblemDetails problemDetails)
+    public static Result<T> ToFailedResult<T>(this ProblemDetails problemDetails)
     {
-        return ManagedCode.Communication.Result<T>.Fail(problemDetails.AsProblem());
+        return Result<T>.Fail(problemDetails.AsProblem());
     }
-    
+
     /// <summary>
-    /// Creates a failed Result from Problem.
+    ///     Creates a failed Result from Problem.
     /// </summary>
-    public static ManagedCode.Communication.Result ToFailedResult(this ManagedCode.Communication.Problem problem)
+    public static Result ToFailedResult(this Problem problem)
     {
-        return ManagedCode.Communication.Result.Fail(problem);
+        return Result.Fail(problem);
     }
-    
+
     /// <summary>
-    /// Creates a failed Result<T> from Problem.
+    ///     Creates a failed Result<T> from Problem.
     /// </summary>
-    public static ManagedCode.Communication.Result<T> ToFailedResult<T>(this ManagedCode.Communication.Problem problem)
+    public static Result<T> ToFailedResult<T>(this Problem problem)
     {
-        return ManagedCode.Communication.Result<T>.Fail(problem);
+        return Result<T>.Fail(problem);
     }
 }

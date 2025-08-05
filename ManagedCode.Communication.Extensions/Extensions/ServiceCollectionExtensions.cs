@@ -12,7 +12,6 @@ using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions.Extensions;
 
-
 public static class HostApplicationBuilderExtensions
 {
     public static IHostApplicationBuilder AddCommunication(this IHostApplicationBuilder builder)
@@ -20,7 +19,7 @@ public static class HostApplicationBuilderExtensions
         builder.Services.AddCommunication(options => options.ShowErrorDetails = builder.Environment.IsDevelopment());
         return builder;
     }
-    
+
     public static IHostApplicationBuilder AddCommunication(this IHostApplicationBuilder builder, Action<CommunicationOptions> config)
     {
         builder.Services.AddCommunication(config);
@@ -30,16 +29,16 @@ public static class HostApplicationBuilderExtensions
 
 public static class ServiceCollectionExtensions
 {
-    
     public static IServiceCollection AddCommunication(this IServiceCollection services, Action<CommunicationOptions>? configure = null)
     {
         if (configure != null)
+        {
             services.Configure(configure);
+        }
 
         return services;
     }
-    
-   
+
 
     public static IServiceCollection AddDefaultProblemDetails(this IServiceCollection services)
     {
@@ -68,20 +67,20 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
-    
+
     public static MvcOptions AddCommunicationFilters(this MvcOptions options)
     {
         options.Filters.Add<CommunicationExceptionFilter>();
         options.Filters.Add<CommunicationModelValidationFilter>();
         options.Filters.Add<ResultToActionResultFilter>();
-        
+
         return options;
     }
-    
+
     public static HubOptions AddCommunicationFilters(this HubOptions options)
     {
         options.AddFilter<CommunicationHubExceptionFilter>();
-        
+
         return options;
     }
 }

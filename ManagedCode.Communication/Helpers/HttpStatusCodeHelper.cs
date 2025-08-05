@@ -38,21 +38,18 @@ public static class HttpStatusCodeHelper
             TimeoutException => HttpStatusCode.RequestTimeout,
             TaskCanceledException => HttpStatusCode.RequestTimeout,
             OperationCanceledException => HttpStatusCode.RequestTimeout,
-            
+
             InvalidDataException => HttpStatusCode.Conflict,
-            
+
             NotImplementedException => HttpStatusCode.NotImplemented,
-            
+
             // System exceptions
             ThreadAbortException => HttpStatusCode.InternalServerError,
             NotFiniteNumberException => HttpStatusCode.InternalServerError,
             OutOfMemoryException => HttpStatusCode.InternalServerError,
             StackOverflowException => HttpStatusCode.InternalServerError,
-    
             ApplicationException => HttpStatusCode.InternalServerError,
             SystemException => HttpStatusCode.InternalServerError,
-            
-
 
             _ => HttpStatusCode.InternalServerError
         };

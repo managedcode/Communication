@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 
 namespace ManagedCode.Communication;
 
@@ -34,22 +33,22 @@ public partial struct Result
     {
         return exception != null ? Result<T>.Fail(exception) : Result<T>.Fail("Unknown error");
     }
-    
+
     public static Result<T> FailValidation<T>(params (string field, string message)[] errors)
     {
         return Result<T>.FailValidation(errors);
     }
-    
+
     public static Result<T> FailUnauthorized<T>(string? detail = null)
     {
         return Result<T>.FailUnauthorized(detail);
     }
-    
+
     public static Result<T> FailForbidden<T>(string? detail = null)
     {
         return Result<T>.FailForbidden(detail);
     }
-    
+
     public static Result<T> FailNotFound<T>(string? detail = null)
     {
         return Result<T>.FailNotFound(detail);

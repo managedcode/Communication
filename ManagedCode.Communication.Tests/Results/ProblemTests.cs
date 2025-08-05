@@ -6,15 +6,15 @@ using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
-public enum TestError 
-{ 
-    InvalidInput, 
-    ResourceLocked 
+public enum TestError
+{
+    InvalidInput,
+    ResourceLocked
 }
 
-public enum OtherError 
-{ 
-    SomethingElse 
+public enum OtherError
+{
+    SomethingElse
 }
 
 public class ProblemTests
@@ -33,12 +33,24 @@ public class ProblemTests
         var problem = Problem.Create(type, title, statusCode, detail, instance);
 
         // Assert
-        problem.Type.Should().Be(type);
-        problem.Title.Should().Be(title);
-        problem.StatusCode.Should().Be(statusCode);
-        problem.Detail.Should().Be(detail);
-        problem.Instance.Should().Be(instance);
-        problem.Extensions.Should().NotBeNull();
+        problem.Type
+            .Should()
+            .Be(type);
+        problem.Title
+            .Should()
+            .Be(title);
+        problem.StatusCode
+            .Should()
+            .Be(statusCode);
+        problem.Detail
+            .Should()
+            .Be(detail);
+        problem.Instance
+            .Should()
+            .Be(instance);
+        problem.Extensions
+            .Should()
+            .NotBeNull();
     }
 
     [Fact]
@@ -48,10 +60,18 @@ public class ProblemTests
         var problem = Problem.FromStatusCode(HttpStatusCode.NotFound, "User not found");
 
         // Assert
-        problem.Type.Should().Be("https://httpstatuses.io/404");
-        problem.Title.Should().Be("NotFound");
-        problem.StatusCode.Should().Be(404);
-        problem.Detail.Should().Be("User not found");
+        problem.Type
+            .Should()
+            .Be("https://httpstatuses.io/404");
+        problem.Title
+            .Should()
+            .Be("NotFound");
+        problem.StatusCode
+            .Should()
+            .Be(404);
+        problem.Detail
+            .Should()
+            .Be("User not found");
     }
 
     [Fact]
@@ -61,12 +81,24 @@ public class ProblemTests
         var problem = Problem.FromEnum(TestError.InvalidInput, "The input provided is not valid", 422);
 
         // Assert
-        problem.Type.Should().Be("https://httpstatuses.io/422");
-        problem.Title.Should().Be("InvalidInput");
-        problem.StatusCode.Should().Be(422);
-        problem.Detail.Should().Be("The input provided is not valid");
-        problem.ErrorCode.Should().Be("InvalidInput");
-        problem.Extensions[ProblemExtensionKeys.ErrorType].Should().Be("TestError");
+        problem.Type
+            .Should()
+            .Be("https://httpstatuses.io/422");
+        problem.Title
+            .Should()
+            .Be("InvalidInput");
+        problem.StatusCode
+            .Should()
+            .Be(422);
+        problem.Detail
+            .Should()
+            .Be("The input provided is not valid");
+        problem.ErrorCode
+            .Should()
+            .Be("InvalidInput");
+        problem.Extensions[ProblemExtensionKeys.ErrorType]
+            .Should()
+            .Be("TestError");
     }
 
     [Fact]
@@ -77,39 +109,64 @@ public class ProblemTests
         exception.Data["CustomKey"] = "CustomValue";
 
         // Act
-        var problem = Problem.FromException(exception, 500);
+        var problem = Problem.FromException(exception);
 
         // Assert
-        problem.Type.Should().Be("https://httpstatuses.io/500");
-        problem.Title.Should().Be("InvalidOperationException");
-        problem.Detail.Should().Be("This operation is not allowed");
-        problem.StatusCode.Should().Be(500);
-        problem.ErrorCode.Should().Be("System.InvalidOperationException");
-        problem.Extensions[$"{ProblemExtensionKeys.ExceptionDataPrefix}CustomKey"].Should().Be("CustomValue");
+        problem.Type
+            .Should()
+            .Be("https://httpstatuses.io/500");
+        problem.Title
+            .Should()
+            .Be("InvalidOperationException");
+        problem.Detail
+            .Should()
+            .Be("This operation is not allowed");
+        problem.StatusCode
+            .Should()
+            .Be(500);
+        problem.ErrorCode
+            .Should()
+            .Be("System.InvalidOperationException");
+        problem.Extensions[$"{ProblemExtensionKeys.ExceptionDataPrefix}CustomKey"]
+            .Should()
+            .Be("CustomValue");
     }
 
     [Fact]
     public void Validation_ShouldCreateValidationProblem()
     {
         // Act
-        var problem = Problem.Validation(
-            ("email", "Email is required"),
-            ("email", "Email format is invalid"),
-            ("age", "Age must be greater than 0")
-        );
+        var problem = Problem.Validation(("email", "Email is required"), ("email", "Email format is invalid"), ("age", "Age must be greater than 0"));
 
         // Assert
-        problem.Type.Should().Be("https://tools.ietf.org/html/rfc7231#section-6.5.1");
-        problem.Title.Should().Be("Validation Failed");
-        problem.StatusCode.Should().Be(400);
-        problem.Detail.Should().Be("One or more validation errors occurred.");
-        
+        problem.Type
+            .Should()
+            .Be("https://tools.ietf.org/html/rfc7231#section-6.5.1");
+        problem.Title
+            .Should()
+            .Be("Validation Failed");
+        problem.StatusCode
+            .Should()
+            .Be(400);
+        problem.Detail
+            .Should()
+            .Be("One or more validation errors occurred.");
+
         var validationErrors = problem.GetValidationErrors();
-        validationErrors.Should().NotBeNull();
-        validationErrors!["email"].Should().HaveCount(2);
-        validationErrors["email"].Should().Contain("Email is required");
-        validationErrors["email"].Should().Contain("Email format is invalid");
-        validationErrors["age"].Should().Contain("Age must be greater than 0");
+        validationErrors.Should()
+            .NotBeNull();
+        validationErrors!["email"]
+            .Should()
+            .HaveCount(2);
+        validationErrors["email"]
+            .Should()
+            .Contain("Email is required");
+        validationErrors["email"]
+            .Should()
+            .Contain("Email format is invalid");
+        validationErrors["age"]
+            .Should()
+            .Contain("Age must be greater than 0");
     }
 
     [Fact]
@@ -122,8 +179,12 @@ public class ProblemTests
         problem.ErrorCode = "TEST_ERROR";
 
         // Assert
-        problem.ErrorCode.Should().Be("TEST_ERROR");
-        problem.Extensions["errorCode"].Should().Be("TEST_ERROR");
+        problem.ErrorCode
+            .Should()
+            .Be("TEST_ERROR");
+        problem.Extensions["errorCode"]
+            .Should()
+            .Be("TEST_ERROR");
     }
 
     [Fact]
@@ -137,8 +198,12 @@ public class ProblemTests
         problem.ErrorCode = null;
 
         // Assert
-        problem.ErrorCode.Should().BeNull();
-        problem.Extensions.Should().NotContainKey("errorCode");
+        problem.ErrorCode
+            .Should()
+            .BeNull();
+        problem.Extensions
+            .Should()
+            .NotContainKey("errorCode");
     }
 
     [Fact]
@@ -148,8 +213,12 @@ public class ProblemTests
         var problem = Problem.FromEnum(TestError.InvalidInput);
 
         // Act & Assert
-        problem.HasErrorCode(TestError.InvalidInput).Should().BeTrue();
-        problem.HasErrorCode(TestError.ResourceLocked).Should().BeFalse();
+        problem.HasErrorCode(TestError.InvalidInput)
+            .Should()
+            .BeTrue();
+        problem.HasErrorCode(TestError.ResourceLocked)
+            .Should()
+            .BeFalse();
     }
 
     [Fact]
@@ -162,7 +231,8 @@ public class ProblemTests
         var errorCode = problem.GetErrorCodeAs<TestError>();
 
         // Assert
-        errorCode.Should().Be(TestError.InvalidInput);
+        errorCode.Should()
+            .Be(TestError.InvalidInput);
     }
 
     [Fact]
@@ -175,26 +245,30 @@ public class ProblemTests
         var errorCode = problem.GetErrorCodeAs<OtherError>();
 
         // Assert
-        errorCode.Should().BeNull();
+        errorCode.Should()
+            .BeNull();
     }
 
     [Fact]
     public void GetValidationErrors_WithValidationProblem_ShouldReturnErrors()
     {
         // Arrange
-        var problem = Problem.Validation(
-            ("email", "Email is required"),
-            ("age", "Age must be greater than 0")
-        );
+        var problem = Problem.Validation(("email", "Email is required"), ("age", "Age must be greater than 0"));
 
         // Act
         var errors = problem.GetValidationErrors();
 
         // Assert
-        errors.Should().NotBeNull();
-        errors.Should().HaveCount(2);
-        errors!["email"].Should().Contain("Email is required");
-        errors["age"].Should().Contain("Age must be greater than 0");
+        errors.Should()
+            .NotBeNull();
+        errors.Should()
+            .HaveCount(2);
+        errors!["email"]
+            .Should()
+            .Contain("Email is required");
+        errors["age"]
+            .Should()
+            .Contain("Age must be greater than 0");
     }
 
     [Fact]
@@ -207,7 +281,8 @@ public class ProblemTests
         var errors = problem.GetValidationErrors();
 
         // Assert
-        errors.Should().BeNull();
+        errors.Should()
+            .BeNull();
     }
 
     [Fact]
@@ -217,8 +292,12 @@ public class ProblemTests
         var problem = Problem.Create("type", "title", 400, "detail");
 
         // Assert
-        problem.Extensions.Should().NotBeNull();
-        problem.Extensions.Should().BeEmpty();
+        problem.Extensions
+            .Should()
+            .NotBeNull();
+        problem.Extensions
+            .Should()
+            .BeEmpty();
     }
 
     [Fact]
@@ -228,11 +307,23 @@ public class ProblemTests
         var problem = Problem.Create("type", "title", 400, "detail", "instance");
 
         // Assert
-        problem.Type.Should().Be("type");
-        problem.Title.Should().Be("title");
-        problem.StatusCode.Should().Be(400);
-        problem.Detail.Should().Be("detail");
-        problem.Instance.Should().Be("instance");
-        problem.Extensions.Should().NotBeNull();
+        problem.Type
+            .Should()
+            .Be("type");
+        problem.Title
+            .Should()
+            .Be("title");
+        problem.StatusCode
+            .Should()
+            .Be(400);
+        problem.Detail
+            .Should()
+            .Be("detail");
+        problem.Instance
+            .Should()
+            .Be("instance");
+        problem.Extensions
+            .Should()
+            .NotBeNull();
     }
 }
