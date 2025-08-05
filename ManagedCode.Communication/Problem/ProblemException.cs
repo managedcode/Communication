@@ -9,29 +9,49 @@ namespace ManagedCode.Communication;
 public class ProblemException : Exception
 {
     /// <summary>
-    ///     Initializes a new instance of the <see cref="ProblemException" /> class.
+    ///     Initializes a new instance of the <see cref="ProblemException" /> class with a Problem.
     /// </summary>
     public ProblemException(Problem problem) : base(GetMessage(problem))
     {
         Problem = problem;
+        PopulateData(problem);
+    }
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ProblemException" /> class with basic details.
+    /// </summary>
+    public ProblemException(string title, string? detail = null, int statusCode = 500) 
+        : this(Problem.Create($"https://httpstatuses.io/{statusCode}", title, statusCode, detail ?? title))
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ProblemException" /> class with an inner exception.
+    /// </summary>
+    public ProblemException(string title, Exception innerException) 
+        : this(Problem.FromException(innerException))
+    {
+    }
+
+    private void PopulateData(Problem problem)
+    {
         // Add problem data to exception Data collection
-        Data["Problem.Type"] = problem.Type;
-        Data["Problem.Title"] = problem.Title;
-        Data["Problem.StatusCode"] = problem.StatusCode;
-        Data["Problem.Detail"] = problem.Detail;
-        Data["Problem.Instance"] = problem.Instance;
+        Data[$"{nameof(Problem)}.{nameof(problem.Type)}"] = problem.Type;
+        Data[$"{nameof(Problem)}.{nameof(problem.Title)}"] = problem.Title;
+        Data[$"{nameof(Problem)}.{nameof(problem.StatusCode)}"] = problem.StatusCode;
+        Data[$"{nameof(Problem)}.{nameof(problem.Detail)}"] = problem.Detail;
+        Data[$"{nameof(Problem)}.{nameof(problem.Instance)}"] = problem.Instance;
 
         // Add extensions to Data
         foreach (var extension in problem.Extensions)
         {
-            Data[$"Problem.Extensions.{extension.Key}"] = extension.Value;
+            Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.{extension.Key}"] = extension.Value;
         }
 
         // Handle error code if present
         if (problem.ErrorCode != null)
         {
-            Data["Problem.ErrorCode"] = problem.ErrorCode;
+            Data[$"{nameof(Problem)}.{nameof(problem.ErrorCode)}"] = problem.ErrorCode;
         }
 
         // Handle validation errors if present
@@ -40,7 +60,7 @@ public class ProblemException : Exception
         {
             foreach (var error in validationErrors)
             {
-                Data[$"Problem.ValidationError.{error.Key}"] = string.Join("; ", error.Value);
+                Data[$"{nameof(Problem)}.ValidationError.{error.Key}"] = string.Join("; ", error.Value);
             }
         }
     }

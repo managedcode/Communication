@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace ManagedCode.Communication;
 
 /// <summary>
@@ -19,4 +21,11 @@ public interface IResultProblem
     ///     Throws an exception if the result indicates a failure.
     /// </summary>
     bool ThrowIfFail();
-}
+
+    /// <summary>
+    ///     Tries to get the problem from the result.
+    /// </summary>
+    /// <param name="problem">When this method returns, contains the problem if the result has a problem; otherwise, null.</param>
+    /// <returns>true if the result has a problem; otherwise, false.</returns>
+    bool TryGetProblem([MaybeNullWhen(false)] out Problem problem);
+}       

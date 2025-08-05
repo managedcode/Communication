@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -48,6 +49,7 @@ public partial struct Result : IResult
     ///     Gets a value indicating whether the result has a problem.
     /// </summary>
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Problem))]
     public bool HasProblem => Problem != null;
 
 
@@ -56,22 +58,24 @@ public partial struct Result : IResult
     /// </summary>
     public bool ThrowIfFail()
     {
-        if (IsSuccess && !HasProblem)
+        if (HasProblem)
         {
-            return false;
+            throw Problem;
         }
-
-        if (Problem != null)
-        {
-            throw new ProblemException(Problem);
-        }
-
-        if (IsFailed)
-        {
-            throw new Exception("Operation failed");
-        }
-
+        
         return false;
+    }
+
+    /// <summary>
+    ///     Tries to get the problem from the result.
+    /// </summary>
+    /// <param name="problem">When this method returns, contains the problem if the result has a problem; otherwise, null.</param>
+    /// <returns>true if the result has a problem; otherwise, false.</returns>
+    [MemberNotNullWhen(true, nameof(Problem))]
+    public bool TryGetProblem([MaybeNullWhen(false)] out Problem problem)
+    {
+        problem = Problem;
+        return HasProblem;
     }
 
 

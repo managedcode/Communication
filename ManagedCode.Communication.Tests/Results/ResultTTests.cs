@@ -344,4 +344,83 @@ public class ResultTTests
             .Should()
             .Be("Test exception");
     }
+
+    [Fact]
+    public void TryGetProblem_WithSuccessfulResult_ShouldReturnFalse()
+    {
+        // Arrange
+        var result = Result<string>.Succeed("test value");
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeFalse();
+        problem.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
+    {
+        // Arrange
+        var expectedProblem = Problem.Create("https://httpstatuses.io/500", "Internal Server Error", 500, "Server error occurred");
+        var result = Result<string>.Fail(expectedProblem);
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeTrue();
+        problem.Should().NotBeNull();
+        problem.Should().Be(expectedProblem);
+    }
+
+    [Fact]
+    public void ThrowIfFail_WithSuccessfulResult_ShouldNotThrow()
+    {
+        // Arrange
+        var result = Result<int>.Succeed(42);
+
+        // Act & Assert
+        result.Invoking(r => r.ThrowIfFail())
+            .Should()
+            .NotThrow();
+    }
+
+    [Fact]
+    public void ThrowIfFail_WithFailedResult_ShouldThrowProblemException()
+    {
+        // Arrange
+        var problem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input data");
+        var result = Result<string>.Fail(problem);
+
+        // Act & Assert
+        result.Invoking(r => r.ThrowIfFail())
+            .Should()
+            .Throw<ProblemException>()
+            .Which.Problem
+            .Should()
+            .BeEquivalentTo(problem);
+    }
+
+    [Fact]
+    public void ThrowIfFail_WithValidationFailure_ShouldThrowWithValidationDetails()
+    {
+        // Arrange
+        var result = Result<string>.FailValidation(("username", "Username is required"), ("email", "Invalid email format"));
+
+        // Act & Assert
+        var exception = result.Invoking(r => r.ThrowIfFail())
+            .Should()
+            .Throw<ProblemException>()
+            .Which;
+
+        exception.Problem.Title.Should().Be("Validation Failed");
+        exception.Problem.StatusCode.Should().Be(400);
+        
+        var validationErrors = exception.Problem.GetValidationErrors();
+        validationErrors.Should().NotBeNull();
+        validationErrors!["username"].Should().Contain("Username is required");
+        validationErrors!["email"].Should().Contain("Invalid email format");
+    }
 }

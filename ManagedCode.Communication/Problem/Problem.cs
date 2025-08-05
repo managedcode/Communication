@@ -72,4 +72,12 @@ public partial class Problem
     /// </remarks>
     [JsonExtensionData]
     public IDictionary<string, object?> Extensions { get; init; } = new Dictionary<string, object?>(StringComparer.Ordinal);
+
+    /// <summary>
+    ///     Implicit conversion from Problem to ProblemException.
+    /// </summary>
+    public static implicit operator ProblemException(Problem problem)
+    {
+        return new ProblemException(problem);
+    }
 }

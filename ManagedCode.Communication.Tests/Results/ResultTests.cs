@@ -198,8 +198,10 @@ public class ResultTests
         // Act & Assert
         result.Invoking(r => r.ThrowIfFail())
             .Should()
-            .Throw<Exception>()
-            .WithMessage("Operation failed - Something went wrong - (HTTP 400)");
+            .Throw<ProblemException>()
+            .Which.Problem.Title
+            .Should()
+            .Be("Operation failed");
     }
 
     [Fact]
@@ -295,5 +297,71 @@ public class ResultTests
         result.Problem!.Detail
             .Should()
             .Be("Test exception");
+    }
+
+    [Fact]
+    public void TryGetProblem_WithSuccessfulResult_ShouldReturnFalse()
+    {
+        // Arrange
+        var result = Result.Succeed();
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeFalse();
+        problem.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
+    {
+        // Arrange
+        var expectedProblem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input");
+        var result = Result.Fail(expectedProblem);
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeTrue();
+        problem.Should().NotBeNull();
+        problem.Should().Be(expectedProblem);
+    }
+
+    [Fact]
+    public void TryGetProblem_WithValidationResult_ShouldReturnTrueAndValidationProblem()
+    {
+        // Arrange
+        var result = Result.FailValidation(("email", "Email is required"));
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeTrue();
+        problem.Should().NotBeNull();
+        problem!.Title.Should().Be("Validation Failed");
+        problem.StatusCode.Should().Be(400);
+        
+        var validationErrors = problem.GetValidationErrors();
+        validationErrors.Should().NotBeNull();
+        validationErrors!["email"].Should().Contain("Email is required");
+    }
+
+    [Fact]
+    public void ThrowIfFail_WithProblemException_ShouldPreserveProblemDetails()
+    {
+        // Arrange
+        var problem = Problem.Create("https://httpstatuses.io/404", "Not Found", 404, "User not found");
+        var result = Result.Fail(problem);
+
+        // Act & Assert
+        result.Invoking(r => r.ThrowIfFail())
+            .Should()
+            .Throw<ProblemException>()
+            .Which.Problem
+            .Should()
+            .BeEquivalentTo(problem);
     }
 }

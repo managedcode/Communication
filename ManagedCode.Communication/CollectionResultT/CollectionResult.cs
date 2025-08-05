@@ -70,28 +70,26 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
     public bool HasItems => Collection?.Length > 0;
 
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Problem))]
     public bool HasProblem => Problem != null;
 
     #region IResultProblem Implementation
 
     public bool ThrowIfFail()
     {
-        if (IsSuccess && !HasProblem)
+        if (HasProblem)
         {
-            return false;
+            throw Problem;
         }
-
-        if (Problem != null)
-        {
-            throw new ProblemException(Problem);
-        }
-
-        if (IsFailed)
-        {
-            throw new Exception("Operation failed");
-        }
-
+        
         return false;
+    }
+
+    [MemberNotNullWhen(true, nameof(Problem))]
+    public bool TryGetProblem([MaybeNullWhen(false)] out Problem problem)
+    {
+        problem = Problem;
+        return HasProblem;
     }
 
     #endregion

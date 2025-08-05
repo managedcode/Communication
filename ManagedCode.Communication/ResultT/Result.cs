@@ -36,25 +36,26 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Throws an exception if the result is a failure.
     /// </summary>
-    [MemberNotNullWhen(false, nameof(Value))]
     public bool ThrowIfFail()
     {
-        if (IsSuccess && !HasProblem)
+        if (HasProblem)
         {
-            return false;
+            throw Problem;
         }
-
-        if (Problem != null)
-        {
-            throw new ProblemException(Problem);
-        }
-
-        if (IsFailed)
-        {
-            throw new Exception("Operation failed");
-        }
-
+        
         return false;
+    }
+
+    /// <summary>
+    ///     Tries to get the problem from the result.
+    /// </summary>
+    /// <param name="problem">When this method returns, contains the problem if the result has a problem; otherwise, null.</param>
+    /// <returns>true if the result has a problem; otherwise, false.</returns>
+    [MemberNotNullWhen(true, nameof(Problem))]
+    public bool TryGetProblem([MaybeNullWhen(false)] out Problem problem)
+    {
+        problem = Problem;
+        return HasProblem;
     }
 
 
@@ -96,6 +97,7 @@ public partial struct Result<T> : IResult<T>
     ///     Gets a value indicating whether the result has a problem.
     /// </summary>
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Problem))]
     public bool HasProblem => Problem != null;
 
     /// <summary>

@@ -379,8 +379,10 @@ public class CollectionResultTests
         // Act & Assert
         result.Invoking(r => r.ThrowIfFail())
             .Should()
-            .Throw<Exception>()
-            .WithMessage("Operation failed - Something went wrong - (HTTP 400)");
+            .Throw<ProblemException>()
+            .Which.Problem.Title
+            .Should()
+            .Be("Operation failed");
     }
 
     [Fact]
@@ -395,5 +397,90 @@ public class CollectionResultTests
             .BeTrue();
         ((bool)failResult).Should()
             .BeFalse();
+    }
+
+    [Fact]
+    public void TryGetProblem_WithSuccessfulResult_ShouldReturnFalse()
+    {
+        // Arrange
+        var result = CollectionResult<string>.Succeed(new[] { "item1", "item2" });
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeFalse();
+        problem.Should().BeNull();
+    }
+
+    [Fact]
+    public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
+    {
+        // Arrange
+        var expectedProblem = Problem.Create("https://httpstatuses.io/503", "Service Unavailable", 503, "Service is temporarily unavailable");
+        var result = CollectionResult<string>.Fail(expectedProblem);
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeTrue();
+        problem.Should().NotBeNull();
+        problem.Should().Be(expectedProblem);
+    }
+
+    [Fact]
+    public void TryGetProblem_WithEmptyCollection_ButSuccessful_ShouldReturnFalse()
+    {
+        // Arrange
+        var result = CollectionResult<string>.Empty();
+
+        // Act
+        var hasProblem = result.TryGetProblem(out var problem);
+
+        // Assert
+        hasProblem.Should().BeFalse();
+        problem.Should().BeNull();
+        result.IsEmpty.Should().BeTrue();
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ThrowIfFail_WithProblemException_ShouldPreserveProblemDetails()
+    {
+        // Arrange
+        var problem = Problem.Create("https://httpstatuses.io/429", "Too Many Requests", 429, "Rate limit exceeded");
+        problem.Extensions["retryAfter"] = 60;
+        var result = CollectionResult<string>.Fail(problem);
+
+        // Act & Assert
+        var exception = result.Invoking(r => r.ThrowIfFail())
+            .Should()
+            .Throw<ProblemException>()
+            .Which;
+
+        exception.Problem.Should().BeEquivalentTo(problem);
+        exception.Problem.Extensions["retryAfter"].Should().Be(60);
+    }
+
+    [Fact]
+    public void ThrowIfFail_WithValidationFailure_ShouldThrowWithValidationDetails()
+    {
+        // Arrange
+        var result = CollectionResult<string>.FailValidation(("filter", "Invalid filter format"), ("pageSize", "Page size must be between 1 and 100"));
+
+        // Act & Assert
+        var exception = result.Invoking(r => r.ThrowIfFail())
+            .Should()
+            .Throw<ProblemException>()
+            .Which;
+
+        exception.Problem.Title.Should().Be("Validation Failed");
+        exception.Problem.StatusCode.Should().Be(400);
+        
+        var validationErrors = exception.Problem.GetValidationErrors();
+        validationErrors.Should().NotBeNull();
+        validationErrors!["filter"].Should().Contain("Invalid filter format");
+        validationErrors!["pageSize"].Should().Contain("Page size must be between 1 and 100");
     }
 }
