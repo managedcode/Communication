@@ -1,131 +1,475 @@
-# Communication
+# ManagedCode.Communication
 
 [![.NET](https://github.com/managedcode/Communication/actions/workflows/dotnet.yml/badge.svg)](https://github.com/managedcode/Communication/actions/workflows/dotnet.yml)
 [![Coverage Status](https://coveralls.io/repos/github/managedcode/Communication/badge.svg?branch=main&service=github)](https://coveralls.io/github/managedcode/Communication?branch=main)
 [![nuget](https://github.com/managedcode/Communication/actions/workflows/nuget.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/nuget.yml)
 [![CodeQL](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml)
 [![NuGet Package](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication)
 
-The Communication library is a convenient wrapper for handling the results of functions that do not throw exceptions.
-Instead of throwing exceptions, these functions return an object that contains the result of the operation.
-This makes it easy to handle and process the results of these operations in a consistent, reliable way.
+> A powerful .NET library that revolutionizes error handling by providing a Result pattern implementation, eliminating exceptions and making your code more predictable, testable, and maintainable.
 
-## Motivation
+## 🎯 Why ManagedCode.Communication?
 
-Many functions in software development can fail and throw exceptions when something goes wrong.
-This can make it difficult to handle errors and to read and understand code that uses these functions.
+Traditional exception-based error handling can make code difficult to follow and test. The Communication library introduces a **Result pattern** that transforms how you handle operations that might fail:
 
-Exceptions are a powerful tool for handling error conditions in your code, but they can also be difficult to manage and
-can make your code harder to read and understand.
-Instead of throwing exceptions, the Communication library allows you to return a Result object that contains the result
-of an operation.
-This makes it easy to handle and process the results of these operations in a consistent, reliable way.
+- ✅ **No More Exceptions** - Replace try-catch blocks with elegant Result objects
+- 🔍 **Explicit Error Handling** - Makes potential failures visible in method signatures
+- 🧪 **Better Testability** - No need to test exception scenarios
+- 🚀 **Improved Performance** - Avoid the overhead of throwing exceptions
+- 📝 **Self-Documenting Code** - Method signatures clearly indicate possible failures
 
-## Features
+## 📦 Installation
 
-- Wraps the result of a function in an object, eliminating the need to handle exceptions.
-- Makes it easy to check whether the function was successful or not.
-- Provides access to the function's output via simple property accessors.
+```bash
+# Core library
+dotnet add package ManagedCode.Communication
 
-## Getting Started
+# ASP.NET Core integration
+dotnet add package ManagedCode.Communication.Extensions
 
-To use the Communication library in your project, you will need to add a reference to the Communication assembly.
-You can do this by downloading the library from GitHub and adding it to your project, or by installing the Communication
-NuGet package.
+# Orleans integration
+dotnet add package ManagedCode.Communication.Orleans
+```
 
-Once you have added a reference to the Communication assembly, you can start using the library in your code.
-Here is a simple example of how to use the Communication library to handle the result of an operation:
+## 🚀 Quick Start
+
+### Basic Usage
 
 ```csharp
-var succeed = Result.Succeed();
-if(succeed.IsSuccess)
+using ManagedCode.Communication;
+
+// Simple success result
+var success = Result.Succeed();
+if (success.IsSuccess)
 {
-    // do some
+    Console.WriteLine("Operation succeeded!");
 }
 
-var fail = Result.Fail();
-if(fail.IsFailed)
+// Simple failure result
+var failure = Result.Fail("Something went wrong");
+if (failure.IsFailed)
 {
-    // do some
+    Console.WriteLine($"Error: {failure.GetError()}");
 }
 ```
 
-Generic Result
+### Generic Results with Values
 
 ```csharp
-var succeed = Result<MyObject>.Succeed(new MyObject());
-if(succeed.IsSuccess)
+// Success with value
+var userResult = Result<User>.Succeed(new User { Id = 1, Name = "John" });
+if (userResult.IsSuccess)
 {
-    succeed.Value // <-- this is the result
-    // do some
+    var user = userResult.Value; // Access the user object
+    Console.WriteLine($"Found user: {user.Name}");
 }
 
-var fail = Result<MyObject>.Fail("Oops!");
-if(fail.IsFailed)
+// Failure with error details
+var notFound = Result<User>.Fail("User not found", HttpStatusCode.NotFound);
+if (notFound.IsFailed)
 {
-    // do some
-}
-```
-
-Collection Result:
-
-```csharp
-var collection = CollectionResult<int>.Succeed(Enumerable.Repeat(4, 100), 5, 100, 15000);
-```
-
-From:
-
-```csharp
-var succeed = await Result<MyObject>.From(() => GetMyResult());
-if(succeed.IsSuccess)
-{
-    succeed.Value // <-- this is the result
-    // do some
+    Console.WriteLine($"Error: {notFound.GetError()} (Status: {notFound.StatusCode})");
 }
 ```
 
-## Global handlers
+### Collection Results
 
-Also we have global handlers for WebApi and SignalR
+Perfect for paginated API responses:
 
 ```csharp
-builder.Services.AddCommunication(option =>
+var products = await GetProductsAsync(page: 1, pageSize: 20);
+
+var result = CollectionResult<Product>.Succeed(
+    items: products,
+    page: 1,
+    pageSize: 20,
+    totalCount: 150
+);
+
+// Access pagination info
+Console.WriteLine($"Page {result.Page} of {result.TotalPages}");
+Console.WriteLine($"Showing {result.Items.Count()} of {result.TotalCount} products");
+```
+
+### Async Operations with Result.From
+
+Convert any operation into a Result:
+
+```csharp
+// Wrap synchronous operations
+var result = await Result<string>.From(() => 
 {
-    option.ShowErrorDetails = true;
+    return File.ReadAllText("config.json");
 });
-        
+
+// Wrap async operations
+var apiResult = await Result<WeatherData>.From(async () => 
+{
+    return await weatherService.GetCurrentWeatherAsync("London");
+});
+
+if (apiResult.IsSuccess)
+{
+    Console.WriteLine($"Temperature: {apiResult.Value.Temperature}°C");
+}
+else
+{
+    Console.WriteLine($"API call failed: {apiResult.GetError()}");
+}
 ```
 
-SignalR global hub filter
+## 🌐 ASP.NET Core Integration
+
+### Configure Services
 
 ```csharp
-builder.Services.AddSignalR(options => options.AddCommunicationHubFilter());
-```
+using ManagedCode.Communication.Extensions;
 
-WebApi middleware
+var builder = WebApplication.CreateBuilder(args);
 
-```csharp
+// Add Communication services
+builder.Services.AddCommunication(options =>
+{
+    options.ShowErrorDetails = builder.Environment.IsDevelopment();
+});
+
+// Add MVC with Communication filters
+builder.Services.AddControllers(options =>
+{
+    options.AddCommunicationFilters();
+});
+
+// Add SignalR with Communication filters
+builder.Services.AddSignalR(options => 
+{
+    options.AddCommunicationFilters();
+});
+
+var app = builder.Build();
+
+// Use Communication middleware for global error handling
 app.UseCommunication();
 ```
 
-Orleans
-
-silo:
+### Controller Examples
 
 ```csharp
-siloBuilder.UseOrleansCommunication();
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    private readonly IUserService _userService;
+
+    public UsersController(IUserService userService)
+    {
+        _userService = userService;
+    }
+
+    [HttpGet("{id}")]
+    public async Task<Result<UserDto>> GetUser(int id)
+    {
+        var user = await _userService.GetByIdAsync(id);
+        
+        if (user == null)
+            return Result<UserDto>.Fail($"User with ID {id} not found", HttpStatusCode.NotFound);
+            
+        return Result<UserDto>.Succeed(user.ToDto());
+    }
+
+    [HttpPost]
+    public async Task<Result<UserDto>> CreateUser([FromBody] CreateUserDto dto)
+    {
+        // Model validation is handled automatically by CommunicationModelValidationFilter
+        var user = await _userService.CreateAsync(dto);
+        return Result<UserDto>.Succeed(user.ToDto(), HttpStatusCode.Created);
+    }
+
+    [HttpGet]
+    public async Task<CollectionResult<UserDto>> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        var (users, totalCount) = await _userService.GetPagedAsync(page, pageSize);
+        
+        return CollectionResult<UserDto>.Succeed(
+            users.Select(u => u.ToDto()),
+            page,
+            pageSize,
+            totalCount
+        );
+    }
+}
 ```
 
-client:
+### SignalR Hub Example
 
 ```csharp
-clientBuilder.UseOrleansCommunication();
+public class NotificationHub : Hub
+{
+    private readonly INotificationService _notificationService;
+
+    public NotificationHub(INotificationService notificationService)
+    {
+        _notificationService = notificationService;
+    }
+
+    public async Task<Result> SendNotification(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return Result.Fail("Message cannot be empty");
+
+        await _notificationService.BroadcastAsync(message);
+        return Result.Succeed();
+    }
+
+    public async Task<Result<int>> GetUnreadCount()
+    {
+        var count = await _notificationService.GetUnreadCountAsync(Context.UserIdentifier);
+        return Result<int>.Succeed(count);
+    }
+}
 ```
 
-## Conclusion
+## 🎨 Advanced Features
 
-In summary, our library provides a convenient and easy-to-use solution for handling the result of a function that may
-throw exceptions.
-It eliminates the need to handle exceptions and makes it easy to check whether the function was successful and to access
-its output.
-We hope you find it useful in your own projects!
+### Custom Error Types
+
+```csharp
+public class ValidationError : Error
+{
+    public Dictionary<string, string[]> Errors { get; }
+    
+    public ValidationError(Dictionary<string, string[]> errors) 
+        : base("Validation failed", HttpStatusCode.BadRequest)
+    {
+        Errors = errors;
+    }
+}
+
+// Usage
+var validationErrors = new Dictionary<string, string[]>
+{
+    ["Email"] = ["Invalid email format", "Email already exists"],
+    ["Password"] = ["Password must be at least 8 characters"]
+};
+
+return Result<User>.Fail(new ValidationError(validationErrors));
+```
+
+### Result Extensions and Chaining
+
+```csharp
+// Map successful results
+var result = await GetUserAsync(id)
+    .Map(user => user.ToDto())
+    .Map(dto => new UserViewModel(dto));
+
+// Handle both success and failure cases
+var message = await CreateOrderAsync(orderDto)
+    .Match(
+        onSuccess: order => $"Order {order.Id} created successfully",
+        onFailure: error => $"Failed to create order: {error.Message}"
+    );
+
+// Chain operations
+var finalResult = await GetUserAsync(userId)
+    .Bind(user => ValidateUserAsync(user))
+    .Bind(user => CreateOrderForUserAsync(user, orderDto))
+    .Map(order => order.ToDto());
+```
+
+### Global Exception Handling
+
+The Communication filters automatically convert exceptions to Result objects:
+
+```csharp
+// This exception will be caught and converted to Result.Fail
+[HttpGet("{id}")]
+public async Task<Result<Product>> GetProduct(int id)
+{
+    // If this throws, CommunicationExceptionFilter handles it
+    var product = await _repository.GetByIdAsync(id);
+    return Result<Product>.Succeed(product);
+}
+```
+
+### Status Code Mapping
+
+The library automatically maps exceptions to appropriate HTTP status codes:
+
+```csharp
+// Built-in mappings
+ArgumentException           → 400 Bad Request
+UnauthorizedAccessException → 401 Unauthorized  
+KeyNotFoundException       → 404 Not Found
+InvalidOperationException   → 409 Conflict
+NotImplementedException     → 501 Not Implemented
+
+// ASP.NET Core specific
+BadHttpRequestException     → 400 Bad Request
+AuthenticationFailureException → 401 Unauthorized
+AntiforgeryValidationException → 400 Bad Request
+```
+
+## 🏗️ Orleans Integration
+
+```csharp
+// Silo configuration
+var builder = new HostBuilder()
+    .UseOrleans(siloBuilder =>
+    {
+        siloBuilder.UseOrleansCommunication();
+    });
+
+// Client configuration
+var client = new ClientBuilder()
+    .UseOrleansCommunication()
+    .Build();
+
+// Grain implementation
+public class UserGrain : Grain, IUserGrain
+{
+    public Task<Result<UserData>> GetUserDataAsync()
+    {
+        try
+        {
+            var userData = LoadUserData();
+            return Task.FromResult(Result<UserData>.Succeed(userData));
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult(Result<UserData>.Fail(ex));
+        }
+    }
+}
+```
+
+## 📊 Performance Benefits
+
+Using Result pattern instead of exceptions provides significant performance improvements:
+
+```csharp
+// ❌ Traditional approach - throwing exceptions
+public User GetUser(int id)
+{
+    var user = _repository.FindById(id);
+    if (user == null)
+        throw new NotFoundException($"User {id} not found"); // Expensive!
+    return user;
+}
+
+// ✅ Result pattern - no exceptions
+public Result<User> GetUser(int id)
+{
+    var user = _repository.FindById(id);
+    if (user == null)
+        return Result<User>.Fail($"User {id} not found"); // Much faster!
+    return Result<User>.Succeed(user);
+}
+```
+
+## 🧪 Testing
+
+Result pattern makes testing much cleaner:
+
+```csharp
+[Test]
+public async Task GetUser_WhenUserExists_ReturnsSuccess()
+{
+    // Arrange
+    var userId = 123;
+    var expectedUser = new User { Id = userId, Name = "John" };
+    _mockRepository.Setup(x => x.FindById(userId)).Returns(expectedUser);
+
+    // Act
+    var result = await _userService.GetUser(userId);
+
+    // Assert
+    Assert.IsTrue(result.IsSuccess);
+    Assert.AreEqual(expectedUser.Name, result.Value.Name);
+}
+
+[Test]
+public async Task GetUser_WhenUserNotFound_ReturnsFailure()
+{
+    // Arrange
+    var userId = 999;
+    _mockRepository.Setup(x => x.FindById(userId)).Returns((User)null);
+
+    // Act
+    var result = await _userService.GetUser(userId);
+
+    // Assert
+    Assert.IsFalse(result.IsSuccess);
+    Assert.AreEqual(HttpStatusCode.NotFound, result.StatusCode);
+}
+```
+
+## 🛠️ Configuration Options
+
+```csharp
+services.AddCommunication(options =>
+{
+    // Show detailed error information (disable in production)
+    options.ShowErrorDetails = false;
+    
+    // Custom error response builder
+    options.ErrorResponseBuilder = (error, context) =>
+    {
+        return new
+        {
+            error = error.Message,
+            timestamp = DateTime.UtcNow,
+            path = context.Request.Path
+        };
+    };
+    
+    // Custom status code mapping
+    options.StatusCodeMapping[typeof(CustomException)] = HttpStatusCode.Conflict;
+});
+```
+
+## 📝 Best Practices
+
+1. **Always return Result types from your service methods**
+   ```csharp
+   public interface IUserService
+   {
+       Task<Result<User>> GetByIdAsync(int id);
+       Task<Result<User>> CreateAsync(CreateUserDto dto);
+       Task<Result> DeleteAsync(int id);
+   }
+   ```
+
+2. **Use specific error messages and appropriate status codes**
+   ```csharp
+   return Result<Order>.Fail(
+       "Insufficient inventory for product SKU-123", 
+       HttpStatusCode.UnprocessableEntity
+   );
+   ```
+
+3. **Leverage pattern matching for elegant error handling**
+   ```csharp
+   var response = await ProcessOrder(orderId) switch
+   {
+       { IsSuccess: true } result => Ok(result.Value),
+       { StatusCode: HttpStatusCode.NotFound } => NotFound(),
+       var failure => BadRequest(failure.GetError())
+   };
+   ```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+Special thanks to all contributors who have helped make this library better!
+
+---
+
+**Made with ❤️ by [ManagedCode](https://github.com/managedcode)**
