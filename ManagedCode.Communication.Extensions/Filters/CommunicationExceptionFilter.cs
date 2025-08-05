@@ -8,7 +8,7 @@ using static ManagedCode.Communication.Extensions.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.Extensions.Filters;
 
-public abstract class ExceptionFilterBase(ILogger logger) : IExceptionFilter
+public class CommunicationExceptionFilter(ILogger<CommunicationExceptionFilter> logger) : IExceptionFilter
 {
     public virtual void OnException(ExceptionContext context)
     {
@@ -22,20 +22,7 @@ public abstract class ExceptionFilterBase(ILogger logger) : IExceptionFilter
                 controllerName, actionName);
 
             var statusCode = GetStatusCodeForException(exception);
-            
-            var problem = new Problem()
-            {
-                Title = exception.GetType().Name,
-                Detail = exception.Message,
-                StatusCode = (int)statusCode,
-                Instance = context.HttpContext.Request.Path,
-                Extensions =
-                {
-                    [ExtensionKeys.TraceId] = context.HttpContext.TraceIdentifier
-                }
-            };
-            
-            var result = Result.Fail(problem);
+            var result = Result.Fail(exception, statusCode);
 
             context.Result = new ObjectResult(result)
             {
@@ -51,14 +38,7 @@ public abstract class ExceptionFilterBase(ILogger logger) : IExceptionFilter
         {
             logger.LogError(ex, "Error occurred while handling exception in {FilterType}", GetType().Name);
             
-            var fallbackProblem = new Problem
-            {
-                Title = Titles.UnexpectedError,
-                StatusCode = (int)HttpStatusCode.InternalServerError,
-                Instance = context.HttpContext.Request.Path
-            };
-            
-            context.Result = new ObjectResult(Result.Fail(fallbackProblem))
+            context.Result = new ObjectResult(Result.Fail(Titles.UnexpectedError, ex.Message, HttpStatusCode.InternalServerError))
             {
                 StatusCode = (int)HttpStatusCode.InternalServerError
             };

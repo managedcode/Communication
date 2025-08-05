@@ -22,9 +22,16 @@ public class HttpHostProgram
         
         builder.Services.AddAuthorization();
         
-        builder.Services.AddCommunicationFilters<TestExceptionFilter, TestModelValidationFilter, TestHubExceptionFilter>();
-        builder.Services.AddSignalR(options => 
+        builder.Services.AddCommunicationFilters();
+        
+        builder.Services.AddControllers(options => 
         {
+            options.AddCommunicationFilters();
+        });
+        
+        builder.Services.AddSignalR(options =>
+        {
+            options.AddCommunicationFilters();
         });
 
         

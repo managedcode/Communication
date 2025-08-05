@@ -1,9 +1,0 @@
-using ManagedCode.Communication.Extensions.Filters;
-using Microsoft.Extensions.Logging;
-
-namespace ManagedCode.Communication.Tests.Common.TestApp;
-
-public class TestExceptionFilter(ILogger<TestExceptionFilter> logger) : ExceptionFilterBase(logger)
-{
-    // Uses default implementation from base class
-}

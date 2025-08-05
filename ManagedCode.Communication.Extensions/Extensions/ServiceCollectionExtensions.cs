@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using ManagedCode.Communication.Extensions.Filters;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,29 +59,29 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddCommunicationFilters<TExceptionFilter, TModelValidationFilter, THubExceptionFilter>(
-        this IServiceCollection services)
-        where TExceptionFilter : ExceptionFilterBase
-        where TModelValidationFilter : ModelValidationFilterBase
-        where THubExceptionFilter : HubExceptionFilterBase
+    public static IServiceCollection AddCommunicationFilters(this IServiceCollection services)
     {
-        services.AddScoped<TExceptionFilter>();
-        services.AddScoped<TModelValidationFilter>();
-        services.AddScoped<THubExceptionFilter>();
+        services.AddScoped<CommunicationExceptionFilter>();
+        services.AddScoped<CommunicationModelValidationFilter>();
+        services.AddScoped<CommunicationHubExceptionFilter>();
         services.AddScoped<ResultToActionResultFilter>();
 
-        services.AddControllers(options => 
-        { 
-            options.Filters.Add<TExceptionFilter>();
-            options.Filters.Add<TModelValidationFilter>();
-            options.Filters.Add<ResultToActionResultFilter>();
-        });
-
-        services.Configure<HubOptions>(options =>
-        {
-            options.AddFilter<THubExceptionFilter>();
-        });
-
         return services;
+    }
+    
+    public static MvcOptions AddCommunicationFilters(this MvcOptions options)
+    {
+        options.Filters.Add<CommunicationExceptionFilter>();
+        options.Filters.Add<CommunicationModelValidationFilter>();
+        options.Filters.Add<ResultToActionResultFilter>();
+        
+        return options;
+    }
+    
+    public static HubOptions AddCommunicationFilters(this HubOptions options)
+    {
+        options.AddFilter<CommunicationHubExceptionFilter>();
+        
+        return options;
     }
 }
