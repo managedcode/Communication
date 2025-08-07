@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -31,7 +32,7 @@ public partial struct Result<T> : IResult<T>
     private Result(Exception exception) : this(false, default, Problem.Create(exception))
     {
     }
-    
+
     /// <summary>
     ///     Creates a Result with the specified success status, value and optional problem.
     /// </summary>
@@ -50,7 +51,7 @@ public partial struct Result<T> : IResult<T>
         {
             throw Problem;
         }
-        
+
         return false;
     }
 
@@ -71,6 +72,7 @@ public partial struct Result<T> : IResult<T>
     ///     Gets a value indicating whether the result is a success.
     /// </summary>
     [MemberNotNullWhen(true, nameof(Value))]
+    [MemberNotNullWhen(false, nameof(Problem))]
     public bool IsSuccess { get; init; }
 
     /// <summary>

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -22,7 +23,7 @@ public partial struct Result : IResult
         IsSuccess = isSuccess;
         Problem = problem;
     }
-    
+
     /// <summary>
     ///     Creates a Result with the specified success status and optional problem.
     /// </summary>
@@ -36,6 +37,7 @@ public partial struct Result : IResult
     /// </summary>
     [JsonPropertyName("isSuccess")]
     [JsonPropertyOrder(1)]
+    [MemberNotNullWhen(false, nameof(Problem))]
     public bool IsSuccess { get; init; }
 
     /// <summary>
@@ -70,7 +72,7 @@ public partial struct Result : IResult
         {
             throw Problem;
         }
-        
+
         return false;
     }
 

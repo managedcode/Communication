@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -27,7 +28,7 @@ public partial struct CollectionResult<T> : IResult
         TotalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalItems / pageSize) : 0;
         Problem = problem;
     }
-    
+
     internal static CollectionResult<T> Create(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Problem? problem = null)
     {
         return new CollectionResult<T>(isSuccess, collection, pageNumber, pageSize, totalItems, problem);
@@ -36,6 +37,7 @@ public partial struct CollectionResult<T> : IResult
     [JsonPropertyName("isSuccess")]
     [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Collection))]
+    [MemberNotNullWhen(false, nameof(Problem))]
     public bool IsSuccess { get; set; }
 
     [JsonIgnore]
@@ -67,7 +69,6 @@ public partial struct CollectionResult<T> : IResult
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Problem? Problem { get; set; }
 
-
     [JsonIgnore]
     public bool IsEmpty => Collection is null || Collection.Length == 0;
 
@@ -86,7 +87,7 @@ public partial struct CollectionResult<T> : IResult
         {
             throw Problem;
         }
-        
+
         return false;
     }
 
@@ -98,7 +99,7 @@ public partial struct CollectionResult<T> : IResult
     }
 
     #endregion
-    
+
     #region IResultInvalid Implementation
 
     public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";

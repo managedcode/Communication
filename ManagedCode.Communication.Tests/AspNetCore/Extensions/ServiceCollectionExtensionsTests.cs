@@ -9,20 +9,13 @@ using Xunit;
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 [Collection(nameof(TestClusterApplication))]
-public class ServiceCollectionExtensionsTests
+public class ServiceCollectionExtensionsTests(TestClusterApplication app)
 {
-    private readonly TestClusterApplication _app;
-
-    public ServiceCollectionExtensionsTests(TestClusterApplication app)
-    {
-        _app = app;
-    }
-
     [Fact]
     public async Task Communication_Should_Handle_Successful_Result()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/result-success");
@@ -37,7 +30,7 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_Failed_Result()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/result-failure");
@@ -52,7 +45,7 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_NotFound_Result()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/result-notfound");
@@ -67,7 +60,7 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_Collection_Results()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/collection-success");
@@ -83,7 +76,7 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_Empty_Collections()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/collection-empty");
@@ -98,7 +91,7 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_Enum_Errors()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/enum-error");
@@ -113,11 +106,11 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_Valid_Model_Validation()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
         var validModel = "{\"name\":\"John Doe\",\"email\":\"john@example.com\",\"age\":30}";
 
         // Act
-        var response = await client.PostAsync("/test/validate", 
+        var response = await client.PostAsync("/test/validate",
             new StringContent(validModel, Encoding.UTF8, "application/json"));
 
         // Assert
@@ -130,11 +123,11 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Reject_Invalid_Model()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
         var invalidModel = "{\"name\":\"\",\"email\":\"invalid\",\"age\":-1}";
 
         // Act
-        var response = await client.PostAsync("/test/validate", 
+        var response = await client.PostAsync("/test/validate",
             new StringContent(invalidModel, Encoding.UTF8, "application/json"));
 
         // Assert
@@ -145,7 +138,7 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_Custom_Problems()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/custom-problem");
@@ -160,7 +153,7 @@ public class ServiceCollectionExtensionsTests
     public async Task Communication_Should_Handle_Exceptions()
     {
         // Arrange
-        var client = _app.CreateClient();
+        var client = app.CreateClient();
 
         // Act
         var response = await client.GetAsync("/test/throw-exception");

@@ -1,532 +1,540 @@
 # ManagedCode.Communication
 
 [![.NET](https://github.com/managedcode/Communication/actions/workflows/ci.yml/badge.svg)](https://github.com/managedcode/Communication/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml)
-[![Coverage Status](https://coveralls.io/repos/github/managedcode/Communication/badge.svg?branch=main&service=github)](https://coveralls.io/github/managedcode/Communication?branch=main)
 [![NuGet Package](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication)
 
-> **The most advanced Result pattern implementation for .NET, featuring first-class Orleans support, RFC 7807 Problem Details, and 1000x performance improvement over exceptions. Build robust distributed systems and APIs with type-safe error handling.**
+## Overview
 
-## 🚀 Why Choose ManagedCode.Communication?
+ManagedCode.Communication is a comprehensive Result pattern implementation for .NET that fundamentally changes how you handle errors in your applications. Instead of using exceptions for control flow, this library provides a type-safe, explicit, and performant way to handle both successful and failed operations.
 
-In the landscape of .NET Result pattern libraries, **ManagedCode.Communication stands apart as the ONLY library with dedicated Orleans integration**, making it the definitive choice for distributed systems. While other libraries like FluentResults (3.3M downloads) or OneOf (37.9M downloads) focus on general error handling, we've built a comprehensive solution specifically designed for modern cloud architectures and microservices.
+### What is the Result Pattern?
 
-### 🏆 Unique Advantages
+The Result pattern is a functional programming concept where functions return an object that explicitly represents either success or failure, rather than throwing exceptions. This makes error handling:
 
-#### **1. First-Class Orleans Support** 🎯
-We are the **only Result pattern library with native Orleans integration**. This isn't just an adapter or wrapper - it's a deep integration that understands the actor model, handles grain serialization, and provides specialized surrogates for distributed communication.
+- **Explicit** - All possible errors are visible in method signatures
+- **Composable** - Operations can be chained together with automatic error propagation  
+- **Performant** - No exception throwing overhead
+- **Testable** - Easier to test both success and failure scenarios
 
-```csharp
-// Seamless Orleans grain implementation
-public class OrderGrain : Grain, IOrderGrain
-{
-    public async Task<Result<Order>> ProcessOrderAsync(OrderRequest request)
-    {
-        return await ValidateInventory(request)
-            .BindAsync(req => ReserveStock(req))
-            .BindAsync(req => ProcessPayment(req))
-            .MapAsync(confirmation => CreateOrder(confirmation));
-    }
-}
-```
+### Core Features
 
-#### **2. RFC 7807 Problem Details - Built-In** 📋
-Unlike competitors that require custom mapping or third-party packages, we provide **complete RFC 7807 compliance out of the box**. Every error in your system becomes a standardized, machine-readable problem that frontend teams and API consumers will love.
+- **Result Types** - `Result`, `Result<T>`, and `CollectionResult<T>` for different scenarios
+- **RFC 7807 Problem Details** - Standardized error format for APIs
+- **Railway-Oriented Programming** - Chain operations with automatic error handling
+- **Framework Integration** - Native support for ASP.NET Core, SignalR, and Orleans
+- **Validation Support** - Built-in handling for validation errors
+- **Custom Error Enums** - Domain-specific error codes
+- **Performance** - Significantly faster than exception-based error handling
 
-```csharp
-// Automatic Problem Details for all errors
-var problem = Problem.Create(
-    type: "https://api.example.com/errors/insufficient-funds",
-    title: "Payment Failed",
-    statusCode: 402,
-    detail: "Your account balance is $30, but this transaction requires $50",
-    instance: "/transactions/12345"
-);
-problem.Extensions["balance"] = 30;
-problem.Extensions["required"] = 50;
-```
+## Table of Contents
 
-#### **3. Blazing Performance - 1000x Faster** ⚡
-Traditional exception handling is slow. Really slow. Our benchmarks show that returning a Result is **~1000x faster than throwing an exception**. In high-throughput scenarios, this difference transforms system performance:
+- [Installation](#installation)
+- [Basic Concepts](#basic-concepts)
+- [Creating Results](#creating-results)
+- [Checking Results](#checking-results)
+- [Problem Details (RFC 7807)](#problem-details-rfc-7807)
+- [Railway-Oriented Programming](#railway-oriented-programming)
+- [ASP.NET Core Integration](#aspnet-core-integration)
+- [Orleans Integration](#orleans-integration)
+- [SignalR Integration](#signalr-integration)
+- [Validation Handling](#validation-handling)
+- [Error Handling Strategies](#error-handling-strategies)
+- [Testing](#testing)
+- [Performance](#performance)
+- [Best Practices](#best-practices)
+- [Migration Guide](#migration-guide)
+- [Real-World Examples](#real-world-examples)
 
-```csharp
-// ❌ Traditional approach - SLOW (involves stack unwinding)
-public User GetUser(int id)
-{
-    var user = _repository.FindById(id);
-    if (user == null)
-        throw new NotFoundException($"User {id} not found"); // ~1000x slower!
-    return user;
-}
+## Installation
 
-// ✅ Result pattern - FAST (simple object return)
-public Result<User> GetUser(int id)
-{
-    var user = _repository.FindById(id);
-    if (user == null)
-        return Result<User>.FailNotFound($"User {id} not found"); // Lightning fast!
-    return Result<User>.Succeed(user);
-}
-```
-
-#### **4. CollectionResult<T> - Pagination Made Simple** 📚
-We're one of the few libraries that provides built-in pagination support. No more manually wrapping collections with metadata - CollectionResult<T> handles it all:
-
-```csharp
-public CollectionResult<Product> GetProducts(int page = 1, int pageSize = 20)
-{
-    var query = _repository.GetAll();
-    var totalCount = query.Count();
-    var items = query
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .ToList();
-    
-    return CollectionResult<Product>.Succeed(
-        items, 
-        pageNumber: page, 
-        pageSize: pageSize, 
-        totalItems: totalCount
-    );
-    // Automatically includes: TotalPages, HasNextPage, HasPreviousPage, etc.
-}
-```
-
-#### **5. Railway-Oriented Programming Excellence** 🚂
-Transform complex workflows into elegant, readable chains. Our implementation of Railway-Oriented Programming makes error handling beautiful:
-
-```csharp
-public async Task<Result<OrderConfirmation>> ProcessOrderAsync(OrderRequest request)
-{
-    return await ValidateCustomer(request.CustomerId)
-        .BindAsync(customer => CheckInventory(request.Items))
-        .BindAsync(items => CalculatePricing(items))
-        .TapAsync(pricing => LogPricing(pricing))              // Side effects
-        .BindAsync(pricing => ProcessPayment(pricing))
-        .MapAsync(payment => GenerateConfirmation(payment))    // Transform
-        .TapAsync(confirmation => SendEmail(confirmation));     // More side effects
-    // Any failure in the chain automatically short-circuits!
-}
-```
-
-#### **6. Seamless Framework Integration** 🔌
-Unlike libraries that require extensive configuration, we integrate naturally with ASP.NET Core and SignalR:
-
-```csharp
-// One line to enable everything
-app.UseCommunication();
-
-// Controllers just return Results - we handle the rest
-[HttpGet("{id}")]
-public async Task<Result<User>> GetUser(int id) => 
-    await _userService.GetByIdAsync(id);
-
-// SignalR hubs work seamlessly
-public async Task<Result> SendMessage(string message) =>
-    string.IsNullOrEmpty(message) 
-        ? Result.FailValidation(("message", "Message cannot be empty"))
-        : await BroadcastMessage(message);
-```
-
-## 📊 Comparison with Other Libraries
-
-| Feature | ManagedCode.Communication | FluentResults | ErrorOr | OneOf | LanguageExt | Ardalis.Result |
-|---------|-------------------------|---------------|---------|--------|-------------|----------------|
-| **Orleans Support** | ✅ Native Integration | ❌ Third-party | ❌ None | ❌ None | ❌ None | ❌ None |
-| **RFC 7807 Problem Details** | ✅ Built-in | ❌ Manual mapping | ❌ None | ❌ None | ❌ None | ⏳ Planned |
-| **Performance vs Exceptions** | ~1000x faster | ~100x faster | ~100x faster | ~100x faster | ~100x faster | ~100x faster |
-| **Pagination Support** | ✅ CollectionResult<T> | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None |
-| **Railway Programming** | ✅ Full support | ✅ Full | ✅ Full | ⚠️ Limited | ✅ Full | ✅ Recent |
-| **ASP.NET Integration** | ✅ Middleware + Filters | ⚠️ Extension pkg | ⚠️ Manual | ⚠️ Manual | ⚠️ Manual | ✅ Native |
-| **SignalR Support** | ✅ Hub Filters | ❌ None | ❌ None | ❌ None | ❌ None | ❌ None |
-| **Zero Dependencies** | ✅ Core library | ❌ No | ✅ Yes | ✅ Yes | ❌ No | ❌ No |
-| **Downloads** | 82K+ | 3.3M+ | 600K+ | 37.9M+ | 5.9M+ | 300K+ |
-| **Active Development** | ✅ Very Active | ✅ Active | ✅ Active | ✅ Active | ✅ Active | ✅ Active |
-
-## 📚 Table of Contents
-
-- [Core Concepts](#-core-concepts)
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [Result Pattern Deep Dive](#-result-pattern-deep-dive)
-- [Problem Details (RFC 7807)](#-problem-details-rfc-7807)
-- [Railway-Oriented Programming](#-railway-oriented-programming)
-- [ASP.NET Core Integration](#-aspnet-core-integration)
-- [Orleans Integration](#-orleans-integration)
-- [SignalR Integration](#-signalr-integration)
-- [Performance & Benchmarks](#-performance--benchmarks)
-- [Testing Strategies](#-testing-strategies)
-- [API Reference](#-api-reference)
-- [Best Practices](#-best-practices)
-- [Migration Guide](#-migration-guide)
-- [Real-World Examples](#-real-world-examples)
-
-## 🎯 Core Concepts
-
-### What Problems Does This Solve?
-
-Traditional exception-based error handling in .NET has fundamental flaws:
-
-1. **Hidden Control Flow**: Exceptions create invisible exit points in your code. Any method call might throw, making the actual flow impossible to understand without reading implementation details.
-
-2. **Performance Overhead**: Throwing an exception involves capturing the stack trace, unwinding the stack, and searching for catch blocks. This is ~1000x slower than returning a value.
-
-3. **Poor Composability**: Try-catch blocks don't compose well. You can't chain operations elegantly when each might throw different exceptions.
-
-4. **Implicit Contracts**: Method signatures lie. `User GetUser(int id)` doesn't tell you it might throw `NotFoundException`, `DatabaseException`, or `ValidationException`.
-
-5. **Testing Complexity**: Testing exception scenarios requires complex setup and makes test code harder to read and maintain.
-
-### The Result Pattern Solution
-
-The Result pattern makes failure handling explicit, performant, and composable:
-
-```csharp
-// The method signature tells the whole truth
-public Result<User> GetUser(int id)
-{
-    // Failures are just data, not control flow disruption
-    if (id <= 0)
-        return Result<User>.FailValidation(("id", "ID must be positive"));
-    
-    var user = _repository.FindById(id);
-    if (user == null)
-        return Result<User>.FailNotFound($"User {id} not found");
-    
-    if (!user.IsActive)
-        return Result<User>.FailForbidden("User account is deactivated");
-    
-    return Result<User>.Succeed(user);
-}
-```
-
-### Core Types
-
-Our library provides three fundamental types:
-
-1. **`Result`** - For operations without a return value
-2. **`Result<T>`** - For operations that return a value of type T
-3. **`CollectionResult<T>`** - For paginated collections with metadata
-
-Each type can be in one of two states:
-- **Success** - The operation completed successfully
-- **Failed** - The operation failed with an optional Problem Details
-
-## 📦 Installation
+### NuGet Packages
 
 ```bash
-# Core library (required)
+# Core library - Required for all projects
 dotnet add package ManagedCode.Communication
 
-# ASP.NET Core integration (recommended for web APIs)
+# ASP.NET Core integration - For Web APIs and MVC applications
 dotnet add package ManagedCode.Communication.AspNetCore
 
-# Orleans integration (for distributed systems)
+# Orleans integration - For distributed systems using Orleans
 dotnet add package ManagedCode.Communication.Orleans
 ```
 
-### Version Requirements
-- **.NET 6.0** or higher (we support .NET 6, 7, 8, and 9)
-- **C# 10.0** or higher
-- **ASP.NET Core 6.0+** (for web integration)
-- **Orleans 7.0+** (for Orleans integration)
+## Basic Concepts
 
-### NuGet Package Details
-- **Main Package**: [ManagedCode.Communication](https://www.nuget.org/packages/ManagedCode.Communication)
-- **ASP.NET Core**: [ManagedCode.Communication.AspNetCore](https://www.nuget.org/packages/ManagedCode.Communication.AspNetCore)
-- **Orleans**: [ManagedCode.Communication.Orleans](https://www.nuget.org/packages/ManagedCode.Communication.Orleans)
-- **License**: MIT
-- **Source**: [GitHub](https://github.com/managedcode/Communication)
+### The Problem with Exceptions
 
-## 🚀 Quick Start
-
-### 1. Basic Usage - Your First Result
+Traditional exception handling has several issues:
 
 ```csharp
-using ManagedCode.Communication;
-
+// BAD: Using exceptions for control flow
 public class UserService
 {
-    public Result<User> CreateUser(string email, string password)
+    public User GetUser(int id)
     {
-        // Validation
-        if (string.IsNullOrEmpty(email))
-            return Result<User>.FailValidation(("email", "Email is required"));
+        var user = _repository.FindById(id);
+        if (user == null)
+            throw new NotFoundException($"User {id} not found"); // Hidden in implementation
         
-        if (password.Length < 8)
-            return Result<User>.FailValidation(("password", "Password must be at least 8 characters"));
+        if (!user.IsActive)
+            throw new ForbiddenException("User is deactivated"); // Another hidden path
         
-        // Business logic
-        if (_repository.EmailExists(email))
-            return Result<User>.Fail("Duplicate Email", "This email is already registered", HttpStatusCode.Conflict);
+        if (user.IsDeleted)
+            throw new InvalidOperationException("User is deleted"); // Yet another
         
-        // Success case
-        var user = new User { Email = email, Password = HashPassword(password) };
-        _repository.Add(user);
+        return user; // Method signature lies - says it returns User, but can throw 3+ exceptions
+    }
+}
+
+// Caller has to know about all possible exceptions
+try
+{
+    var user = userService.GetUser(123);
+    // Use user
+}
+catch (NotFoundException ex)
+{
+    // Handle not found
+}
+catch (ForbiddenException ex) 
+{
+    // Handle forbidden
+}
+catch (InvalidOperationException ex)
+{
+    // Handle invalid operation  
+}
+catch (Exception ex)
+{
+    // Handle unexpected errors
+}
+```
+
+### The Result Pattern Solution
+
+With Result pattern, all possible outcomes are explicit:
+
+```csharp
+// GOOD: Using Result pattern
+public class UserService
+{
+    public Result<User> GetUser(int id)
+    {
+        var user = _repository.FindById(id);
+        if (user == null)
+            return Result<User>.FailNotFound($"User {id} not found");
+        
+        if (!user.IsActive)
+            return Result<User>.FailForbidden("User account is deactivated");
+        
+        if (user.IsDeleted)
+            return Result<User>.Fail("User Deleted", "This user has been deleted", 410);
         
         return Result<User>.Succeed(user);
     }
 }
 
-// Usage
-var result = userService.CreateUser("user@example.com", "password123");
+// Caller handles results explicitly
+var result = userService.GetUser(123);
 
 if (result.IsSuccess)
 {
-    Console.WriteLine($"User created: {result.Value.Email}");
+    var user = result.Value;
+    // Use user
 }
-else if (result.HasProblem)
+else if (result.Problem.StatusCode == 404)
 {
-    Console.WriteLine($"Error: {result.Problem.Title} - {result.Problem.Detail}");
+    // Handle not found
 }
-```
-
-### 2. ASP.NET Core Controller
-
-```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class UsersController : ControllerBase
+else if (result.Problem.StatusCode == 403)
 {
-    private readonly IUserService _userService;
-    
-    [HttpPost]
-    public async Task<Result<UserDto>> CreateUser([FromBody] CreateUserRequest request)
-    {
-        // The framework automatically handles validation and converts Result to appropriate HTTP response
-        return await _userService.CreateUserAsync(request);
-    }
-    
-    [HttpGet("{id}")]
-    public async Task<Result<UserDto>> GetUser(int id)
-    {
-        return await _userService.GetUserAsync(id);
-    }
-    
-    [HttpGet]
-    public async Task<CollectionResult<UserDto>> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
-    {
-        return await _userService.GetUsersAsync(page, pageSize);
-    }
+    // Handle forbidden
+}
+else
+{
+    // Handle other errors
+    _logger.LogError("Failed to get user: {Error}", result.Problem.Detail);
 }
 ```
 
-### 3. Configuration
+### Result Types
+
+The library provides three main result types:
 
 ```csharp
-// Program.cs
-var builder = WebApplication.CreateBuilder(args);
-
-// Add Communication services
-builder.Services.AddCommunication(options =>
+// Result - for operations without a return value
+public Result DeleteUser(int id)
 {
-    options.ShowErrorDetails = builder.Environment.IsDevelopment();
-});
+    if (!_repository.Exists(id))
+        return Result.FailNotFound($"User {id} not found");
+    
+    _repository.Delete(id);
+    return Result.Succeed();
+}
 
-// Add controllers with Communication filters
-builder.Services.AddControllers(options =>
+// Result<T> - for operations that return a value
+public Result<User> GetUser(int id)
 {
-    options.AddCommunicationFilters();
-});
+    var user = _repository.FindById(id);
+    if (user == null)
+        return Result<User>.FailNotFound($"User {id} not found");
+    
+    return Result<User>.Succeed(user);
+}
 
-var app = builder.Build();
-
-// Use Communication middleware for global error handling
-app.UseCommunication();
-
-app.MapControllers();
-app.Run();
+// CollectionResult<T> - for paginated collections
+public CollectionResult<User> GetUsers(int page = 1, int pageSize = 20)
+{
+    var query = _repository.GetAll();
+    var totalCount = query.Count();
+    
+    var items = query
+        .Skip((page - 1) * pageSize)
+        .Take(pageSize)
+        .ToList();
+    
+    return CollectionResult<User>.Succeed(
+        items,
+        pageNumber: page,
+        pageSize: pageSize,
+        totalItems: totalCount
+    );
+}
 ```
 
-## 🔧 Result Pattern Deep Dive
+## Creating Results
 
-### Creating Results
-
-#### Success Results
+### Success Results
 
 ```csharp
-// Simple success
-Result.Succeed()
+// Simple success without value
+Result successResult = Result.Succeed();
 
 // Success with value
-Result<User>.Succeed(user)
+User user = new User { Id = 1, Name = "John" };
+Result<User> userResult = Result<User>.Succeed(user);
 
-// Success with collection
-CollectionResult<Product>.Succeed(products, pageNumber: 1, pageSize: 20, totalItems: 100)
+// Success with collection and pagination
+List<Product> products = GetProducts();
+CollectionResult<Product> productsResult = CollectionResult<Product>.Succeed(
+    products,
+    pageNumber: 1,
+    pageSize: 20,
+    totalItems: 100
+);
 ```
 
-#### Failure Results
+### Failure Results
 
 ```csharp
-// Basic failures
-Result.Fail()                                           // Simple failure
-Result.Fail("Operation failed")                         // With message
-Result.Fail("Not Found", "User does not exist")        // With title and detail
-Result.Fail("Forbidden", "Access denied", HttpStatusCode.Forbidden) // With status code
+// Basic failure
+Result failResult = Result.Fail();
+Result failWithMessage = Result.Fail("Operation failed");
 
-// Specific failure types
-Result.FailValidation(("email", "Invalid format"), ("age", "Must be 18+"))
-Result.FailUnauthorized("Invalid credentials")
-Result.FailForbidden("Insufficient permissions")
-Result.FailNotFound("Resource not found")
+// Failure with title and detail
+Result detailedFail = Result.Fail(
+    title: "Payment Failed",
+    detail: "Insufficient funds in account"
+);
 
-// From Problem or Exception
-var problem = Problem.Create("Error", "Details", 500);
-Result.Fail(problem)
-Result.Fail(new InvalidOperationException("Not allowed"))
+// Failure with status code
+Result httpFail = Result.Fail(
+    title: "Resource Conflict",
+    detail: "A resource with this name already exists",
+    statusCode: HttpStatusCode.Conflict // 409
+);
 
-// From custom enum
-public enum OrderError
+// Common HTTP failures - shortcuts
+Result notFound = Result.FailNotFound("User not found");
+Result unauthorized = Result.FailUnauthorized("Invalid credentials");
+Result forbidden = Result.FailForbidden("You don't have permission");
+Result conflict = Result.FailConflict("Resource already exists");
+Result badRequest = Result.FailBadRequest("Invalid request data");
+
+// Validation failures
+Result validationFail = Result.FailValidation(
+    ("email", "Email is required"),
+    ("email", "Email format is invalid"),
+    ("password", "Password must be at least 8 characters"),
+    ("age", "You must be 18 or older")
+);
+
+// From exception
+try
 {
-    InsufficientStock,
-    PaymentFailed,
-    InvalidCoupon
+    // Some operation
+}
+catch (Exception ex)
+{
+    return Result.Fail(ex);
 }
 
-Result.Fail(OrderError.InsufficientStock, "Only 3 items available")
+// From Problem Details
+var problem = Problem.Create(
+    type: "https://api.example.com/errors/payment-failed",
+    title: "Payment Failed",
+    statusCode: 402,
+    detail: "Your payment could not be processed"
+);
+return Result.Fail(problem);
+
+// From custom error enum
+public enum OrderError
+{
+    InsufficientStock = 1001,
+    InvalidCoupon = 1002,
+    ShippingNotAvailable = 1003
+}
+
+Result orderFail = Result.Fail(
+    OrderError.InsufficientStock,
+    "Only 3 items in stock, but 5 were requested"
+);
 ```
 
 ### Try Pattern - Converting Exceptions to Results
 
-The Try pattern elegantly wraps exception-throwing code:
+The Try pattern wraps exception-throwing code and converts it to Results:
 
 ```csharp
-// Synchronous operations
-var result = Result.Try(() => 
+// Synchronous Try
+public Result<Configuration> LoadConfiguration()
 {
-    var json = File.ReadAllText("config.json");
-    return JsonSerializer.Deserialize<Config>(json);
-});
+    return Result.Try(() =>
+    {
+        var json = File.ReadAllText("config.json");
+        return JsonSerializer.Deserialize<Configuration>(json);
+    });
+}
 
-// Asynchronous operations
-var asyncResult = await Result.TryAsync(async () =>
+// Asynchronous Try
+public async Task<Result<WeatherData>> GetWeatherAsync(string city)
 {
-    var response = await httpClient.GetStringAsync(url);
-    return JsonSerializer.Deserialize<Data>(response);
-}, HttpStatusCode.BadGateway);
+    return await Result.TryAsync(async () =>
+    {
+        var response = await _httpClient.GetStringAsync($"api/weather/{city}");
+        return JsonSerializer.Deserialize<WeatherData>(response);
+    }, HttpStatusCode.BadGateway); // Optional: specify status code for failures
+}
 
-// With specific error handling
-var dbResult = await Result.TryAsync(
-    async () => await _dbContext.Users.FirstAsync(u => u.Id == id),
-    HttpStatusCode.InternalServerError
-);
-
-// Collection operations
-var users = await CollectionResult<User>.From(async () =>
+// Try with specific exception handling
+public async Task<Result<User>> GetUserFromDatabaseAsync(int id)
 {
-    return await _repository.GetUsersAsync();
-});
+    return await Result.TryAsync(
+        async () => await _dbContext.Users.FirstAsync(u => u.Id == id),
+        onException: ex => ex switch
+        {
+            InvalidOperationException => Result<User>.FailNotFound($"User {id} not found"),
+            DbUpdateException => Result<User>.Fail("Database Error", ex.Message, 500),
+            _ => Result<User>.Fail(ex)
+        }
+    );
+}
+
+// Collection Try
+public async Task<CollectionResult<Order>> GetOrdersAsync()
+{
+    return await CollectionResult<Order>.From(async () =>
+    {
+        var orders = await _repository.GetOrdersAsync();
+        var count = await _repository.GetOrderCountAsync();
+        
+        return CollectionResult<Order>.Succeed(
+            orders,
+            pageNumber: 1,
+            pageSize: 50,
+            totalItems: count
+        );
+    });
+}
 ```
 
-### Checking Result State
+## Checking Results
+
+### Basic State Checking
 
 ```csharp
 var result = GetUserResult(id);
 
-// Boolean properties
-if (result.IsSuccess) { /* Handle success */ }
-if (result.IsFailed) { /* Handle failure */ }
-if (result.HasProblem) { /* Has error details */ }
-
-// Safe Problem access
-if (result.TryGetProblem(out var problem))
+// Check if successful
+if (result.IsSuccess)
 {
-    _logger.LogError("Operation failed: {Title} - {Detail}", 
-        problem.Title, problem.Detail);
+    var user = result.Value; // Safe to access when IsSuccess is true
+    Console.WriteLine($"Found user: {user.Name}");
 }
 
-// Pattern matching
-var message = result.Match(
-    onSuccess: user => $"Found user: {user.Name}",
-    onFailure: problem => $"Error: {problem?.Title ?? "Unknown error"}"
-);
+// Check if failed
+if (result.IsFailed)
+{
+    Console.WriteLine("Operation failed");
+}
 
-// Throw if failed (for integration with exception-based code)
-result.ThrowIfFail(); // Throws ProblemException if failed
+// Check if has problem details
+if (result.HasProblem)
+{
+    var problem = result.Problem; // Always safe to access, never null
+    Console.WriteLine($"Error: {problem.Title} - {problem.Detail}");
+}
+
+// Safe problem access with out parameter
+if (result.TryGetProblem(out var problem))
+{
+    _logger.LogError(
+        "Operation failed with status {StatusCode}: {Title} - {Detail}",
+        problem.StatusCode,
+        problem.Title,
+        problem.Detail
+    );
+}
 ```
 
-## 📋 Problem Details (RFC 7807)
+### Pattern Matching
+
+```csharp
+// Basic pattern matching
+var message = result.Match(
+    onSuccess: user => $"Welcome, {user.Name}!",
+    onFailure: problem => $"Error: {problem.Title}"
+);
+
+// Pattern matching with actions
+result.Match(
+    onSuccess: user => 
+    {
+        _cache.Set(user.Id, user);
+        _logger.LogInfo($"User {user.Id} retrieved");
+    },
+    onFailure: problem =>
+    {
+        _logger.LogError($"Failed to get user: {problem.Detail}");
+        _metrics.IncrementErrorCounter();
+    }
+);
+
+// Pattern matching for HTTP responses
+public IActionResult HandleResult<T>(Result<T> result)
+{
+    return result.Match(
+        onSuccess: value => Ok(new { success = true, data = value }),
+        onFailure: problem => problem.StatusCode switch
+        {
+            400 => BadRequest(problem),
+            401 => Unauthorized(problem),
+            403 => Forbid(),
+            404 => NotFound(problem),
+            409 => Conflict(problem),
+            422 => UnprocessableEntity(problem),
+            _ => StatusCode(problem.StatusCode, problem)
+        }
+    );
+}
+```
+
+### Throwing Exceptions from Results
+
+Sometimes you need to integrate with code that expects exceptions:
+
+```csharp
+// Throw if failed - throws ProblemException with all problem details
+var result = GetUserResult(id);
+result.ThrowIfFail(); // Throws if failed, continues if successful
+var user = result.Value; // Safe after ThrowIfFail
+
+// Or use the Value property which throws if failed
+try
+{
+    var user = result.Value; // Throws ProblemException if result is failed
+}
+catch (ProblemException ex)
+{
+    Console.WriteLine($"Problem: {ex.Problem.Title}");
+}
+```
+
+## Problem Details (RFC 7807)
 
 ### Understanding RFC 7807
 
-RFC 7807 defines a standard format for error responses in HTTP APIs. Instead of inconsistent error messages, you get structured, machine-readable problem details that frontend developers and API consumers can reliably parse.
+RFC 7807 defines a standard format for error responses in HTTP APIs. Instead of ad-hoc error messages, you get structured, machine-readable problem details.
 
 ### Problem Structure
 
 ```csharp
 public class Problem
 {
-    public string Type { get; set; }       // URI identifying the problem type
-    public string Title { get; set; }      // Short, human-readable summary
-    public int StatusCode { get; set; }    // HTTP status code
-    public string Detail { get; set; }     // Human-readable explanation
-    public string Instance { get; set; }   // URI for this specific occurrence
-    public Dictionary<string, object?> Extensions { get; set; } // Additional data
+    // A URI reference that identifies the problem type
+    public string Type { get; set; }
+    
+    // A short, human-readable summary of the problem type
+    public string Title { get; set; }
+    
+    // The HTTP status code
+    public int StatusCode { get; set; }
+    
+    // A human-readable explanation specific to this occurrence
+    public string Detail { get; set; }
+    
+    // A URI reference that identifies the specific occurrence
+    public string Instance { get; set; }
+    
+    // Additional problem-specific data
+    public Dictionary<string, object?> Extensions { get; set; }
 }
 ```
 
-### Creating Problems
+### Creating Problem Details
 
 ```csharp
 // Basic problem
 var problem = Problem.Create(
-    title: "Payment Failed",
-    detail: "Your credit card was declined by the bank",
-    statusCode: 402
+    title: "Validation Failed",
+    detail: "The request contains invalid data",
+    statusCode: 400
 );
 
 // Full problem with all properties
 var detailedProblem = Problem.Create(
-    type: "https://api.example.com/errors/payment-failed",
-    title: "Payment Failed",
-    statusCode: 402,
-    detail: "Your credit card ending in 4242 was declined",
-    instance: "/orders/12345/payment"
+    type: "https://api.example.com/errors/out-of-credit",
+    title: "Out of Credit",
+    statusCode: 403,
+    detail: "Your current balance is 30 USD, but that costs 50 USD",
+    instance: "/account/12345/transactions/abc"
 );
 
-// Add custom extensions for additional context
+// Add extensions for additional context
 detailedProblem.Extensions["balance"] = 30.00m;
-detailedProblem.Extensions["required"] = 50.00m;
-detailedProblem.Extensions["cardLast4"] = "4242";
-detailedProblem.Extensions["declineCode"] = "insufficient_funds";
+detailedProblem.Extensions["cost"] = 50.00m;
+detailedProblem.Extensions["currency"] = "USD";
+
+// Problem for validation errors
+var validationProblem = Problem.CreateValidation(
+    ("email", new[] { "Email is required", "Email format is invalid" }),
+    ("password", new[] { "Password is too short" })
+);
+
+// This creates a problem with Extensions["errors"] containing:
+// {
+//   "email": ["Email is required", "Email format is invalid"],
+//   "password": ["Password is too short"]
+// }
 ```
 
-### Validation Errors
+### JSON Representation
 
-Validation errors are stored in the Extensions dictionary under the "errors" key:
+Problems are serialized to JSON following RFC 7807:
 
-```csharp
-// Creating validation problems
-var result = Result.FailValidation(
-    ("email", "Email is required"),
-    ("email", "Email format is invalid"),
-    ("password", "Password must be at least 8 characters"),
-    ("password", "Password must contain a number"),
-    ("age", "You must be 18 or older")
-);
-
-// Accessing validation errors
-if (result.Problem?.GetValidationErrors() is var errors && errors != null)
+```json
 {
-    foreach (var (field, messages) in errors)
-    {
-        Console.WriteLine($"{field}:");
-        foreach (var message in messages)
-        {
-            Console.WriteLine($"  - {message}");
-        }
-    }
+  "type": "https://api.example.com/errors/out-of-credit",
+  "title": "Out of Credit",
+  "status": 403,
+  "detail": "Your current balance is 30 USD, but that costs 50 USD",
+  "instance": "/account/12345/transactions/abc",
+  "balance": 30.00,
+  "cost": 50.00,
+  "currency": "USD"
 }
-// Output:
-// email:
-//   - Email is required
-//   - Email format is invalid
-// password:
-//   - Password must be at least 8 characters
-//   - Password must contain a number
-// age:
-//   - You must be 18 or older
 ```
 
 ### Custom Error Enums
@@ -534,303 +542,353 @@ if (result.Problem?.GetValidationErrors() is var errors && errors != null)
 Define domain-specific error codes for better error categorization:
 
 ```csharp
+// Define your error enum
 public enum PaymentError
 {
+    [Description("Insufficient funds in account")]
     InsufficientFunds = 1001,
+    
+    [Description("Credit card has expired")]
     CardExpired = 1002,
+    
+    [Description("Card was declined by bank")]
     CardDeclined = 1003,
+    
+    [Description("Payment gateway timeout")]
     PaymentGatewayTimeout = 1004,
+    
+    [Description("Invalid card number")]
     InvalidCardNumber = 1005
 }
 
-// Create problem from enum
-var problem = Problem.FromEnum(
-    PaymentError.InsufficientFunds,
-    $"Your balance ($30) is insufficient for this purchase ($50)",
-    statusCode: 402
-);
-
-// Use with Result
-var result = Result.Fail(PaymentError.CardExpired, "Your card expired last month");
-
-// Check for specific error
-if (result.Problem?.HasErrorCode(PaymentError.CardExpired) == true)
+// Use in results
+public Result<PaymentReceipt> ProcessPayment(PaymentRequest request)
 {
-    // Prompt user to update card
+    if (request.Amount > account.Balance)
+    {
+        return Result<PaymentReceipt>.Fail(
+            PaymentError.InsufficientFunds,
+            $"Your balance ({account.Balance:C}) is insufficient for this payment ({request.Amount:C})"
+        );
+    }
+    
+    if (request.Card.ExpiryDate < DateTime.Now)
+    {
+        return Result<PaymentReceipt>.Fail(
+            PaymentError.CardExpired,
+            $"Your card expired on {request.Card.ExpiryDate:MM/yyyy}"
+        );
+    }
+    
+    // Process payment...
+}
+
+// Check for specific errors
+var result = ProcessPayment(request);
+if (result.HasProblem && result.Problem.HasErrorCode(PaymentError.InsufficientFunds))
+{
+    // Prompt user to add funds
 }
 
 // Get error code as enum
-var errorCode = result.Problem?.GetErrorCodeAs<PaymentError>();
+var errorCode = result.HasProblem ? result.Problem.GetErrorCodeAs<PaymentError>() : null;
 switch (errorCode)
 {
     case PaymentError.InsufficientFunds:
-        // Handle insufficient funds
+        ShowAddFundsDialog();
         break;
     case PaymentError.CardExpired:
-        // Handle expired card
+        ShowUpdateCardDialog();
+        break;
+    case PaymentError.CardDeclined:
+        ShowAlternativePaymentOptions();
         break;
 }
 ```
 
-## 🚂 Railway-Oriented Programming
+## Railway-Oriented Programming
 
-### The Railway Metaphor
+### Concept
 
-Imagine your code as a railway track. Success stays on the main track, while failures switch to an error track. Once on the error track, subsequent operations are skipped until you explicitly handle the error.
+Railway-Oriented Programming (ROP) is a functional programming pattern where your code flows like a train on railway tracks. Success stays on the main track, while failures switch to an error track. Once on the error track, subsequent operations are skipped.
 
-### Core Railway Operations
+### Core Operations
 
-#### Bind (FlatMap) - Chain operations that return Results
+#### Bind - Chain Operations That Return Results
 
 ```csharp
-public Result<Order> ProcessOrder(OrderRequest request)
+public Result<Invoice> CreateInvoice(InvoiceRequest request)
 {
-    return ValidateRequest(request)          // Result<OrderRequest>
-        .Bind(req => CheckInventory(req))    // Result<OrderRequest>
-        .Bind(req => CalculatePricing(req))  // Result<PricedOrder>
-        .Bind(order => ProcessPayment(order)) // Result<PaidOrder>
-        .Bind(order => CreateOrder(order));   // Result<Order>
-    // If any step fails, the chain stops and returns the failure
+    return ValidateRequest(request)           // Result<InvoiceRequest>
+        .Bind(req => CheckCustomerCredit(req)) // Result<InvoiceRequest>
+        .Bind(req => CalculateTaxes(req))      // Result<InvoiceRequest>
+        .Bind(req => GenerateInvoice(req))     // Result<Invoice>
+        .Bind(inv => SaveInvoice(inv));        // Result<Invoice>
+    
+    // If any step fails, the chain stops and returns that failure
 }
-```
 
-#### Map - Transform successful values
-
-```csharp
-public Result<OrderDto> GetOrderDto(int orderId)
-{
-    return GetOrder(orderId)           // Result<Order>
-        .Map(order => order.ToDto())   // Result<OrderDto>
-        .Map(dto => EnrichDto(dto));   // Result<OrderDto>
-}
-```
-
-#### Tap - Perform side effects without changing the result
-
-```csharp
-public Result<User> ProcessUser(int userId)
-{
-    return GetUser(userId)
-        .Tap(user => _logger.LogInfo($"Processing user {user.Id}"))
-        .Tap(user => _metrics.IncrementUserProcessed())
-        .Tap(user => _cache.Set(user.Id, user))
-        .Tap(user => SendNotification(user));
-    // User is passed through unchanged
-}
-```
-
-#### Match - Handle both success and failure cases
-
-```csharp
-public IActionResult HandleResult<T>(Result<T> result)
-{
-    return result.Match(
-        onSuccess: value => Ok(new { success = true, data = value }),
-        onFailure: problem => problem?.StatusCode switch
-        {
-            400 => BadRequest(problem),
-            401 => Unauthorized(problem),
-            403 => Forbid(),
-            404 => NotFound(problem),
-            409 => Conflict(problem),
-            _ => StatusCode(500, problem)
-        }
-    );
-}
-```
-
-### Async Railway Operations
-
-All railway methods have async variants for asynchronous operations:
-
-```csharp
-public async Task<Result<OrderConfirmation>> ProcessOrderAsync(OrderRequest request)
+// Async version
+public async Task<Result<Invoice>> CreateInvoiceAsync(InvoiceRequest request)
 {
     return await ValidateRequestAsync(request)
-        // Chain async operations
-        .BindAsync(async req => await CheckInventoryAsync(req))
-        
-        // Mix sync and async operations
-        .MapAsync(req => CalculatePricing(req))
-        
-        // Async side effects
-        .TapAsync(async pricing => await LogPricingAsync(pricing))
-        
-        // Continue the chain
-        .BindAsync(async pricing => await ProcessPaymentAsync(pricing))
-        
-        // Final transformation
-        .MapAsync(async payment => await GenerateConfirmationAsync(payment));
+        .BindAsync(req => CheckCustomerCreditAsync(req))
+        .BindAsync(req => CalculateTaxesAsync(req))
+        .BindAsync(req => GenerateInvoiceAsync(req))
+        .BindAsync(inv => SaveInvoiceAsync(inv));
 }
 ```
 
-### Complex Real-World Example
+#### Map - Transform Successful Values
+
+```csharp
+public Result<InvoiceDto> GetInvoiceDto(int invoiceId)
+{
+    return GetInvoice(invoiceId)              // Result<Invoice>
+        .Map(invoice => invoice.ToDto())       // Result<InvoiceDto>
+        .Map(dto => EnrichWithCustomerData(dto)) // Result<InvoiceDto>
+        .Map(dto => AddPaymentHistory(dto));    // Result<InvoiceDto>
+}
+
+// Async version
+public async Task<Result<InvoiceDto>> GetInvoiceDtoAsync(int invoiceId)
+{
+    return await GetInvoiceAsync(invoiceId)
+        .MapAsync(invoice => Task.FromResult(invoice.ToDto()))
+        .MapAsync(async dto => await EnrichWithCustomerDataAsync(dto))
+        .MapAsync(async dto => await AddPaymentHistoryAsync(dto));
+}
+```
+
+#### Tap - Perform Side Effects
+
+```csharp
+public Result<Order> ProcessOrder(Order order)
+{
+    return ValidateOrder(order)
+        .Tap(o => _logger.LogInfo($"Processing order {o.Id}"))
+        .Tap(o => _metrics.IncrementOrderCounter())
+        .Tap(o => _cache.InvalidateCustomerCache(o.CustomerId))
+        .Tap(o => PublishOrderEvent(o));
+    // Order is passed through unchanged
+}
+
+// Async version
+public async Task<Result<Order>> ProcessOrderAsync(Order order)
+{
+    return await ValidateOrderAsync(order)
+        .TapAsync(async o => await _logger.LogInfoAsync($"Processing order {o.Id}"))
+        .TapAsync(async o => await _metrics.IncrementOrderCounterAsync())
+        .TapAsync(async o => await _cache.InvalidateCustomerCacheAsync(o.CustomerId))
+        .TapAsync(async o => await PublishOrderEventAsync(o));
+}
+```
+
+### Complex Railway Example
 
 ```csharp
 public class OrderService
 {
     public async Task<Result<OrderConfirmation>> PlaceOrderAsync(PlaceOrderRequest request)
     {
-        // Start with customer validation
         return await ValidateCustomer(request.CustomerId)
-            
-            // Parallel validation of products
+            // Combine customer with validated products
             .BindAsync(async customer =>
             {
                 var productsResult = await ValidateProducts(request.Items);
-                return productsResult.Map(products => (customer, products));
+                if (productsResult.IsFailed)
+                    return Result<(Customer, List<Product>)>.Fail(productsResult.Problem);
+                
+                return Result<(Customer, List<Product>)>.Succeed((customer, productsResult.Value));
             })
             
-            // Calculate pricing with customer tier discount
+            // Apply discounts and calculate pricing
             .BindAsync(async data =>
             {
-                var pricingResult = await _pricingService.CalculateAsync(
-                    data.products, 
-                    data.customer.Tier
-                );
-                return pricingResult.Map(pricing => 
-                    (data.customer, data.products, pricing));
+                var (customer, products) = data;
+                
+                // Check if coupon is valid
+                if (!string.IsNullOrEmpty(request.CouponCode))
+                {
+                    var couponResult = await ValidateCoupon(request.CouponCode);
+                    if (couponResult.IsFailed)
+                        return Result<Order>.Fail(couponResult.Problem);
+                    
+                    var discount = couponResult.Value;
+                    return await CalculatePricing(customer, products, discount);
+                }
+                
+                return await CalculatePricing(customer, products, null);
             })
             
             // Check credit limit
-            .BindAsync(async data =>
+            .BindAsync(async order =>
             {
-                if (data.pricing.Total > data.customer.CreditLimit)
+                if (order.Total > order.Customer.CreditLimit)
                 {
-                    return Result<(Customer, List<Product>, Pricing)>.Fail(
+                    return Result<Order>.Fail(
                         "Credit Limit Exceeded",
-                        $"Order total ${data.pricing.Total} exceeds your credit limit ${data.customer.CreditLimit}",
+                        $"Order total {order.Total:C} exceeds your credit limit {order.Customer.CreditLimit:C}",
                         HttpStatusCode.PaymentRequired
                     );
                 }
-                return Result<(Customer, List<Product>, Pricing)>.Succeed(data);
-            })
-            
-            // Process payment
-            .BindAsync(async data =>
-            {
-                var paymentResult = await _paymentService.ChargeAsync(
-                    data.customer.PaymentMethod,
-                    data.pricing.Total
-                );
-                return paymentResult.Map(payment => (data, payment));
-            })
-            
-            // Create order in database
-            .BindAsync(async result =>
-            {
-                var order = new Order
-                {
-                    CustomerId = result.data.customer.Id,
-                    Items = result.data.products.Select(p => new OrderItem
-                    {
-                        ProductId = p.Id,
-                        Quantity = request.Items.First(i => i.ProductId == p.Id).Quantity,
-                        Price = p.Price
-                    }).ToList(),
-                    Total = result.data.pricing.Total,
-                    PaymentId = result.payment.TransactionId,
-                    Status = OrderStatus.Confirmed
-                };
-                
-                await _repository.SaveAsync(order);
                 return Result<Order>.Succeed(order);
             })
             
-            // Send notifications (side effects that don't affect the result)
-            .TapAsync(async order =>
+            // Process payment
+            .BindAsync(async order =>
             {
-                // These operations run but don't affect the success of the order
-                await Task.WhenAll(
-                    _emailService.SendOrderConfirmationAsync(order),
-                    _smsService.SendOrderSmsAsync(order),
-                    _inventoryService.UpdateStockLevelsAsync(order.Items)
+                var paymentResult = await _paymentService.ChargeAsync(
+                    order.Customer.PaymentMethod,
+                    order.Total
                 );
+                
+                if (paymentResult.IsFailed)
+                    return Result<Order>.Fail(paymentResult.Problem);
+                
+                order.PaymentId = paymentResult.Value.TransactionId;
+                order.PaymentStatus = PaymentStatus.Completed;
+                return Result<Order>.Succeed(order);
             })
             
-            // Map to final confirmation
+            // Save order to database
+            .BindAsync(async order =>
+            {
+                try
+                {
+                    await _repository.SaveOrderAsync(order);
+                    return Result<Order>.Succeed(order);
+                }
+                catch (DbUpdateException ex)
+                {
+                    // Rollback payment if save fails
+                    await _paymentService.RefundAsync(order.PaymentId);
+                    return Result<Order>.Fail("Database Error", "Failed to save order", 500);
+                }
+            })
+            
+            // Update inventory (side effect - doesn't change the order)
+            .TapAsync(async order =>
+            {
+                foreach (var item in order.Items)
+                {
+                    await _inventoryService.DecrementStockAsync(item.ProductId, item.Quantity);
+                }
+            })
+            
+            // Send notifications (side effect)
+            .TapAsync(async order =>
+            {
+                // Fire and forget - don't fail the order if notifications fail
+                _ = Task.Run(async () =>
+                {
+                    await _emailService.SendOrderConfirmationAsync(order);
+                    await _smsService.SendOrderSmsAsync(order);
+                    await _pushService.SendOrderNotificationAsync(order);
+                });
+            })
+            
+            // Map to confirmation
             .MapAsync(async order =>
             {
                 var trackingNumber = await _shippingService.CreateShipmentAsync(order);
+                
                 return new OrderConfirmation
                 {
                     OrderId = order.Id,
                     OrderNumber = order.OrderNumber,
-                    EstimatedDelivery = DateTime.UtcNow.AddDays(3),
+                    Total = order.Total,
+                    EstimatedDelivery = DateTime.Now.AddDays(3),
                     TrackingNumber = trackingNumber,
-                    Total = order.Total
+                    Items = order.Items.Select(i => new OrderItemDto
+                    {
+                        ProductName = i.ProductName,
+                        Quantity = i.Quantity,
+                        Price = i.Price
+                    }).ToList()
                 };
             });
     }
 }
 ```
 
-## 🌐 ASP.NET Core Integration
+## ASP.NET Core Integration
 
-### Complete Configuration
+### Configuration
 
 ```csharp
 // Program.cs
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Communication with all options
+// Add Communication services with options
 builder.Services.AddCommunication(options =>
 {
-    // Show detailed errors in development
+    // Show detailed error messages in development
     options.ShowErrorDetails = builder.Environment.IsDevelopment();
     
-    // Include exception details in Problem responses
+    // Include exception details in problem responses
     options.IncludeExceptionDetails = builder.Environment.IsDevelopment();
     
-    // Custom error response builder
-    options.ErrorResponseBuilder = (problem, context) =>
+    // Custom problem details factory
+    options.ProblemDetailsFactory = (problem, httpContext) =>
     {
-        return new
+        // Add request ID to all problems
+        problem.Extensions["requestId"] = httpContext.TraceIdentifier;
+        
+        // Add timestamp
+        problem.Extensions["timestamp"] = DateTime.UtcNow;
+        
+        // Add user info if authenticated
+        if (httpContext.User.Identity?.IsAuthenticated == true)
         {
-            type = problem.Type,
-            title = problem.Title,
-            status = problem.StatusCode,
-            detail = options.ShowErrorDetails ? problem.Detail : "An error occurred",
-            instance = problem.Instance,
-            traceId = Activity.Current?.Id ?? context.TraceIdentifier,
-            timestamp = DateTime.UtcNow,
-            extensions = problem.Extensions
-        };
+            problem.Extensions["user"] = httpContext.User.Identity.Name;
+        }
+        
+        return problem;
     };
 });
 
-// Add MVC with Communication filters
+// Add controllers with Communication filters
 builder.Services.AddControllers(options =>
 {
-    // Add all Communication filters
+    // Add all Communication filters at once
     options.AddCommunicationFilters();
     
-    // Or add specific filters
-    options.Filters.Add<CommunicationExceptionFilter>();
-    options.Filters.Add<CommunicationModelValidationFilter>();
-    options.Filters.Add<ResultToActionResultFilter>();
+    // Or add specific filters individually
+    options.Filters.Add<CommunicationExceptionFilter>(); // Converts exceptions to Results
+    options.Filters.Add<CommunicationModelValidationFilter>(); // Handles model validation
+    options.Filters.Add<ResultToActionResultFilter>(); // Converts Results to ActionResults
 });
 
 // Add SignalR with Communication support
 builder.Services.AddSignalR(options =>
 {
     options.AddCommunicationHubFilter();
-    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
 });
 
-// Add Swagger with Problem Details support
+// Configure Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo 
+    { 
+        Title = "My API", 
+        Version = "v1",
+        Description = "API using Result pattern with RFC 7807 Problem Details"
+    });
+    
+    // Add XML comments for better documentation
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
 });
 
 var app = builder.Build();
 
-// Use Communication middleware (must be early in pipeline)
+// Use Communication middleware - must be early in pipeline
 app.UseCommunication();
 
-// Development tools
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -842,12 +900,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
 ```
 
-### Controller Best Practices
+### Controller Implementation
 
 ```csharp
 [ApiController]
@@ -858,9 +916,7 @@ public class ProductsController : ControllerBase
     private readonly IProductService _productService;
     private readonly ILogger<ProductsController> _logger;
     
-    public ProductsController(
-        IProductService productService,
-        ILogger<ProductsController> logger)
+    public ProductsController(IProductService productService, ILogger<ProductsController> logger)
     {
         _productService = productService;
         _logger = logger;
@@ -870,8 +926,8 @@ public class ProductsController : ControllerBase
     /// Get a product by ID
     /// </summary>
     /// <param name="id">Product ID</param>
-    /// <returns>Product details</returns>
-    /// <response code="200">Product found</response>
+    /// <returns>Product details or error</returns>
+    /// <response code="200">Product found successfully</response>
     /// <response code="404">Product not found</response>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]
@@ -879,29 +935,39 @@ public class ProductsController : ControllerBase
     public async Task<Result<ProductDto>> GetProduct(int id)
     {
         _logger.LogInformation("Getting product {ProductId}", id);
+        
+        // The framework automatically converts this Result to appropriate HTTP response
         return await _productService.GetByIdAsync(id);
     }
     
     /// <summary>
-    /// Get paginated products with optional filtering
+    /// Get paginated list of products
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(CollectionResult<ProductDto>), StatusCodes.Status200OK)]
     public async Task<CollectionResult<ProductDto>> GetProducts(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
         [FromQuery] string? category = null,
         [FromQuery] decimal? minPrice = null,
-        [FromQuery] decimal? maxPrice = null)
+        [FromQuery] decimal? maxPrice = null,
+        [FromQuery] string? sortBy = "name",
+        [FromQuery] bool descending = false)
     {
-        return await _productService.GetPagedAsync(new ProductFilter
+        var filter = new ProductFilter
         {
             Page = page,
             PageSize = pageSize,
+            Search = search,
             Category = category,
             MinPrice = minPrice,
-            MaxPrice = maxPrice
-        });
+            MaxPrice = maxPrice,
+            SortBy = sortBy,
+            Descending = descending
+        };
+        
+        return await _productService.GetProductsAsync(filter);
     }
     
     /// <summary>
@@ -913,13 +979,14 @@ public class ProductsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<Result<ProductDto>> CreateProduct([FromBody] CreateProductDto dto)
     {
-        // Model validation is handled automatically by filters
+        // Model validation is handled automatically by CommunicationModelValidationFilter
         var result = await _productService.CreateAsync(dto);
         
         // Set Location header for created resource
         if (result.IsSuccess)
         {
             Response.Headers.Location = $"/api/products/{result.Value.Id}";
+            Response.StatusCode = 201; // Created
         }
         
         return result;
@@ -932,11 +999,53 @@ public class ProductsController : ControllerBase
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<Result<ProductDto>> UpdateProduct(
         int id,
         [FromBody] UpdateProductDto dto)
     {
+        if (id != dto.Id)
+        {
+            return Result<ProductDto>.FailBadRequest("ID in URL doesn't match ID in body");
+        }
+        
         return await _productService.UpdateAsync(id, dto);
+    }
+    
+    /// <summary>
+    /// Partially update a product
+    /// </summary>
+    [HttpPatch("{id:int}")]
+    [ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<Result<ProductDto>> PatchProduct(
+        int id,
+        [FromBody] JsonPatchDocument<UpdateProductDto> patchDoc)
+    {
+        if (patchDoc == null)
+        {
+            return Result<ProductDto>.FailBadRequest("Invalid patch document");
+        }
+        
+        // Get existing product
+        var getResult = await _productService.GetByIdAsync(id);
+        if (getResult.IsFailed)
+            return Result<ProductDto>.Fail(getResult.Problem);
+        
+        // Apply patch
+        var productToUpdate = getResult.Value.ToUpdateDto();
+        patchDoc.ApplyTo(productToUpdate, ModelState);
+        
+        if (!ModelState.IsValid)
+        {
+            return Result<ProductDto>.FailValidation(
+                ModelState.SelectMany(x => x.Value.Errors.Select(e => (x.Key, e.ErrorMessage)))
+                    .ToArray()
+            );
+        }
+        
+        return await _productService.UpdateAsync(id, productToUpdate);
     }
     
     /// <summary>
@@ -948,34 +1057,56 @@ public class ProductsController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<Result> DeleteProduct(int id)
     {
-        return await _productService.DeleteAsync(id);
+        var result = await _productService.DeleteAsync(id);
+        
+        if (result.IsSuccess)
+        {
+            Response.StatusCode = 204; // No Content
+        }
+        
+        return result;
     }
     
     /// <summary>
-    /// Bulk update product prices
+    /// Bulk import products from CSV
     /// </summary>
-    [HttpPost("bulk-price-update")]
-    [ProducesResponseType(typeof(BulkUpdateResult), StatusCodes.Status200OK)]
+    [HttpPost("import")]
+    [ProducesResponseType(typeof(ImportResult), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    public async Task<Result<BulkUpdateResult>> BulkUpdatePrices(
-        [FromBody] BulkPriceUpdateDto dto)
+    public async Task<Result<ImportResult>> ImportProducts(IFormFile file)
     {
-        return await _productService.BulkUpdatePricesAsync(dto);
+        if (file == null || file.Length == 0)
+        {
+            return Result<ImportResult>.FailBadRequest("No file uploaded");
+        }
+        
+        if (!file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+        {
+            return Result<ImportResult>.FailBadRequest("Only CSV files are supported");
+        }
+        
+        if (file.Length > 10 * 1024 * 1024) // 10MB
+        {
+            return Result<ImportResult>.FailBadRequest("File size cannot exceed 10MB");
+        }
+        
+        using var stream = file.OpenReadStream();
+        return await _productService.ImportFromCsvAsync(stream);
     }
 }
 ```
 
-### Service Layer Implementation
+### Service Layer with Results
 
 ```csharp
 public interface IProductService
 {
     Task<Result<ProductDto>> GetByIdAsync(int id);
-    Task<CollectionResult<ProductDto>> GetPagedAsync(ProductFilter filter);
+    Task<CollectionResult<ProductDto>> GetProductsAsync(ProductFilter filter);
     Task<Result<ProductDto>> CreateAsync(CreateProductDto dto);
     Task<Result<ProductDto>> UpdateAsync(int id, UpdateProductDto dto);
     Task<Result> DeleteAsync(int id);
-    Task<Result<BulkUpdateResult>> BulkUpdatePricesAsync(BulkPriceUpdateDto dto);
+    Task<Result<ImportResult>> ImportFromCsvAsync(Stream csvStream);
 }
 
 public class ProductService : IProductService
@@ -989,14 +1120,15 @@ public class ProductService : IProductService
     
     public async Task<Result<ProductDto>> GetByIdAsync(int id)
     {
-        // Try to get from cache first
+        // Check cache first
         var cacheKey = $"product:{id}";
         if (await _cache.TryGetAsync<ProductDto>(cacheKey) is { } cached)
         {
+            _logger.LogDebug("Product {ProductId} found in cache", id);
             return Result<ProductDto>.Succeed(cached);
         }
         
-        // Use Try pattern to handle exceptions
+        // Get from database
         return await Result.TryAsync(async () =>
         {
             var product = await _repository.FindByIdAsync(id);
@@ -1005,42 +1137,84 @@ public class ProductService : IProductService
                 return Result<ProductDto>.FailNotFound($"Product with ID {id} not found");
             }
             
+            if (product.IsDeleted)
+            {
+                return Result<ProductDto>.Fail(
+                    "Product Deleted",
+                    $"Product {id} has been deleted",
+                    HttpStatusCode.Gone
+                );
+            }
+            
             var dto = product.ToDto();
+            
+            // Cache for 5 minutes
             await _cache.SetAsync(cacheKey, dto, TimeSpan.FromMinutes(5));
             
             return Result<ProductDto>.Succeed(dto);
         });
     }
     
-    public async Task<CollectionResult<ProductDto>> GetPagedAsync(ProductFilter filter)
+    public async Task<CollectionResult<ProductDto>> GetProductsAsync(ProductFilter filter)
     {
         return await CollectionResult<ProductDto>.From(async () =>
         {
             var query = _repository.Query();
             
-            // Apply filters
-            if (!string.IsNullOrEmpty(filter.Category))
-                query = query.Where(p => p.Category == filter.Category);
+            // Apply search
+            if (!string.IsNullOrWhiteSpace(filter.Search))
+            {
+                query = query.Where(p => 
+                    p.Name.Contains(filter.Search) || 
+                    p.Description.Contains(filter.Search) ||
+                    p.Sku.Contains(filter.Search)
+                );
+            }
             
+            // Apply category filter
+            if (!string.IsNullOrWhiteSpace(filter.Category))
+            {
+                query = query.Where(p => p.Category == filter.Category);
+            }
+            
+            // Apply price filters
             if (filter.MinPrice.HasValue)
+            {
                 query = query.Where(p => p.Price >= filter.MinPrice.Value);
+            }
             
             if (filter.MaxPrice.HasValue)
+            {
                 query = query.Where(p => p.Price <= filter.MaxPrice.Value);
+            }
             
-            // Get total count
+            // Get total count before pagination
             var totalCount = await query.CountAsync();
             
-            // Get paginated items
+            // Apply sorting
+            query = filter.SortBy?.ToLower() switch
+            {
+                "name" => filter.Descending ? 
+                    query.OrderByDescending(p => p.Name) : 
+                    query.OrderBy(p => p.Name),
+                "price" => filter.Descending ? 
+                    query.OrderByDescending(p => p.Price) : 
+                    query.OrderBy(p => p.Price),
+                "created" => filter.Descending ? 
+                    query.OrderByDescending(p => p.CreatedAt) : 
+                    query.OrderBy(p => p.CreatedAt),
+                _ => query.OrderBy(p => p.Name)
+            };
+            
+            // Apply pagination
             var items = await query
-                .OrderBy(p => p.Name)
                 .Skip((filter.Page - 1) * filter.PageSize)
                 .Take(filter.PageSize)
                 .Select(p => p.ToDto())
                 .ToListAsync();
             
             return CollectionResult<ProductDto>.Succeed(
-                items.ToArray(),
+                items,
                 filter.Page,
                 filter.PageSize,
                 totalCount
@@ -1050,7 +1224,7 @@ public class ProductService : IProductService
     
     public async Task<Result<ProductDto>> CreateAsync(CreateProductDto dto)
     {
-        // Validate
+        // Validate input
         var validationResult = await _createValidator.ValidateAsync(dto);
         if (!validationResult.IsValid)
         {
@@ -1061,18 +1235,18 @@ public class ProductService : IProductService
             );
         }
         
-        // Check for duplicates
+        // Check for duplicate SKU
         var existingProduct = await _repository.FindBySkuAsync(dto.Sku);
         if (existingProduct != null)
         {
             return Result<ProductDto>.Fail(
-                "Duplicate Product",
+                "Duplicate SKU",
                 $"A product with SKU '{dto.Sku}' already exists",
                 HttpStatusCode.Conflict
             );
         }
         
-        // Create product using railway programming
+        // Create product
         return await Result.TryAsync(async () =>
         {
             var product = new Product
@@ -1083,153 +1257,116 @@ public class ProductService : IProductService
                 Price = dto.Price,
                 Category = dto.Category,
                 StockQuantity = dto.InitialStock,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = _currentUser.Id
             };
             
             await _repository.AddAsync(product);
             await _repository.SaveChangesAsync();
             
+            _logger.LogInformation("Product {ProductId} created with SKU {Sku}", product.Id, product.Sku);
+            
             return product;
         })
         .TapAsync(async product =>
         {
-            // Side effects that don't affect the result
-            await _eventBus.PublishAsync(new ProductCreatedEvent(product.Id));
-            await _cache.InvalidateAsync($"products:*");
+            // Publish event (fire and forget)
+            await _eventBus.PublishAsync(new ProductCreatedEvent
+            {
+                ProductId = product.Id,
+                Sku = product.Sku,
+                Name = product.Name,
+                Price = product.Price,
+                CreatedAt = product.CreatedAt
+            });
+            
+            // Invalidate cache
+            await _cache.InvalidateAsync("products:*");
         })
         .MapAsync(product => Task.FromResult(product.ToDto()));
     }
     
-    public async Task<Result<ProductDto>> UpdateAsync(int id, UpdateProductDto dto)
+    public async Task<Result<ImportResult>> ImportFromCsvAsync(Stream csvStream)
     {
-        return await GetProductEntityAsync(id)
-            .BindAsync(async product =>
-            {
-                // Validate
-                var validationResult = await _updateValidator.ValidateAsync(dto);
-                if (!validationResult.IsValid)
-                {
-                    return Result<Product>.FailValidation(
-                        validationResult.Errors
-                            .Select(e => (e.PropertyName, e.ErrorMessage))
-                            .ToArray()
-                    );
-                }
-                
-                // Update properties
-                product.Name = dto.Name ?? product.Name;
-                product.Description = dto.Description ?? product.Description;
-                product.Price = dto.Price ?? product.Price;
-                product.Category = dto.Category ?? product.Category;
-                product.UpdatedAt = DateTime.UtcNow;
-                
-                await _repository.SaveChangesAsync();
-                
-                return Result<Product>.Succeed(product);
-            })
-            .TapAsync(async product =>
-            {
-                await _eventBus.PublishAsync(new ProductUpdatedEvent(product.Id));
-                await _cache.InvalidateAsync($"product:{product.Id}");
-            })
-            .MapAsync(product => Task.FromResult(product.ToDto()));
-    }
-    
-    public async Task<Result> DeleteAsync(int id)
-    {
-        return await GetProductEntityAsync(id)
-            .BindAsync(async product =>
-            {
-                // Check if product can be deleted
-                if (product.HasActiveOrders)
-                {
-                    return Result.Fail(
-                        "Cannot Delete Product",
-                        "This product has active orders and cannot be deleted",
-                        HttpStatusCode.Conflict
-                    );
-                }
-                
-                _repository.Remove(product);
-                await _repository.SaveChangesAsync();
-                
-                return Result.Succeed();
-            })
-            .TapAsync(async () =>
-            {
-                await _eventBus.PublishAsync(new ProductDeletedEvent(id));
-                await _cache.InvalidateAsync($"product:{id}");
-            });
-    }
-    
-    public async Task<Result<BulkUpdateResult>> BulkUpdatePricesAsync(BulkPriceUpdateDto dto)
-    {
-        var results = new List<(int ProductId, bool Success, string? Error)>();
-        
-        foreach (var update in dto.Updates)
+        var importResult = new ImportResult
         {
-            var result = await UpdateProductPriceAsync(update.ProductId, update.NewPrice);
-            results.Add((
-                update.ProductId,
-                result.IsSuccess,
-                result.Problem?.Detail
-            ));
-        }
-        
-        var summary = new BulkUpdateResult
-        {
-            TotalProcessed = results.Count,
-            SuccessCount = results.Count(r => r.Success),
-            FailureCount = results.Count(r => !r.Success),
-            Results = results.Select(r => new BulkUpdateItemResult
-            {
-                ProductId = r.ProductId,
-                Success = r.Success,
-                Error = r.Error
-            }).ToList()
+            StartedAt = DateTime.UtcNow,
+            ProcessedCount = 0,
+            SuccessCount = 0,
+            FailedCount = 0,
+            Errors = new List<ImportError>()
         };
         
-        if (summary.FailureCount > 0)
+        try
         {
-            return Result<BulkUpdateResult>.Fail(
-                "Partial Success",
-                $"{summary.FailureCount} of {summary.TotalProcessed} updates failed",
-                HttpStatusCode.MultiStatus
-            ).Map(() => summary);
+            using var reader = new StreamReader(csvStream);
+            using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+            
+            var records = csv.GetRecords<ProductCsvRecord>().ToList();
+            
+            foreach (var (record, index) in records.Select((r, i) => (r, i)))
+            {
+                importResult.ProcessedCount++;
+                
+                // Validate record
+                if (string.IsNullOrWhiteSpace(record.Sku))
+                {
+                    importResult.FailedCount++;
+                    importResult.Errors.Add(new ImportError
+                    {
+                        Row = index + 2, // +1 for header, +1 for 1-based
+                        Field = "SKU",
+                        Error = "SKU is required"
+                    });
+                    continue;
+                }
+                
+                // Create product
+                var createResult = await CreateAsync(new CreateProductDto
+                {
+                    Sku = record.Sku,
+                    Name = record.Name,
+                    Description = record.Description,
+                    Price = record.Price,
+                    Category = record.Category,
+                    InitialStock = record.Stock
+                });
+                
+                if (createResult.IsSuccess)
+                {
+                    importResult.SuccessCount++;
+                }
+                else
+                {
+                    importResult.FailedCount++;
+                    importResult.Errors.Add(new ImportError
+                    {
+                        Row = index + 2,
+                        Sku = record.Sku,
+                        Error = createResult.Problem.Detail
+                    });
+                }
+            }
+            
+            importResult.CompletedAt = DateTime.UtcNow;
+            importResult.Duration = importResult.CompletedAt.Value - importResult.StartedAt;
+            
+            return Result<ImportResult>.Succeed(importResult);
         }
-        
-        return Result<BulkUpdateResult>.Succeed(summary);
-    }
-    
-    private async Task<Result<Product>> GetProductEntityAsync(int id)
-    {
-        var product = await _repository.FindByIdAsync(id);
-        if (product == null)
+        catch (Exception ex)
         {
-            return Result<Product>.FailNotFound($"Product with ID {id} not found");
+            _logger.LogError(ex, "Failed to import products from CSV");
+            return Result<ImportResult>.Fail("Import Failed", ex.Message);
         }
-        return Result<Product>.Succeed(product);
     }
 }
 ```
 
-## 🎭 Orleans Integration
+## Orleans Integration
 
-### Why Orleans Needs Special Support
-
-Orleans is a distributed actor framework that requires special serialization support. Regular Result pattern libraries fail in Orleans because:
-
-1. **Grain State Persistence** - Results must be serializable for grain state
-2. **Network Serialization** - Results cross network boundaries between silos
-3. **Immutability Requirements** - Orleans prefers immutable types
-4. **Surrogate Patterns** - Complex types need Orleans surrogates
-
-**We are the ONLY Result pattern library with native Orleans support!**
-
-### Orleans Configuration
+### Silo Configuration
 
 ```csharp
-// Silo Configuration
 var builder = Host.CreateDefaultBuilder(args)
     .UseOrleans(siloBuilder =>
     {
@@ -1247,44 +1384,16 @@ var builder = Host.CreateDefaultBuilder(args)
             // Enable Communication support for Orleans
             .UseOrleansCommunication()
             .AddMemoryGrainStorage("users")
-            .UseDashboard(options => { });
+            .AddMemoryGrainStorage("products");
     })
     .ConfigureServices(services =>
     {
-        // Add Communication services
         services.AddCommunication();
-        
-        // Add your services
         services.AddSingleton<IUserValidator, UserValidator>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
     });
 
 await builder.RunConsoleAsync();
-```
-
-### Client Configuration
-
-```csharp
-var client = new ClientBuilder()
-    .UseLocalhostClustering()
-    .Configure<ClusterOptions>(options =>
-    {
-        options.ClusterId = "dev";
-        options.ServiceId = "MyService";
-    })
-    // Enable Communication support for Orleans client
-    .UseOrleansCommunication()
-    .Build();
-
-await client.Connect();
-
-// Use grains with Result pattern
-var userGrain = client.GetGrain<IUserGrain>(userId);
-var result = await userGrain.GetUserAsync();
-
-if (result.IsSuccess)
-{
-    Console.WriteLine($"User: {result.Value.Name}");
-}
 ```
 
 ### Grain Implementation
@@ -1293,9 +1402,25 @@ if (result.IsSuccess)
 public interface IUserGrain : IGrainWithGuidKey
 {
     Task<Result<UserState>> GetUserAsync();
+    Task<Result<UserState>> CreateUserAsync(CreateUserCommand command);
     Task<Result<UserState>> UpdateUserAsync(UpdateUserCommand command);
     Task<Result> ChangePasswordAsync(string currentPassword, string newPassword);
-    Task<CollectionResult<Activity>> GetUserActivitiesAsync(int page, int pageSize);
+    Task<Result> ActivateUserAsync();
+    Task<Result> DeactivateUserAsync();
+    Task<CollectionResult<UserActivity>> GetActivitiesAsync(int page, int pageSize);
+}
+
+[Serializable]
+public class UserState
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; }
+    public string Name { get; set; }
+    public string PasswordHash { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? LastLoginAt { get; set; }
+    public List<UserActivity> Activities { get; set; } = new();
 }
 
 public class UserGrain : Grain, IUserGrain
@@ -1332,19 +1457,85 @@ public class UserGrain : Grain, IUserGrain
             );
         }
         
+        if (!_state.State.IsActive)
+        {
+            return Result<UserState>.FailForbidden(
+                "User account is deactivated"
+            );
+        }
+        
         return Result<UserState>.Succeed(_state.State);
     }
     
-    public async Task<Result<UserState>> UpdateUserAsync(UpdateUserCommand command)
+    public async Task<Result<UserState>> CreateUserAsync(CreateUserCommand command)
     {
+        // Check if user already exists
+        if (_state.RecordExists)
+        {
+            return Result<UserState>.Fail(
+                "User Already Exists",
+                $"User {this.GetPrimaryKey()} already exists",
+                HttpStatusCode.Conflict
+            );
+        }
+        
         // Validate command
-        var validationResult = await _validator.ValidateAsync(command);
+        var validationResult = await _validator.ValidateCreateCommandAsync(command);
         if (validationResult.IsFailed)
         {
             return Result<UserState>.Fail(validationResult.Problem!);
         }
         
-        // Check user exists
+        // Check email uniqueness
+        var emailGrain = GrainFactory.GetGrain<IEmailIndexGrain>(0);
+        var emailExists = await emailGrain.CheckEmailExistsAsync(command.Email);
+        if (emailExists)
+        {
+            return Result<UserState>.Fail(
+                "Email Already Taken",
+                $"The email {command.Email} is already registered",
+                HttpStatusCode.Conflict
+            );
+        }
+        
+        // Create user
+        _state.State = new UserState
+        {
+            Id = this.GetPrimaryKey(),
+            Email = command.Email,
+            Name = command.Name,
+            PasswordHash = _passwordHasher.HashPassword(command.Password),
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            Activities = new List<UserActivity>
+            {
+                new UserActivity
+                {
+                    Type = "AccountCreated",
+                    Description = "Account was created",
+                    Timestamp = DateTime.UtcNow
+                }
+            }
+        };
+        
+        // Register email
+        await emailGrain.RegisterEmailAsync(command.Email, _state.State.Id);
+        
+        // Persist state
+        await _state.WriteStateAsync();
+        
+        _logger.LogInformation("User {UserId} created with email {Email}", 
+            _state.State.Id, _state.State.Email);
+        
+        // Send welcome email (fire and forget)
+        var emailServiceGrain = GrainFactory.GetGrain<IEmailServiceGrain>(0);
+        await emailServiceGrain.SendWelcomeEmailAsync(_state.State.Id, _state.State.Email);
+        
+        return Result<UserState>.Succeed(_state.State);
+    }
+    
+    public async Task<Result<UserState>> UpdateUserAsync(UpdateUserCommand command)
+    {
         if (!_state.RecordExists)
         {
             return Result<UserState>.FailNotFound(
@@ -1352,50 +1543,62 @@ public class UserGrain : Grain, IUserGrain
             );
         }
         
-        // Apply updates using railway programming
-        return await Result.Try(() =>
+        // Validate command
+        var validationResult = await _validator.ValidateUpdateCommandAsync(command);
+        if (validationResult.IsFailed)
         {
-            _state.State.Name = command.Name ?? _state.State.Name;
-            _state.State.Email = command.Email ?? _state.State.Email;
-            _state.State.PhoneNumber = command.PhoneNumber ?? _state.State.PhoneNumber;
-            _state.State.UpdatedAt = DateTime.UtcNow;
+            return Result<UserState>.Fail(validationResult.Problem!);
+        }
+        
+        // Check email uniqueness if changing email
+        if (!string.IsNullOrEmpty(command.Email) && command.Email != _state.State.Email)
+        {
+            var emailGrain = GrainFactory.GetGrain<IEmailIndexGrain>(0);
+            var emailExists = await emailGrain.CheckEmailExistsAsync(command.Email);
             
-            return _state.State;
-        })
-        .BindAsync(async state =>
-        {
-            // Check email uniqueness if changed
-            if (command.Email != null && command.Email != state.Email)
+            if (emailExists)
             {
-                var emailGrain = GrainFactory.GetGrain<IEmailIndexGrain>(0);
-                var emailAvailable = await emailGrain.IsEmailAvailableAsync(command.Email);
-                
-                if (!emailAvailable)
-                {
-                    return Result<UserState>.Fail(
-                        "Email Already Taken",
-                        $"The email {command.Email} is already registered",
-                        HttpStatusCode.Conflict
-                    );
-                }
-                
-                // Update email index
-                await emailGrain.UpdateEmailAsync(state.Email, command.Email, state.Id);
+                return Result<UserState>.Fail(
+                    "Email Already Taken",
+                    $"The email {command.Email} is already registered",
+                    HttpStatusCode.Conflict
+                );
             }
             
-            return Result<UserState>.Succeed(state);
-        })
-        .TapAsync(async state =>
+            // Update email index
+            await emailGrain.UpdateEmailAsync(_state.State.Email, command.Email, _state.State.Id);
+            _state.State.Email = command.Email;
+        }
+        
+        // Update fields
+        if (!string.IsNullOrEmpty(command.Name))
         {
-            // Persist state
-            await _state.WriteStateAsync();
-            
-            // Notify other grains
-            var notificationGrain = GrainFactory.GetGrain<INotificationGrain>(state.Id);
-            await notificationGrain.SendUserUpdatedNotificationAsync();
-            
-            _logger.LogInformation("User {UserId} updated successfully", state.Id);
+            _state.State.Name = command.Name;
+        }
+        
+        // Add activity
+        _state.State.Activities.Add(new UserActivity
+        {
+            Type = "ProfileUpdated",
+            Description = "Profile information was updated",
+            Timestamp = DateTime.UtcNow
         });
+        
+        // Keep only last 100 activities
+        if (_state.State.Activities.Count > 100)
+        {
+            _state.State.Activities = _state.State.Activities
+                .OrderByDescending(a => a.Timestamp)
+                .Take(100)
+                .ToList();
+        }
+        
+        // Persist state
+        await _state.WriteStateAsync();
+        
+        _logger.LogInformation("User {UserId} updated", _state.State.Id);
+        
+        return Result<UserState>.Succeed(_state.State);
     }
     
     public async Task<Result> ChangePasswordAsync(string currentPassword, string newPassword)
@@ -1412,56 +1615,55 @@ public class UserGrain : Grain, IUserGrain
         }
         
         // Validate new password
+        if (string.IsNullOrWhiteSpace(newPassword))
+        {
+            return Result.FailValidation(("password", "Password cannot be empty"));
+        }
+        
         if (newPassword.Length < 8)
         {
-            return Result.FailValidation(
-                ("password", "Password must be at least 8 characters")
-            );
+            return Result.FailValidation(("password", "Password must be at least 8 characters"));
+        }
+        
+        if (!newPassword.Any(char.IsDigit))
+        {
+            return Result.FailValidation(("password", "Password must contain at least one digit"));
+        }
+        
+        if (!newPassword.Any(char.IsUpper))
+        {
+            return Result.FailValidation(("password", "Password must contain at least one uppercase letter"));
         }
         
         // Update password
         _state.State.PasswordHash = _passwordHasher.HashPassword(newPassword);
-        _state.State.PasswordChangedAt = DateTime.UtcNow;
-        _state.State.UpdatedAt = DateTime.UtcNow;
         
+        // Add activity
+        _state.State.Activities.Add(new UserActivity
+        {
+            Type = "PasswordChanged",
+            Description = "Password was changed",
+            Timestamp = DateTime.UtcNow
+        });
+        
+        // Persist state
         await _state.WriteStateAsync();
         
         // Invalidate all sessions
         var sessionGrain = GrainFactory.GetGrain<ISessionManagerGrain>(_state.State.Id);
         await sessionGrain.InvalidateAllSessionsAsync();
         
+        _logger.LogInformation("User {UserId} changed password", _state.State.Id);
+        
         return Result.Succeed();
     }
     
-    public async Task<CollectionResult<Activity>> GetUserActivitiesAsync(int page, int pageSize)
+    public async Task<CollectionResult<UserActivity>> GetActivitiesAsync(int page, int pageSize)
     {
         if (!_state.RecordExists)
         {
-            return CollectionResult<Activity>.FailNotFound(
+            return CollectionResult<UserActivity>.FailNotFound(
                 $"User {this.GetPrimaryKey()} not found"
-            );
-        }
-        
-        // Get activities from activity grain
-        var activityGrain = GrainFactory.GetGrain<IActivityGrain>(_state.State.Id);
-        return await activityGrain.GetActivitiesAsync(page, pageSize);
-    }
-}
-
-// Supporting grain for activities
-public class ActivityGrain : Grain, IActivityGrain
-{
-    private readonly IPersistentState<ActivityState> _state;
-    
-    public async Task<CollectionResult<Activity>> GetActivitiesAsync(int page, int pageSize)
-    {
-        if (!_state.RecordExists || _state.State.Activities.Count == 0)
-        {
-            return CollectionResult<Activity>.Succeed(
-                Array.Empty<Activity>(),
-                page,
-                pageSize,
-                0
             );
         }
         
@@ -1469,9 +1671,9 @@ public class ActivityGrain : Grain, IActivityGrain
             .OrderByDescending(a => a.Timestamp)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToArray();
+            .ToList();
         
-        return CollectionResult<Activity>.Succeed(
+        return CollectionResult<UserActivity>.Succeed(
             activities,
             page,
             pageSize,
@@ -1481,433 +1683,601 @@ public class ActivityGrain : Grain, IActivityGrain
 }
 ```
 
-## 🔔 SignalR Integration
+## SignalR Integration
 
-### Hub Implementation with Result Pattern
+### Hub Implementation
 
 ```csharp
-public class ChatHub : Hub
+public class NotificationHub : Hub
 {
-    private readonly IChatService _chatService;
+    private readonly INotificationService _notificationService;
     private readonly IUserService _userService;
-    private readonly ILogger<ChatHub> _logger;
+    private readonly ILogger<NotificationHub> _logger;
     
-    public ChatHub(
-        IChatService chatService,
+    public NotificationHub(
+        INotificationService notificationService,
         IUserService userService,
-        ILogger<ChatHub> logger)
+        ILogger<NotificationHub> logger)
     {
-        _chatService = chatService;
+        _notificationService = notificationService;
         _userService = userService;
         _logger = logger;
     }
     
-    public async Task<Result> JoinRoom(string roomId)
+    public override async Task OnConnectedAsync()
     {
         var userId = Context.UserIdentifier;
         if (string.IsNullOrEmpty(userId))
         {
-            return Result.FailUnauthorized("You must be logged in to join a room");
+            Context.Abort();
+            return;
         }
         
-        // Check if user has access to the room
-        var accessResult = await _chatService.CheckRoomAccessAsync(userId, roomId);
-        if (accessResult.IsFailed)
+        _logger.LogInformation("User {UserId} connected to notifications", userId);
+        
+        // Add to user's personal group
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"user-{userId}");
+        
+        // Add to role-based groups
+        var userRoles = await _userService.GetUserRolesAsync(userId);
+        foreach (var role in userRoles)
         {
-            return accessResult;
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"role-{role}");
         }
         
-        // Add to SignalR group
-        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-        
-        // Notify others in the room
-        await Clients.OthersInGroup(roomId).SendAsync("UserJoined", new
+        // Send any pending notifications
+        var pendingNotifications = await _notificationService.GetPendingNotificationsAsync(userId);
+        if (pendingNotifications.Any())
         {
-            userId,
-            username = Context.User?.Identity?.Name,
-            timestamp = DateTime.UtcNow
-        });
-        
-        _logger.LogInformation("User {UserId} joined room {RoomId}", userId, roomId);
-        
-        return Result.Succeed();
-    }
-    
-    public async Task<Result> SendMessage(SendMessageDto dto)
-    {
-        // Validate message
-        if (string.IsNullOrWhiteSpace(dto.Message))
-        {
-            return Result.FailValidation(("message", "Message cannot be empty"));
-        }
-        
-        if (dto.Message.Length > 1000)
-        {
-            return Result.FailValidation(
-                ("message", "Message cannot exceed 1000 characters")
-            );
-        }
-        
-        var userId = Context.UserIdentifier;
-        
-        // Check if user can send messages in this room
-        var canSend = await _chatService.CanUserSendMessageAsync(userId, dto.RoomId);
-        if (!canSend)
-        {
-            return Result.FailForbidden(
-                "You don't have permission to send messages in this room"
-            );
-        }
-        
-        // Save message
-        var message = new ChatMessage
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Username = Context.User?.Identity?.Name ?? "Anonymous",
-            RoomId = dto.RoomId,
-            Text = dto.Message,
-            Timestamp = DateTime.UtcNow
-        };
-        
-        await _chatService.SaveMessageAsync(message);
-        
-        // Broadcast to room
-        await Clients.Group(dto.RoomId).SendAsync("ReceiveMessage", message);
-        
-        return Result.Succeed();
-    }
-    
-    public async Task<Result<List<ChatMessage>>> GetRoomHistory(
-        string roomId, 
-        int? limit = 50)
-    {
-        var userId = Context.UserIdentifier;
-        
-        // Check access
-        var hasAccess = await _chatService.HasRoomAccessAsync(userId, roomId);
-        if (!hasAccess)
-        {
-            return Result<List<ChatMessage>>.FailForbidden(
-                "You don't have access to this room"
-            );
-        }
-        
-        var messages = await _chatService.GetRoomHistoryAsync(roomId, limit ?? 50);
-        return Result<List<ChatMessage>>.Succeed(messages);
-    }
-    
-    public async Task<CollectionResult<Room>> GetAvailableRooms(
-        int page = 1, 
-        int pageSize = 20)
-    {
-        var userId = Context.UserIdentifier;
-        return await _chatService.GetAvailableRoomsAsync(userId, page, pageSize);
-    }
-    
-    public async Task<Result> LeaveRoom(string roomId)
-    {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
-        
-        await Clients.OthersInGroup(roomId).SendAsync("UserLeft", new
-        {
-            userId = Context.UserIdentifier,
-            timestamp = DateTime.UtcNow
-        });
-        
-        return Result.Succeed();
-    }
-    
-    public override async Task OnConnectedAsync()
-    {
-        _logger.LogInformation(
-            "User {UserId} connected with connection {ConnectionId}",
-            Context.UserIdentifier,
-            Context.ConnectionId
-        );
-        
-        // Auto-join user to their personal notification channel
-        if (!string.IsNullOrEmpty(Context.UserIdentifier))
-        {
-            await Groups.AddToGroupAsync(
-                Context.ConnectionId, 
-                $"user-{Context.UserIdentifier}"
-            );
+            await Clients.Caller.SendAsync("PendingNotifications", pendingNotifications);
         }
         
         await base.OnConnectedAsync();
     }
     
+    public async Task<Result> MarkAsRead(Guid notificationId)
+    {
+        var userId = Context.UserIdentifier;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Result.FailUnauthorized("User not authenticated");
+        }
+        
+        var result = await _notificationService.MarkAsReadAsync(userId, notificationId);
+        
+        if (result.IsSuccess)
+        {
+            // Notify other connections of the same user
+            await Clients.OthersInGroup($"user-{userId}")
+                .SendAsync("NotificationRead", notificationId);
+        }
+        
+        return result;
+    }
+    
+    public async Task<Result> MarkAllAsRead()
+    {
+        var userId = Context.UserIdentifier;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Result.FailUnauthorized("User not authenticated");
+        }
+        
+        var result = await _notificationService.MarkAllAsReadAsync(userId);
+        
+        if (result.IsSuccess)
+        {
+            await Clients.OthersInGroup($"user-{userId}")
+                .SendAsync("AllNotificationsRead");
+        }
+        
+        return result;
+    }
+    
+    public async Task<CollectionResult<NotificationDto>> GetNotifications(
+        int page = 1,
+        int pageSize = 20,
+        bool unreadOnly = false)
+    {
+        var userId = Context.UserIdentifier;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return CollectionResult<NotificationDto>.FailUnauthorized("User not authenticated");
+        }
+        
+        return await _notificationService.GetNotificationsAsync(userId, page, pageSize, unreadOnly);
+    }
+    
+    public async Task<Result> SubscribeToTopic(string topic)
+    {
+        var userId = Context.UserIdentifier;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Result.FailUnauthorized("User not authenticated");
+        }
+        
+        // Validate topic
+        if (!await _notificationService.IsValidTopicAsync(topic))
+        {
+            return Result.FailBadRequest($"Invalid topic: {topic}");
+        }
+        
+        // Check permissions
+        if (!await _userService.CanSubscribeToTopicAsync(userId, topic))
+        {
+            return Result.FailForbidden($"You don't have permission to subscribe to {topic}");
+        }
+        
+        // Add to topic group
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"topic-{topic}");
+        
+        // Save subscription
+        await _notificationService.SubscribeToTopicAsync(userId, topic);
+        
+        _logger.LogInformation("User {UserId} subscribed to topic {Topic}", userId, topic);
+        
+        return Result.Succeed();
+    }
+    
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        var userId = Context.UserIdentifier;
+        
         if (exception != null)
         {
-            _logger.LogError(
-                exception,
-                "User {UserId} disconnected with error",
-                Context.UserIdentifier
-            );
+            _logger.LogError(exception, "User {UserId} disconnected with error", userId);
         }
         else
         {
-            _logger.LogInformation(
-                "User {UserId} disconnected normally",
-                Context.UserIdentifier
-            );
+            _logger.LogInformation("User {UserId} disconnected", userId);
         }
         
         await base.OnDisconnectedAsync(exception);
     }
 }
+
+// Service to send notifications
+public class NotificationSender
+{
+    private readonly IHubContext<NotificationHub> _hubContext;
+    
+    public NotificationSender(IHubContext<NotificationHub> hubContext)
+    {
+        _hubContext = hubContext;
+    }
+    
+    public async Task SendToUserAsync(string userId, NotificationDto notification)
+    {
+        await _hubContext.Clients
+            .Group($"user-{userId}")
+            .SendAsync("NewNotification", notification);
+    }
+    
+    public async Task SendToRoleAsync(string role, NotificationDto notification)
+    {
+        await _hubContext.Clients
+            .Group($"role-{role}")
+            .SendAsync("NewNotification", notification);
+    }
+    
+    public async Task SendToTopicAsync(string topic, NotificationDto notification)
+    {
+        await _hubContext.Clients
+            .Group($"topic-{topic}")
+            .SendAsync("NewNotification", notification);
+    }
+    
+    public async Task BroadcastAsync(NotificationDto notification)
+    {
+        await _hubContext.Clients
+            .All
+            .SendAsync("Broadcast", notification);
+    }
+}
 ```
 
-### Hub Filters for Global Error Handling
+## Validation Handling
+
+### Creating Validation Errors
 
 ```csharp
-public class CommunicationHubFilter : IHubFilter
+public Result<User> CreateUser(CreateUserDto dto)
 {
-    private readonly ILogger<CommunicationHubFilter> _logger;
+    var errors = new List<(string field, string message)>();
     
-    public CommunicationHubFilter(ILogger<CommunicationHubFilter> logger)
+    // Validate email
+    if (string.IsNullOrWhiteSpace(dto.Email))
     {
+        errors.Add(("email", "Email is required"));
+    }
+    else if (!IsValidEmail(dto.Email))
+    {
+        errors.Add(("email", "Email format is invalid"));
+    }
+    
+    // Validate password
+    if (string.IsNullOrWhiteSpace(dto.Password))
+    {
+        errors.Add(("password", "Password is required"));
+    }
+    else
+    {
+        if (dto.Password.Length < 8)
+        {
+            errors.Add(("password", "Password must be at least 8 characters"));
+        }
+        if (!dto.Password.Any(char.IsDigit))
+        {
+            errors.Add(("password", "Password must contain at least one digit"));
+        }
+        if (!dto.Password.Any(char.IsUpper))
+        {
+            errors.Add(("password", "Password must contain at least one uppercase letter"));
+        }
+    }
+    
+    // Validate age
+    if (dto.Age < 18)
+    {
+        errors.Add(("age", "You must be 18 or older"));
+    }
+    
+    // Return validation errors if any
+    if (errors.Any())
+    {
+        return Result<User>.FailValidation(errors.ToArray());
+    }
+    
+    // Continue with user creation...
+}
+```
+
+### Using FluentValidation
+
+```csharp
+public class CreateUserValidator : AbstractValidator<CreateUserDto>
+{
+    public CreateUserValidator()
+    {
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required")
+            .EmailAddress().WithMessage("Email format is invalid");
+        
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password is required")
+            .MinimumLength(8).WithMessage("Password must be at least 8 characters")
+            .Matches(@"[A-Z]").WithMessage("Password must contain at least one uppercase letter")
+            .Matches(@"[a-z]").WithMessage("Password must contain at least one lowercase letter")
+            .Matches(@"[0-9]").WithMessage("Password must contain at least one digit")
+            .Matches(@"[!@#$%^&*]").WithMessage("Password must contain at least one special character");
+        
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("Name is required")
+            .Length(2, 100).WithMessage("Name must be between 2 and 100 characters");
+        
+        RuleFor(x => x.Age)
+            .GreaterThanOrEqualTo(18).WithMessage("You must be 18 or older");
+        
+        RuleFor(x => x.PhoneNumber)
+            .Matches(@"^\+?[1-9]\d{1,14}$").When(x => !string.IsNullOrEmpty(x.PhoneNumber))
+            .WithMessage("Invalid phone number format");
+    }
+}
+
+// In service
+public async Task<Result<User>> CreateUserAsync(CreateUserDto dto)
+{
+    var validationResult = await _validator.ValidateAsync(dto);
+    
+    if (!validationResult.IsValid)
+    {
+        return Result<User>.FailValidation(
+            validationResult.Errors
+                .Select(e => (e.PropertyName, e.ErrorMessage))
+                .ToArray()
+        );
+    }
+    
+    // Continue with user creation...
+}
+```
+
+### Accessing Validation Errors
+
+```csharp
+var result = CreateUser(dto);
+
+if (result.IsFailed && result.Problem.StatusCode == 400)
+{
+    // Get validation errors
+    var errors = result.Problem.GetValidationErrors();
+    
+    if (errors != null)
+    {
+        foreach (var (field, messages) in errors)
+        {
+            Console.WriteLine($"{field}:");
+            foreach (var message in messages)
+            {
+                Console.WriteLine($"  - {message}");
+            }
+        }
+    }
+}
+
+// Or check specific field
+if (result.HasProblem && result.Problem.HasValidationError("email"))
+{
+    var emailErrors = result.Problem.GetValidationErrors("email");
+    // Handle email errors
+}
+```
+
+## Error Handling Strategies
+
+### Global Error Handler
+
+```csharp
+public class GlobalErrorHandlingMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalErrorHandlingMiddleware> _logger;
+    
+    public GlobalErrorHandlingMiddleware(
+        RequestDelegate next,
+        ILogger<GlobalErrorHandlingMiddleware> logger)
+    {
+        _next = next;
         _logger = logger;
     }
     
-    public async ValueTask<object?> InvokeMethodAsync(
-        HubInvocationContext invocationContext,
-        Func<HubInvocationContext, ValueTask<object?>> next)
+    public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            var result = await next(invocationContext);
-            
-            // If the result is a failed Result, log it
-            if (result is IResult res && res.IsFailed && res.HasProblem)
-            {
-                _logger.LogWarning(
-                    "Hub method {MethodName} failed with problem: {ProblemTitle}",
-                    invocationContext.HubMethodName,
-                    res.Problem?.Title
-                );
-            }
-            
-            return result;
+            await _next(context);
         }
         catch (Exception ex)
         {
-            _logger.LogError(
-                ex,
-                "Hub method {MethodName} threw exception",
-                invocationContext.HubMethodName
-            );
-            
-            // Convert exception to Result
-            return Result.Fail(ex);
-        }
-    }
-}
-```
-
-## ⚡ Performance & Benchmarks
-
-### Why Exceptions Are Slow
-
-When you throw an exception in .NET:
-1. **Stack Trace Capture** - The runtime walks the entire call stack
-2. **Stack Unwinding** - Each frame is unwound looking for catch blocks
-3. **Object Allocation** - Exception objects are allocated on the heap
-4. **Finally Blocks** - All finally blocks must execute
-5. **Debugger Hooks** - Debugger notification overhead
-
-### Benchmark Results
-
-```csharp
-[MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net80)]
-public class ResultVsExceptionBenchmark
-{
-    [Benchmark]
-    public User GetUser_WithException()
-    {
-        try
-        {
-            throw new NotFoundException("User not found");
-        }
-        catch (NotFoundException)
-        {
-            return null;
+            _logger.LogError(ex, "Unhandled exception occurred");
+            await HandleExceptionAsync(context, ex);
         }
     }
     
-    [Benchmark]
-    public Result<User> GetUser_WithResult()
+    private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        return Result<User>.FailNotFound("User not found");
+        var problem = exception switch
+        {
+            ProblemException problemEx => problemEx.Problem,
+            ValidationException validationEx => Problem.CreateValidation(
+                validationEx.Errors.Select(e => (e.PropertyName, new[] { e.ErrorMessage }))
+            ),
+            UnauthorizedAccessException => Problem.Create(
+                "Unauthorized",
+                "You are not authorized to perform this action",
+                401
+            ),
+            KeyNotFoundException or FileNotFoundException => Problem.Create(
+                "Not Found",
+                exception.Message,
+                404
+            ),
+            TimeoutException => Problem.Create(
+                "Request Timeout",
+                "The operation timed out",
+                408
+            ),
+            _ => Problem.Create(
+                "Internal Server Error",
+                "An unexpected error occurred",
+                500
+            )
+        };
+        
+        // Add additional context
+        problem.Extensions["traceId"] = context.TraceIdentifier;
+        problem.Extensions["timestamp"] = DateTime.UtcNow;
+        
+        context.Response.StatusCode = problem.StatusCode;
+        context.Response.ContentType = "application/problem+json";
+        
+        await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
     }
 }
 ```
 
-**Results on .NET 8.0:**
+### Retry Strategy with Results
 
-| Method | Mean | Error | StdDev | Ratio | Allocated |
-|--------|------|-------|--------|-------|-----------|
-| GetUser_WithException | 5,847.2 ns | 98.45 ns | 92.09 ns | 1,000.00 | 352 B |
-| GetUser_WithResult | 5.7 ns | 0.14 ns | 0.13 ns | 1.00 | 24 B |
+```csharp
+public static class ResultRetryExtensions
+{
+    public static async Task<Result<T>> RetryAsync<T>(
+        Func<Task<Result<T>>> operation,
+        int maxAttempts = 3,
+        TimeSpan? delay = null)
+    {
+        delay ??= TimeSpan.FromSeconds(1);
+        
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var result = await operation();
+            
+            if (result.IsSuccess)
+            {
+                return result;
+            }
+            
+            // Don't retry on client errors (4xx)
+            if (result.Problem.StatusCode >= 400 && result.Problem.StatusCode < 500)
+            {
+                return result;
+            }
+            
+            // Last attempt, return the failure
+            if (attempt == maxAttempts)
+            {
+                return result;
+            }
+            
+            // Wait before retrying (with exponential backoff)
+            var waitTime = TimeSpan.FromMilliseconds(delay.Value.TotalMilliseconds * Math.Pow(2, attempt - 1));
+            await Task.Delay(waitTime);
+        }
+        
+        return Result<T>.Fail("Max retries exceeded");
+    }
+}
 
-**That's a 1,025x performance improvement!**
+// Usage
+var result = await ResultRetryExtensions.RetryAsync(
+    async () => await _httpClient.GetDataAsync(),
+    maxAttempts: 3,
+    delay: TimeSpan.FromSeconds(1)
+);
+```
 
-### Real-World Impact
-
-In a high-throughput API handling 10,000 requests/second where 20% result in errors:
-
-- **With Exceptions**: 2,000 errors × 5,847ns = 11.7ms overhead per second
-- **With Results**: 2,000 errors × 5.7ns = 0.011ms overhead per second
-
-That's 11.7ms of CPU time saved every second, which can handle ~2,000 additional requests!
-
-## 🧪 Testing Strategies
+## Testing
 
 ### Unit Testing with Results
 
-The Result pattern makes testing significantly cleaner:
-
 ```csharp
-public class ProductServiceTests
+public class UserServiceTests
 {
-    private readonly Mock<IProductRepository> _repositoryMock;
-    private readonly Mock<ICacheService> _cacheMock;
-    private readonly ProductService _service;
+    private readonly Mock<IUserRepository> _repositoryMock;
+    private readonly Mock<IEmailService> _emailServiceMock;
+    private readonly UserService _service;
     
-    public ProductServiceTests()
+    public UserServiceTests()
     {
-        _repositoryMock = new Mock<IProductRepository>();
-        _cacheMock = new Mock<ICacheService>();
-        _service = new ProductService(_repositoryMock.Object, _cacheMock.Object);
+        _repositoryMock = new Mock<IUserRepository>();
+        _emailServiceMock = new Mock<IEmailService>();
+        _service = new UserService(_repositoryMock.Object, _emailServiceMock.Object);
     }
     
     [Fact]
-    public async Task GetByIdAsync_WhenProductExists_ReturnsSuccess()
+    public async Task GetUser_WhenUserExists_ReturnsSuccess()
     {
         // Arrange
-        var productId = 123;
-        var expectedProduct = new Product 
+        var userId = 123;
+        var expectedUser = new User 
         { 
-            Id = productId, 
-            Name = "Test Product",
-            Price = 99.99m
+            Id = userId, 
+            Name = "John Doe",
+            Email = "john@example.com" 
         };
         
         _repositoryMock
-            .Setup(x => x.FindByIdAsync(productId))
-            .ReturnsAsync(expectedProduct);
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync(expectedUser);
         
         // Act
-        var result = await _service.GetByIdAsync(productId);
+        var result = await _service.GetUserAsync(userId);
         
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value.Id.Should().Be(productId);
-        result.Value.Name.Should().Be("Test Product");
-        result.Value.Price.Should().Be(99.99m);
-        
-        // Verify caching occurred
-        _cacheMock.Verify(
-            x => x.SetAsync(
-                $"product:{productId}",
-                It.IsAny<ProductDto>(),
-                It.IsAny<TimeSpan>()
-            ),
-            Times.Once
-        );
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal(userId, result.Value.Id);
+        Assert.Equal("John Doe", result.Value.Name);
+        Assert.Equal("john@example.com", result.Value.Email);
     }
     
     [Fact]
-    public async Task GetByIdAsync_WhenProductNotFound_ReturnsNotFound()
+    public async Task GetUser_WhenUserNotFound_ReturnsNotFound()
     {
         // Arrange
-        var productId = 999;
+        var userId = 999;
         _repositoryMock
-            .Setup(x => x.FindByIdAsync(productId))
-            .ReturnsAsync((Product?)null);
+            .Setup(x => x.FindByIdAsync(userId))
+            .ReturnsAsync((User?)null);
         
         // Act
-        var result = await _service.GetByIdAsync(productId);
+        var result = await _service.GetUserAsync(userId);
         
         // Assert
-        // Verify the result indicates failure
-        if (result.IsFailed && result.HasProblem)
-        {
-            Console.WriteLine($"Product not found: {result.Problem.Detail}");
-            // HTTP 404 status code for API responses
-            // Title: "Not Found"
-        }
-        
-        // Verify no caching occurred
-        _cacheMock.Verify(
-            x => x.SetAsync(
-                It.IsAny<string>(),
-                It.IsAny<ProductDto>(),
-                It.IsAny<TimeSpan>()
-            ),
-            Times.Never
-        );
+        Assert.True(result.IsFailed);
+        Assert.True(result.HasProblem);
+        Assert.Equal(404, result.Problem.StatusCode);
+        Assert.Equal("Not Found", result.Problem.Title);
+        Assert.Contains("999", result.Problem.Detail);
     }
     
     [Fact]
-    public async Task CreateAsync_WithDuplicateSku_ReturnsConflict()
+    public async Task CreateUser_WithInvalidEmail_ReturnsValidationError()
     {
         // Arrange
-        var dto = new CreateProductDto
+        var dto = new CreateUserDto
         {
-            Sku = "EXISTING-SKU",
-            Name = "New Product",
-            Price = 49.99m
+            Email = "invalid-email",
+            Name = "John Doe",
+            Password = "Password123!"
+        };
+        
+        // Act
+        var result = await _service.CreateUserAsync(dto);
+        
+        // Assert
+        Assert.True(result.IsFailed);
+        Assert.Equal(400, result.Problem.StatusCode);
+        
+        var errors = result.Problem.GetValidationErrors();
+        Assert.NotNull(errors);
+        Assert.ContainsKey("email", errors);
+        Assert.Contains("Email format is invalid", errors["email"]);
+    }
+    
+    [Fact]
+    public async Task CreateUser_WithDuplicateEmail_ReturnsConflict()
+    {
+        // Arrange
+        var dto = new CreateUserDto
+        {
+            Email = "existing@example.com",
+            Name = "John Doe",
+            Password = "Password123!"
         };
         
         _repositoryMock
-            .Setup(x => x.FindBySkuAsync(dto.Sku))
-            .ReturnsAsync(new Product { Sku = dto.Sku });
+            .Setup(x => x.ExistsByEmailAsync(dto.Email))
+            .ReturnsAsync(true);
         
         // Act
-        var result = await _service.CreateAsync(dto);
+        var result = await _service.CreateUserAsync(dto);
         
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.StatusCode.Should().Be(409);
-        result.Problem.Title.Should().Be("Duplicate Product");
-        result.Problem.Detail.Should().Contain($"SKU '{dto.Sku}' already exists");
+        Assert.True(result.IsFailed);
+        Assert.Equal(409, result.Problem.StatusCode);
+        Assert.Equal("Email Already Taken", result.Problem.Title);
     }
     
     [Theory]
-    [InlineData("", "Name is required")]
-    [InlineData("A", "Name must be at least 3 characters")]
-    public async Task CreateAsync_WithInvalidName_ReturnsValidationError(
-        string name, 
+    [InlineData("", "Password is required")]
+    [InlineData("short", "Password must be at least 8 characters")]
+    [InlineData("nouppercasehere", "Password must contain at least one uppercase letter")]
+    [InlineData("NOLOWERCASEHERE", "Password must contain at least one lowercase letter")]
+    [InlineData("NoDigitsHere", "Password must contain at least one digit")]
+    public async Task CreateUser_WithInvalidPassword_ReturnsValidationError(
+        string password,
         string expectedError)
     {
         // Arrange
-        var dto = new CreateProductDto
+        var dto = new CreateUserDto
         {
-            Sku = "NEW-SKU",
-            Name = name,
-            Price = 29.99m
+            Email = "test@example.com",
+            Name = "John Doe",
+            Password = password
         };
         
-        var validator = new CreateProductValidator();
-        _service = new ProductService(_repositoryMock.Object, validator, _cacheMock.Object);
-        
         // Act
-        var result = await _service.CreateAsync(dto);
+        var result = await _service.CreateUserAsync(dto);
         
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Title.Should().Be("Validation Failed");
+        Assert.True(result.IsFailed);
+        Assert.Equal(400, result.Problem.StatusCode);
         
         var errors = result.Problem.GetValidationErrors();
-        errors.Should().ContainKey("Name");
-        errors!["Name"].Should().Contain(expectedError);
+        Assert.NotNull(errors);
+        Assert.ContainsKey("password", errors);
+        Assert.Contains(expectedError, errors["password"]);
     }
 }
 ```
@@ -1915,12 +2285,12 @@ public class ProductServiceTests
 ### Integration Testing
 
 ```csharp
-public class ProductsApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public class UserApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
     
-    public ProductsApiIntegrationTests(WebApplicationFactory<Program> factory)
+    public UserApiIntegrationTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
@@ -1932,6 +2302,10 @@ public class ProductsApiIntegrationTests : IClassFixture<WebApplicationFactory<P
                 {
                     options.UseInMemoryDatabase("TestDb");
                 });
+                
+                // Replace external services with mocks
+                services.RemoveAll<IEmailService>();
+                services.AddSingleton<IEmailService>(new Mock<IEmailService>().Object);
             });
         });
         
@@ -1939,240 +2313,473 @@ public class ProductsApiIntegrationTests : IClassFixture<WebApplicationFactory<P
     }
     
     [Fact]
-    public async Task GetProduct_ReturnsCorrectResponse()
+    public async Task GetUser_ReturnsUser_WhenExists()
     {
         // Arrange
-        await SeedProduct(new Product { Id = 1, Name = "Test Product" });
+        await SeedUser(new User { Id = 1, Name = "Test User", Email = "test@example.com" });
         
         // Act
-        var response = await _client.GetAsync("/api/products/1");
+        var response = await _client.GetAsync("/api/users/1");
         
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.EnsureSuccessStatusCode();
         
-        var result = await response.Content.ReadFromJsonAsync<Result<ProductDto>>();
-        result.Should().NotBeNull();
-        result!.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value!.Name.Should().Be("Test Product");
+        var content = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<Result<UserDto>>(content);
+        
+        Assert.NotNull(result);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Value);
+        Assert.Equal("Test User", result.Value.Name);
     }
     
     [Fact]
-    public async Task CreateProduct_WithValidData_Returns201()
+    public async Task GetUser_Returns404_WhenNotExists()
     {
-        // Arrange
-        var newProduct = new CreateProductDto
-        {
-            Sku = "NEW-001",
-            Name = "New Product",
-            Description = "A brand new product",
-            Price = 99.99m,
-            Category = "Electronics"
-        };
-        
         // Act
-        var response = await _client.PostAsJsonAsync("/api/products", newProduct);
+        var response = await _client.GetAsync("/api/users/999");
         
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        response.Headers.Location.Should().NotBeNull();
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         
-        var result = await response.Content.ReadFromJsonAsync<Result<ProductDto>>();
-        result!.IsSuccess.Should().BeTrue();
-        result.Value!.Sku.Should().Be("NEW-001");
+        var content = await response.Content.ReadAsStringAsync();
+        var problem = JsonSerializer.Deserialize<ProblemDetails>(content);
+        
+        Assert.NotNull(problem);
+        Assert.Equal(404, problem.Status);
+        Assert.Equal("Not Found", problem.Title);
     }
     
     [Fact]
-    public async Task CreateProduct_WithInvalidData_Returns400WithProblemDetails()
+    public async Task CreateUser_ReturnsCreated_WhenValid()
     {
         // Arrange
-        var invalidProduct = new CreateProductDto
+        var newUser = new CreateUserDto
         {
-            Sku = "", // Invalid
-            Name = "A", // Too short
-            Price = -10 // Negative
+            Email = "new@example.com",
+            Name = "New User",
+            Password = "Password123!"
         };
         
         // Act
-        var response = await _client.PostAsJsonAsync("/api/products", invalidProduct);
+        var response = await _client.PostAsJsonAsync("/api/users", newUser);
         
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
         
-        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
-        problem.Should().NotBeNull();
-        problem!.Status.Should().Be(400);
-        problem.Title.Should().Be("Validation Failed");
-        problem.Errors.Should().ContainKey("Sku");
-        problem.Errors.Should().ContainKey("Name");
-        problem.Errors.Should().ContainKey("Price");
+        var content = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<Result<UserDto>>(content);
+        
+        Assert.NotNull(result);
+        Assert.True(result.IsSuccess);
+        Assert.Equal("new@example.com", result.Value.Email);
+    }
+    
+    [Fact]
+    public async Task CreateUser_Returns400_WhenInvalid()
+    {
+        // Arrange
+        var invalidUser = new CreateUserDto
+        {
+            Email = "", // Invalid
+            Name = "", // Invalid
+            Password = "123" // Invalid
+        };
+        
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/users", invalidUser);
+        
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        
+        var content = await response.Content.ReadAsStringAsync();
+        var problem = JsonSerializer.Deserialize<ValidationProblemDetails>(content);
+        
+        Assert.NotNull(problem);
+        Assert.Equal(400, problem.Status);
+        Assert.Equal("Validation Failed", problem.Title);
+        Assert.NotEmpty(problem.Errors);
+        Assert.ContainsKey("email", problem.Errors);
+        Assert.ContainsKey("name", problem.Errors);
+        Assert.ContainsKey("password", problem.Errors);
     }
 }
 ```
 
-### Custom Test Assertions
+## Performance
+
+### Benchmark Results
 
 ```csharp
-public static class ResultAssertions
+[MemoryDiagnoser]
+[SimpleJob(RuntimeMoniker.Net80)]
+public class ResultVsExceptionBenchmark
 {
-    public static ResultAssertions<T> Should<T>(this Result<T> result)
+    [Benchmark]
+    public void ThrowException()
     {
-        return new ResultAssertions<T>(result);
+        try
+        {
+            throw new InvalidOperationException("Operation failed");
+        }
+        catch (InvalidOperationException)
+        {
+            // Handle exception
+        }
+    }
+    
+    [Benchmark]
+    public void ReturnResult()
+    {
+        var result = Result.Fail("Operation failed");
+        if (result.IsFailed)
+        {
+            // Handle failure
+        }
+    }
+}
+```
+
+Results show that returning a Result is significantly faster than throwing an exception:
+
+| Method | Mean | Error | StdDev | Allocated |
+|--------|------|-------|--------|-----------|
+| ThrowException | 5,847 ns | 98 ns | 92 ns | 352 B |
+| ReturnResult | 6 ns | 0.1 ns | 0.1 ns | 24 B |
+
+## Best Practices
+
+### 1. Use Specific Failure Methods
+
+```csharp
+// Good - Specific and clear
+return Result.FailNotFound($"User {id} not found");
+return Result.FailUnauthorized("Invalid credentials");
+return Result.FailValidation(("email", "Invalid format"));
+
+// Bad - Generic
+return Result.Fail("Error");
+return Result.Fail("Something went wrong");
+```
+
+### 2. Include Context in Error Messages
+
+```csharp
+// Good - Provides context
+return Result.Fail(
+    "Payment Failed",
+    $"Unable to charge ${amount:C} to card ending in {card.Last4}. Bank declined with code: {declineCode}",
+    HttpStatusCode.PaymentRequired
+);
+
+// Bad - No context
+return Result.Fail("Payment failed");
+```
+
+### 3. Use Railway Programming for Complex Flows
+
+```csharp
+// Good - Clean and readable
+return await ValidateInput(request)
+    .BindAsync(r => ProcessPayment(r))
+    .BindAsync(p => SaveOrder(p))
+    .MapAsync(o => o.ToDto());
+
+// Bad - Nested if statements
+var validateResult = await ValidateInput(request);
+if (validateResult.IsFailed)
+    return Result<OrderDto>.Fail(validateResult.Problem);
+
+var paymentResult = await ProcessPayment(validateResult.Value);
+if (paymentResult.IsFailed)
+    return Result<OrderDto>.Fail(paymentResult.Problem);
+
+var orderResult = await SaveOrder(paymentResult.Value);
+if (orderResult.IsFailed)
+    return Result<OrderDto>.Fail(orderResult.Problem);
+
+return Result<OrderDto>.Succeed(orderResult.Value.ToDto());
+```
+
+### 4. Don't Mix Exceptions and Results
+
+```csharp
+// Bad - Mixing patterns
+public Result<User> GetUser(int id)
+{
+    try
+    {
+        var user = _repository.FindById(id); // May throw
+        if (user == null)
+            return Result<User>.FailNotFound($"User {id} not found");
+        return Result<User>.Succeed(user);
+    }
+    catch (Exception ex)
+    {
+        throw; // Don't throw when returning Result
     }
 }
 
-public class ResultAssertions<T>
+// Good - Consistent Result pattern
+public Result<User> GetUser(int id)
 {
-    private readonly Result<T> _result;
-    
-    public ResultAssertions(Result<T> result)
+    return Result.Try(() =>
     {
-        _result = result;
-    }
-    
-    public AndConstraint<ResultAssertions<T>> BeSuccess()
-    {
-        Execute.Assertion
-            .ForCondition(_result.IsSuccess)
-            .FailWith("Expected result to be successful, but it was failed");
-        
-        return new AndConstraint<ResultAssertions<T>>(this);
-    }
-    
-    public AndConstraint<ResultAssertions<T>> BeFailed()
-    {
-        Execute.Assertion
-            .ForCondition(_result.IsFailed)
-            .FailWith("Expected result to be failed, but it was successful");
-        
-        return new AndConstraint<ResultAssertions<T>>(this);
-    }
-    
-    public AndConstraint<ResultAssertions<T>> HaveStatusCode(int statusCode)
-    {
-        Execute.Assertion
-            .ForCondition(_result.Problem?.StatusCode == statusCode)
-            .FailWith($"Expected status code {statusCode}, but got {_result.Problem?.StatusCode}");
-        
-        return new AndConstraint<ResultAssertions<T>>(this);
-    }
-    
-    public AndConstraint<ResultAssertions<T>> HaveErrorCode<TEnum>(TEnum errorCode) 
-        where TEnum : Enum
-    {
-        Execute.Assertion
-            .ForCondition(_result.Problem?.HasErrorCode(errorCode) == true)
-            .FailWith($"Expected error code {errorCode}, but it was not found");
-        
-        return new AndConstraint<ResultAssertions<T>>(this);
-    }
-    
-    public AndConstraint<ResultAssertions<T>> HaveValidationError(string field)
-    {
-        var errors = _result.Problem?.GetValidationErrors();
-        
-        Execute.Assertion
-            .ForCondition(errors?.ContainsKey(field) == true)
-            .FailWith($"Expected validation error for field '{field}', but none was found");
-        
-        return new AndConstraint<ResultAssertions<T>>(this);
-    }
-    
-    public AndConstraint<ResultAssertions<T>> HaveValue(Action<T> assertions)
-    {
-        Execute.Assertion
-            .ForCondition(_result.IsSuccess && _result.Value != null)
-            .FailWith("Expected result to have a value, but it was failed or null");
-        
-        assertions(_result.Value!);
-        
-        return new AndConstraint<ResultAssertions<T>>(this);
-    }
-}
-
-// Usage
-result.Should()
-    .BeSuccess()
-    .And.HaveValue(product =>
-    {
-        product.Name.Should().Be("Expected Name");
-        product.Price.Should().BeGreaterThan(0);
+        var user = _repository.FindById(id);
+        if (user == null)
+            return Result<User>.FailNotFound($"User {id} not found");
+        return Result<User>.Succeed(user);
     });
+}
 ```
 
-## 📖 API Reference
-
-[Full API documentation continues as in the original README...]
-
-## 💡 Best Practices
-
-[Best practices section continues as in the original README...]
-
-## 🔄 Migration Guide
-
-[Migration guide continues as in the original README...]
-
-## 🌟 Real-World Examples
-
-### E-Commerce Platform
+### 5. Use CollectionResult for Paginated Data
 
 ```csharp
-// Complete order processing workflow
+// Good - Includes pagination metadata
+public CollectionResult<Product> GetProducts(int page, int pageSize)
+{
+    var query = _db.Products;
+    var total = query.Count();
+    var items = query.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+    
+    return CollectionResult<Product>.Succeed(items, page, pageSize, total);
+}
+
+// Bad - No pagination info
+public Result<List<Product>> GetProducts(int page, int pageSize)
+{
+    var items = _db.Products.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+    return Result<List<Product>>.Succeed(items);
+}
+```
+
+## Migration Guide
+
+### From Exceptions to Results
+
+Before:
+```csharp
+public class UserService
+{
+    public User GetUser(int id)
+    {
+        var user = _repository.FindById(id);
+        if (user == null)
+            throw new NotFoundException($"User {id} not found");
+        
+        if (!user.IsActive)
+            throw new ForbiddenException("User is inactive");
+        
+        return user;
+    }
+    
+    public void DeleteUser(int id)
+    {
+        var user = GetUser(id); // May throw
+        _repository.Delete(user);
+    }
+}
+```
+
+After:
+```csharp
+public class UserService
+{
+    public Result<User> GetUser(int id)
+    {
+        var user = _repository.FindById(id);
+        if (user == null)
+            return Result<User>.FailNotFound($"User {id} not found");
+        
+        if (!user.IsActive)
+            return Result<User>.FailForbidden("User is inactive");
+        
+        return Result<User>.Succeed(user);
+    }
+    
+    public Result DeleteUser(int id)
+    {
+        var userResult = GetUser(id);
+        if (userResult.IsFailed)
+            return Result.Fail(userResult.Problem);
+        
+        _repository.Delete(userResult.Value);
+        return Result.Succeed();
+    }
+}
+```
+
+### Gradual Migration Strategy
+
+1. **Start with new code** - Use Results for all new features
+2. **Wrap existing code** - Use Try pattern to wrap exception-throwing code
+3. **Update interfaces** - Change method signatures to return Results
+4. **Update callers** - Update code that calls changed methods
+5. **Remove exception handling** - Remove try-catch blocks as you migrate
+
+## Real-World Examples
+
+### E-Commerce Order Processing
+
+```csharp
 public class OrderProcessor
 {
     public async Task<Result<OrderConfirmation>> ProcessOrderAsync(CartCheckoutRequest request)
     {
-        return await ValidateCart(request.CartId)
-            .BindAsync(cart => ValidateCustomer(cart.CustomerId))
-            .BindAsync(customer => CheckInventory(request.Items))
-            .BindAsync(items => ApplyDiscounts(items, request.CouponCode))
-            .BindAsync(items => CalculateShipping(items, request.ShippingAddress))
+        // Validate cart exists and is not empty
+        var cartResult = await _cartService.GetCartAsync(request.CartId);
+        if (cartResult.IsFailed)
+            return Result<OrderConfirmation>.Fail(cartResult.Problem);
+        
+        if (!cartResult.Value.Items.Any())
+            return Result<OrderConfirmation>.FailBadRequest("Cart is empty");
+        
+        // Process the order
+        return await ValidateCustomer(request.CustomerId)
+            .BindAsync(customer => ValidateShippingAddress(request.ShippingAddress))
+            .BindAsync(address => CheckInventory(cartResult.Value.Items))
+            .BindAsync(items => ApplyCoupons(items, request.CouponCodes))
+            .BindAsync(items => CalculateTotals(items, request.ShippingAddress))
             .BindAsync(order => ProcessPayment(order, request.PaymentMethod))
+            .BindAsync(order => CreateOrderRecord(order))
             .TapAsync(order => UpdateInventory(order.Items))
             .TapAsync(order => SendOrderEmails(order))
+            .TapAsync(order => PublishOrderEvent(order))
             .MapAsync(order => GenerateConfirmation(order));
+    }
+    
+    private async Task<Result<Customer>> ValidateCustomer(int customerId)
+    {
+        var customer = await _customerRepository.FindByIdAsync(customerId);
+        if (customer == null)
+            return Result<Customer>.FailNotFound($"Customer {customerId} not found");
+        
+        if (customer.IsBlocked)
+            return Result<Customer>.FailForbidden("Customer account is blocked");
+        
+        if (!customer.EmailVerified)
+            return Result<Customer>.FailForbidden("Please verify your email before placing orders");
+        
+        return Result<Customer>.Succeed(customer);
+    }
+    
+    private async Task<Result<List<OrderItem>>> CheckInventory(List<CartItem> items)
+    {
+        var orderItems = new List<OrderItem>();
+        
+        foreach (var item in items)
+        {
+            var stockResult = await _inventoryService.CheckStockAsync(item.ProductId, item.Quantity);
+            if (stockResult.IsFailed)
+                return Result<List<OrderItem>>.Fail(stockResult.Problem);
+            
+            if (stockResult.Value.AvailableQuantity < item.Quantity)
+            {
+                return Result<List<OrderItem>>.Fail(
+                    "Insufficient Stock",
+                    $"Only {stockResult.Value.AvailableQuantity} units of {item.ProductName} available",
+                    HttpStatusCode.Conflict
+                );
+            }
+            
+            orderItems.Add(new OrderItem
+            {
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                Quantity = item.Quantity,
+                UnitPrice = stockResult.Value.CurrentPrice
+            });
+        }
+        
+        return Result<List<OrderItem>>.Succeed(orderItems);
     }
 }
 ```
 
-### Banking System
+### Banking Transfer Service
 
 ```csharp
-// Money transfer with comprehensive validation
 public class TransferService
 {
     public async Task<Result<TransferReceipt>> TransferMoneyAsync(TransferRequest request)
     {
-        return await ValidateAccounts(request.FromAccount, request.ToAccount)
-            .BindAsync(_ => CheckBalance(request.FromAccount, request.Amount))
-            .BindAsync(_ => CheckTransferLimits(request))
-            .BindAsync(_ => CheckFraudRules(request))
-            .BindAsync(_ => ExecuteTransfer(request))
-            .TapAsync(transfer => NotifyAccountHolders(transfer))
-            .TapAsync(transfer => LogTransferForAudit(transfer))
+        // Validate amount
+        if (request.Amount <= 0)
+            return Result<TransferReceipt>.FailBadRequest("Transfer amount must be positive");
+        
+        if (request.Amount > 1_000_000)
+            return Result<TransferReceipt>.FailBadRequest("Transfer amount exceeds maximum limit");
+        
+        // Process transfer
+        return await ValidateAccounts(request.FromAccountId, request.ToAccountId)
+            .BindAsync(accounts => CheckAccountStatus(accounts))
+            .BindAsync(accounts => CheckBalance(accounts.from, request.Amount))
+            .BindAsync(accounts => CheckDailyLimit(accounts.from, request.Amount))
+            .BindAsync(accounts => CheckFraudRules(accounts, request))
+            .BindAsync(accounts => ExecuteTransfer(accounts, request))
+            .TapAsync(transfer => LogTransfer(transfer))
+            .TapAsync(transfer => SendNotifications(transfer))
             .MapAsync(transfer => GenerateReceipt(transfer));
+    }
+    
+    private async Task<Result<(Account from, Account to)>> ValidateAccounts(
+        string fromAccountId, 
+        string toAccountId)
+    {
+        if (fromAccountId == toAccountId)
+            return Result<(Account, Account)>.FailBadRequest("Cannot transfer to the same account");
+        
+        var fromAccount = await _accountRepository.FindByIdAsync(fromAccountId);
+        if (fromAccount == null)
+            return Result<(Account, Account)>.FailNotFound($"Source account {fromAccountId} not found");
+        
+        var toAccount = await _accountRepository.FindByIdAsync(toAccountId);
+        if (toAccount == null)
+            return Result<(Account, Account)>.FailNotFound($"Destination account {toAccountId} not found");
+        
+        return Result<(Account, Account)>.Succeed((fromAccount, toAccount));
+    }
+    
+    private Result<(Account from, Account to)> CheckAccountStatus((Account from, Account to) accounts)
+    {
+        if (accounts.from.Status == AccountStatus.Frozen)
+            return Result<(Account, Account)>.FailForbidden("Source account is frozen");
+        
+        if (accounts.from.Status == AccountStatus.Closed)
+            return Result<(Account, Account)>.FailForbidden("Source account is closed");
+        
+        if (accounts.to.Status == AccountStatus.Closed)
+            return Result<(Account, Account)>.FailForbidden("Destination account is closed");
+        
+        return Result<(Account, Account)>.Succeed(accounts);
+    }
+    
+    private Result<(Account from, Account to)> CheckBalance(Account fromAccount, decimal amount)
+    {
+        if (fromAccount.Balance < amount)
+        {
+            return Result<(Account, Account)>.Fail(
+                "Insufficient Funds",
+                $"Available balance: {fromAccount.Balance:C}, Required: {amount:C}",
+                HttpStatusCode.PaymentRequired
+            );
+        }
+        
+        return Result<(Account, Account)>.Succeed((fromAccount, null));
     }
 }
 ```
 
-## 📚 Additional Resources
+## Contributing
 
-- [RFC 7807 - Problem Details for HTTP APIs](https://datatracker.ietf.org/doc/html/rfc7807)
-- [Railway Oriented Programming](https://fsharpforfunandprofit.com/posts/recipe-part2/)
-- [GitHub Repository](https://github.com/managedcode/Communication)
-- [NuGet Package](https://www.nuget.org/packages/ManagedCode.Communication)
-- [Orleans Documentation](https://docs.microsoft.com/en-us/dotnet/orleans/)
+See [CONTRIBUTING.md](CONTRIBUTING.md)
 
-## 🤝 Contributing
+## License
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT
 
 ---
 
-**Made with ❤️ by [ManagedCode](https://github.com/managedcode) - A Ukrainian Open Source Community**
-
-*Supporting Ukraine 🇺🇦 through quality open source software*
+**Made with ❤️ by [ManagedCode](https://github.com/managedcode)**

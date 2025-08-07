@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,36 +35,12 @@ public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, IC
 
     public TestCluster Cluster { get; }
 
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        
-        // Manually set content root to avoid solution file discovery
-        var contentRoot = FindContentRoot();
-        builder.UseContentRoot(contentRoot);
-    }
-    
-    private static string FindContentRoot()
-    {
-        var currentDir = System.IO.Directory.GetCurrentDirectory();
-        var dir = new System.IO.DirectoryInfo(currentDir);
-        
-        // Navigate up to find solution directory containing .slnx
-        while (dir?.Parent != null)
-        {
-            if (System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "ManagedCode.Communication.slnx")))
-            {
-                return dir.FullName;
-            }
-            dir = dir.Parent;
-        }
-        
-        return currentDir;
-    }
-
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
-        return base.CreateHost(builder);
+        builder.UseContentRoot(Directory.GetCurrentDirectory());
+        base.ConfigureWebHost(builder);
     }
 
     public HubConnection CreateSignalRClient(string hubUrl, Action<HubConnectionBuilder>? configure = null)
