@@ -77,13 +77,7 @@ public class ProblemToExceptionTests
     public void ToException_FromProblemWithoutOriginalType_ShouldReturnProblemException()
     {
         // Arrange
-        var problem = new Problem
-        {
-            Type = "https://httpstatuses.io/500",
-            Title = "Server Error",
-            StatusCode = 500,
-            Detail = "Something went wrong"
-        };
+        var problem = Problem.Create("Server Error", "Something went wrong", 500, "https://httpstatuses.io/500");
 
         // Act
         var exception = problem.ToException();
@@ -116,7 +110,7 @@ public class ProblemToExceptionTests
     {
         // Arrange
         var problem = Problem.Create("type", "title", 400, "detail");
-        problem.Extensions[ProblemExtensionKeys.OriginalExceptionType] = "NonExistent.Exception.Type";
+        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = "NonExistent.Exception.Type";
 
         // Act
         var exception = problem.ToException();
@@ -130,7 +124,7 @@ public class ProblemToExceptionTests
     {
         // Arrange
         var problem = Problem.Create("type", "title", 400, "detail");
-        problem.Extensions[ProblemExtensionKeys.OriginalExceptionType] = typeof(string).FullName;
+        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = typeof(string).FullName;
 
         // Act
         var exception = problem.ToException();

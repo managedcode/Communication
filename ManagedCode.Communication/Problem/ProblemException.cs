@@ -18,10 +18,26 @@ public class ProblemException : Exception
     }
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="ProblemException" /> class with basic details.
+    ///     Initializes a new instance of the <see cref="ProblemException" /> class with title.
     /// </summary>
-    public ProblemException(string title, string? detail = null, int statusCode = 500) 
-        : this(Problem.Create($"https://httpstatuses.io/{statusCode}", title, statusCode, detail ?? title))
+    public ProblemException(string title) 
+        : this(Problem.Create(title, title))
+    {
+    }
+    
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ProblemException" /> class with title and detail.
+    /// </summary>
+    public ProblemException(string title, string detail) 
+        : this(Problem.Create(title, detail))
+    {
+    }
+    
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ProblemException" /> class with title, detail and status code.
+    /// </summary>
+    public ProblemException(string title, string detail, int statusCode) 
+        : this(Problem.Create(title, detail, statusCode))
     {
     }
 
@@ -29,7 +45,7 @@ public class ProblemException : Exception
     ///     Initializes a new instance of the <see cref="ProblemException" /> class with an inner exception.
     /// </summary>
     public ProblemException(Exception innerException) 
-        : this(Problem.FromException(innerException))
+        : this(Problem.Create(innerException))
     {
     }
 
@@ -78,22 +94,22 @@ public class ProblemException : Exception
     /// <summary>
     ///     Gets the problem type.
     /// </summary>
-    public string? Type => Problem.Type;
+    public string? Type => string.IsNullOrEmpty(Problem.Type) || Problem.Type == "https://httpstatuses.io/0" ? null : Problem.Type;
 
     /// <summary>
     ///     Gets the problem title.
     /// </summary>
-    public string? Title => Problem.Title;
+    public string? Title => string.IsNullOrEmpty(Problem.Title) ? null : Problem.Title;
 
     /// <summary>
     ///     Gets the problem detail.
     /// </summary>
-    public string? Detail => Problem.Detail;
+    public string? Detail => string.IsNullOrEmpty(Problem.Detail) ? null : Problem.Detail;
 
     /// <summary>
     ///     Gets the error code if available.
     /// </summary>
-    public string? ErrorCode => Problem.ErrorCode;
+    public string ErrorCode => Problem.ErrorCode;
 
     /// <summary>
     ///     Gets the validation errors if this is a validation problem.

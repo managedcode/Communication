@@ -1,3 +1,4 @@
+using System;
 using FluentAssertions;
 using ManagedCode.Communication.Commands;
 using Xunit;
@@ -18,10 +19,11 @@ public class CommandTests
     [Fact]
     public void FromIdValue()
     {
-        var command = Command<string>.From(nameof(CommandTests), nameof(Command));
+        var expectedId = Guid.NewGuid();
+        var command = Command<string>.From(expectedId, nameof(Command));
         command.CommandId
             .Should()
-            .Be(nameof(CommandTests));
+            .Be(expectedId);
         command.Value
             .Should()
             .Be(nameof(Command));

@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
         <IsPackable>true</IsPackable>
         <DebugType>embedded</DebugType>
         <RootNamespace>ManagedCode.Communication</RootNamespace>
@@ -23,6 +22,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj"/>
+        <ProjectReference Include="..\ManagedCode.Communication.AspNetCore\ManagedCode.Communication.AspNetCore.csproj"/>
     </ItemGroup>
 
 </Project>

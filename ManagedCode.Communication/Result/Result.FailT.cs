@@ -24,14 +24,14 @@ public partial struct Result
         return Result<T>.Fail(code);
     }
 
-    public static Result<T> Fail<T, TEnum>(TEnum code, string? detail) where TEnum : Enum
+    public static Result<T> Fail<T, TEnum>(TEnum code, string detail) where TEnum : Enum
     {
         return Result<T>.Fail(code, detail);
     }
 
-    public static Result<T> Fail<T>(Exception? exception)
+    public static Result<T> Fail<T>(Exception exception)
     {
-        return exception != null ? Result<T>.Fail(exception) : Result<T>.Fail("Unknown error");
+        return Result<T>.Fail(exception);
     }
 
     public static Result<T> FailValidation<T>(params (string field, string message)[] errors)
@@ -39,17 +39,32 @@ public partial struct Result
         return Result<T>.FailValidation(errors);
     }
 
-    public static Result<T> FailUnauthorized<T>(string? detail = null)
+    public static Result<T> FailUnauthorized<T>()
+    {
+        return Result<T>.FailUnauthorized();
+    }
+    
+    public static Result<T> FailUnauthorized<T>(string detail)
     {
         return Result<T>.FailUnauthorized(detail);
     }
 
-    public static Result<T> FailForbidden<T>(string? detail = null)
+    public static Result<T> FailForbidden<T>()
+    {
+        return Result<T>.FailForbidden();
+    }
+    
+    public static Result<T> FailForbidden<T>(string detail)
     {
         return Result<T>.FailForbidden(detail);
     }
 
-    public static Result<T> FailNotFound<T>(string? detail = null)
+    public static Result<T> FailNotFound<T>()
+    {
+        return Result<T>.FailNotFound();
+    }
+    
+    public static Result<T> FailNotFound<T>(string detail)
     {
         return Result<T>.FailNotFound(detail);
     }

@@ -3,7 +3,6 @@
     <PropertyGroup>
         <IsPackable>true</IsPackable>
         <DebugType>embedded</DebugType>
-        <TargetFrameworks>net8.0;net9.0;</TargetFrameworks>
     </PropertyGroup>
 
     <!--NuGet-->

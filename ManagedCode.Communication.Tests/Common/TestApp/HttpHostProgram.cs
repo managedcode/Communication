@@ -1,4 +1,4 @@
-using ManagedCode.Communication.Extensions.Extensions;
+using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Tests.Common.TestApp.Controllers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;

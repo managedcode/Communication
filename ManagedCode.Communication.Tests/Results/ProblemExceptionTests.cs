@@ -11,7 +11,7 @@ public class ProblemExceptionTests
     public void Constructor_WithProblem_ShouldSetPropertiesCorrectly()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/404", "Not Found", 404, "Resource not found", "/api/users/123");
+        var problem = Problem.Create("Not Found", "Resource not found", 404, "https://httpstatuses.io/404", "/api/users/123");
 
         // Act
         var exception = new ProblemException(problem);
@@ -133,15 +133,7 @@ public class ProblemExceptionTests
     public void Constructor_WithProblemHavingNullProperties_ShouldHandleGracefully()
     {
         // Arrange
-        var problem = new Problem
-        {
-            Type = null,
-            Title = null,
-            StatusCode = 0,
-            Detail = null,
-            Instance = null,
-            Extensions = new Dictionary<string, object?>()
-        };
+        var problem = Problem.Create("", "", 0);
 
         // Act
         var exception = new ProblemException(problem);

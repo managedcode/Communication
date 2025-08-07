@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ManagedCode.Communication.AspNetCore/ManagedCode.Communication.AspNetCore.csproj" />
+  <Project Path="ManagedCode.Communication.Benchmark/ManagedCode.Communication.Benchmark.csproj" />
+  <Project Path="ManagedCode.Communication.Orleans/ManagedCode.Communication.Orleans.csproj" />
+  <Project Path="ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj" />
+  <Project Path="ManagedCode.Communication/ManagedCode.Communication.csproj" />
+</Solution>

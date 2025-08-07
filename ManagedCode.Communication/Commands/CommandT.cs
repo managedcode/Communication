@@ -9,24 +9,32 @@ namespace ManagedCode.Communication.Commands;
 [DebuggerDisplay("CommandId: {CommandId}; {Value?.ToString()}")]
 public partial class Command<T> : ICommand<T>
 {
-    internal Command(string commandId, T? value)
+    [JsonConstructor]
+    protected Command()
+    {
+        CommandType = string.Empty;
+    }
+    
+    protected Command(Guid commandId, T? value)
     {
         CommandId = commandId;
         Value = value;
         CommandType = Value?.GetType()
             .Name ?? string.Empty;
+        Timestamp = DateTimeOffset.UtcNow;
     }
 
-    internal Command(string commandId, string commandType, T? value)
+    protected Command(Guid commandId, string commandType, T? value)
     {
         CommandId = commandId;
         Value = value;
         CommandType = commandType;
+        Timestamp = DateTimeOffset.UtcNow;
     }
 
     [JsonPropertyName("commandId")]
     [JsonPropertyOrder(1)]
-    public string CommandId { get; set; }
+    public Guid CommandId { get; set; }
 
     [JsonPropertyName("commandType")]
     [JsonPropertyOrder(2)]
@@ -37,7 +45,58 @@ public partial class Command<T> : ICommand<T>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Value { get; set; }
 
+    [JsonPropertyName("timestamp")]
+    [JsonPropertyOrder(4)]
+    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+
+    [JsonPropertyName("correlationId")]
+    [JsonPropertyOrder(5)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CorrelationId { get; set; }
+
+    [JsonPropertyName("causationId")]
+    [JsonPropertyOrder(6)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CausationId { get; set; }
+
+    [JsonPropertyName("traceId")]
+    [JsonPropertyOrder(7)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? TraceId { get; set; }
+
+    [JsonPropertyName("spanId")]
+    [JsonPropertyOrder(8)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SpanId { get; set; }
+
+    [JsonPropertyName("userId")]
+    [JsonPropertyOrder(9)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? UserId { get; set; }
+
+    [JsonPropertyName("sessionId")]
+    [JsonPropertyOrder(10)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SessionId { get; set; }
+
+    [JsonPropertyName("metadata")]
+    [JsonPropertyOrder(11)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CommandMetadata? Metadata { get; set; }
+
     [JsonIgnore]
     [MemberNotNullWhen(false, nameof(Value))]
     public bool IsEmpty => Value is null;
+
+    /// <summary>
+    /// Try to convert CommandType string to an enum value
+    /// </summary>
+    public Result<TEnum> GetCommandTypeAsEnum<TEnum>() where TEnum : struct, Enum
+    {
+        if (Enum.TryParse<TEnum>(CommandType, true, out var result))
+        {
+            return Result<TEnum>.Succeed(result);
+        }
+        return Result<TEnum>.Fail("InvalidCommandType", $"Cannot convert '{CommandType}' to enum {typeof(TEnum).Name}");
+    }
 }

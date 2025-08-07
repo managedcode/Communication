@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using ManagedCode.Communication.Extensions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -56,7 +57,7 @@ public class ResultHelperMethodsTests
     public void Result_ThrowIfFail_WithFailure_ShouldThrowProblemException()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/500", "Server Error", 500, "Internal error");
+        var problem = Problem.Create("Server Error", "Internal error", 500, "https://httpstatuses.io/500");
         var result = Result.Fail(problem);
 
         // Act & Assert
@@ -435,7 +436,7 @@ public class ResultHelperMethodsTests
     public void Result_Match_WithFailure_ShouldCallOnFailure()
     {
         // Arrange
-        var problem = Problem.Create("type", "title", 400, "detail");
+        var problem = Problem.Create("title", "detail", 400, "type");
         var result = Result.Fail(problem);
         var successCalled = false;
         var failureCalled = false;

@@ -37,7 +37,7 @@ public class CommunicationIncomingGrainCallFilter : IIncomingGrainCallFilter
                         }
                         else
                         {
-                            // Result<T> - use Activator with internal constructor
+                            // Result<T> - use Activator with an internal constructor
                             var resultInstance = Activator.CreateInstance(taskResultType, BindingFlags.NonPublic | BindingFlags.Instance, null,
                                 [exception], CultureInfo.CurrentCulture);
                             context.Result = resultInstance;

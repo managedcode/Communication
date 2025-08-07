@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <DebugType>embedded</DebugType>
+        <OutputType>Library</OutputType>
+    </PropertyGroup>
+
+    <!--NuGet-->
+    <PropertyGroup>
+        <Title>ManagedCode.Communication.AspNetCore - ASP.NET Core Integration</Title>
+        <PackageId>ManagedCode.Communication.AspNetCore</PackageId>
+        <Description>ASP.NET Core integration for ManagedCode.Communication library. Provides global exception handling, model validation filters, SignalR hub filters, and automatic Result to HTTP response mapping. Seamlessly integrates the Result pattern with your ASP.NET Core WebAPI and SignalR applications.</Description>
+        <PackageTags>aspnetcore;asp.net;webapi;signalr;result-pattern;error-handling;exception-filter;model-validation;middleware;http;rest;api;managedcode;problem-details;rfc7807</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj"/>
+    </ItemGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.0" />
+    </ItemGroup>
+
+</Project>
