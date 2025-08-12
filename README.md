@@ -1,242 +1,720 @@
 # ManagedCode.Communication
 
-[![.NET](https://github.com/managedcode/Communication/actions/workflows/dotnet.yml/badge.svg)](https://github.com/managedcode/Communication/actions/workflows/dotnet.yml)
-[![Coverage Status](https://coveralls.io/repos/github/managedcode/Communication/badge.svg?branch=main&service=github)](https://coveralls.io/github/managedcode/Communication?branch=main)
-[![nuget](https://github.com/managedcode/Communication/actions/workflows/nuget.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/nuget.yml)
-[![CodeQL](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml)
-[![NuGet Package](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication)
+Result pattern for .NET that replaces exceptions with type-safe return values. Features railway-oriented programming, ASP.NET Core integration, RFC 7807 Problem Details, and built-in pagination. Designed for production systems requiring explicit error handling without the overhead of throwing exceptions.
 
-> A powerful .NET library implementing the Result pattern with RFC 7807 Problem Details support for C# and ASP.NET Core applications. Replace exceptions with type-safe Result objects, making your error handling more predictable, testable, and maintainable. Perfect for building robust APIs with standardized error responses.
+[![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%207.0%20%7C%206.0-512BD4)](https://dotnet.microsoft.com/)
 
-## 🎯 Why ManagedCode.Communication?
+## Table of Contents
 
-Traditional exception-based error handling in .NET and C# applications can make code difficult to follow and test. The Communication library introduces a **Result pattern** implementation with **Problem Details (RFC 7807)** support that transforms how you handle operations that might fail in ASP.NET Core, Orleans, and other .NET applications:
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Installation](#installation)
+- [Core Concepts](#core-concepts)
+- [Quick Start](#quick-start)
+- [API Reference](#api-reference)
+- [Railway-Oriented Programming](#railway-oriented-programming)
+- [Command Pattern and Idempotency](#command-pattern-and-idempotency)
+- [Error Handling Patterns](#error-handling-patterns)
+- [Integration Guides](#integration-guides)
+- [Performance](#performance)
+- [Comparison](#comparison)
+- [Best Practices](#best-practices)
+- [Examples](#examples)
+- [Migration Guide](#migration-guide)
 
-- ✅ **No More Exceptions** - Replace try-catch blocks with elegant Result objects
-- 🔍 **Explicit Error Handling** - Makes potential failures visible in method signatures
-- 🧪 **Better Testability** - No need to test exception scenarios
-- 🚀 **Improved Performance** - Avoid the overhead of throwing exceptions
-- 📝 **Self-Documenting Code** - Method signatures clearly indicate possible failures
-- 🌐 **RFC 7807 Compliant** - Standardized error responses for APIs
-- 🔄 **Railway-Oriented Programming** - Functional programming style with Bind, Map, Tap, and Match methods for C#
-- 🎭 **Exception Recovery** - Convert between exceptions and Results seamlessly
+## Overview
 
-## 📦 Installation
+ManagedCode.Communication brings functional error handling to .NET through the Result pattern. Instead of throwing exceptions, methods return Result types that explicitly indicate success or failure. This approach eliminates hidden control flow, improves performance, and makes error handling a first-class concern in your codebase.
+
+### Why Result Pattern?
+
+Traditional exception handling has several drawbacks:
+
+- **Performance overhead**: Throwing exceptions is expensive
+- **Hidden control flow**: Exceptions create invisible exit points in your code
+- **Unclear contracts**: Methods don't explicitly declare what errors they might produce
+- **Testing complexity**: Exception paths require separate test scenarios
+
+The Result pattern solves these issues by:
+
+- **Explicit error handling**: Errors are part of the method signature
+- **Performance**: No exception throwing overhead
+- **Composability**: Chain operations using railway-oriented programming
+- **Type safety**: Compiler ensures error handling
+- **Testability**: All paths are explicit and easy to test
+
+## Key Features
+
+### 🎯 Core Result Types
+
+- **`Result`**: Represents success/failure without a value
+- **`Result<T>`**: Represents success with value `T` or failure
+- **`CollectionResult<T>`**: Represents collections with built-in pagination
+- **`Problem`**: RFC 7807 compliant error details
+
+### 🚂 Railway-Oriented Programming
+
+Complete set of functional combinators for composing operations:
+
+- `Map`: Transform success values
+- `Bind` / `Then`: Chain Result-returning operations
+- `Tap` / `Do`: Execute side effects
+- `Match`: Pattern matching on success/failure
+- `Compensate`: Recovery from failures
+- `Merge` / `Combine`: Aggregate multiple results
+
+### 🌐 Framework Integration
+
+- **ASP.NET Core**: Automatic HTTP response mapping
+- **SignalR**: Hub filters for real-time error handling
+- **Microsoft Orleans**: Grain call filters and surrogates
+- **Command Pattern**: Built-in command infrastructure with idempotency
+
+### 🛡️ Error Types
+
+Pre-defined error categories with appropriate HTTP status codes:
+
+- Validation errors (400 Bad Request)
+- Not Found (404)
+- Unauthorized (401)
+- Forbidden (403)
+- Internal Server Error (500)
+- Custom enum-based errors
+
+## Installation
+
+### Package Manager Console
+
+```powershell
+# Core library
+Install-Package ManagedCode.Communication
+
+# ASP.NET Core integration
+Install-Package ManagedCode.Communication.AspNetCore
+
+# Orleans integration
+Install-Package ManagedCode.Communication.Orleans
+```
+
+### .NET CLI
 
 ```bash
 # Core library
 dotnet add package ManagedCode.Communication
 
 # ASP.NET Core integration
-dotnet add package ManagedCode.Communication.Extensions
+dotnet add package ManagedCode.Communication.AspNetCore
 
 # Orleans integration
 dotnet add package ManagedCode.Communication.Orleans
 ```
 
-## 🚀 Quick Start
+### PackageReference
+
+```xml
+<PackageReference Include="ManagedCode.Communication" Version="9.6.0" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="9.6.0" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="9.6.0" />
+```
+
+## Core Concepts
+
+### Result Type
+
+The `Result` type represents an operation that can either succeed or fail:
+
+```csharp
+public struct Result
+{
+    public bool IsSuccess { get; }
+    public Problem? Problem { get; }
+}
+```
+
+### Result Type with Value
+
+The generic `Result<T>` includes a value on success:
+
+```csharp
+public struct Result<T>
+{
+    public bool IsSuccess { get; }
+    public T? Value { get; }
+    public Problem? Problem { get; }
+}
+```
+
+### Problem Type
+
+Implements RFC 7807 Problem Details for HTTP APIs:
+
+```csharp
+public class Problem
+{
+    public string Type { get; set; }
+    public string Title { get; set; }
+    public int StatusCode { get; set; }
+    public string Detail { get; set; }
+    public Dictionary<string, object> Extensions { get; set; }
+}
+```
+
+## Quick Start
 
 ### Basic Usage
 
 ```csharp
 using ManagedCode.Communication;
 
-// Simple success result
+// Creating Results
 var success = Result.Succeed();
-if (success.IsSuccess)
-{
-    Console.WriteLine("Operation succeeded!");
-}
+var failure = Result.Fail("Operation failed");
 
-// Failure with Problem Details
-var failure = Result.Fail("Operation failed", "Details about the failure");
-if (failure.IsFailed)
-{
-    Console.WriteLine($"Error: {failure.Problem.Title} - {failure.Problem.Detail}");
-}
-
-// Different ways to create failures
-var basicFail = Result.Fail(); // Simple failure
-var withMessage = Result.Fail("Something went wrong");
-var withDetails = Result.Fail("Operation failed", "Detailed error description");
-var withStatus = Result.Fail("Not Found", "Resource does not exist", HttpStatusCode.NotFound);
-var notFound = Result.FailNotFound("User not found");
-var validation = Result.FailValidation(("field", "Field is required"));
-
-// Try to get the problem details
-if (failure.TryGetProblem(out var problem))
-{
-    Console.WriteLine($"Status: {problem.StatusCode}, Type: {problem.Type}");
-}
-
-// Throw exception if failed (when you need to integrate with exception-based code)
-failure.ThrowIfFail(); // Throws ProblemException
-```
-
-### Generic Results with Values
-
-```csharp
-// Success with value
+// Results with values
 var userResult = Result<User>.Succeed(new User { Id = 1, Name = "John" });
-if (userResult.IsSuccess)
-{
-    var user = userResult.Value; // Access the user object
-    Console.WriteLine($"Found user: {user.Name}");
-}
-
-// Failure with Problem Details
 var notFound = Result<User>.FailNotFound("User not found");
-if (notFound.IsFailed)
+
+// Validation errors
+var invalid = Result.FailValidation(
+    ("email", "Email is required"),
+    ("age", "Age must be positive")
+);
+
+// From exceptions
+try
 {
-    Console.WriteLine($"Error: {notFound.Problem.Title} (Status: {notFound.Problem.StatusCode})");
+    // risky operation
+}
+catch (Exception ex)
+{
+    var error = Result.Fail(ex);
+}
+```
+
+### Checking Result State
+
+```csharp
+if (result.IsSuccess)
+{
+    // Handle success
 }
 
-// Using Try pattern for exception-prone operations
-var result = Result.Try(() => 
+if (result.IsFailed)
 {
-    return JsonSerializer.Deserialize<User>(jsonString);
-});
+    // Handle failure
+}
+
+if (result.IsInvalid)
+{
+    // Handle validation errors
+}
+
+// Pattern matching
+result.Match(
+    onSuccess: () => Console.WriteLine("Success!"),
+    onFailure: problem => Console.WriteLine($"Failed: {problem.Detail}")
+);
 ```
 
-### Collection Results
+## API Reference
 
-Perfect for paginated API responses:
+### Result Creation Methods
+
+#### Success Methods
 
 ```csharp
-var products = await GetProductsAsync(page: 1, pageSize: 20);
+// Basic success
+Result.Succeed()
+Result<T>.Succeed(T value)
+CollectionResult<T>.Succeed(T[] items, int pageNumber, int pageSize, int totalItems)
 
-var result = CollectionResult<Product>.Succeed(
-    items: products,
-    pageNumber: 1,
-    pageSize: 20,
-    totalItems: 150
-);
+// From operations
+Result.From(Action action)
+Result<T>.From(Func<T> func)
+Result<T>.From(Task<T> task)
 
-// Access pagination info
-Console.WriteLine($"Page {result.PageNumber} of {result.TotalPages}");
-Console.WriteLine($"Showing {result.Collection.Count()} of {result.TotalItems} products");
+// Try pattern with exception catching
+Result.Try(Action action)
+Result<T>.Try(Func<T> func)
 ```
 
-### Problem Details (RFC 7807)
-
-The library fully implements RFC 7807 Problem Details for standardized error responses:
+#### Failure Methods
 
 ```csharp
-// Create a problem with all details
-var problem = Problem.Create(
-    type: "https://example.com/probs/out-of-credit",
-    title: "You do not have enough credit",
-    statusCode: 403,
-    detail: "Your current balance is 30, but that costs 50.",
-    instance: "/account/12345/msgs/abc"
-);
+// Basic failures
+Result.Fail()
+Result.Fail(string title)
+Result.Fail(string title, string detail)
+Result.Fail(Problem problem)
+Result.Fail(Exception exception)
 
-// Add custom extensions
-problem.Extensions["balance"] = 30;
-problem.Extensions["accounts"] = new[] { "/account/12345", "/account/67890" };
+// HTTP status failures
+Result.FailNotFound(string detail)
+Result.FailUnauthorized(string detail)
+Result.FailForbidden(string detail)
 
-// Convert to Result
-var result = Result.Fail(problem);
+// Validation failures
+Result.FailValidation(params (string field, string message)[] errors)
+Result.Invalid(string message)
+Result.Invalid(string field, string message)
 
-// Create Problem from exception
-var exception = new InvalidOperationException("Operation not allowed");
-var problemFromException = Problem.FromException(exception);
+// Enum-based failures
+Result.Fail<TEnum>(TEnum errorCode) where TEnum : Enum
+```
 
-// Create Problem from enum
-public enum ApiError { InvalidInput, Unauthorized, RateLimitExceeded }
-var problemFromEnum = Problem.FromEnum(ApiError.RateLimitExceeded, "Too many requests", 429);
+### Transformation Methods
 
-// Validation problems
-var validationResult = Result.FailValidation(
-    ("email", "Email is required"),
-    ("email", "Email format is invalid"),
-    ("age", "Age must be greater than 18")
-);
+```csharp
+// Map: Transform the value
+Result<int> ageResult = userResult.Map(user => user.Age);
 
-// Access validation errors
-if (validationResult.Problem.GetValidationErrors() is var errors && errors != null)
+// Bind: Chain operations that return Results
+Result<Order> orderResult = userResult
+    .Bind(user => GetUserCart(user.Id))
+    .Bind(cart => CreateOrder(cart));
+
+// Tap: Execute side effects
+Result<User> result = userResult
+    .Tap(user => _logger.LogInfo($"Processing user {user.Id}"))
+    .Tap(user => _cache.Set(user.Id, user));
+```
+
+### Validation Methods
+
+```csharp
+// Ensure: Add validation
+Result<User> validUser = userResult
+    .Ensure(user => user.Age >= 18, Problem.Create("User must be 18+"))
+    .Ensure(user => user.Email.Contains("@"), Problem.Create("Invalid email"));
+
+// Where: Filter with predicate
+Result<User> filtered = userResult
+    .Where(user => user.IsActive, "User is not active");
+
+// FailIf: Conditional failure
+Result<Order> order = orderResult
+    .FailIf(o => o.Total <= 0, "Order total must be positive");
+
+// OkIf: Must satisfy condition
+Result<Payment> payment = paymentResult
+    .OkIf(p => p.IsAuthorized, "Payment not authorized");
+```
+
+## Railway-Oriented Programming
+
+Railway-oriented programming treats operations as a series of tracks where success continues on the main track and failures switch to an error track:
+
+### Basic Chaining
+
+```csharp
+public Result<Order> ProcessOrder(int userId)
 {
-    foreach (var error in errors)
+    return Result.From(() => GetUser(userId))
+        .Then(user => ValidateUser(user))
+        .Then(user => GetUserCart(user.Id))
+        .Then(cart => ValidateCart(cart))
+        .Then(cart => CreateOrder(cart))
+        .Then(order => ProcessPayment(order))
+        .Then(order => SendConfirmation(order));
+}
+```
+
+### Async Operations
+
+```csharp
+public async Task<Result<Order>> ProcessOrderAsync(int userId)
+{
+    return await Result.From(() => GetUserAsync(userId))
+        .ThenAsync(user => ValidateUserAsync(user))
+        .ThenAsync(user => GetUserCartAsync(user.Id))
+        .ThenAsync(cart => CreateOrderAsync(cart))
+        .ThenAsync(order => ProcessPaymentAsync(order))
+        .ThenAsync(order => SendConfirmationAsync(order));
+}
+```
+
+### Error Recovery
+
+```csharp
+var result = await GetPrimaryService()
+    .CompensateAsync(async error => 
     {
-        Console.WriteLine($"{error.Key}: {string.Join(", ", error.Value)}");
+        _logger.LogWarning($"Primary service failed: {error.Detail}");
+        return await GetFallbackService();
+    })
+    .CompensateWith(defaultValue); // Final fallback
+```
+
+### Combining Multiple Results
+
+```csharp
+// Merge: Stop at first failure
+var result = Result.Merge(
+    ValidateName(name),
+    ValidateEmail(email),
+    ValidateAge(age)
+);
+
+// MergeAll: Collect all failures
+var result = Result.MergeAll(
+    ValidateName(name),
+    ValidateEmail(email),
+    ValidateAge(age)
+); // Returns all validation errors
+
+// Combine: Aggregate values
+var combined = Result.Combine(
+    GetUserProfile(),
+    GetUserSettings(),
+    GetUserPermissions()
+); // Returns CollectionResult<T>
+```
+
+## Command Pattern and Idempotency
+
+### Command Infrastructure
+
+The library includes built-in support for command pattern with distributed idempotency:
+
+```csharp
+// Basic command
+public class CreateOrderCommand : Command<Order>
+{
+    public CreateOrderCommand(string orderId, Order order) 
+        : base(orderId, "CreateOrder")
+    {
+        Value = order;
+        UserId = "user123";
+        CorrelationId = Guid.NewGuid().ToString();
+    }
+}
+
+// Command with metadata
+var command = new Command("command-id", "ProcessPayment")
+{
+    UserId = "user123",
+    SessionId = "session456",
+    CorrelationId = "correlation789",
+    CausationId = "parent-command-id",
+    TraceId = Activity.Current?.TraceId.ToString(),
+    SpanId = Activity.Current?.SpanId.ToString()
+};
+```
+
+### Idempotent Command Execution
+
+#### ASP.NET Core Idempotency
+
+```csharp
+// Register idempotency store
+builder.Services.AddSingleton<ICommandIdempotencyStore, InMemoryCommandIdempotencyStore>();
+// Or use Orleans-based store
+builder.Services.AddSingleton<ICommandIdempotencyStore, OrleansCommandIdempotencyStore>();
+
+// Service with idempotent operations
+public class PaymentService
+{
+    private readonly ICommandIdempotencyStore _idempotencyStore;
+    
+    public async Task<Result<Payment>> ProcessPaymentAsync(ProcessPaymentCommand command)
+    {
+        // Automatic idempotency - returns cached result if already executed
+        return await _idempotencyStore.ExecuteIdempotentAsync(
+            command.Id,
+            async () =>
+            {
+                // This code runs only once per command ID
+                var payment = await _paymentGateway.ChargeAsync(command.Amount);
+                await _repository.SavePaymentAsync(payment);
+                return Result<Payment>.Succeed(payment);
+            },
+            command.Metadata
+        );
     }
 }
 ```
 
-### Railway-Oriented Programming
-
-Chain operations elegantly:
+#### Orleans-Based Idempotency
 
 ```csharp
-var result = await GetUserAsync(userId)
-    .BindAsync(user => ValidateUserAsync(user))
-    .MapAsync(user => EnrichUserDataAsync(user))
-    .TapAsync(user => LogUserAccessAsync(user))
-    .Match(
-        onSuccess: user => Ok(user),
-        onFailure: problem => problem.StatusCode switch
+// Automatic idempotency with Orleans grains
+public class OrderGrain : Grain, IOrderGrain
+{
+    private readonly ICommandIdempotencyStore _idempotencyStore;
+    
+    public async Task<Result<Order>> CreateOrderAsync(CreateOrderCommand command)
+    {
+        // Uses ICommandIdempotencyGrain internally for distributed coordination
+        return await _idempotencyStore.ExecuteIdempotentAsync(
+            command.Id,
+            async () =>
+            {
+                // Guaranteed to execute only once across the cluster
+                var order = new Order { /* ... */ };
+                await SaveOrderAsync(order);
+                return Result<Order>.Succeed(order);
+            }
+        );
+    }
+}
+```
+
+### Command Execution Status
+
+```csharp
+public enum CommandExecutionStatus
+{
+    NotStarted,    // Command hasn't been processed
+    Processing,    // Currently being processed
+    Completed,     // Successfully completed
+    Failed,        // Processing failed
+    Expired        // Result expired from cache
+}
+
+// Check command status
+var status = await _idempotencyStore.GetCommandStatusAsync("command-id");
+if (status == CommandExecutionStatus.Completed)
+{
+    var result = await _idempotencyStore.GetCommandResultAsync<Order>("command-id");
+}
+```
+
+## Error Handling Patterns
+
+### Validation Pattern
+
+```csharp
+public Result<User> CreateUser(CreateUserDto dto)
+{
+    // Collect all validation errors
+    var errors = new List<(string field, string message)>();
+    
+    if (string.IsNullOrEmpty(dto.Email))
+        errors.Add(("email", "Email is required"));
+    
+    if (!dto.Email.Contains("@"))
+        errors.Add(("email", "Invalid email format"));
+    
+    if (dto.Age < 0)
+        errors.Add(("age", "Age must be positive"));
+    
+    if (dto.Age < 18)
+        errors.Add(("age", "Must be 18 or older"));
+    
+    if (errors.Any())
+        return Result<User>.FailValidation(errors.ToArray());
+    
+    var user = new User { /* ... */ };
+    return Result<User>.Succeed(user);
+}
+```
+
+### Repository Pattern with Entity Framework
+
+```csharp
+public class UserRepository
+{
+    private readonly AppDbContext _context;
+    private readonly ILogger<UserRepository> _logger;
+    
+    public async Task<Result<User>> GetByIdAsync(int id)
+    {
+        try
         {
-            404 => NotFound(problem),
-            403 => Forbid(problem),
-            _ => BadRequest(problem)
+            var user = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == id);
+            
+            if (user == null)
+                return Result<User>.FailNotFound($"User {id} not found");
+            
+            return Result<User>.Succeed(user);
         }
-    );
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Database error getting user {UserId}", id);
+            return Result<User>.Fail(ex);
+        }
+    }
+    
+    public async Task<CollectionResult<User>> GetPagedAsync(
+        int page, 
+        int pageSize,
+        Expression<Func<User, bool>>? filter = null,
+        Expression<Func<User, object>>? orderBy = null)
+    {
+        try
+        {
+            // Build query with IQueryable for efficient SQL generation
+            IQueryable<User> query = _context.Users.AsNoTracking();
+            
+            // Apply filter if provided
+            if (filter != null)
+                query = query.Where(filter);
+            
+            // Apply ordering
+            query = orderBy != null 
+                ? query.OrderBy(orderBy) 
+                : query.OrderBy(u => u.Id);
+            
+            // Get total count - generates COUNT(*) SQL query
+            var totalItems = await query.CountAsync();
+            
+            if (totalItems == 0)
+                return CollectionResult<User>.Succeed(Array.Empty<User>(), page, pageSize, 0);
+            
+            // Get page of data - generates SQL with OFFSET and FETCH
+            var users = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToArrayAsync();
+            
+            return CollectionResult<User>.Succeed(users, page, pageSize, totalItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Database error in GetPagedAsync");
+            return CollectionResult<User>.Fail(ex);
+        }
+    }
+    
+    // Example with complex query
+    public async Task<CollectionResult<UserDto>> SearchUsersAsync(
+        string searchTerm,
+        int page,
+        int pageSize)
+    {
+        try
+        {
+            var query = _context.Users
+                .AsNoTracking()
+                .Where(u => u.IsActive)
+                .Where(u => EF.Functions.Like(u.Name, $"%{searchTerm}%") ||
+                           EF.Functions.Like(u.Email, $"%{searchTerm}%"));
+            
+            // Count before projection for efficiency
+            var totalItems = await query.CountAsync();
+            
+            // Project to DTO and paginate - single SQL query
+            var users = await query
+                .OrderBy(u => u.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(u => new UserDto
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    Email = u.Email,
+                    LastLoginDate = u.LastLoginDate
+                })
+                .ToArrayAsync();
+            
+            return CollectionResult<UserDto>.Succeed(users, page, pageSize, totalItems);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search failed for term: {SearchTerm}", searchTerm);
+            return CollectionResult<UserDto>.Fail(ex);
+        }
+    }
+}
 ```
 
-### Exception Interoperability
-
-The library provides seamless conversion between .NET exceptions and Result types, making it easy to integrate with existing codebases:
+### Service Layer Pattern
 
 ```csharp
-// Convert exception to Problem
-var exception = new InvalidOperationException("Operation not allowed");
-var problem = Problem.FromException(exception);
-
-// Convert Problem back to exception
-var reconstructedException = problem.ToException();
-// If original was InvalidOperationException, it returns InvalidOperationException
-// Otherwise returns ProblemException
-
-// Use with Result
-var result = Result.Fail(exception); // Automatically converts to Problem
-result.ThrowIfFail(); // Throws the appropriate exception type
+public class OrderService
+{
+    public async Task<Result<Order>> CreateOrderAsync(CreateOrderDto dto)
+    {
+        // Validate input
+        var validationResult = ValidateOrderDto(dto);
+        if (validationResult.IsFailed)
+            return validationResult;
+        
+        // Get user
+        var userResult = await _userRepo.GetByIdAsync(dto.UserId);
+        if (userResult.IsFailed)
+            return Result<Order>.Fail(userResult.Problem);
+        
+        // Check permissions
+        var user = userResult.Value;
+        if (!user.CanCreateOrders)
+            return Result<Order>.FailForbidden("User cannot create orders");
+        
+        // Create order
+        return await Result.Try(async () =>
+        {
+            var order = new Order
+            {
+                UserId = user.Id,
+                Items = dto.Items,
+                Total = CalculateTotal(dto.Items)
+            };
+            
+            await _orderRepo.SaveAsync(order);
+            return order;
+        });
+    }
+}
 ```
 
-## 🌐 ASP.NET Core Integration
+## Integration Guides
 
-### Configure Services
+### ASP.NET Core Integration
+
+#### Installation and Setup
 
 ```csharp
-using ManagedCode.Communication.Extensions;
+// 1. Install NuGet package
+// dotnet add package ManagedCode.Communication.AspNetCore
 
+// 2. Program.cs configuration
 var builder = WebApplication.CreateBuilder(args);
 
-// Add Communication services
+// Method 1: Simple configuration with auto-detection of environment
+builder.AddCommunication(); // ShowErrorDetails = IsDevelopment
+
+// Method 2: Custom configuration
 builder.Services.AddCommunication(options =>
 {
-    options.ShowErrorDetails = builder.Environment.IsDevelopment();
+    options.ShowErrorDetails = true; // Show detailed error messages in responses
 });
 
-// Add MVC with Communication filters
+// 3. Add filters to MVC controllers (ORDER MATTERS!)
 builder.Services.AddControllers(options =>
+{
+    options.AddCommunicationFilters();
+    // Filters are applied in this order:
+    // 1. CommunicationModelValidationFilter - Catches validation errors first
+    // 2. ResultToActionResultFilter - Converts Result to HTTP response
+    // 3. CommunicationExceptionFilter - Catches any unhandled exceptions last
+});
+
+// 4. Optional: Add filters to SignalR hubs
+builder.Services.AddSignalR(options =>
 {
     options.AddCommunicationFilters();
 });
 
-// Add SignalR with Communication filters
-builder.Services.AddSignalR(options => 
-{
-    options.AddCommunicationHubFilter();
-});
-
 var app = builder.Build();
-
-// Use Communication middleware for global error handling
-app.UseCommunication();
 ```
 
-### Controller Examples
+#### Filter Execution Order
+
+The order of filters is important for proper error handling:
+
+| Order | Filter | Purpose | When It Runs |
+|-------|--------|---------|--------------|
+| 1 | `CommunicationModelValidationFilter` | Converts ModelState errors to `Result.FailValidation` | Before action execution if model is invalid |
+| 2 | `ResultToActionResultFilter` | Maps `Result<T>` return values to HTTP responses | After action execution |
+| 3 | `CommunicationExceptionFilter` | Catches unhandled exceptions, returns Problem Details | On any exception |
+
+⚠️ **Important**: The filters must be registered using `AddCommunicationFilters()` to ensure correct ordering. Manual registration may cause unexpected behavior.
+
+#### Controller Implementation
 
 ```csharp
 [ApiController]
@@ -244,386 +722,680 @@ app.UseCommunication();
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
-
-    public UsersController(IUserService userService)
-    {
-        _userService = userService;
-    }
-
+    
     [HttpGet("{id}")]
-    public async Task<Result<UserDto>> GetUser(int id)
+    [ProducesResponseType(typeof(User), 200)]
+    [ProducesResponseType(typeof(Problem), 404)]
+    public async Task<Result<User>> GetUser(int id)
     {
-        var user = await _userService.GetByIdAsync(id);
-        
-        if (user == null)
-            return Result<UserDto>.FailNotFound($"User with ID {id} not found");
-            
-        return Result<UserDto>.Succeed(user.ToDto());
+        return await _userService.GetUserAsync(id);
     }
-
+    
     [HttpPost]
-    public async Task<Result<UserDto>> CreateUser([FromBody] CreateUserDto dto)
+    [ProducesResponseType(typeof(User), 201)]
+    [ProducesResponseType(typeof(Problem), 400)]
+    public async Task<Result<User>> CreateUser([FromBody] CreateUserDto dto)
     {
-        // Model validation is handled automatically by filters
-        var validationResult = await _userService.ValidateAsync(dto);
-        if (validationResult.IsFailed)
-            return validationResult;
-
-        var user = await _userService.CreateAsync(dto);
-        return Result<UserDto>.Succeed(user.ToDto());
+        return await _userService.CreateUserAsync(dto);
     }
-
+    
     [HttpGet]
-    public async Task<CollectionResult<UserDto>> GetUsers(
-        [FromQuery] int page = 1, 
-        [FromQuery] int pageSize = 20)
+    [ProducesResponseType(typeof(CollectionResult<User>), 200)]
+    public async Task<CollectionResult<User>> GetUsers(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var (users, totalCount) = await _userService.GetPagedAsync(page, pageSize);
-        
-        return CollectionResult<UserDto>.Succeed(
-            users.Select(u => u.ToDto()),
-            page,
-            pageSize,
-            totalCount
-        );
+        return await _userService.GetUsersAsync(page, pageSize);
     }
 }
 ```
 
-### SignalR Hub Example
+#### Automatic HTTP Response Mapping
+
+The library automatically converts Result types to appropriate HTTP responses:
+
+| Result State | HTTP Status | Response Body |
+|-------------|-------------|---------------|
+| `Result.Succeed()` | 204 No Content | Empty |
+| `Result<T>.Succeed(value)` | 200 OK | `value` |
+| `Result.FailValidation(...)` | 400 Bad Request | Problem Details |
+| `Result.FailUnauthorized()` | 401 Unauthorized | Problem Details |
+| `Result.FailForbidden()` | 403 Forbidden | Problem Details |
+| `Result.FailNotFound()` | 404 Not Found | Problem Details |
+| `Result.Fail(...)` | 500 Internal Server Error | Problem Details |
+
+### SignalR Integration
 
 ```csharp
-public class NotificationHub : Hub
+public class ChatHub : Hub
 {
-    private readonly INotificationService _notificationService;
-
-    public NotificationHub(INotificationService notificationService)
+    public async Task<Result<MessageDto>> SendMessage(string user, string message)
     {
-        _notificationService = notificationService;
+        if (string.IsNullOrEmpty(message))
+            return Result<MessageDto>.FailValidation(("message", "Message cannot be empty"));
+        
+        var messageDto = new MessageDto
+        {
+            User = user,
+            Message = message,
+            Timestamp = DateTime.UtcNow
+        };
+        
+        await Clients.All.SendAsync("ReceiveMessage", user, message);
+        return Result<MessageDto>.Succeed(messageDto);
     }
-
-    public async Task<Result> SendNotification(string message)
+    
+    public async Task<Result> JoinGroup(string groupName)
     {
-        if (string.IsNullOrWhiteSpace(message))
-            return Result.FailValidation(("message", "Message cannot be empty"));
-
-        await _notificationService.BroadcastAsync(message);
+        if (string.IsNullOrEmpty(groupName))
+            return Result.FailValidation(("groupName", "Group name is required"));
+        
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
         return Result.Succeed();
     }
-
-    public async Task<Result<int>> GetUnreadCount()
-    {
-        var count = await _notificationService.GetUnreadCountAsync(Context.UserIdentifier);
-        return Result<int>.Succeed(count);
-    }
 }
 ```
 
-## 🎨 Advanced Features
+### Microsoft Orleans Integration
 
-### Custom Error Enums
-
-Define domain-specific errors:
-
-```csharp
-public enum OrderError
-{
-    InsufficientInventory,
-    PaymentFailed,
-    ShippingNotAvailable
-}
-
-// Use with Result
-var result = Result.Fail(
-    OrderError.InsufficientInventory, 
-    "Not enough items in stock"
-);
-
-// Check specific error
-if (result.Problem?.HasErrorCode(OrderError.InsufficientInventory) == true)
-{
-    // Handle inventory error
-}
-```
-
-### Problem and ProblemDetails Conversion
-
-Seamless integration with ASP.NET Core's ProblemDetails:
-
-```csharp
-// Convert between Problem and ProblemDetails
-Problem problem = Result.Fail("Error", "Details").Problem;
-ProblemDetails problemDetails = problem.ToProblemDetails();
-
-// Convert back
-Problem convertedProblem = problemDetails.AsProblem();
-
-// Create Result from ProblemDetails
-Result result = problemDetails.ToFailedResult();
-```
-
-### Try Pattern for Exception Handling
-
-Wrap exception-throwing code elegantly:
-
-```csharp
-// Synchronous
-var result = Result.Try(() =>
-{
-    var config = JsonSerializer.Deserialize<Config>(json);
-    ValidateConfig(config);
-    return config;
-});
-
-// Asynchronous
-var asyncResult = await Result.TryAsync(async () =>
-{
-    var data = await httpClient.GetStringAsync(url);
-    return JsonSerializer.Deserialize<Data>(data);
-}, HttpStatusCode.BadGateway);
-
-// With specific value type
-var parseResult = Result.Try<int>(() => int.Parse(userInput));
-```
-
-### Result Extensions and Chaining
-
-```csharp
-// Map successful results
-var result = await GetUserAsync(id)
-    .Map(user => user.ToDto())
-    .Map(dto => new UserViewModel(dto));
-
-// Bind operations (flatMap)
-var finalResult = await GetUserAsync(userId)
-    .BindAsync(user => ValidateUserAsync(user))
-    .BindAsync(user => CreateOrderForUserAsync(user, orderDto))
-    .MapAsync(order => order.ToDto());
-
-// Tap for side effects
-var resultWithLogging = await ProcessOrderAsync(orderId)
-    .TapAsync(order => LogOrderProcessed(order))
-    .TapAsync(order => SendNotificationAsync(order));
-
-// Pattern matching
-var message = result.Match(
-    onSuccess: value => $"Success: {value}",
-    onFailure: problem => $"Error {problem.StatusCode}: {problem.Detail}"
-);
-```
-
-### Entity Framework Integration
-
-```csharp
-public async Task<Result<Customer>> GetCustomerAsync(int id)
-{
-    return await Result.TryAsync(async () =>
-    {
-        var customer = await _dbContext.Customers
-            .Include(c => c.Orders)
-            .FirstOrDefaultAsync(c => c.Id == id);
-            
-        return customer ?? Result<Customer>.FailNotFound($"Customer {id} not found");
-    });
-}
-
-public async Task<Result> UpdateCustomerAsync(Customer customer)
-{
-    return await Result.TryAsync(async () =>
-    {
-        _dbContext.Customers.Update(customer);
-        await _dbContext.SaveChangesAsync();
-    }, HttpStatusCode.InternalServerError);
-}
-```
-
-## 🏗️ Orleans Integration
+#### Setup
 
 ```csharp
 // Silo configuration
-var builder = new HostBuilder()
-    .UseOrleans(siloBuilder =>
+var builder = Host.CreateDefaultBuilder(args)
+    .UseOrleans(silo =>
     {
-        siloBuilder.UseOrleansCommunication();
+        silo.UseLocalhostClustering()
+            .UseOrleansCommunication(); // Required for Result serialization
     });
 
-// Client configuration
-var client = new ClientBuilder()
-    .UseOrleansCommunication()
-    .Build();
+// Client configuration  
+var clientBuilder = Host.CreateDefaultBuilder(args)
+    .UseOrleansClient(client =>
+    {
+        client.UseOrleansCommunication(); // Required for Result serialization
+    });
+```
 
-// Grain implementation
+That's it! The `UseOrleansCommunication()` extension automatically configures:
+- Serialization for all Result types across grain boundaries
+- Proper handling of Problem Details in distributed calls
+- Support for CollectionResult with pagination
+
+#### Grain Implementation
+
+```csharp
+public interface IUserGrain : IGrainWithStringKey
+{
+    Task<Result<UserState>> GetStateAsync();
+    Task<Result> UpdateProfileAsync(UpdateProfileDto dto);
+    Task<CollectionResult<Activity>> GetActivitiesAsync(int page, int pageSize);
+}
+
 public class UserGrain : Grain, IUserGrain
 {
-    public async Task<Result<UserData>> GetUserDataAsync()
+    private readonly IPersistentState<UserState> _state;
+    
+    public UserGrain([PersistentState("user")] IPersistentState<UserState> state)
     {
-        return await Result.TryAsync(async () =>
-        {
-            var userData = await LoadUserDataAsync();
-            return userData;
-        });
+        _state = state;
+    }
+    
+    public Task<Result<UserState>> GetStateAsync()
+    {
+        if (!_state.RecordExists)
+            return Task.FromResult(Result<UserState>.FailNotFound("User not found"));
+        
+        return Task.FromResult(Result<UserState>.Succeed(_state.State));
+    }
+    
+    public async Task<Result> UpdateProfileAsync(UpdateProfileDto dto)
+    {
+        if (!_state.RecordExists)
+            return Result.FailNotFound("User not found");
+        
+        // Validate
+        if (string.IsNullOrEmpty(dto.DisplayName))
+            return Result.FailValidation(("displayName", "Display name is required"));
+        
+        // Update state
+        _state.State.DisplayName = dto.DisplayName;
+        _state.State.Bio = dto.Bio;
+        _state.State.UpdatedAt = DateTime.UtcNow;
+        
+        await _state.WriteStateAsync();
+        return Result.Succeed();
+    }
+    
+    public async Task<CollectionResult<Activity>> GetActivitiesAsync(int page, int pageSize)
+    {
+        if (!_state.RecordExists)
+            return CollectionResult<Activity>.FailNotFound("User not found");
+        
+        // For real data, use a repository with Entity Framework
+        var repository = GrainFactory.GetGrain<IActivityRepositoryGrain>(0);
+        return await repository.GetUserActivitiesAsync(this.GetPrimaryKeyString(), page, pageSize);
     }
 }
 ```
 
-## 📊 Performance Benefits
+## Performance
 
-The Result pattern provides significant performance improvements over traditional exception handling in .NET applications. Exceptions are expensive - they involve stack unwinding, object allocation, and can be 1000x slower than returning a Result object:
+### Best Practices
+
+1. **Use structs**: `Result` and `Result<T>` are value types (structs) to avoid heap allocation
+2. **Avoid boxing**: Use generic methods to prevent boxing of value types
+3. **Chain operations**: Use railway-oriented programming to avoid intermediate variables
+4. **Async properly**: Use `ConfigureAwait(false)` in library code
+5. **Cache problems**: Reuse common Problem instances for frequent errors
+
+## Comparison
+
+### Comparison with Other Libraries
+
+| Feature | ManagedCode.Communication | FluentResults | CSharpFunctionalExtensions | ErrorOr |
+|---------|--------------------------|---------------|---------------------------|---------|
+| **Multiple Errors** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
+| **Railway-Oriented** | ✅ Full | ✅ Full | ✅ Full | ⚠️ Limited |
+| **HTTP Integration** | ✅ Built-in | ❌ No | ⚠️ Extension | ❌ No |
+| **Orleans Support** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
+| **SignalR Support** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
+| **RFC 7807** | ✅ Full | ❌ No | ❌ No | ❌ No |
+| **Pagination** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
+| **Command Pattern** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
+| **Performance** | ✅ Struct-based | ❌ Class-based | ✅ Struct-based | ✅ Struct-based |
+| **Async Support** | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
+
+### When to Use ManagedCode.Communication
+
+Choose this library when you need:
+
+- **Full-stack integration**: ASP.NET Core + SignalR + Orleans
+- **Standardized errors**: RFC 7807 Problem Details
+- **Pagination**: Built-in collection results with paging
+- **Command pattern**: Command infrastructure with idempotency
+- **Performance**: Struct-based implementation for minimal overhead
+
+## Best Practices
+
+### DO ✅
 
 ```csharp
-// ❌ Traditional approach - throwing exceptions
-public User GetUser(int id)
-{
-    var user = _repository.FindById(id);
-    if (user == null)
-        throw new NotFoundException($"User {id} not found"); // ~1000x slower!
-    return user;
-}
-
-// ✅ Result pattern - no exceptions
+// DO: Use Result for operations that can fail
 public Result<User> GetUser(int id)
 {
     var user = _repository.FindById(id);
+    return user != null 
+        ? Result<User>.Succeed(user)
+        : Result<User>.FailNotFound($"User {id} not found");
+}
+
+// DO: Chain operations using railway-oriented programming
+public Result<Order> ProcessOrder(OrderDto dto)
+{
+    return ValidateOrder(dto)
+        .Then(CreateOrder)
+        .Then(CalculateTotals)
+        .Then(ApplyDiscounts)
+        .Then(SaveOrder);
+}
+
+// DO: Provide specific error information
+public Result ValidateEmail(string email)
+{
+    if (string.IsNullOrEmpty(email))
+        return Result.FailValidation(("email", "Email is required"));
+    
+    if (!email.Contains("@"))
+        return Result.FailValidation(("email", "Invalid email format"));
+    
+    return Result.Succeed();
+}
+
+// DO: Use CollectionResult for paginated data
+public CollectionResult<Product> GetProducts(int page, int pageSize)
+{
+    var products = _repository.GetPaged(page, pageSize);
+    var total = _repository.Count();
+    return CollectionResult<Product>.Succeed(products, page, pageSize, total);
+}
+```
+
+### DON'T ❌
+
+```csharp
+// DON'T: Throw exceptions from Result-returning methods
+public Result<User> GetUser(int id)
+{
+    if (id <= 0)
+        throw new ArgumentException("Invalid ID"); // ❌ Don't throw
+    
+    // Instead:
+    if (id <= 0)
+        return Result<User>.FailValidation(("id", "ID must be positive")); // ✅
+}
+
+// DON'T: Ignore Result values
+var result = UpdateUser(user); // ❌ Result ignored
+DoSomethingElse();
+
+// Instead:
+var result = UpdateUser(user);
+if (result.IsFailed)
+    return result; // ✅ Handle the failure
+
+// DON'T: Mix Result and exceptions
+public async Task<User> GetUserMixed(int id)
+{
+    var result = await GetUserAsync(id);
+    if (result.IsFailed)
+        throw new Exception(result.Problem.Detail); // ❌ Mixing patterns
+    
+    return result.Value;
+}
+
+// DON'T: Create generic error messages
+return Result.Fail("Error"); // ❌ Too vague
+
+// Instead:
+return Result.Fail("User creation failed", "Email already exists"); // ✅
+```
+
+## Examples
+
+### Complete Web API Example
+
+```csharp
+// Domain Model
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+    public int Stock { get; set; }
+}
+
+// Service Interface
+public interface IProductService
+{
+    Task<Result<Product>> GetByIdAsync(int id);
+    Task<Result<Product>> CreateAsync(CreateProductDto dto);
+    Task<Result> UpdateStockAsync(int id, int quantity);
+    Task<CollectionResult<Product>> SearchAsync(string query, int page, int pageSize);
+}
+
+// Service Implementation
+public class ProductService : IProductService
+{
+    private readonly IProductRepository _repository;
+    private readonly ILogger<ProductService> _logger;
+    
+    public async Task<Result<Product>> GetByIdAsync(int id)
+    {
+        return await Result.Try(async () =>
+        {
+            var product = await _repository.FindByIdAsync(id);
+            return product ?? throw new KeyNotFoundException($"Product {id} not found");
+        })
+        .CompensateAsync(async error =>
+        {
+            _logger.LogWarning("Product {Id} not found, checking archive", id);
+            var archived = await _repository.FindInArchiveAsync(id);
+            return archived != null
+                ? Result<Product>.Succeed(archived)
+                : Result<Product>.FailNotFound($"Product {id} not found");
+        });
+    }
+    
+    public async Task<Result<Product>> CreateAsync(CreateProductDto dto)
+    {
+        // Validation
+        var validationResult = await ValidateProductDto(dto);
+        if (validationResult.IsFailed)
+            return Result<Product>.Fail(validationResult.Problem);
+        
+        // Check for duplicates
+        var existing = await _repository.FindByNameAsync(dto.Name);
+        if (existing != null)
+            return Result<Product>.Fail("Duplicate product", 
+                $"Product with name '{dto.Name}' already exists");
+        
+        // Create product
+        var product = new Product
+        {
+            Name = dto.Name,
+            Price = dto.Price,
+            Stock = dto.InitialStock
+        };
+        
+        await _repository.AddAsync(product);
+        await _repository.SaveChangesAsync();
+        
+        return Result<Product>.Succeed(product);
+    }
+    
+    public async Task<Result> UpdateStockAsync(int id, int quantity)
+    {
+        return await GetByIdAsync(id)
+            .Then(product =>
+            {
+                if (product.Stock + quantity < 0)
+                    return Result.Fail("Insufficient stock", 
+                        $"Cannot reduce stock by {Math.Abs(quantity)}. Current stock: {product.Stock}");
+                
+                product.Stock += quantity;
+                return Result.Succeed();
+            })
+            .ThenAsync(async () =>
+            {
+                await _repository.SaveChangesAsync();
+                return Result.Succeed();
+            });
+    }
+    
+    public async Task<CollectionResult<Product>> SearchAsync(string query, int page, int pageSize)
+    {
+        try
+        {
+            var (products, total) = await _repository.SearchAsync(query, page, pageSize);
+            return CollectionResult<Product>.Succeed(products, page, pageSize, total);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search failed for query: {Query}", query);
+            return CollectionResult<Product>.Fail(ex);
+        }
+    }
+    
+    private async Task<Result> ValidateProductDto(CreateProductDto dto)
+    {
+        var errors = new List<(string field, string message)>();
+        
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            errors.Add(("name", "Product name is required"));
+        else if (dto.Name.Length > 100)
+            errors.Add(("name", "Product name must be 100 characters or less"));
+        
+        if (dto.Price <= 0)
+            errors.Add(("price", "Price must be greater than zero"));
+        
+        if (dto.InitialStock < 0)
+            errors.Add(("initialStock", "Initial stock cannot be negative"));
+        
+        // Async validation
+        if (!string.IsNullOrWhiteSpace(dto.Name))
+        {
+            var categoryExists = await _repository.CategoryExistsAsync(dto.CategoryId);
+            if (!categoryExists)
+                errors.Add(("categoryId", "Invalid category"));
+        }
+        
+        return errors.Any() 
+            ? Result.FailValidation(errors.ToArray())
+            : Result.Succeed();
+    }
+}
+
+// Controller
+[ApiController]
+[Route("api/[controller]")]
+public class ProductsController : ControllerBase
+{
+    private readonly IProductService _productService;
+    
+    [HttpGet("{id}")]
+    public async Task<Result<Product>> Get(int id)
+    {
+        return await _productService.GetByIdAsync(id);
+    }
+    
+    [HttpPost]
+    public async Task<Result<Product>> Create([FromBody] CreateProductDto dto)
+    {
+        return await _productService.CreateAsync(dto);
+    }
+    
+    [HttpPatch("{id}/stock")]
+    public async Task<Result> UpdateStock(int id, [FromBody] UpdateStockDto dto)
+    {
+        return await _productService.UpdateStockAsync(id, dto.Quantity);
+    }
+    
+    [HttpGet("search")]
+    public async Task<CollectionResult<Product>> Search(
+        [FromQuery] string q,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        return await _productService.SearchAsync(q, page, pageSize);
+    }
+}
+```
+
+### Complex Business Logic Example
+
+```csharp
+public class OrderProcessingService
+{
+    public async Task<Result<Order>> ProcessOrderAsync(ProcessOrderCommand command)
+    {
+        // Complete order processing pipeline
+        return await Result
+            // Validate command
+            .From(() => ValidateCommand(command))
+            
+            // Load user
+            .ThenAsync(async () => await _userRepository.GetByIdAsync(command.UserId))
+            
+            // Check user permissions
+            .Then(user => user.CanPlaceOrders 
+                ? Result<User>.Succeed(user)
+                : Result<User>.FailForbidden("User cannot place orders"))
+            
+            // Verify user credit
+            .ThenAsync(async user => await _creditService.CheckCreditAsync(user.Id))
+            .Then(creditResult => creditResult.AvailableCredit >= command.TotalAmount
+                ? Result.Succeed()
+                : Result.Fail("Insufficient credit"))
+            
+            // Check inventory
+            .ThenAsync(async () => await CheckInventoryAsync(command.Items))
+            
+            // Reserve inventory
+            .ThenAsync(async () => await ReserveInventoryAsync(command.Items))
+            
+            // Create order
+            .ThenAsync(async () => await CreateOrderAsync(command))
+            
+            // Process payment
+            .ThenAsync(async order => await ProcessPaymentAsync(order, command.PaymentMethod))
+            
+            // Send confirmation
+            .ThenAsync(async order => await SendOrderConfirmationAsync(order))
+            
+            // Handle any failures
+            .CompensateAsync(async problem =>
+            {
+                _logger.LogError("Order processing failed: {Problem}", problem.Detail);
+                
+                // Rollback inventory reservation
+                await ReleaseInventoryAsync(command.Items);
+                
+                // Notify user
+                await _notificationService.NotifyOrderFailedAsync(command.UserId, problem.Detail);
+                
+                return Result<Order>.Fail(problem);
+            });
+    }
+    
+    private async Task<Result> CheckInventoryAsync(List<OrderItem> items)
+    {
+        var unavailable = new List<string>();
+        
+        foreach (var item in items)
+        {
+            var stock = await _inventoryService.GetStockAsync(item.ProductId);
+            if (stock < item.Quantity)
+            {
+                unavailable.Add($"{item.ProductName}: requested {item.Quantity}, available {stock}");
+            }
+        }
+        
+        return unavailable.Any()
+            ? Result.Fail("Insufficient inventory", string.Join("; ", unavailable))
+            : Result.Succeed();
+    }
+}
+```
+
+## Migration Guide
+
+### Migrating from Exceptions
+
+#### Before (Exception-based)
+
+```csharp
+public User GetUser(int id)
+{
+    if (id <= 0)
+        throw new ArgumentException("Invalid ID");
+    
+    var user = _repository.FindById(id);
     if (user == null)
-        return Result<User>.FailNotFound($"User {id} not found"); // Much faster!
+        throw new NotFoundException($"User {id} not found");
+    
+    if (!user.IsActive)
+        throw new InvalidOperationException("User is not active");
+    
+    return user;
+}
+
+// Usage
+try
+{
+    var user = GetUser(id);
+    // Process user
+}
+catch (ArgumentException ex)
+{
+    // Handle validation error
+}
+catch (NotFoundException ex)
+{
+    // Handle not found
+}
+catch (Exception ex)
+{
+    // Handle other errors
+}
+```
+
+#### After (Result-based)
+
+```csharp
+public Result<User> GetUser(int id)
+{
+    if (id <= 0)
+        return Result<User>.FailValidation(("id", "ID must be positive"));
+    
+    var user = _repository.FindById(id);
+    if (user == null)
+        return Result<User>.FailNotFound($"User {id} not found");
+    
+    if (!user.IsActive)
+        return Result<User>.Fail("User inactive", "User account is not active");
+    
     return Result<User>.Succeed(user);
 }
 
-// Multiple ways to create failures
-var notFound = Result<User>.FailNotFound("User not found");
-var generalFail = Result<User>.Fail("Operation failed", "Detailed error description");
-var withStatusCode = Result<User>.Fail("Forbidden", "Access denied", HttpStatusCode.Forbidden);
-var fromProblem = Result<User>.Fail(Problem.Create("type", "title", 400, "detail"));
-var fromException = Result<User>.Fail(new InvalidOperationException("Not allowed"));
-```
-
-## 🧪 Testing
-
-The Result pattern makes unit testing in .NET much cleaner by eliminating the need to test exception scenarios. Instead of asserting on thrown exceptions, you can directly check Result properties:
-
-```csharp
-[Test]
-public async Task GetUser_WhenUserExists_ReturnsSuccess()
-{
-    // Arrange
-    var userId = 123;
-    var expectedUser = new User { Id = userId, Name = "John" };
-    _mockRepository.Setup(x => x.FindById(userId)).Returns(expectedUser);
-
-    // Act
-    var result = await _userService.GetUser(userId);
-
-    // Assert
-    result.IsSuccess.Should().BeTrue();
-    result.Value.Name.Should().Be(expectedUser.Name);
-}
-
-[Test]
-public async Task GetUser_WhenUserNotFound_ReturnsCorrectProblem()
-{
-    // Arrange
-    var userId = 999;
-    _mockRepository.Setup(x => x.FindById(userId)).Returns((User)null);
-
-    // Act
-    var result = await _userService.GetUser(userId);
-
-    // Assert
-    result.IsFailed.Should().BeTrue();
-    result.Problem.StatusCode.Should().Be(404);
-    result.Problem.Title.Should().Be("Not Found");
-}
-```
-
-## 🛠️ Configuration Options
-
-```csharp
-services.AddCommunication(options =>
-{
-    // Show detailed error information (disable in production)
-    options.ShowErrorDetails = false;
-    
-    // Custom error response builder
-    options.ErrorResponseBuilder = (problem, context) =>
+// Usage
+var result = GetUser(id);
+result.Match(
+    onSuccess: user => { /* Process user */ },
+    onFailure: problem =>
     {
-        return new
+        if (result.IsInvalid)
         {
-            type = problem.Type,
-            title = problem.Title,
-            status = problem.StatusCode,
-            detail = options.ShowErrorDetails ? problem.Detail : null,
-            instance = problem.Instance,
-            traceId = Activity.Current?.Id ?? context.TraceIdentifier,
-            extensions = problem.Extensions
-        };
-    };
-});
+            // Handle validation error
+        }
+        else if (problem.StatusCode == 404)
+        {
+            // Handle not found
+        }
+        else
+        {
+            // Handle other errors
+        }
+    }
+);
 ```
 
-## 📝 Best Practices for Result Pattern in .NET
+### Gradual Migration Strategy
 
-1. **Always return Result types from your service methods in C# applications**
-   ```csharp
-   public interface IUserService
-   {
-       Task<Result<User>> GetByIdAsync(int id);
-       Task<Result<User>> CreateAsync(CreateUserDto dto);
-       Task<Result> DeleteAsync(int id);
-       Task<CollectionResult<User>> GetPagedAsync(int page, int pageSize);
-   }
-   ```
+1. **Start with new code**: Implement Result pattern in new features
+2. **Wrap existing methods**: Use `Result.Try()` to wrap exception-throwing code
+3. **Update interfaces**: Change return types from `T` to `Result<T>`
+4. **Convert controllers**: Update API endpoints to return Result types
+5. **Remove try-catch blocks**: Replace with Result pattern handling
 
-2. **Use specific Problem Details for different error scenarios**
-   ```csharp
-   return Result<Order>.Fail(Problem.Create(
-       type: "https://example.com/probs/insufficient-inventory",
-       title: "Insufficient Inventory",
-       statusCode: 422,
-       detail: $"Product {productId} has only {available} items, but {requested} were requested",
-       instance: $"/orders/{orderId}"
-   ));
-   ```
+```csharp
+// Step 1: Wrap existing code
+public Result<User> GetUserSafe(int id)
+{
+    return Result.Try(() => GetUserUnsafe(id));
+}
 
-3. **Leverage Railway-Oriented Programming for complex workflows**
-   ```csharp
-   public async Task<Result<OrderConfirmation>> ProcessOrderAsync(OrderRequest request)
-   {
-       return await ValidateOrderRequest(request)
-           .BindAsync(validRequest => CheckInventoryAsync(validRequest))
-           .BindAsync(inventory => CalculatePricingAsync(inventory))
-           .BindAsync(pricing => ProcessPaymentAsync(pricing))
-           .BindAsync(payment => CreateOrderAsync(payment))
-           .MapAsync(order => GenerateConfirmationAsync(order));
-   }
-   ```
+// Step 2: Gradually refactor internals
+public Result<User> GetUserRefactored(int id)
+{
+    // Refactored implementation without exceptions
+}
 
-4. **Use TryGetProblem for conditional error handling**
-   ```csharp
-   if (result.TryGetProblem(out var problem))
-   {
-       _logger.LogError("Operation failed: {Type} - {Detail}", 
-           problem.Type, problem.Detail);
-       
-       if (problem.StatusCode == 429) // Too Many Requests
-       {
-           var retryAfter = problem.Extensions.GetValueOrDefault("retryAfter");
-           // Handle rate limiting
-       }
-   }
-   ```
+// Step 3: Update consumers
+public async Task<IActionResult> GetUser(int id)
+{
+    var result = await _service.GetUserRefactored(id);
+    return result.Match(
+        onSuccess: user => Ok(user),
+        onFailure: problem => Problem(problem)
+    );
+}
+```
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+Contributions are welcome! Fork the repository and submit a pull request.
 
-## 📄 License
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/managed-code-hub/Communication.git
+
+# Build the solution
+dotnet build
+
+# Run tests
+dotnet test
+
+# Run benchmarks
+dotnet run -c Release --project benchmarks/ManagedCode.Communication.Benchmarks
+```
+
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Support
 
-Special thanks to all contributors who have helped make this library better!
+- **Issues**: [GitHub Issues](https://github.com/managed-code-hub/Communication/issues)
+- **Source Code**: [GitHub Repository](https://github.com/managed-code-hub/Communication)
 
----
+## Acknowledgments
 
-**Made with ❤️ by [ManagedCode](https://github.com/managedcode)**
+- Inspired by F# and Rust Result types
+- Railway-oriented programming concepts
+- RFC 7807 Problem Details for HTTP APIs
+- Built for seamless integration with Microsoft Orleans
+- Optimized for ASP.NET Core applications
+

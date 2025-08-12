@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -10,9 +11,9 @@ namespace ManagedCode.Communication.CollectionResultT;
 
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Count: {Collection?.Length ?? 0}; Problem: {Problem?.Title}")]
-public partial struct CollectionResult<T> : IResult, IResultProblem
+public partial struct CollectionResult<T> : IResult
 {
-    internal CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Problem? problem) : this(
+    private CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Problem? problem) : this(
         isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, problem)
     {
     }
@@ -24,13 +25,19 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
         PageNumber = pageNumber;
         PageSize = pageSize;
         TotalItems = totalItems;
-        TotalPages = (int)Math.Ceiling((double)totalItems / pageSize);
+        TotalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalItems / pageSize) : 0;
         Problem = problem;
+    }
+
+    internal static CollectionResult<T> Create(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Problem? problem = null)
+    {
+        return new CollectionResult<T>(isSuccess, collection, pageNumber, pageSize, totalItems, problem);
     }
 
     [JsonPropertyName("isSuccess")]
     [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Collection))]
+    [MemberNotNullWhen(false, nameof(Problem))]
     public bool IsSuccess { get; set; }
 
     [JsonIgnore]
@@ -62,7 +69,6 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Problem? Problem { get; set; }
 
-
     [JsonIgnore]
     public bool IsEmpty => Collection is null || Collection.Length == 0;
 
@@ -81,7 +87,7 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
         {
             throw Problem;
         }
-        
+
         return false;
     }
 
@@ -93,7 +99,6 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
     }
 
     #endregion
-
 
     #region IResultInvalid Implementation
 
@@ -107,29 +112,29 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
         return errors?.ContainsKey(fieldName) ?? false;
     }
 
-    public string? InvalidFieldError(string fieldName)
+    public string InvalidFieldError(string fieldName)
     {
         var errors = Problem?.GetValidationErrors();
-        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : null;
+        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
     }
 
     public void AddInvalidMessage(string message)
     {
         if (Problem == null)
         {
-            Problem = Problem.Validation(("_general", message));
+            Problem = Problem.Validation((ProblemConstants.ValidationFields.General, message));
         }
         else
         {
-            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
             {
-                if (!errors.ContainsKey("_general"))
+                if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
                 {
-                    errors["_general"] = new List<string>();
+                    errors[ProblemConstants.ValidationFields.General] = new List<string>();
                 }
 
-                errors["_general"]
+                errors[ProblemConstants.ValidationFields.General]
                     .Add(message);
             }
         }
@@ -143,16 +148,15 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
         }
         else
         {
-            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
             {
                 if (!errors.ContainsKey(key))
                 {
                     errors[key] = new List<string>();
                 }
 
-                errors[key]
-                    .Add(value);
+                errors[key].Add(value);
             }
         }
     }
@@ -166,15 +170,15 @@ public partial struct CollectionResult<T> : IResult, IResultProblem
     /// </summary>
     public static CollectionResult<T> Empty()
     {
-        return new CollectionResult<T>(true, Array.Empty<T>(), 1, 0, 0);
+        return Create(true, [], 0, 0, 0);
     }
 
     /// <summary>
     ///     Creates an empty collection result with paging information.
     /// </summary>
-    public static CollectionResult<T> Empty(int pageNumber, int pageSize)
+    public static CollectionResult<T> Empty()
     {
-        return new CollectionResult<T>(true, Array.Empty<T>(), pageNumber, pageSize, 0);
+        return Create(true, [], 0, 0, 0);
     }
 
     #endregion

@@ -14,7 +14,7 @@ public static class HttpResponseExtension
         }
 
         var content = await responseMessage.Content.ReadAsStringAsync();
-        return Result<T>.Fail(content, null, responseMessage.StatusCode);
+        return Result<T>.Fail(content, content, responseMessage.StatusCode);
     }
 
     public static async Task<Result> FromRequestToResult(this HttpResponseMessage responseMessage)
@@ -25,6 +25,6 @@ public static class HttpResponseExtension
         }
 
         var content = await responseMessage.Content.ReadAsStringAsync();
-        return Result.Fail(content, null, responseMessage.StatusCode);
+        return Result.Fail(content, content, responseMessage.StatusCode);
     }
 }

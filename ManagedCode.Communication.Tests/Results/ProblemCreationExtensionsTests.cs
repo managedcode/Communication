@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using FluentAssertions;
+using ManagedCode.Communication.Extensions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
@@ -110,7 +111,7 @@ public class ProblemCreationExtensionsTests
     public void ToException_FromProblem_ShouldCreateProblemException()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/409", "Conflict", 409, "Resource conflict detected");
+        var problem = Problem.Create("Conflict", "Resource conflict detected", 409, "https://httpstatuses.io/409");
 
         // Act
         var exception = problem.ToException();

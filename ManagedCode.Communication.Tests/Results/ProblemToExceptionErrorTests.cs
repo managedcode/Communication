@@ -133,14 +133,8 @@ public class ProblemToExceptionErrorTests
     public void ToException_WithNullDetail_ShouldUseTitle()
     {
         // Arrange
-        var problem = new Problem
-        {
-            Type = "https://httpstatuses.io/500",
-            Title = "Server Error",
-            StatusCode = 500,
-            Detail = null
-        };
-        problem.Extensions[ProblemExtensionKeys.OriginalExceptionType] = typeof(InvalidOperationException).FullName;
+        var problem = Problem.Create("Server Error", "", 500, "https://httpstatuses.io/500");
+        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = typeof(InvalidOperationException).FullName;
 
         // Act
         var exception = problem.ToException();
@@ -154,14 +148,8 @@ public class ProblemToExceptionErrorTests
     public void ToException_WithNullDetailAndTitle_ShouldUseDefaultMessage()
     {
         // Arrange
-        var problem = new Problem
-        {
-            Type = "https://httpstatuses.io/500",
-            Title = null,
-            StatusCode = 500,
-            Detail = null
-        };
-        problem.Extensions[ProblemExtensionKeys.OriginalExceptionType] = typeof(InvalidOperationException).FullName;
+        var problem = Problem.Create("", "", 500, "https://httpstatuses.io/500");
+        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = typeof(InvalidOperationException).FullName;
 
         // Act
         var exception = problem.ToException();
@@ -176,7 +164,7 @@ public class ProblemToExceptionErrorTests
     {
         // Arrange
         var problem = Problem.Create("type", "title", 400, "detail");
-        problem.Extensions[ProblemExtensionKeys.OriginalExceptionType] = "This.Is.Not.A.Valid.Type.Name!!!";
+        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = "This.Is.Not.A.Valid.Type.Name!!!";
 
         // Act
         var exception = problem.ToException();
@@ -191,7 +179,7 @@ public class ProblemToExceptionErrorTests
         // Arrange
         var originalException = new InvalidOperationException("Test");
         originalException.Data["key1"] = "value1";
-        originalException.Data[ProblemExtensionKeys.ExceptionDataPrefix + "key2"] = "This should not happen";
+        originalException.Data[ProblemConstants.ExtensionKeys.ExceptionDataPrefix + "key2"] = "This should not happen";
         
         var problem = Problem.FromException(originalException);
 
@@ -224,12 +212,12 @@ public class ProblemToExceptionErrorTests
     {
         // Arrange
         var problem = Problem.Create("type", "title", 500, "detail");
-        problem.Extensions[ProblemExtensionKeys.OriginalExceptionType] = typeof(InvalidOperationException).FullName;
+        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = typeof(InvalidOperationException).FullName;
         
         // Add many data items
         for (int i = 0; i < 100; i++)
         {
-            problem.Extensions[$"{ProblemExtensionKeys.ExceptionDataPrefix}key{i}"] = $"value{i}";
+            problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}key{i}"] = $"value{i}";
         }
 
         // Act

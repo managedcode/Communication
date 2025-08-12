@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -28,8 +29,16 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Initializes a new instance of the Result struct with an exception.
     /// </summary>
-    internal Result(Exception exception) : this(false, default, Problem.FromException(exception))
+    private Result(Exception exception) : this(false, default, Problem.Create(exception))
     {
+    }
+
+    /// <summary>
+    ///     Creates a Result with the specified success status, value and optional problem.
+    /// </summary>
+    internal static Result<T> Create(bool isSuccess, T? value, Problem? problem = null)
+    {
+        return new Result<T>(isSuccess, value, problem);
     }
 
 
@@ -42,7 +51,7 @@ public partial struct Result<T> : IResult<T>
         {
             throw Problem;
         }
-        
+
         return false;
     }
 
@@ -63,7 +72,8 @@ public partial struct Result<T> : IResult<T>
     ///     Gets a value indicating whether the result is a success.
     /// </summary>
     [MemberNotNullWhen(true, nameof(Value))]
-    public bool IsSuccess { get; set; }
+    [MemberNotNullWhen(false, nameof(Problem))]
+    public bool IsSuccess { get; init; }
 
     /// <summary>
     ///     Gets a value indicating whether the result is empty.
@@ -98,7 +108,7 @@ public partial struct Result<T> : IResult<T>
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
-    public bool HasProblem => Problem != null;
+    public bool HasProblem => Problem is not null;
 
     /// <summary>
     ///     Gets a value indicating whether the result is invalid.
@@ -117,19 +127,19 @@ public partial struct Result<T> : IResult<T>
     {
         if (Problem == null)
         {
-            Problem = Problem.Validation(("_general", message));
+            Problem = Problem.Validation((ProblemConstants.ValidationFields.General, message));
         }
         else
         {
-            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
             {
-                if (!errors.ContainsKey("_general"))
+                if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
                 {
-                    errors["_general"] = new List<string>();
+                    errors[ProblemConstants.ValidationFields.General] = new List<string>();
                 }
 
-                errors["_general"]
+                errors[ProblemConstants.ValidationFields.General]
                     .Add(message);
             }
         }
@@ -146,8 +156,8 @@ public partial struct Result<T> : IResult<T>
         }
         else
         {
-            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
             {
                 if (!errors.ContainsKey(key))
                 {
@@ -166,10 +176,10 @@ public partial struct Result<T> : IResult<T>
         return errors?.ContainsKey(fieldName) ?? false;
     }
 
-    public string? InvalidFieldError(string fieldName)
+    public string InvalidFieldError(string fieldName)
     {
         var errors = Problem?.GetValidationErrors();
-        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : null;
+        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
     }
 
     public Dictionary<string, List<string>>? InvalidObject => Problem?.GetValidationErrors();

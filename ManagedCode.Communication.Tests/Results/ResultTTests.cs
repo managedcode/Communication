@@ -72,7 +72,7 @@ public class ResultTTests
     public void Fail_WithProblem_ShouldCreateFailedResult()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input");
+        var problem = Problem.Create("Bad Request", "Invalid input", 400, "https://httpstatuses.io/400");
 
         // Act
         var result = Result<string>.Fail(problem);
@@ -174,7 +174,7 @@ public class ResultTTests
     public void ImplicitOperator_FromProblem_ShouldCreateFailedResult()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input");
+        var problem = Problem.Create("Bad Request", "Invalid input", 400, "https://httpstatuses.io/400");
 
         // Act
         Result<string> result = problem;
@@ -363,7 +363,7 @@ public class ResultTTests
     public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
     {
         // Arrange
-        var expectedProblem = Problem.Create("https://httpstatuses.io/500", "Internal Server Error", 500, "Server error occurred");
+        var expectedProblem = Problem.Create("Internal Server Error", "Server error occurred", 500, "https://httpstatuses.io/500");
         var result = Result<string>.Fail(expectedProblem);
 
         // Act
@@ -391,7 +391,7 @@ public class ResultTTests
     public void ThrowIfFail_WithFailedResult_ShouldThrowProblemException()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input data");
+        var problem = Problem.Create("Bad Request", "Invalid input data", 400, "https://httpstatuses.io/400");
         var result = Result<string>.Fail(problem);
 
         // Act & Assert

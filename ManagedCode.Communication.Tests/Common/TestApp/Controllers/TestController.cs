@@ -31,7 +31,7 @@ public class TestController : ControllerBase
         return Ok("oke");
     }
 
-    [HttpGet("result-success")]
+    [HttpGet("result-simple")]
     public Result GetResultSuccess()
     {
         return Result.Succeed();
@@ -122,6 +122,67 @@ public class TestController : ControllerBase
     public Result ThrowUnhandledException()
     {
         throw new InvalidOperationException("This is an unhandled exception");
+    }
+
+    [HttpGet("throw-exception")]
+    public string ThrowException()
+    {
+        throw new InvalidOperationException("This is a test exception for integration testing");
+    }
+
+    [HttpPost("validate")]
+    public ActionResult<string> Validate([FromBody] TestValidationModel model)
+    {
+        return Ok("Validation passed");
+    }
+
+    [HttpGet("result-success")]
+    public Result<TestModel> GetResultSuccessWithValue()
+    {
+        return Result<TestModel>.Succeed(new TestModel { Id = 42, Name = "Test Success" });
+    }
+
+    [HttpGet("result-failure")]
+    public Result<string> GetResultFailure()
+    {
+        return Result<string>.Fail("Validation failed", "The provided data is invalid", HttpStatusCode.BadRequest);
+    }
+
+    [HttpGet("result-notfound")]
+    public Result<string> GetResultNotFoundTest()
+    {
+        return Result<string>.FailNotFound("Resource not found");
+    }
+
+    [HttpGet("custom-problem")]
+    public ActionResult CustomProblem()
+    {
+        var problem = Communication.Problem.Create("Custom Error", "This is a custom error for testing", 409, "https://example.com/custom-error");
+        return StatusCode(409, problem);
+    }
+
+    [HttpGet("collection-success")]
+    public CollectionResult<TestModel> GetCollectionSuccess()
+    {
+        var items = new[]
+        {
+            new TestModel { Id = 1, Name = "Item 1" },
+            new TestModel { Id = 2, Name = "Item 2" },
+            new TestModel { Id = 3, Name = "Item 3" }
+        };
+        return CollectionResult<TestModel>.Succeed(items, pageNumber: 1, pageSize: 10, totalItems: 3);
+    }
+
+    [HttpGet("collection-empty")]
+    public CollectionResult<TestModel> GetCollectionEmpty()
+    {
+        return CollectionResult<TestModel>.Empty();
+    }
+
+    [HttpGet("enum-error")]
+    public Result<string> GetEnumError()
+    {
+        return Result<string>.Fail(TestErrorEnum.InvalidInput, "Invalid input provided");
     }
 }
 

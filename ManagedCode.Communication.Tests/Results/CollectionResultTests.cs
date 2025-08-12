@@ -238,7 +238,7 @@ public class CollectionResultTests
     public void Fail_WithProblem_ShouldCreateFailedResult()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input");
+        var problem = Problem.Create("Bad Request", "Invalid input", 400, "https://httpstatuses.io/400");
 
         // Act
         var result = CollectionResult<string>.Fail(problem);
@@ -316,7 +316,7 @@ public class CollectionResultTests
         ageErrors.Should()
             .Be("Age must be greater than 0");
         nameErrors.Should()
-            .BeNull();
+            .BeEmpty();
     }
 
     [Fact]
@@ -417,7 +417,7 @@ public class CollectionResultTests
     public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
     {
         // Arrange
-        var expectedProblem = Problem.Create("https://httpstatuses.io/503", "Service Unavailable", 503, "Service is temporarily unavailable");
+        var expectedProblem = Problem.Create("Service Unavailable", "Service is temporarily unavailable", 503, "https://httpstatuses.io/503");
         var result = CollectionResult<string>.Fail(expectedProblem);
 
         // Act
@@ -449,7 +449,7 @@ public class CollectionResultTests
     public void ThrowIfFail_WithProblemException_ShouldPreserveProblemDetails()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/429", "Too Many Requests", 429, "Rate limit exceeded");
+        var problem = Problem.Create("Too Many Requests", "Rate limit exceeded", 429, "https://httpstatuses.io/429");
         problem.Extensions["retryAfter"] = 60;
         var result = CollectionResult<string>.Fail(problem);
 

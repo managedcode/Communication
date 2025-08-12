@@ -4,14 +4,13 @@ namespace ManagedCode.Communication.Commands;
 
 public partial class Command
 {
-    public static Command<T> From<T>(string id, T value)
+    public static Command<T> From<T>(Guid id, T value)
     {
-        return new Command<T>(id, value);
+        return Command<T>.Create(id, value);
     }
 
     public static Command<T> From<T>(T value)
     {
-        return new Command<T>(Guid.NewGuid()
-            .ToString("N"), value);
+        return Command<T>.Create(value);
     }
 }

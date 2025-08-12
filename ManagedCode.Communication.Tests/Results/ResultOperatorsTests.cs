@@ -29,7 +29,7 @@ public class ResultOperatorsTests
     public void Result_ImplicitOperator_FromProblem_ShouldCreateFailedResult()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/400", "Bad Request", 400, "Invalid input");
+        var problem = Problem.Create("Bad Request", "Invalid input", 400, "https://httpstatuses.io/400");
 
         // Act
         Result result = problem;
@@ -217,7 +217,7 @@ public class ResultOperatorsTests
     public void CollectionResult_ImplicitOperator_FromProblem_ShouldCreateFailedResult()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/500", "Server Error", 500, "Database error");
+        var problem = Problem.Create("Server Error", "Database error", 500, "https://httpstatuses.io/500");
 
         // Act
         CollectionResult<int> result = problem;

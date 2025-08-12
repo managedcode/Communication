@@ -31,7 +31,7 @@ public class ProblemTests
         const string instance = "/api/users/123";
 
         // Act
-        var problem = Problem.Create(type, title, statusCode, detail, instance);
+        var problem = Problem.Create(title, detail, statusCode, type, instance);
 
         // Assert
         problem.Type
@@ -97,7 +97,7 @@ public class ProblemTests
         problem.ErrorCode
             .Should()
             .Be("InvalidInput");
-        problem.Extensions[ProblemExtensionKeys.ErrorType]
+        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType]
             .Should()
             .Be("TestError");
     }
@@ -128,7 +128,7 @@ public class ProblemTests
         problem.ErrorCode
             .Should()
             .Be("System.InvalidOperationException");
-        problem.Extensions[$"{ProblemExtensionKeys.ExceptionDataPrefix}CustomKey"]
+        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}CustomKey"]
             .Should()
             .Be("CustomValue");
     }
@@ -183,7 +183,7 @@ public class ProblemTests
         problem.ErrorCode
             .Should()
             .Be("TEST_ERROR");
-        problem.Extensions[ProblemExtensionKeys.ErrorCode]
+        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorCode]
             .Should()
             .Be("TEST_ERROR");
     }
@@ -196,15 +196,15 @@ public class ProblemTests
         problem.ErrorCode = "TEST_ERROR";
 
         // Act
-        problem.ErrorCode = null;
+        problem.ErrorCode = string.Empty;
 
         // Assert
         problem.ErrorCode
             .Should()
-            .BeNull();
+            .BeEmpty();
         problem.Extensions
             .Should()
-            .NotContainKey(ProblemExtensionKeys.ErrorCode);
+            .NotContainKey(ProblemConstants.ExtensionKeys.ErrorCode);
     }
 
     [Fact]
@@ -290,7 +290,7 @@ public class ProblemTests
     public void Constructor_ShouldInitializeExtensions()
     {
         // Act
-        var problem = Problem.Create("type", "title", 400, "detail");
+        var problem = Problem.Create("title", "detail", 400, "type");
 
         // Assert
         problem.Extensions
@@ -305,7 +305,7 @@ public class ProblemTests
     public void Constructor_WithParameters_ShouldSetProperties()
     {
         // Act
-        var problem = Problem.Create("type", "title", 400, "detail", "instance");
+        var problem = Problem.Create("title", "detail", 400, "type", "instance");
 
         // Assert
         problem.Type
@@ -416,7 +416,7 @@ public class ProblemTests
     public void ImplicitOperator_ToProblemException_ShouldCreateException()
     {
         // Arrange
-        var problem = Problem.Create("https://httpstatuses.io/404", "Not Found", 404, "Resource not found");
+        var problem = Problem.Create("Not Found", "Resource not found", 404, "https://httpstatuses.io/404");
 
         // Act
         ProblemException exception = problem;

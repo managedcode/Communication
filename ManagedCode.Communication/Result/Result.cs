@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -24,11 +25,20 @@ public partial struct Result : IResult
     }
 
     /// <summary>
+    ///     Creates a Result with the specified success status and optional problem.
+    /// </summary>
+    internal static Result Create(bool isSuccess, Problem? problem = null)
+    {
+        return new Result(isSuccess, problem);
+    }
+
+    /// <summary>
     ///     Gets or sets a value indicating whether the operation was successful.
     /// </summary>
     [JsonPropertyName("isSuccess")]
     [JsonPropertyOrder(1)]
-    public bool IsSuccess { get; set; }
+    [MemberNotNullWhen(false, nameof(Problem))]
+    public bool IsSuccess { get; init; }
 
     /// <summary>
     ///     Gets a value indicating whether the operation failed.
@@ -62,7 +72,7 @@ public partial struct Result : IResult
         {
             throw Problem;
         }
-        
+
         return false;
     }
 
@@ -91,29 +101,29 @@ public partial struct Result : IResult
         return errors?.ContainsKey(fieldName) ?? false;
     }
 
-    public string? InvalidFieldError(string fieldName)
+    public string InvalidFieldError(string fieldName)
     {
         var errors = Problem?.GetValidationErrors();
-        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : null;
+        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
     }
 
     public void AddInvalidMessage(string message)
     {
         if (Problem == null)
         {
-            Problem = Problem.Validation(("_general", message));
+            Problem = Problem.Validation((ProblemConstants.ValidationFields.General, message));
         }
         else
         {
-            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
             {
-                if (!errors.ContainsKey("_general"))
+                if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
                 {
-                    errors["_general"] = new List<string>();
+                    errors[ProblemConstants.ValidationFields.General] = new List<string>();
                 }
 
-                errors["_general"]
+                errors[ProblemConstants.ValidationFields.General]
                     .Add(message);
             }
         }
@@ -127,8 +137,8 @@ public partial struct Result : IResult
         }
         else
         {
-            Problem.Extensions[ProblemExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
             {
                 if (!errors.ContainsKey(key))
                 {

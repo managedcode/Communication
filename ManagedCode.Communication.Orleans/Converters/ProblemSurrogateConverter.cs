@@ -1,3 +1,4 @@
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Surrogates;
 using Orleans;
 
@@ -8,8 +9,23 @@ public sealed class ProblemSurrogateConverter : IConverter<Problem, ProblemSurro
 {
     public Problem ConvertFromSurrogate(in ProblemSurrogate surrogate)
     {
-        var problem = Problem.Create(surrogate.Type ?? "about:blank", surrogate.Title ?? "Error", surrogate.StatusCode,
-            surrogate.Detail ?? "An error occurred", surrogate.Instance);
+        var problem = surrogate.Instance != null && surrogate.Type != null
+            ? Problem.Create(
+                surrogate.Title ?? ProblemConstants.Titles.Error, 
+                surrogate.Detail ?? ProblemConstants.Messages.GenericError, 
+                surrogate.StatusCode, 
+                surrogate.Type, 
+                surrogate.Instance)
+            : surrogate.Type != null
+                ? Problem.Create(
+                    surrogate.Title ?? ProblemConstants.Titles.Error, 
+                    surrogate.Detail ?? ProblemConstants.Messages.GenericError, 
+                    surrogate.StatusCode, 
+                    surrogate.Type)
+                : Problem.Create(
+                    surrogate.Title ?? ProblemConstants.Titles.Error, 
+                    surrogate.Detail ?? ProblemConstants.Messages.GenericError, 
+                    surrogate.StatusCode);
 
         // Copy extensions using the WithExtensions method
         if (surrogate.Extensions.Count > 0)

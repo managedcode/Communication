@@ -193,7 +193,7 @@ public class ResultExtensionsTests
     {
         // Arrange
         var result = Result<int>.Succeed(3);
-        var problem = new Problem { Title = "Value too small" };
+        var problem = Problem.Create("Value too small", "Value must be greater than 5");
 
         // Act
         var ensured = result.Ensure(x => x > 5, problem);
@@ -406,7 +406,7 @@ public class ResultExtensionsTests
         // Act
         var result = Result<string>.Succeed(input)
             .Map(int.Parse)
-            .Ensure(x => x > 0, new Problem { Title = "Must be positive" })
+            .Ensure(x => x > 0, Problem.Create("Must be positive", "Must be positive"))
             .Map(x => x * 2)
             .Bind(x => x < 100 ? Result<double>.Succeed(x / 2.0) : Result<double>.Fail("Too large"))
             .Tap(x => Console.WriteLine($"Current value: {x}"))

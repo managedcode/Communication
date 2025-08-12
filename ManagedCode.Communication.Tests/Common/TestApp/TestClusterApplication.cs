@@ -1,10 +1,19 @@
 ﻿using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
+using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Tests.Common.TestApp.Controllers;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans.Hosting;
 using Orleans.TestingHost;
@@ -26,14 +35,12 @@ public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, IC
 
     public TestCluster Cluster { get; }
 
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-    }
-
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
-        return base.CreateHost(builder);
+        builder.UseContentRoot(Directory.GetCurrentDirectory());
+        base.ConfigureWebHost(builder);
     }
 
     public HubConnection CreateSignalRClient(string hubUrl, Action<HubConnectionBuilder>? configure = null)
@@ -47,11 +54,18 @@ public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, IC
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
+        Cluster?.StopAllSilosAsync().Wait();
+        Cluster?.Dispose();
     }
 
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
+        if (Cluster != null)
+        {
+            await Cluster.StopAllSilosAsync();
+            Cluster.Dispose();
+        }
     }
 
     private class TestSiloConfigurations : ISiloConfigurator
