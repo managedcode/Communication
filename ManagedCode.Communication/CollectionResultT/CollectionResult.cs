@@ -170,15 +170,15 @@ public partial struct CollectionResult<T> : IResult
     /// </summary>
     public static CollectionResult<T> Empty()
     {
-        return Create(true, [], 1, 0, 0);
+        return Create(true, [], 0, 0, 0);
     }
 
     /// <summary>
     ///     Creates an empty collection result with paging information.
     /// </summary>
-    public static CollectionResult<T> Empty(int pageNumber, int pageSize)
+    public static CollectionResult<T> Empty()
     {
-        return Create(true, [], pageNumber, pageSize, 0);
+        return Create(true, [], 0, 0, 0);
     }
 
     #endregion
