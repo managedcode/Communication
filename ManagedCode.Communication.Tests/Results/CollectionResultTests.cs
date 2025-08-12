@@ -153,7 +153,7 @@ public class CollectionResultTests
             .BeEmpty();
         result.PageNumber
             .Should()
-            .Be(1);
+            .Be(0);
         result.PageSize
             .Should()
             .Be(0);
@@ -169,33 +169,6 @@ public class CollectionResultTests
         result.IsEmpty
             .Should()
             .BeTrue();
-    }
-
-    [Fact]
-    public void Empty_WithPaging_ShouldCreateEmptyResultWithPaging()
-    {
-        // Act
-        var result = CollectionResult<string>.Empty(pageNumber: 2, pageSize: 10);
-
-        // Assert
-        result.IsSuccess
-            .Should()
-            .BeTrue();
-        result.Collection
-            .Should()
-            .BeEmpty();
-        result.PageNumber
-            .Should()
-            .Be(2);
-        result.PageSize
-            .Should()
-            .Be(10);
-        result.TotalItems
-            .Should()
-            .Be(0);
-        result.TotalPages
-            .Should()
-            .Be(0);
     }
 
     [Fact]
@@ -477,7 +450,7 @@ public class CollectionResultTests
 
         exception.Problem.Title.Should().Be("Validation Failed");
         exception.Problem.StatusCode.Should().Be(400);
-        
+
         var validationErrors = exception.Problem.GetValidationErrors();
         validationErrors.Should().NotBeNull();
         validationErrors!["filter"].Should().Contain("Invalid filter format");

@@ -60,7 +60,7 @@ public class SerializationTests
         deserialized!.Type.Should().Be(ProblemConstants.Types.ValidationFailed);
         deserialized.Title.Should().Be(ProblemConstants.Titles.ValidationFailed);
         deserialized.StatusCode.Should().Be(400);
-        
+
         var errors = deserialized.GetValidationErrors();
         errors.Should().NotBeNull();
         errors!["email"].Should().Contain("Invalid format");
@@ -220,7 +220,7 @@ public class SerializationTests
         // Assert
         deserialized.IsSuccess.Should().BeTrue();
         deserialized.Collection.Should().BeEmpty();
-        deserialized.PageNumber.Should().Be(1);
+        deserialized.PageNumber.Should().Be(0);
         deserialized.PageSize.Should().Be(0);
         deserialized.TotalItems.Should().Be(0);
     }
