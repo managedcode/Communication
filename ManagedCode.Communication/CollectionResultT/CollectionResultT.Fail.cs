@@ -33,13 +33,13 @@ public partial struct CollectionResult<T>
         var problem = Problem.Create(title, title, (int)HttpStatusCode.InternalServerError);
         return Create(false, default, 0, 0, 0, problem);
     }
-    
+
     public static CollectionResult<T> Fail(string title, string detail)
     {
         var problem = Problem.Create(title, detail);
         return Create(false, default, 0, 0, 0, problem);
     }
-    
+
     public static CollectionResult<T> Fail(string title, string detail, HttpStatusCode status)
     {
         var problem = Problem.Create(title, detail, (int)status);
@@ -50,7 +50,7 @@ public partial struct CollectionResult<T>
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
     }
-    
+
     public static CollectionResult<T> Fail(Exception exception, HttpStatusCode status)
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(exception, (int)status));
@@ -59,6 +59,26 @@ public partial struct CollectionResult<T>
     public static CollectionResult<T> FailValidation(params (string field, string message)[] errors)
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Validation(errors));
+    }
+
+    public static CollectionResult<T> FailBadRequest()
+    {
+        var problem = Problem.Create(
+            ProblemConstants.Titles.BadRequest,
+            ProblemConstants.Messages.BadRequest,
+            (int)HttpStatusCode.BadRequest);
+
+        return Create(false, default, 0, 0, 0, problem);
+    }
+
+    public static CollectionResult<T> FailBadRequest(string detail)
+    {
+        var problem = Problem.Create(
+            ProblemConstants.Titles.BadRequest,
+            detail,
+            (int)HttpStatusCode.BadRequest);
+
+        return Create(false, default, 0, 0, 0, problem);
     }
 
     public static CollectionResult<T> FailUnauthorized()
@@ -70,7 +90,7 @@ public partial struct CollectionResult<T>
 
         return Create(false, default, 0, 0, 0, problem);
     }
-    
+
     public static CollectionResult<T> FailUnauthorized(string detail)
     {
         var problem = Problem.Create(
@@ -90,7 +110,7 @@ public partial struct CollectionResult<T>
 
         return Create(false, default, 0, 0, 0, problem);
     }
-    
+
     public static CollectionResult<T> FailForbidden(string detail)
     {
         var problem = Problem.Create(
@@ -110,7 +130,7 @@ public partial struct CollectionResult<T>
 
         return Create(false, default, 0, 0, 0, problem);
     }
-    
+
     public static CollectionResult<T> FailNotFound(string detail)
     {
         var problem = Problem.Create(
@@ -125,7 +145,7 @@ public partial struct CollectionResult<T>
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode));
     }
-    
+
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, string detail) where TEnum : Enum
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode, detail));
@@ -135,7 +155,7 @@ public partial struct CollectionResult<T>
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode, errorCode.ToString(), (int)status));
     }
-    
+
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
         return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode, detail, (int)status));

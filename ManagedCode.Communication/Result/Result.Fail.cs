@@ -31,7 +31,7 @@ public partial struct Result
         var problem = Problem.Create(title, title, HttpStatusCode.InternalServerError);
         return Create(false, problem);
     }
-    
+
     /// <summary>
     ///     Creates a failed result with a title and detail.
     /// </summary>
@@ -40,7 +40,7 @@ public partial struct Result
         var problem = Problem.Create(title, detail, HttpStatusCode.InternalServerError);
         return Create(false, problem);
     }
-    
+
     /// <summary>
     ///     Creates a failed result with a title, detail and status.
     /// </summary>
@@ -57,7 +57,7 @@ public partial struct Result
     {
         return Create(false, Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
     }
-    
+
     /// <summary>
     ///     Creates a failed result from an exception with specific status.
     /// </summary>
@@ -75,6 +75,32 @@ public partial struct Result
     }
 
     /// <summary>
+    ///     Creates a failed result for bad request.
+    /// </summary>
+    public static Result FailBadRequest()
+    {
+        var problem = Problem.Create(
+            ProblemConstants.Titles.BadRequest,
+            ProblemConstants.Messages.BadRequest,
+            (int)HttpStatusCode.BadRequest);
+
+        return Create(false, problem);
+    }
+
+    /// <summary>
+    ///     Creates a failed result for bad request with custom detail.
+    /// </summary>
+    public static Result FailBadRequest(string detail)
+    {
+        var problem = Problem.Create(
+            ProblemConstants.Titles.BadRequest,
+            detail,
+            (int)HttpStatusCode.BadRequest);
+
+        return Create(false, problem);
+    }
+
+    /// <summary>
     ///     Creates a failed result for unauthorized access.
     /// </summary>
     public static Result FailUnauthorized()
@@ -86,7 +112,7 @@ public partial struct Result
 
         return Create(false, problem);
     }
-    
+
     /// <summary>
     ///     Creates a failed result for unauthorized access with custom detail.
     /// </summary>
@@ -112,7 +138,7 @@ public partial struct Result
 
         return Create(false, problem);
     }
-    
+
     /// <summary>
     ///     Creates a failed result for forbidden access with custom detail.
     /// </summary>
@@ -138,7 +164,7 @@ public partial struct Result
 
         return Create(false, problem);
     }
-    
+
     /// <summary>
     ///     Creates a failed result for not found with custom detail.
     /// </summary>
@@ -159,7 +185,7 @@ public partial struct Result
     {
         return Create(false, Problem.Create(errorCode));
     }
-    
+
     /// <summary>
     ///     Creates a failed result from a custom error enum with detail.
     /// </summary>
@@ -175,10 +201,10 @@ public partial struct Result
     {
         return Create(false, Problem.Create(errorCode, errorCode.ToString(), (int)status));
     }
-    
+
     /// <summary>
     ///     Creates a failed result from a custom error enum with detail and specific HTTP status.
-    /// </summary>і 
+    /// </summary>і
     public static Result Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
         return Create(false, Problem.Create(errorCode, detail, (int)status));
