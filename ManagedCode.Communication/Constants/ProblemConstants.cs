@@ -29,6 +29,7 @@ public static class ProblemConstants
     /// </summary>
     public static class Messages
     {
+        public const string BadRequest = "The request could not be understood by the server due to malformed syntax.";
         public const string UnauthorizedAccess = "Authentication is required to access this resource.";
         public const string ForbiddenAccess = "You do not have permission to access this resource.";
         public const string ResourceNotFound = "The requested resource was not found.";
@@ -44,7 +45,7 @@ public static class ProblemConstants
     {
         public const string AboutBlank = "about:blank";
         public const string ValidationFailed = "https://tools.ietf.org/html/rfc7231#section-6.5.1";
-        
+
         public static string HttpStatus(int statusCode) => $"https://httpstatuses.io/{statusCode}";
     }
 
@@ -83,7 +84,7 @@ public static class ProblemConstants
         /// </summary>
         public const string OriginalExceptionType = "originalExceptionType";
     }
-    
+
     /// <summary>
     /// Field names for validation errors.
     /// </summary>
