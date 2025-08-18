@@ -8,9 +8,9 @@ namespace ManagedCode.Communication;
 public interface IResultProblem
 {
     /// <summary>
-    ///     Gets or sets the problem details.
+    ///     Gets the problem details.
     /// </summary>
-    Problem? Problem { get; set; }
+    Problem? Problem { get; }
 
     /// <summary>
     ///     Determines whether the result has a problem.

@@ -18,7 +18,7 @@ public partial struct CollectionResult<T> : IResult
     {
     }
 
-    internal CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Problem? problem = null)
+    private CollectionResult(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Problem? problem = null)
     {
         IsSuccess = isSuccess;
         Collection = collection ?? [];
@@ -29,9 +29,14 @@ public partial struct CollectionResult<T> : IResult
         Problem = problem;
     }
 
-    internal static CollectionResult<T> Create(bool isSuccess, T[]? collection, int pageNumber, int pageSize, int totalItems, Problem? problem = null)
+    internal static CollectionResult<T> CreateSuccess(T[]? collection, int pageNumber, int pageSize, int totalItems)
     {
-        return new CollectionResult<T>(isSuccess, collection, pageNumber, pageSize, totalItems, problem);
+        return new CollectionResult<T>(true, collection, pageNumber, pageSize, totalItems, null);
+    }
+
+    internal static CollectionResult<T> CreateFailed(Problem problem, T[]? collection = null)
+    {
+        return new CollectionResult<T>(false, collection, 0, 0, 0, problem);
     }
 
     [JsonPropertyName("isSuccess")]
@@ -170,7 +175,7 @@ public partial struct CollectionResult<T> : IResult
     /// </summary>
     public static CollectionResult<T> Empty()
     {
-        return Create(true, [], 0, 0, 0);
+        return CreateSuccess([], 0, 0, 0);
     }
 
     #endregion

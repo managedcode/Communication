@@ -15,7 +15,7 @@ public partial struct Result
     {
         var problem = Problem.Validation(("message", nameof(Invalid)));
         problem.ErrorCode = code.ToString();
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     public static Result Invalid(string message)
@@ -27,7 +27,7 @@ public partial struct Result
     {
         var problem = Problem.Validation((nameof(message), message));
         problem.ErrorCode = code.ToString();
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     public static Result Invalid(string key, string value)
@@ -39,7 +39,7 @@ public partial struct Result
     {
         var problem = Problem.Validation((key, value));
         problem.ErrorCode = code.ToString();
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     public static Result Invalid(Dictionary<string, string> values)
@@ -53,7 +53,7 @@ public partial struct Result
         var problem = Problem.Validation(values.Select(kvp => (kvp.Key, kvp.Value))
             .ToArray());
         problem.ErrorCode = code.ToString();
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
 

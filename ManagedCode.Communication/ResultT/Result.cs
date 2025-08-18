@@ -19,7 +19,7 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Initializes a new instance of the Result struct.
     /// </summary>
-    internal Result(bool isSuccess, T? value, Problem? problem = null)
+    private Result(bool isSuccess, T? value, Problem? problem = null)
     {
         IsSuccess = isSuccess;
         Value = value;
@@ -27,18 +27,19 @@ public partial struct Result<T> : IResult<T>
     }
 
     /// <summary>
-    ///     Initializes a new instance of the Result struct with an exception.
+    ///     Creates a successful Result with the specified value.
     /// </summary>
-    private Result(Exception exception) : this(false, default, Problem.Create(exception))
+    internal static Result<T> CreateSuccess(T value)
     {
+        return new Result<T>(true, value, null);
     }
 
     /// <summary>
-    ///     Creates a Result with the specified success status, value and optional problem.
+    ///     Creates a failed Result with the specified problem and optional value.
     /// </summary>
-    internal static Result<T> Create(bool isSuccess, T? value, Problem? problem = null)
+    internal static Result<T> CreateFailed(Problem problem, T? value = default)
     {
-        return new Result<T>(isSuccess, value, problem);
+        return new Result<T>(false, value, problem);
     }
 
 
@@ -64,7 +65,7 @@ public partial struct Result<T> : IResult<T>
     public bool TryGetProblem([MaybeNullWhen(false)] out Problem problem)
     {
         problem = Problem;
-        return HasProblem;
+        return problem is not null;
     }
 
 
@@ -73,7 +74,7 @@ public partial struct Result<T> : IResult<T>
     /// </summary>
     [MemberNotNullWhen(true, nameof(Value))]
     [MemberNotNullWhen(false, nameof(Problem))]
-    public bool IsSuccess { get; init; }
+    public bool IsSuccess { get; private init; }
 
     /// <summary>
     ///     Gets a value indicating whether the result is empty.
@@ -95,13 +96,25 @@ public partial struct Result<T> : IResult<T>
     public T? Value { get; set; }
 
 
+    private Problem? _problem;
+
     /// <summary>
     ///     Gets or sets the problem that occurred during the operation.
     /// </summary>
     [JsonPropertyName("problem")]
     [JsonPropertyOrder(3)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Problem? Problem { get; set; }
+    public Problem? Problem
+    {
+        get
+        {
+            if (_problem is null && !IsSuccess)
+                _problem = Problem.GenericError();
+
+            return _problem;
+        }
+        private init => _problem = value;
+    }
 
     /// <summary>
     ///     Gets a value indicating whether the result has a problem.
@@ -109,6 +122,12 @@ public partial struct Result<T> : IResult<T>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
     public bool HasProblem => Problem is not null;
+
+    /// <summary>
+    ///     Get the Problem assigned to the result without falling back to a generic error if no problem is assigned.
+    ///     Useful if a different default problem is desired.
+    /// </summary>
+    internal Problem? GetProblemNoFallback() => _problem;
 
     /// <summary>
     ///     Gets a value indicating whether the result is invalid.
@@ -125,23 +144,20 @@ public partial struct Result<T> : IResult<T>
     /// </summary>
     public void AddInvalidMessage(string message)
     {
-        if (Problem == null)
-        {
-            Problem = Problem.Validation((ProblemConstants.ValidationFields.General, message));
-        }
-        else
-        {
-            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-            {
-                if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
-                {
-                    errors[ProblemConstants.ValidationFields.General] = new List<string>();
-                }
+        if (IsSuccess) throw new InvalidOperationException("Cannot add invalid message to a successful result");
 
-                errors[ProblemConstants.ValidationFields.General]
-                    .Add(message);
+        var problem = Problem;
+
+        problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+        if (problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+        {
+            if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
+            {
+                errors[ProblemConstants.ValidationFields.General] = new List<string>();
             }
+
+            errors[ProblemConstants.ValidationFields.General]
+                .Add(message);
         }
     }
 
@@ -150,23 +166,20 @@ public partial struct Result<T> : IResult<T>
     /// </summary>
     public void AddInvalidMessage(string key, string value)
     {
-        if (Problem == null)
-        {
-            Problem = Problem.Validation((key, value));
-        }
-        else
-        {
-            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-            {
-                if (!errors.ContainsKey(key))
-                {
-                    errors[key] = new List<string>();
-                }
+        if (IsSuccess) throw new InvalidOperationException("Cannot add invalid message to a successful result");
 
-                errors[key]
-                    .Add(value);
+        var problem = Problem;
+
+        problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+        if (problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+        {
+            if (!errors.ContainsKey(key))
+            {
+                errors[key] = new List<string>();
             }
+
+            errors[key]
+                .Add(value);
         }
     }
 
