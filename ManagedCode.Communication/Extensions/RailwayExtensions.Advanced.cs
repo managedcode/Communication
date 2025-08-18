@@ -240,7 +240,7 @@ public static class AdvancedRailwayExtensions
         }
         else
         {
-            onFailure(Problem.Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError));
+            onFailure(Problem.GenericError());
         }
         return result;
     }
@@ -283,7 +283,7 @@ public static class AdvancedRailwayExtensions
             
         return result.TryGetProblem(out var problem)
             ? recovery(problem)
-            : recovery(Problem.Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError));
+            : recovery(Problem.GenericError());
     }
 
     /// <summary>
@@ -304,7 +304,7 @@ public static class AdvancedRailwayExtensions
             
         var problem = result.TryGetProblem(out var p)
             ? p
-            : Problem.Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+            : Problem.GenericError();
             
         return await recovery(problem);
     }
