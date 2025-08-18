@@ -11,7 +11,7 @@ namespace ManagedCode.Communication.CollectionResultT;
 
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Count: {Collection?.Length ?? 0}; Problem: {Problem?.Title}")]
-public partial struct CollectionResult<T> : IResult
+public partial struct CollectionResult<T> : IResultCollection<T>
 {
     private CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Problem? problem) : this(
         isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, problem)
@@ -48,6 +48,12 @@ public partial struct CollectionResult<T> : IResult
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T[] Collection { get; set; } = [];
 
+    /// <summary>
+    ///     Gets the collection as Value property for IResult<T[]> compatibility.
+    /// </summary>
+    [JsonIgnore]
+    public T[]? Value => Collection;
+
     [JsonPropertyName("pageNumber")]
     [JsonPropertyOrder(3)]
     public int PageNumber { get; set; }
@@ -75,9 +81,21 @@ public partial struct CollectionResult<T> : IResult
     [JsonIgnore]
     public bool HasItems => Collection?.Length > 0;
 
+    /// <summary>
+    ///     Gets a value indicating whether the result has a non-empty value (for IResult<T[]> compatibility).
+    /// </summary>
+    [JsonIgnore]
+    public bool HasValue => !IsEmpty;
+
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
     public bool HasProblem => Problem != null;
+
+    /// <summary>
+    ///     Gets a value indicating whether the result is valid (successful and has no problems).
+    /// </summary>
+    [JsonIgnore]
+    public bool IsValid => IsSuccess && !HasProblem;
 
     #region IResultProblem Implementation
 
@@ -102,9 +120,14 @@ public partial struct CollectionResult<T> : IResult
 
     #region IResultInvalid Implementation
 
+    [JsonIgnore]
     public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
 
+    [JsonIgnore]
     public bool IsNotInvalid => !IsInvalid;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, List<string>>? InvalidObject => Problem?.GetValidationErrors();
 
     public bool InvalidField(string fieldName)
     {

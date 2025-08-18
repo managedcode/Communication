@@ -71,6 +71,8 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Gets a value indicating whether the result is a success.
     /// </summary>
+    [JsonPropertyName("isSuccess")]
+    [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Value))]
     [MemberNotNullWhen(false, nameof(Problem))]
     public bool IsSuccess { get; init; }
@@ -78,6 +80,7 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Gets a value indicating whether the result is empty.
     /// </summary>
+    [JsonIgnore]
     [MemberNotNullWhen(false, nameof(Value))]
     public bool IsEmpty => Value is null;
 
@@ -91,6 +94,8 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Gets or sets the value of the result.
     /// </summary>
+    [JsonPropertyName("value")]
+    [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Value { get; set; }
 
@@ -111,12 +116,19 @@ public partial struct Result<T> : IResult<T>
     public bool HasProblem => Problem is not null;
 
     /// <summary>
+    ///     Gets a value indicating whether the result is valid (successful and has no problems).
+    /// </summary>
+    [JsonIgnore]
+    public bool IsValid => IsSuccess && !HasProblem;
+
+    /// <summary>
     ///     Gets a value indicating whether the result is invalid.
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(false, nameof(Value))]
     public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
 
+    [JsonIgnore]
     public bool IsNotInvalid => !IsInvalid;
 
 
@@ -182,5 +194,6 @@ public partial struct Result<T> : IResult<T>
         return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
     }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, List<string>>? InvalidObject => Problem?.GetValidationErrors();
 }

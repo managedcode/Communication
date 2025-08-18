@@ -11,6 +11,7 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Installation](#installation)
+- [Logging Configuration](#logging-configuration)
 - [Core Concepts](#core-concepts)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
@@ -118,6 +119,48 @@ dotnet add package ManagedCode.Communication.Orleans
 <PackageReference Include="ManagedCode.Communication.AspNetCore" Version="9.6.0" />
 <PackageReference Include="ManagedCode.Communication.Orleans" Version="9.6.0" />
 ```
+
+## Logging Configuration
+
+The library includes integrated logging for error scenarios. Configure logging to capture detailed error information:
+
+### ASP.NET Core Setup
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Add your logging configuration
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+// Register other services
+builder.Services.AddControllers();
+
+// Configure Communication library - this enables automatic error logging
+builder.Services.ConfigureCommunication();
+
+var app = builder.Build();
+```
+
+### Console Application Setup
+
+```csharp
+var services = new ServiceCollection();
+
+// Add logging
+services.AddLogging(builder => 
+{
+    builder.AddConsole()
+           .SetMinimumLevel(LogLevel.Information);
+});
+
+// Configure Communication library
+services.ConfigureCommunication();
+
+var serviceProvider = services.BuildServiceProvider();
+```
+
+The library automatically logs errors in Result factory methods (`From`, `Try`, etc.) with detailed context including file names, line numbers, and method names for easier debugging.
 
 ## Core Concepts
 

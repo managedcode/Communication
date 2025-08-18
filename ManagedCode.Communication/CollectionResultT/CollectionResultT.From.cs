@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
@@ -207,8 +208,9 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            ILogger logger = new Logger<CollectionResult<T>>(new LoggerFactory());
-            logger.LogError(e, $"Error {e.Message} in {Path.GetFileName(path)} at line {lineNumber} in {caller}");
+            var logger = CommunicationLogger.GetLogger<CollectionResult<T>>();
+            logger.LogError(e, "Error {Message} in {FileName} at line {LineNumber} in {Caller}", 
+                e.Message, Path.GetFileName(path), lineNumber, caller);
             return Fail(e);
         }
     }
