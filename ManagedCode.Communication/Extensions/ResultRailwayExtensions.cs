@@ -219,7 +219,7 @@ public static class ResultRailwayExtensions
         if (result.IsSuccess)
             return onSuccess();
         
-        var problem = result.TryGetProblem(out var p) ? p : Problem.Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+        var problem = result.TryGetProblem(out var p) ? p : Problem.GenericError();
         return onFailure(problem);
     }
 
@@ -231,7 +231,7 @@ public static class ResultRailwayExtensions
         if (result.IsSuccess)
             return onSuccess(result.Value);
         
-        var problem = result.TryGetProblem(out var p) ? p : Problem.Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+        var problem = result.TryGetProblem(out var p) ? p : Problem.GenericError();
         return onFailure(problem);
     }
 
@@ -246,7 +246,7 @@ public static class ResultRailwayExtensions
         }
         else
         {
-            var problem = result.TryGetProblem(out var p) ? p : Problem.Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+            var problem = result.TryGetProblem(out var p) ? p : Problem.GenericError();
             onFailure(problem);
         }
     }
@@ -262,7 +262,7 @@ public static class ResultRailwayExtensions
         }
         else
         {
-            var problem = result.TryGetProblem(out var p) ? p : Problem.Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+            var problem = result.TryGetProblem(out var p) ? p : Problem.GenericError();
             onFailure(problem);
         }
     }
