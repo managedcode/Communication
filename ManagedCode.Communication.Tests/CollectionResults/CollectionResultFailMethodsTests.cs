@@ -28,7 +28,7 @@ public class CollectionResultFailMethodsTests
         result.PageSize.Should().Be(0);
         result.TotalItems.Should().Be(0);
         result.TotalPages.Should().Be(0);
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     #endregion
@@ -48,7 +48,7 @@ public class CollectionResultFailMethodsTests
         result.IsFailed.Should().BeTrue();
         result.Collection.Should().BeEquivalentTo(items);
         result.Collection.Should().HaveCount(5);
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class CollectionResultFailMethodsTests
         result.IsFailed.Should().BeTrue();
         result.Collection.Should().BeEquivalentTo(items);
         result.Collection.Should().HaveCount(3);
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     [Fact]
