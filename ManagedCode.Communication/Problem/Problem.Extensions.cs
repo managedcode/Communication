@@ -386,6 +386,14 @@ public partial class Problem
     }
 
     /// <summary>
+    ///     Creates a Problem for a generic error.
+    /// </summary>
+    public static Problem GenericError()
+    {
+        return Create(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+    }
+
+    /// <summary>
     ///     Checks if this problem has a specific error code.
     /// </summary>
     public bool HasErrorCode<TEnum>(TEnum errorCode) where TEnum : Enum
