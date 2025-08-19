@@ -4,7 +4,7 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 
 [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%207.0%20%7C%206.0-512BD4)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-9.0)](https://dotnet.microsoft.com/)
 
 ## Table of Contents
 
