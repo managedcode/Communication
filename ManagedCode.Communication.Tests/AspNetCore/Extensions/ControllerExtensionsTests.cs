@@ -225,4 +225,38 @@ public class ControllerExtensionsTests
         httpResult.Should().NotBeNull();
         httpResult.GetType().Name.Should().Contain("Ok");
     }
+
+    [Fact]
+    public void ToActionResult_NonGenericWithNoProblem_ReturnsDefaultError()
+    {
+        // Arrange - manually create failed result without problem
+        var result = new Result { IsSuccess = false, Problem = null };
+
+        // Act
+        var actionResult = result.ToActionResult();
+
+        // Assert
+        actionResult.Should().BeOfType<ObjectResult>();
+        var objectResult = (ObjectResult)actionResult;
+        objectResult.StatusCode.Should().Be(500);
+        
+        var returnedProblem = (Problem)objectResult.Value!;
+        returnedProblem.StatusCode.Should().Be(500);
+        returnedProblem.Title.Should().Be("Operation failed");
+        returnedProblem.Detail.Should().Be("Unknown error occurred");
+    }
+
+    [Fact]
+    public void ToHttpResult_NonGenericWithNoProblem_ReturnsDefaultError()
+    {
+        // Arrange - manually create failed result without problem
+        var result = new Result { IsSuccess = false, Problem = null };
+
+        // Act
+        var httpResult = result.ToHttpResult();
+
+        // Assert
+        httpResult.Should().NotBeNull();
+        httpResult.GetType().Name.Should().Contain("Problem");
+    }
 }

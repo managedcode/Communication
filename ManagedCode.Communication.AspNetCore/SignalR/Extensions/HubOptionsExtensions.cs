@@ -7,8 +7,13 @@ namespace ManagedCode.Communication.AspNetCore.Extensions;
 
 public static class HubOptionsExtensions
 {
-    public static void AddCommunicationHubFilter(this HubOptions result)
+    public static void AddCommunicationHubFilter(this HubOptions options)
     {
-        result.AddFilter<CommunicationHubExceptionFilter>();
+        options.AddFilter<CommunicationHubExceptionFilter>();
+    }
+
+    public static void AddCommunicationFilters(this HubOptions options)
+    {
+        options.AddCommunicationHubFilter();
     }
 }

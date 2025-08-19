@@ -10,19 +10,8 @@ namespace ManagedCode.Communication.Extensions;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Configures Communication library to use the service provider for logging
-    /// </summary>
-    public static IServiceCollection ConfigureCommunication(this IServiceCollection services)
-    {
-        // Configure the static logger to use DI
-        var serviceProvider = services.BuildServiceProvider();
-        CommunicationLogger.Configure(serviceProvider);
-        
-        return services;
-    }
-
-    /// <summary>
-    /// Configures Communication library with a specific logger factory
+    /// Configures Communication library with a specific logger factory.
+    /// For ASP.NET Core applications, use the AspNetCore extension instead.
     /// </summary>
     public static IServiceCollection ConfigureCommunication(this IServiceCollection services, ILoggerFactory loggerFactory)
     {

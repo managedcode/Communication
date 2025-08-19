@@ -20,8 +20,6 @@ public class HttpHostProgram
 
         builder.Services.AddAuthorization();
 
-        builder.Services.AddCommunicationFilters();
-
         builder.Services.AddControllers(options => { options.AddCommunicationFilters(); });
 
         builder.Services.AddSignalR(options => { options.AddCommunicationFilters(); });
