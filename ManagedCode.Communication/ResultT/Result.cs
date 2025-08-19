@@ -73,6 +73,7 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Gets a value indicating whether the result is a success.
     /// </summary>
+    [JsonInclude]
     [MemberNotNullWhen(true, nameof(Value))]
     [MemberNotNullWhen(false, nameof(Problem))]
     public bool IsSuccess { get; private init; }
@@ -96,15 +97,16 @@ public partial struct Result<T> : IResult<T>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Value { get; set; }
 
-
+    [JsonInclude]
+    [JsonPropertyName("problem")]
+    [JsonPropertyOrder(3)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     private Problem? _problem;
 
     /// <summary>
     ///     Gets or sets the problem that occurred during the operation.
     /// </summary>
-    [JsonPropertyName("problem")]
-    [JsonPropertyOrder(3)]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore]
     public Problem? Problem
     {
         get

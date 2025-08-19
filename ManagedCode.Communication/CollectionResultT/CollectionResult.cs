@@ -39,6 +39,7 @@ public partial struct CollectionResult<T> : IResult
         return new CollectionResult<T>(false, collection, 0, 0, 0, problem);
     }
 
+    [JsonInclude]
     [JsonPropertyName("isSuccess")]
     [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Collection))]
@@ -69,11 +70,13 @@ public partial struct CollectionResult<T> : IResult
     [JsonPropertyOrder(6)]
     public int TotalPages { get; set; }
 
-    private Problem? _problem;
-
+    [JsonInclude]
     [JsonPropertyName("problem")]
     [JsonPropertyOrder(7)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    private Problem? _problem;
+
+    [JsonIgnore]
     public Problem? Problem
     {
         get
