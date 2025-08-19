@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
@@ -120,7 +121,7 @@ public class CommandCleanupBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Command cleanup service started with interval {Interval}", _cleanupInterval);
+        LoggerCenter.LogCleanupServiceStarted(_logger, _cleanupInterval);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -134,26 +135,25 @@ public class CommandCleanupBackgroundService : BackgroundService
 
                 if (cleanedCount > 0)
                 {
-                    _logger.LogInformation("Cleaned up {Count} expired commands", cleanedCount);
+                    LoggerCenter.LogCleanupCompleted(_logger, cleanedCount);
                 }
 
                 // Log health metrics
                 if (_options.LogHealthMetrics)
                 {
                     var metrics = await _store.GetHealthMetricsAsync(stoppingToken);
-                    _logger.LogInformation(
-                        "Command store health: Total={Total}, Completed={Completed}, InProgress={InProgress}, Failed={Failed}, StuckRate={StuckRate:F1}%, FailureRate={FailureRate:F1}%",
+                    LoggerCenter.LogHealthMetrics(_logger, 
                         metrics.TotalCommands,
                         metrics.CompletedCommands,
-                        metrics.InProgressCommands,
                         metrics.FailedCommands,
-                        metrics.StuckCommandsPercentage,
-                        metrics.FailureRate);
+                        metrics.InProgressCommands,
+                        metrics.FailureRate / 100, // Convert to ratio for formatting
+                        metrics.StuckCommandsPercentage / 100); // Convert to ratio for formatting
                 }
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogError(ex, "Error during command cleanup");
+                LoggerCenter.LogCleanupError(_logger, ex);
             }
 
             try
@@ -166,7 +166,7 @@ public class CommandCleanupBackgroundService : BackgroundService
             }
         }
 
-        _logger.LogInformation("Command cleanup service stopped");
+        LoggerCenter.LogCleanupServiceStopped(_logger);
     }
 }
 

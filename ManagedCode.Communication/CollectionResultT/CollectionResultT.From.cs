@@ -208,9 +208,8 @@ public partial struct CollectionResult<T>
         }
         catch (Exception e)
         {
-            var logger = CommunicationLogger.GetLogger<CollectionResult<T>>();
-            logger.LogError(e, "Error {Message} in {FileName} at line {LineNumber} in {Caller}", 
-                e.Message, Path.GetFileName(path), lineNumber, caller);
+            var logger = CommunicationLogger.GetLogger();
+            LoggerCenter.LogCollectionResultError(logger, e, e.Message, Path.GetFileName(path), lineNumber, caller);
             return Fail(e);
         }
     }

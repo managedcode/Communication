@@ -43,7 +43,7 @@ public class CommunicationServiceCollectionExtensionsTests
 
         // Assert
         // Verify that CommunicationLogger was configured
-        var logger = CommunicationLogger.GetLogger<CommunicationServiceCollectionExtensionsTests>();
+        var logger = CommunicationLogger.GetLogger();
         logger.Should().NotBeNull();
     }
 
@@ -90,7 +90,7 @@ public class CommunicationServiceCollectionExtensionsTests
         await hostedService.StartAsync(CancellationToken.None);
 
         // Assert
-        var logger = CommunicationLogger.GetLogger<CommunicationServiceCollectionExtensionsTests>();
+        var logger = CommunicationLogger.GetLogger();
         logger.Should().NotBeNull();
     }
 

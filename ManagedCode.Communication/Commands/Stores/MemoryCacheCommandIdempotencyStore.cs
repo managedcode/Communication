@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication.Commands.Stores;
 
@@ -164,7 +165,7 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
 
         if (cleanedCount > 0)
         {
-            _logger.LogInformation("Cleaned up {Count} expired commands older than {MaxAge}", cleanedCount, maxAge);
+            LoggerCenter.LogCommandCleanupExpired(_logger, cleanedCount, maxAge);
         }
 
         return Task.FromResult(cleanedCount);
@@ -196,7 +197,7 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
 
         if (cleanedCount > 0)
         {
-            _logger.LogInformation("Cleaned up {Count} commands with status {Status} older than {MaxAge}", cleanedCount, status, maxAge);
+            LoggerCenter.LogCommandCleanupByStatus(_logger, cleanedCount, status, maxAge);
         }
 
         return Task.FromResult(cleanedCount);

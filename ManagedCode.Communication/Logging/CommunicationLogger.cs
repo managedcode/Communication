@@ -4,71 +4,48 @@ using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.Logging;
 
-/// <summary>
-/// Static logger for Communication library that uses DI when available
-/// </summary>
 public static class CommunicationLogger
 {
     private static IServiceProvider? _serviceProvider;
     private static ILoggerFactory? _fallbackLoggerFactory;
+    private static ILoggerFactory? _lastResortLoggerFactory;
+    private static ILogger<Result>? _logger;
 
-    /// <summary>
-    /// Configure the service provider for logger resolution
-    /// </summary>
     public static void Configure(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
+        _logger = null;
     }
 
-    /// <summary>
-    /// Configure fallback logger factory when DI is not available
-    /// </summary>
     public static void Configure(ILoggerFactory loggerFactory)
     {
         _fallbackLoggerFactory = loggerFactory;
+        _logger = null;
     }
 
-    /// <summary>
-    /// Get logger for specified type
-    /// </summary>
-    public static ILogger<T> GetLogger<T>()
+    public static ILogger<Result> GetLogger()
     {
-        // Try to get from DI first
-        var logger = _serviceProvider?.GetService<ILogger<T>>();
+        if (_logger != null)
+            return _logger;
+            
+        _logger = CreateLogger();
+        return _logger;
+    }
+
+    private static ILogger<Result> CreateLogger()
+    {
+        var logger = _serviceProvider?.GetService<ILogger<Result>>();
         if (logger != null)
             return logger;
 
-        // Fallback to configured logger factory
         if (_fallbackLoggerFactory != null)
         {
-            return new Logger<T>(_fallbackLoggerFactory);
+            return new Logger<Result>(_fallbackLoggerFactory);
         }
 
-        // Last resort - create minimal logger factory
-        var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
-        return new Logger<T>(loggerFactory);
-    }
-
-    /// <summary>
-    /// Get logger by name
-    /// </summary>
-    public static ILogger GetLogger(string categoryName)
-    {
-        // Try to get from DI first
-        if (_serviceProvider != null)
-        {
-            var loggerFactory = _serviceProvider.GetService<ILoggerFactory>();
-            if (loggerFactory != null) return loggerFactory.CreateLogger(categoryName);
-        }
-
-        // Fallback to configured logger factory
-        if (_fallbackLoggerFactory != null)
-        {
-            return _fallbackLoggerFactory.CreateLogger(categoryName);
-        }
-
-        // Last resort - create minimal logger factory
-        var factory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Warning));
-        return factory.CreateLogger(categoryName);
+        _lastResortLoggerFactory ??= LoggerFactory.Create(builder => 
+            builder.SetMinimumLevel(LogLevel.Warning));
+            
+        return new Logger<Result>(_lastResortLoggerFactory);
     }
 }
