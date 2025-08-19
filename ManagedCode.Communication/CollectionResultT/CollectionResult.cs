@@ -46,7 +46,7 @@ public partial struct CollectionResult<T> : IResult
     public bool IsSuccess { get; set; }
 
     [JsonIgnore]
-    public bool IsFailed => !IsSuccess || HasProblem;
+    public bool IsFailed => !IsSuccess;
 
     [JsonPropertyName("collection")]
     [JsonPropertyOrder(2)]
@@ -69,10 +69,22 @@ public partial struct CollectionResult<T> : IResult
     [JsonPropertyOrder(6)]
     public int TotalPages { get; set; }
 
+    private Problem? _problem;
+
     [JsonPropertyName("problem")]
     [JsonPropertyOrder(7)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Problem? Problem { get; set; }
+    public Problem? Problem
+    {
+        get
+        {
+            if (_problem is null && !IsSuccess)
+                _problem = Problem.GenericError();
+
+            return _problem;
+        }
+        private init => _problem = value;
+    }
 
     [JsonIgnore]
     public bool IsEmpty => Collection is null || Collection.Length == 0;
@@ -82,15 +94,22 @@ public partial struct CollectionResult<T> : IResult
 
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
-    public bool HasProblem => Problem != null;
+    public bool HasProblem => !IsSuccess;
 
     #region IResultProblem Implementation
 
+    /// <summary>
+    ///     Get the Problem assigned to the result without falling back to a generic error if no problem is assigned.
+    ///     Useful if a different default problem is desired.
+    /// </summary>
+    internal Problem? GetProblemNoFallback() => _problem;
+
     public bool ThrowIfFail()
     {
-        if (HasProblem)
+        var problem = Problem;
+        if (problem is not null)
         {
-            throw Problem;
+            throw problem;
         }
 
         return false;
@@ -100,7 +119,7 @@ public partial struct CollectionResult<T> : IResult
     public bool TryGetProblem([MaybeNullWhen(false)] out Problem problem)
     {
         problem = Problem;
-        return HasProblem;
+        return problem is not null;
     }
 
     #endregion
@@ -125,44 +144,38 @@ public partial struct CollectionResult<T> : IResult
 
     public void AddInvalidMessage(string message)
     {
-        if (Problem == null)
-        {
-            Problem = Problem.Validation((ProblemConstants.ValidationFields.General, message));
-        }
-        else
-        {
-            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-            {
-                if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
-                {
-                    errors[ProblemConstants.ValidationFields.General] = new List<string>();
-                }
+        if (IsSuccess) throw new InvalidOperationException("Cannot add invalid message to a successful result");
 
-                errors[ProblemConstants.ValidationFields.General]
-                    .Add(message);
+        var problem = Problem;
+
+        problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+        if (problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+        {
+            if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
+            {
+                errors[ProblemConstants.ValidationFields.General] = new List<string>();
             }
+
+            errors[ProblemConstants.ValidationFields.General]
+                .Add(message);
         }
     }
 
     public void AddInvalidMessage(string key, string value)
     {
-        if (Problem == null)
-        {
-            Problem = Problem.Validation((key, value));
-        }
-        else
-        {
-            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-            {
-                if (!errors.ContainsKey(key))
-                {
-                    errors[key] = new List<string>();
-                }
+        if (IsSuccess) throw new InvalidOperationException("Cannot add invalid message to a successful result");
 
-                errors[key].Add(value);
+        var problem = Problem;
+
+        problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+        if (problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+        {
+            if (!errors.ContainsKey(key))
+            {
+                errors[key] = new List<string>();
             }
+
+            errors[key].Add(value);
         }
     }
 

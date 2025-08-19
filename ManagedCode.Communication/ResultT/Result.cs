@@ -48,9 +48,10 @@ public partial struct Result<T> : IResult<T>
     /// </summary>
     public bool ThrowIfFail()
     {
-        if (HasProblem)
+        var problem = Problem;
+        if (problem is not null)
         {
-            throw Problem;
+            throw problem;
         }
 
         return false;
@@ -87,7 +88,7 @@ public partial struct Result<T> : IResult<T>
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(false, nameof(Value))]
-    public bool IsFailed => !IsSuccess || HasProblem;
+    public bool IsFailed => !IsSuccess;
 
     /// <summary>
     ///     Gets or sets the value of the result.
@@ -121,7 +122,7 @@ public partial struct Result<T> : IResult<T>
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
-    public bool HasProblem => Problem is not null;
+    public bool HasProblem => !IsSuccess;
 
     /// <summary>
     ///     Get the Problem assigned to the result without falling back to a generic error if no problem is assigned.

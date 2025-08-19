@@ -52,7 +52,7 @@ public partial struct Result : IResult
     ///     Gets a value indicating whether the operation failed.
     /// </summary>
     [JsonIgnore]
-    public bool IsFailed => !IsSuccess || HasProblem;
+    public bool IsFailed => !IsSuccess;
 
     private Problem? _problem;
 
@@ -80,7 +80,7 @@ public partial struct Result : IResult
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
-    public bool HasProblem => Problem != null;
+    public bool HasProblem => !IsSuccess;
 
 
     /// <summary>
@@ -94,9 +94,10 @@ public partial struct Result : IResult
     /// </summary>
     public bool ThrowIfFail()
     {
-        if (HasProblem)
+        var problem = Problem;
+        if (problem is not null)
         {
-            throw Problem;
+            throw problem;
         }
 
         return false;
