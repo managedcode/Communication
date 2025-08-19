@@ -332,6 +332,30 @@ public class CollectionResultTests
     }
 
     [Fact]
+    public void AddInvalidMessage_ThrowsOnSuccessfulResult()
+    {
+        // Arrange
+        var result = CollectionResult<string>.Empty();
+
+        // Act & Assert
+        result.Invoking(r => r.AddInvalidMessage("email", "Email is required"))
+            .Should()
+            .ThrowExactly<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void AddInvalidMessage_WithGeneralMessage_ThrowsOnSuccessfulResult()
+    {
+        // Arrange
+        var result = CollectionResult<string>.Empty();
+
+        // Act & Assert
+        result.Invoking(r => r.AddInvalidMessage("General error occurred"))
+            .Should()
+            .ThrowExactly<InvalidOperationException>();
+    }
+
+    [Fact]
     public void ThrowIfFail_WithSuccessfulResult_ShouldNotThrow()
     {
         // Arrange
