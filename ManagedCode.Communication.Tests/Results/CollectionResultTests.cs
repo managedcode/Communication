@@ -296,7 +296,7 @@ public class CollectionResultTests
     public void AddInvalidMessage_ShouldAddValidationError()
     {
         // Arrange
-        var result = CollectionResult<string>.Empty();
+        var result = CollectionResult<string>.Invalid();
 
         // Act
         result.AddInvalidMessage("email", "Email is required");
@@ -317,7 +317,7 @@ public class CollectionResultTests
     public void AddInvalidMessage_WithGeneralMessage_ShouldAddToGeneralErrors()
     {
         // Arrange
-        var result = CollectionResult<string>.Empty();
+        var result = CollectionResult<string>.Invalid();
 
         // Act
         result.AddInvalidMessage("General error occurred");

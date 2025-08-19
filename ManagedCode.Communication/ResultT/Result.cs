@@ -27,6 +27,14 @@ public partial struct Result<T> : IResult<T>
     }
 
     /// <summary>
+    ///     Initializes a new instance of the Result struct with an exception.
+    /// </summary>
+    private Result(Exception exception) : this(false, default, Problem.Create(exception))
+    {
+
+    }
+
+    /// <summary>
     ///     Creates a successful Result with the specified value.
     /// </summary>
     internal static Result<T> CreateSuccess(T value)
