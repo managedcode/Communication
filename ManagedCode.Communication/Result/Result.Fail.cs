@@ -204,7 +204,7 @@ public partial struct Result
 
     /// <summary>
     ///     Creates a failed result from a custom error enum with detail and specific HTTP status.
-    /// </summary>і
+    /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
         return CreateFailed(Problem.Create(errorCode, detail, (int)status));
