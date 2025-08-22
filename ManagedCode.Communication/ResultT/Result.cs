@@ -153,21 +153,21 @@ public partial struct Result<T> : IResult<T>
     /// <summary>
     ///     Adds an invalid message to the result.
     /// </summary>
-    [Obsolete("Use Problem.AddInvalidMessage instead")]
+    [Obsolete("Use Problem.AddValidationError instead")]
     public void AddInvalidMessage(string message)
     {
         if (!IsSuccess)
-            Problem.AddInvalidMessage(message);
+            Problem.AddValidationError(message);
     }
 
     /// <summary>
     ///     Adds an invalid message with a specific key to the result.
     /// </summary>
-    [Obsolete("Use Problem.AddInvalidMessage instead")]
+    [Obsolete("Use Problem.AddValidationError instead")]
     public void AddInvalidMessage(string key, string value)
     {
         if (!IsSuccess)
-            Problem.AddInvalidMessage(key, value);
+            Problem.AddValidationError(key, value);
     }
 
     public bool InvalidField(string fieldName)

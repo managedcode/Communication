@@ -294,8 +294,8 @@ public class ProblemExtensionsTests
         var problem = new Problem();
 
         // Act
-        problem.AddInvalidMessage("email", "Email is required");
-        problem.AddInvalidMessage("email", "Email format is invalid");
+        problem.AddValidationError("email", "Email is required");
+        problem.AddValidationError("email", "Email format is invalid");
 
         // Assert
         problem.InvalidField("email")
@@ -315,7 +315,7 @@ public class ProblemExtensionsTests
         var problem = new Problem();
 
         // Act
-        problem.AddInvalidMessage("General error occurred");
+        problem.AddValidationError("General error occurred");
 
         // Assert
         problem.InvalidField("_general")

@@ -145,18 +145,18 @@ public partial struct CollectionResult<T> : IResult
             : Problem.InvalidFieldError(fieldName);
     }
 
-    [Obsolete("Use Problem.AddInvalidMessage instead")]
+    [Obsolete("Use Problem.AddValidationError instead")]
     public void AddInvalidMessage(string message)
     {
         if (!IsSuccess)
-            Problem.AddInvalidMessage(message);
+            Problem.AddValidationError(message);
     }
 
-    [Obsolete("Use Problem.AddInvalidMessage instead")]
+    [Obsolete("Use Problem.AddValidationError instead")]
     public void AddInvalidMessage(string key, string value)
     {
         if (!IsSuccess)
-            Problem.AddInvalidMessage(key, value);
+            Problem.AddValidationError(key, value);
     }
 
     #endregion
