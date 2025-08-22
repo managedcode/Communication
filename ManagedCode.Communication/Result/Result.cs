@@ -18,41 +18,64 @@ public partial struct Result : IResult
     /// <summary>
     ///     Initializes a new instance of the <see cref="Result" /> struct.
     /// </summary>
-    internal Result(bool isSuccess, Problem? problem = null)
+    private Result(bool isSuccess, Problem? problem = null)
     {
         IsSuccess = isSuccess;
         Problem = problem;
     }
 
     /// <summary>
-    ///     Creates a Result with the specified success status and optional problem.
+    ///     Creates a successful Result.
     /// </summary>
-    internal static Result Create(bool isSuccess, Problem? problem = null)
+    internal static Result CreateSuccess()
     {
-        return new Result(isSuccess, problem);
+        return new Result(true, null);
+    }
+
+    /// <summary>
+    ///     Creates a failed Result with the specified problem.
+    /// </summary>
+    internal static Result CreateFailed(Problem problem)
+    {
+        return new Result(false, problem);
     }
 
     /// <summary>
     ///     Gets or sets a value indicating whether the operation was successful.
     /// </summary>
+    [JsonInclude]
     [JsonPropertyName("isSuccess")]
     [JsonPropertyOrder(1)]
     [MemberNotNullWhen(false, nameof(Problem))]
-    public bool IsSuccess { get; init; }
+    public bool IsSuccess { get; private init; }
 
     /// <summary>
     ///     Gets a value indicating whether the operation failed.
     /// </summary>
     [JsonIgnore]
-    public bool IsFailed => !IsSuccess || HasProblem;
+    public bool IsFailed => !IsSuccess;
+
+    [JsonInclude]
+    [JsonPropertyName("problem")]
+    [JsonPropertyOrder(2)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    private Problem? _problem;
 
     /// <summary>
     ///     Gets or sets the problem that occurred during the operation.
     /// </summary>
-    [JsonPropertyName("problem")]
-    [JsonPropertyOrder(2)]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public Problem? Problem { get; set; }
+    [JsonIgnore]
+    public Problem? Problem
+    {
+        get
+        {
+            if (_problem is null && !IsSuccess)
+                _problem = Problem.GenericError();
+
+            return _problem;
+        }
+        private init => _problem = value;
+    }
 
 
     /// <summary>
@@ -60,17 +83,24 @@ public partial struct Result : IResult
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
-    public bool HasProblem => Problem != null;
+    public bool HasProblem => !IsSuccess;
 
+
+    /// <summary>
+    ///     Get the Problem assigned to the result without falling back to a generic error if no problem is assigned.
+    ///     Useful if a different default problem is desired.
+    /// </summary>
+    internal Problem? GetProblemNoFallback() => _problem;
 
     /// <summary>
     ///     Throws an exception if the result indicates a failure.
     /// </summary>
     public bool ThrowIfFail()
     {
-        if (HasProblem)
+        var problem = Problem;
+        if (problem is not null)
         {
-            throw Problem;
+            throw problem;
         }
 
         return false;
@@ -85,7 +115,7 @@ public partial struct Result : IResult
     public bool TryGetProblem([MaybeNullWhen(false)] out Problem problem)
     {
         problem = Problem;
-        return HasProblem;
+        return problem is not null;
     }
 
 
@@ -97,58 +127,28 @@ public partial struct Result : IResult
 
     public bool InvalidField(string fieldName)
     {
-        var errors = Problem?.GetValidationErrors();
-        return errors?.ContainsKey(fieldName) ?? false;
+        return !IsSuccess && Problem.InvalidField(fieldName);
     }
 
     public string InvalidFieldError(string fieldName)
     {
-        var errors = Problem?.GetValidationErrors();
-        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
+        return IsSuccess
+            ? string.Empty
+            : Problem.InvalidFieldError(fieldName);
     }
 
+    [Obsolete("Use Problem.AddValidationError instead")]
     public void AddInvalidMessage(string message)
     {
-        if (Problem == null)
-        {
-            Problem = Problem.Validation((ProblemConstants.ValidationFields.General, message));
-        }
-        else
-        {
-            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-            {
-                if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
-                {
-                    errors[ProblemConstants.ValidationFields.General] = new List<string>();
-                }
-
-                errors[ProblemConstants.ValidationFields.General]
-                    .Add(message);
-            }
-        }
+        if (!IsSuccess)
+            Problem.AddValidationError(message);
     }
 
+    [Obsolete("Use Problem.AddValidationError instead")]
     public void AddInvalidMessage(string key, string value)
     {
-        if (Problem == null)
-        {
-            Problem = Problem.Validation((key, value));
-        }
-        else
-        {
-            Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-            if (Problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-            {
-                if (!errors.ContainsKey(key))
-                {
-                    errors[key] = new List<string>();
-                }
-
-                errors[key]
-                    .Add(value);
-            }
-        }
+        if (!IsSuccess)
+            Problem.AddValidationError(key, value);
     }
 
     #endregion

@@ -15,7 +15,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail()
     {
-        return Create(false, default);
+        return CreateFailed(Problem.GenericError());
     }
 
     /// <summary>
@@ -23,7 +23,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(T value)
     {
-        return Create(false, value);
+        return CreateFailed(Problem.GenericError(), value);
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(Problem problem)
     {
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
 
@@ -41,7 +41,7 @@ public partial struct Result<T>
     public static Result<T> Fail(string title)
     {
         var problem = Problem.Create(title, title, (int)HttpStatusCode.InternalServerError);
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -50,7 +50,7 @@ public partial struct Result<T>
     public static Result<T> Fail(string title, string detail)
     {
         var problem = Problem.Create(title, detail);
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public partial struct Result<T>
     public static Result<T> Fail(string title, string detail, HttpStatusCode status)
     {
         var problem = Problem.Create(title, detail, (int)status);
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(Exception exception)
     {
-        return new Result<T>(false, default, Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
+        return CreateFailed(Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(Exception exception, HttpStatusCode status)
     {
-        return new Result<T>(false, default, Problem.Create(exception, (int)status));
+        return CreateFailed(Problem.Create(exception, (int)status));
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailValidation(params (string field, string message)[] errors)
     {
-        return new Result<T>(false, default, Problem.Validation(errors));
+        return CreateFailed(Problem.Validation(errors));
     }
 
     /// <summary>
@@ -96,7 +96,7 @@ public partial struct Result<T>
             ProblemConstants.Messages.BadRequest,
             (int)HttpStatusCode.BadRequest);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public partial struct Result<T>
             detail,
             (int)HttpStatusCode.BadRequest);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public partial struct Result<T>
             ProblemConstants.Messages.UnauthorizedAccess,
             (int)HttpStatusCode.Unauthorized);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -135,7 +135,7 @@ public partial struct Result<T>
             detail,
             (int)HttpStatusCode.Unauthorized);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -148,7 +148,7 @@ public partial struct Result<T>
             ProblemConstants.Messages.ForbiddenAccess,
             (int)HttpStatusCode.Forbidden);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -161,7 +161,7 @@ public partial struct Result<T>
             detail,
             (int)HttpStatusCode.Forbidden);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public partial struct Result<T>
             ProblemConstants.Messages.ResourceNotFound,
             (int)HttpStatusCode.NotFound);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -187,7 +187,7 @@ public partial struct Result<T>
             detail,
             (int)HttpStatusCode.NotFound);
 
-        return Create(false, default, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -195,7 +195,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode) where TEnum : Enum
     {
-        return new Result<T>(false, default, Problem.Create(errorCode));
+        return CreateFailed(Problem.Create(errorCode));
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode, string detail) where TEnum : Enum
     {
-        return new Result<T>(false, default, Problem.Create(errorCode, detail));
+        return CreateFailed(Problem.Create(errorCode, detail));
     }
 
     /// <summary>
@@ -211,7 +211,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode, HttpStatusCode status) where TEnum : Enum
     {
-        return new Result<T>(false, default, Problem.Create(errorCode, errorCode.ToString(), (int)status));
+        return CreateFailed(Problem.Create(errorCode, errorCode.ToString(), (int)status));
     }
 
     /// <summary>
@@ -219,6 +219,6 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
-        return new Result<T>(false, default, Problem.Create(errorCode, detail, (int)status));
+        return CreateFailed(Problem.Create(errorCode, detail, (int)status));
     }
 }

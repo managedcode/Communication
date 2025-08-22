@@ -17,6 +17,7 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8"/>
     </ItemGroup>
     <ItemGroup>
+        <InternalsVisibleTo Include="ManagedCode.Communication.AspNetCore"/>
         <InternalsVisibleTo Include="ManagedCode.Communication.Orleans"/>
     </ItemGroup>
 

@@ -10,55 +10,55 @@ public partial struct CollectionResult<T>
 {
     public static CollectionResult<T> Fail()
     {
-        return Create(false, default, 0, 0, 0);
+        return CreateFailed(Problem.GenericError());
     }
 
     public static CollectionResult<T> Fail(IEnumerable<T> value)
     {
-        return Create(false, value.ToArray(), 0, 0, 0);
+        return CreateFailed(Problem.GenericError(), value.ToArray());
     }
 
     public static CollectionResult<T> Fail(T[] value)
     {
-        return Create(false, value, 0, 0, 0);
+        return CreateFailed(Problem.GenericError(), value);
     }
 
     public static CollectionResult<T> Fail(Problem problem)
     {
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> Fail(string title)
     {
         var problem = Problem.Create(title, title, (int)HttpStatusCode.InternalServerError);
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> Fail(string title, string detail)
     {
         var problem = Problem.Create(title, detail);
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> Fail(string title, string detail, HttpStatusCode status)
     {
         var problem = Problem.Create(title, detail, (int)status);
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> Fail(Exception exception)
     {
-        return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
+        return CreateFailed(Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
     }
 
     public static CollectionResult<T> Fail(Exception exception, HttpStatusCode status)
     {
-        return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(exception, (int)status));
+        return CreateFailed(Problem.Create(exception, (int)status));
     }
 
     public static CollectionResult<T> FailValidation(params (string field, string message)[] errors)
     {
-        return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Validation(errors));
+        return CreateFailed(Problem.Validation(errors));
     }
 
     public static CollectionResult<T> FailBadRequest()
@@ -68,7 +68,7 @@ public partial struct CollectionResult<T>
             ProblemConstants.Messages.BadRequest,
             (int)HttpStatusCode.BadRequest);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> FailBadRequest(string detail)
@@ -78,7 +78,7 @@ public partial struct CollectionResult<T>
             detail,
             (int)HttpStatusCode.BadRequest);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> FailUnauthorized()
@@ -88,7 +88,7 @@ public partial struct CollectionResult<T>
             ProblemConstants.Messages.UnauthorizedAccess,
             (int)HttpStatusCode.Unauthorized);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> FailUnauthorized(string detail)
@@ -98,7 +98,7 @@ public partial struct CollectionResult<T>
             detail,
             (int)HttpStatusCode.Unauthorized);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> FailForbidden()
@@ -108,7 +108,7 @@ public partial struct CollectionResult<T>
             ProblemConstants.Messages.ForbiddenAccess,
             (int)HttpStatusCode.Forbidden);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> FailForbidden(string detail)
@@ -118,7 +118,7 @@ public partial struct CollectionResult<T>
             detail,
             (int)HttpStatusCode.Forbidden);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> FailNotFound()
@@ -128,7 +128,7 @@ public partial struct CollectionResult<T>
             ProblemConstants.Messages.ResourceNotFound,
             (int)HttpStatusCode.NotFound);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> FailNotFound(string detail)
@@ -138,26 +138,26 @@ public partial struct CollectionResult<T>
             detail,
             (int)HttpStatusCode.NotFound);
 
-        return Create(false, default, 0, 0, 0, problem);
+        return CreateFailed(problem);
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode) where TEnum : Enum
     {
-        return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode));
+        return CreateFailed(Problem.Create(errorCode));
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, string detail) where TEnum : Enum
     {
-        return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode, detail));
+        return CreateFailed(Problem.Create(errorCode, detail));
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, HttpStatusCode status) where TEnum : Enum
     {
-        return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode, errorCode.ToString(), (int)status));
+        return CreateFailed(Problem.Create(errorCode, errorCode.ToString(), (int)status));
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
-        return new CollectionResult<T>(false, default, 0, 0, 0, Problem.Create(errorCode, detail, (int)status));
+        return CreateFailed(Problem.Create(errorCode, detail, (int)status));
     }
 }

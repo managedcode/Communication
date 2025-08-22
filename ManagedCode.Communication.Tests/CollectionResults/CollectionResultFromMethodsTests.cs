@@ -460,7 +460,7 @@ public class CollectionResultFromMethodsTests
 
         // Assert
         result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     #endregion
@@ -507,7 +507,7 @@ public class CollectionResultFromMethodsTests
 
         // Assert
         result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     #endregion

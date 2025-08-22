@@ -22,7 +22,7 @@ public class ResultStaticHelperMethodsTests
         result.IsFailed.Should().BeTrue();
         result.IsSuccess.Should().BeFalse();
         result.Value.Should().BeNull();
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     [Fact]

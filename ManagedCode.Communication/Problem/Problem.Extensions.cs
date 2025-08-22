@@ -470,7 +470,13 @@ public partial class Problem
 
         fieldErrors.Add(message);
     }
-    
+
+    public void AddValidationError(string message)
+    {
+        const string field = ProblemConstants.ValidationFields.General;
+        AddValidationError(field, message);
+    }
+
     /// <summary>
     ///     Gets or creates validation errors dictionary.
     /// </summary>
@@ -484,6 +490,18 @@ public partial class Problem
         }
         
         return errors;
+    }
+
+    public bool InvalidField(string fieldName)
+    {
+        var errors = GetValidationErrors();
+        return errors?.ContainsKey(fieldName) ?? false;
+    }
+
+    public string InvalidFieldError(string fieldName)
+    {
+        var errors = GetValidationErrors();
+        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
     }
 
     /// <summary>
