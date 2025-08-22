@@ -1,37 +1,13 @@
 # ManagedCode.Communication
 
-A high-performance .NET 9.0 library providing Result types and railway-oriented programming patterns for robust error handling in distributed applications.
+Result pattern for .NET that replaces exceptions with type-safe return values. Features railway-oriented programming, ASP.NET Core integration, RFC 7807 Problem Details, and built-in pagination.
 
-## Project Requirements
+## Build Commands
 
-This project requires **.NET 9.0 SDK**. Install it using:
-
-```bash
-dotnet --list-sdks  # Check if 9.0.x is available
-```
-
-If not available, install .NET 9.0:
-```bash
-wget -q https://dot.net/v1/dotnet-install.sh && chmod +x dotnet-install.sh
-./dotnet-install.sh --version 9.0.100 --install-dir ~/.dotnet
-export PATH="~/.dotnet:$PATH"
-```
-
-## Build and Test
-
-**Restore packages:**
 ```bash
 dotnet restore
-```
-
-**Build all projects:**
-```bash
-dotnet build --configuration Release
-```
-
-**Run tests:**
-```bash
-dotnet test --configuration Release --no-build
+dotnet build
+dotnet test
 ```
 
 ## Project Structure
@@ -44,7 +20,16 @@ dotnet test --configuration Release --no-build
 
 ## Key Concepts
 
-This library implements railway-oriented programming patterns using Result types for error handling without exceptions:
+This library implements the Result pattern for functional error handling without exceptions:
+
+**Core Result Types:**
+- `Result` - Success/failure without a value
+- `Result<T>` - Success with value T or failure  
+- `CollectionResult<T>` - Collections with built-in pagination
+- `Problem` - RFC 7807 compliant error details
+
+**Railway-Oriented Programming:**
+Chain operations using functional combinators like `Map`, `Bind`/`Then`, `Tap`/`Do`, `Match`, and `Compensate`.
 
 ```csharp
 // Basic Result usage
