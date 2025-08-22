@@ -11,7 +11,7 @@ public partial struct Result
     /// </summary>
     public static Result Fail()
     {
-        return Create(false);
+        return CreateFailed(Problem.GenericError());
     }
 
     /// <summary>
@@ -19,7 +19,7 @@ public partial struct Result
     /// </summary>
     public static Result Fail(Problem problem)
     {
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
 
@@ -29,7 +29,7 @@ public partial struct Result
     public static Result Fail(string title)
     {
         var problem = Problem.Create(title, title, HttpStatusCode.InternalServerError);
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public partial struct Result
     public static Result Fail(string title, string detail)
     {
         var problem = Problem.Create(title, detail, HttpStatusCode.InternalServerError);
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public partial struct Result
     public static Result Fail(string title, string detail, HttpStatusCode status)
     {
         var problem = Problem.Create(title, detail, (int)status);
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -55,7 +55,7 @@ public partial struct Result
     /// </summary>
     public static Result Fail(Exception exception)
     {
-        return Create(false, Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
+        return CreateFailed(Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public partial struct Result
     /// </summary>
     public static Result Fail(Exception exception, HttpStatusCode status)
     {
-        return Create(false, Problem.Create(exception, (int)status));
+        return CreateFailed(Problem.Create(exception, (int)status));
     }
 
     /// <summary>
@@ -71,7 +71,7 @@ public partial struct Result
     /// </summary>
     public static Result FailValidation(params (string field, string message)[] errors)
     {
-        return new Result(false, Problem.Validation(errors));
+        return CreateFailed(Problem.Validation(errors));
     }
 
     /// <summary>
@@ -84,7 +84,7 @@ public partial struct Result
             ProblemConstants.Messages.BadRequest,
             (int)HttpStatusCode.BadRequest);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -97,7 +97,7 @@ public partial struct Result
             detail,
             (int)HttpStatusCode.BadRequest);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ public partial struct Result
             ProblemConstants.Messages.UnauthorizedAccess,
             (int)HttpStatusCode.Unauthorized);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ public partial struct Result
             detail,
             (int)HttpStatusCode.Unauthorized);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public partial struct Result
             ProblemConstants.Messages.ForbiddenAccess,
             (int)HttpStatusCode.Forbidden);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -149,7 +149,7 @@ public partial struct Result
             detail,
             (int)HttpStatusCode.Forbidden);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -162,7 +162,7 @@ public partial struct Result
             ProblemConstants.Messages.ResourceNotFound,
             (int)HttpStatusCode.NotFound);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ public partial struct Result
             detail,
             (int)HttpStatusCode.NotFound);
 
-        return Create(false, problem);
+        return CreateFailed(problem);
     }
 
     /// <summary>
@@ -183,7 +183,7 @@ public partial struct Result
     /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode) where TEnum : Enum
     {
-        return Create(false, Problem.Create(errorCode));
+        return CreateFailed(Problem.Create(errorCode));
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ public partial struct Result
     /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode, string detail) where TEnum : Enum
     {
-        return Create(false, Problem.Create(errorCode, detail));
+        return CreateFailed(Problem.Create(errorCode, detail));
     }
 
     /// <summary>
@@ -199,14 +199,14 @@ public partial struct Result
     /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode, HttpStatusCode status) where TEnum : Enum
     {
-        return Create(false, Problem.Create(errorCode, errorCode.ToString(), (int)status));
+        return CreateFailed(Problem.Create(errorCode, errorCode.ToString(), (int)status));
     }
 
     /// <summary>
     ///     Creates a failed result from a custom error enum with detail and specific HTTP status.
-    /// </summary>і
+    /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
-        return Create(false, Problem.Create(errorCode, detail, (int)status));
+        return CreateFailed(Problem.Create(errorCode, detail, (int)status));
     }
 }

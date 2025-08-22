@@ -10,7 +10,7 @@ public static class ControllerExtensions
         if (result.IsSuccess)
             return new OkObjectResult(result.Value);
         
-        var problem = result.Problem ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
+        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
         return new ObjectResult(problem)
         {
             StatusCode = problem.StatusCode
@@ -22,7 +22,7 @@ public static class ControllerExtensions
         if (result.IsSuccess)
             return new NoContentResult();
         
-        var problem = result.Problem ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
+        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
         return new ObjectResult(problem)
         {
             StatusCode = problem.StatusCode
@@ -34,7 +34,7 @@ public static class ControllerExtensions
         if (result.IsSuccess)
             return Results.Ok(result.Value);
         
-        var problem = result.Problem ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
+        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
         return Results.Problem(
             title: problem.Title,
             detail: problem.Detail,
@@ -50,7 +50,7 @@ public static class ControllerExtensions
         if (result.IsSuccess)
             return Results.NoContent();
         
-        var problem = result.Problem ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
+        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
         return Results.Problem(
             title: problem.Title,
             detail: problem.Detail,

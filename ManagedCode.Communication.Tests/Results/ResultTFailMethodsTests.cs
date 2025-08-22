@@ -22,7 +22,7 @@ public class ResultTFailMethodsTests
         result.IsFailed.Should().BeTrue();
         result.IsSuccess.Should().BeFalse();
         result.Value.Should().BeNull();
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     #endregion
@@ -41,7 +41,7 @@ public class ResultTFailMethodsTests
         // Assert
         result.IsFailed.Should().BeTrue();
         result.Value.Should().Be(value);
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class ResultTFailMethodsTests
         // Assert
         result.IsFailed.Should().BeTrue();
         result.Value.Should().BeNull();
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     #endregion

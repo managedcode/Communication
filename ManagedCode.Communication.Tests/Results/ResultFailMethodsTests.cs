@@ -20,7 +20,7 @@ public class ResultFailMethodsTests
         // Assert
         result.IsFailed.Should().BeTrue();
         result.IsSuccess.Should().BeFalse();
-        result.HasProblem.Should().BeFalse();
+        result.HasProblem.Should().BeTrue();
     }
 
     #endregion

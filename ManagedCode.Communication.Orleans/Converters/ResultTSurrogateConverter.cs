@@ -8,7 +8,10 @@ public sealed class ResultTSurrogateConverter<T> : IConverter<Result<T>, ResultT
 {
     public Result<T> ConvertFromSurrogate(in ResultTSurrogate<T> surrogate)
     {
-        return Result<T>.Create(surrogate.IsSuccess, surrogate.Value, surrogate.Problem);
+        if (surrogate.IsSuccess)
+            return Result<T>.Succeed(surrogate.Value!);
+
+        return Result<T>.CreateFailed(surrogate.Problem ?? Problem.GenericError(), surrogate.Value);
     }
 
     public ResultTSurrogate<T> ConvertToSurrogate(in Result<T> value)

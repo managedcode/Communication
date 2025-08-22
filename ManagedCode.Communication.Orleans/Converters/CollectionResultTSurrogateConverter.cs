@@ -9,8 +9,10 @@ public sealed class CollectionResultTSurrogateConverter<T> : IConverter<Collecti
 {
     public CollectionResult<T> ConvertFromSurrogate(in CollectionResultTSurrogate<T> surrogate)
     {
-        return CollectionResult<T>.Create(surrogate.IsSuccess, surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems,
-            surrogate.Problem);
+        if (surrogate.IsSuccess)
+            return CollectionResult<T>.CreateSuccess(surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems);
+
+        return CollectionResult<T>.CreateFailed(surrogate.Problem ?? Problem.GenericError(), surrogate.Collection);
     }
 
     public CollectionResultTSurrogate<T> ConvertToSurrogate(in CollectionResult<T> value)

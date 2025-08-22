@@ -86,7 +86,7 @@ public class ControllerExtensionsTests
     public void ToActionResult_WithNoProblem_ReturnsDefaultError()
     {
         // Arrange - manually create failed result without problem
-        var result = new Result<string> { IsSuccess = false, Problem = null };
+        var result = (Result<string>)default;
 
         // Act
         var actionResult = result.ToActionResult();
