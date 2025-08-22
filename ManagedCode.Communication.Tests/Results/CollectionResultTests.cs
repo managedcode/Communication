@@ -293,69 +293,6 @@ public class CollectionResultTests
     }
 
     [Fact]
-    public void AddInvalidMessage_ShouldAddValidationError()
-    {
-        // Arrange
-        var result = CollectionResult<string>.Invalid();
-
-        // Act
-        result.AddInvalidMessage("email", "Email is required");
-        result.AddInvalidMessage("email", "Email format is invalid");
-
-        // Assert
-        result.InvalidField("email")
-            .Should()
-            .BeTrue();
-        var emailErrors = result.InvalidFieldError("email");
-        emailErrors.Should()
-            .Contain("Email is required");
-        emailErrors.Should()
-            .Contain("Email format is invalid");
-    }
-
-    [Fact]
-    public void AddInvalidMessage_WithGeneralMessage_ShouldAddToGeneralErrors()
-    {
-        // Arrange
-        var result = CollectionResult<string>.Invalid();
-
-        // Act
-        result.AddInvalidMessage("General error occurred");
-
-        // Assert
-        result.InvalidField("_general")
-            .Should()
-            .BeTrue();
-        var generalErrors = result.InvalidFieldError("_general");
-        generalErrors.Should()
-            .Be("General error occurred");
-    }
-
-    [Fact]
-    public void AddInvalidMessage_ThrowsOnSuccessfulResult()
-    {
-        // Arrange
-        var result = CollectionResult<string>.Empty();
-
-        // Act & Assert
-        result.Invoking(r => r.AddInvalidMessage("email", "Email is required"))
-            .Should()
-            .ThrowExactly<InvalidOperationException>();
-    }
-
-    [Fact]
-    public void AddInvalidMessage_WithGeneralMessage_ThrowsOnSuccessfulResult()
-    {
-        // Arrange
-        var result = CollectionResult<string>.Empty();
-
-        // Act & Assert
-        result.Invoking(r => r.AddInvalidMessage("General error occurred"))
-            .Should()
-            .ThrowExactly<InvalidOperationException>();
-    }
-
-    [Fact]
     public void ThrowIfFail_WithSuccessfulResult_ShouldNotThrow()
     {
         // Arrange

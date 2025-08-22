@@ -135,51 +135,28 @@ public partial struct CollectionResult<T> : IResult
 
     public bool InvalidField(string fieldName)
     {
-        var errors = Problem?.GetValidationErrors();
-        return errors?.ContainsKey(fieldName) ?? false;
+        return !IsSuccess && Problem.InvalidField(fieldName);
     }
 
     public string InvalidFieldError(string fieldName)
     {
-        var errors = Problem?.GetValidationErrors();
-        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
+        return IsSuccess
+            ? string.Empty
+            : Problem.InvalidFieldError(fieldName);
     }
 
+    [Obsolete("Use Problem.AddInvalidMessage instead")]
     public void AddInvalidMessage(string message)
     {
-        if (IsSuccess) throw new InvalidOperationException("Cannot add invalid message to a successful result");
-
-        var problem = Problem;
-
-        problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-        if (problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-        {
-            if (!errors.ContainsKey(ProblemConstants.ValidationFields.General))
-            {
-                errors[ProblemConstants.ValidationFields.General] = new List<string>();
-            }
-
-            errors[ProblemConstants.ValidationFields.General]
-                .Add(message);
-        }
+        if (!IsSuccess)
+            Problem.AddInvalidMessage(message);
     }
 
+    [Obsolete("Use Problem.AddInvalidMessage instead")]
     public void AddInvalidMessage(string key, string value)
     {
-        if (IsSuccess) throw new InvalidOperationException("Cannot add invalid message to a successful result");
-
-        var problem = Problem;
-
-        problem.Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
-        if (problem.Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
-        {
-            if (!errors.ContainsKey(key))
-            {
-                errors[key] = new List<string>();
-            }
-
-            errors[key].Add(value);
-        }
+        if (!IsSuccess)
+            Problem.AddInvalidMessage(key, value);
     }
 
     #endregion

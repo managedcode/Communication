@@ -486,6 +486,48 @@ public partial class Problem
         return errors;
     }
 
+    public void AddInvalidMessage(string message)
+    {
+        const string key = ProblemConstants.ValidationFields.General;
+
+        Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+        if (Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+        {
+            if (!errors.TryGetValue(key, out List<string>? list))
+            {
+                errors[key] = list = new();
+            }
+
+            list.Add(message);
+        }
+    }
+
+    public void AddInvalidMessage(string key, string value)
+    {
+        Extensions[ProblemConstants.ExtensionKeys.Errors] ??= new Dictionary<string, List<string>>();
+        if (Extensions[ProblemConstants.ExtensionKeys.Errors] is Dictionary<string, List<string>> errors)
+        {
+            if (!errors.TryGetValue(key, out List<string>? list))
+            {
+                errors[key] = list = new();
+            }
+
+            list.Add(value);
+        }
+    }
+
+    public bool InvalidField(string fieldName)
+    {
+        var errors = GetValidationErrors();
+        return errors?.ContainsKey(fieldName) ?? false;
+    }
+
+    public string InvalidFieldError(string fieldName)
+    {
+        var errors = GetValidationErrors();
+        return errors?.TryGetValue(fieldName, out var fieldErrors) == true ? string.Join(", ", fieldErrors) : string.Empty;
+    }
+
     /// <summary>
     ///     Creates a copy of this Problem with the specified extensions added.
     /// </summary>

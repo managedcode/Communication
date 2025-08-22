@@ -1,3 +1,5 @@
+using System;
+
 namespace ManagedCode.Communication;
 
 /// <summary>
@@ -15,6 +17,7 @@ public interface IResultInvalid
     ///     Adds an invalid message to the result.
     /// </summary>
     /// <param name="message">The invalid message to add.</param>
+    [Obsolete("Use Problem.AddInvalidMessage instead")]
     void AddInvalidMessage(string message);
 
     /// <summary>
@@ -22,5 +25,6 @@ public interface IResultInvalid
     /// </summary>
     /// <param name="key">The key of the invalid message.</param>
     /// <param name="value">The value of the invalid message.</param>
+    [Obsolete("Use Problem.AddInvalidMessage instead")]
     void AddInvalidMessage(string key, string value);
 }

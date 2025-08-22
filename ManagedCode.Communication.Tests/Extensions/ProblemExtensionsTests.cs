@@ -286,4 +286,43 @@ public class ProblemExtensionsTests
         errors["email"].Should().Contain("Already exists");
         errors["password"].Should().Contain("Too short");
     }
+
+    [Fact]
+    public void AddInvalidMessage_ShouldAddValidationError()
+    {
+        // Arrange
+        var problem = new Problem();
+
+        // Act
+        problem.AddInvalidMessage("email", "Email is required");
+        problem.AddInvalidMessage("email", "Email format is invalid");
+
+        // Assert
+        problem.InvalidField("email")
+            .Should()
+            .BeTrue();
+        var emailErrors = problem.InvalidFieldError("email");
+        emailErrors.Should()
+            .Contain("Email is required");
+        emailErrors.Should()
+            .Contain("Email format is invalid");
+    }
+
+    [Fact]
+    public void AddInvalidMessage_WithGeneralMessage_ShouldAddToGeneralErrors()
+    {
+        // Arrange
+        var problem = new Problem();
+
+        // Act
+        problem.AddInvalidMessage("General error occurred");
+
+        // Assert
+        problem.InvalidField("_general")
+            .Should()
+            .BeTrue();
+        var generalErrors = problem.InvalidFieldError("_general");
+        generalErrors.Should()
+            .Be("General error occurred");
+    }
 }
