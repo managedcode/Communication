@@ -19,9 +19,8 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 ## Building and Testing
 
 ```bash
-# Requires .NET 9.0 SDK
-dotnet build ManagedCode.Communication.Tests/Tests.ManagedCode.Communication.sln
-dotnet test ManagedCode.Communication.Tests/Tests.ManagedCode.Communication.sln
+dotnet build
+dotnet test
 ```
 
 ## Formatting
