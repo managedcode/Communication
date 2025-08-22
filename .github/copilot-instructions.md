@@ -5,15 +5,14 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 ## General
 
 * Always prefer Result types over throwing exceptions for expected error cases.
-* Use railway-oriented programming patterns with `Then`, `Map`, `Compensate` for chaining operations.
+* Use railway-oriented programming patterns with `Map`, `Then`, `Compensate` for chaining operations.
 * Always use the latest C# features, currently C# 13.
 * Make only high confidence suggestions when reviewing code changes.
-* Never change `global.json`, `Directory.Build.props`, or solution files unless explicitly asked.
+* Never change `Directory.Build.props`, or solution files unless explicitly asked.
 
 ## .NET Environment
 
 * This project targets .NET 9.0 and uses C# 13.0.
-* Ensure you have .NET 9.0 SDK installed to build and run the project.
 * The project uses nullable reference types and treats warnings as errors.
 
 ## Building and Testing
