@@ -73,7 +73,7 @@ public partial class Command : ICommand
     /// </summary>
     public static Command Create(string commandType)
     {
-        return new Command(Guid.CreateVersion7(), commandType);
+        return new Command(Guid.NewGuid(), commandType);
     }
     
     /// <summary>

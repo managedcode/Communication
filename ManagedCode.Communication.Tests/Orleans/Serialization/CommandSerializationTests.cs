@@ -153,7 +153,7 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
             }
         };
 
-        var command = Command<PaymentRequest>.From(Guid.CreateVersion7(), payload);
+        var command = Command<PaymentRequest>.From(Guid.NewGuid(), payload);
         command.CommandType = "ProcessPayment";
         command.CorrelationId = "correlation-789";
         command.CausationId = "causation-012";

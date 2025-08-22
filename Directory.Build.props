@@ -1,8 +1,8 @@
 <Project>
 
     <PropertyGroup>
-        <LangVersion>13</LangVersion>
-        <TargetFramework>net9.0</TargetFramework>
+        <LangVersion>12</LangVersion>
+        <TargetFramework>net8.0</TargetFramework>
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

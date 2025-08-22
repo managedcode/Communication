@@ -6,7 +6,7 @@ public partial class Command<T>
 {
     public static Command<T> Create(T value)
     {
-        return new Command<T>(Guid.CreateVersion7(), value);
+        return new Command<T>(Guid.NewGuid(), value);
     }
     
     public static Command<T> Create(Guid id, T value)

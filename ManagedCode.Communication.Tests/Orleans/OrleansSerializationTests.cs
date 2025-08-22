@@ -31,7 +31,7 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
         
         // Step 1: Send a command
-        var commandId = Guid.CreateVersion7();
+        var commandId = Guid.NewGuid();
         var paymentRequest = new PaymentRequest
         {
             OrderId = "order-999",
