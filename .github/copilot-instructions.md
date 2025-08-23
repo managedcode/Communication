@@ -49,9 +49,15 @@ public void Succeed_ShouldCreateSuccessfulResult()
 {
     var result = Result.Succeed();
     
-    result.IsSuccess.Should().BeTrue();
-    result.IsFailed.Should().BeFalse();
-    result.Problem.Should().BeNull();
+    result.IsSuccess
+        .Should()
+        .BeTrue();
+    result.IsFailed
+        .Should()
+        .BeFalse();
+    result.Problem
+        .Should()
+        .BeNull();
 }
 ```
 
