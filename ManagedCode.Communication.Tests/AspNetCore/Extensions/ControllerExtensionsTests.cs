@@ -55,7 +55,7 @@ public class ControllerExtensionsTests
         var objectResult = (ObjectResult)actionResult;
         objectResult.StatusCode.Should().Be(404);
         objectResult.Value.Should().BeOfType<Problem>();
-        
+
         var returnedProblem = (Problem)objectResult.Value!;
         returnedProblem.StatusCode.Should().Be(404);
         returnedProblem.Title.Should().Be("Not Found");
@@ -76,7 +76,7 @@ public class ControllerExtensionsTests
         actionResult.Should().BeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
         objectResult.StatusCode.Should().Be(400);
-        
+
         var returnedProblem = (Problem)objectResult.Value!;
         returnedProblem.StatusCode.Should().Be(400);
         returnedProblem.Title.Should().Be("Validation Error");
@@ -95,7 +95,7 @@ public class ControllerExtensionsTests
         actionResult.Should().BeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
         objectResult.StatusCode.Should().Be(500);
-        
+
         var returnedProblem = (Problem)objectResult.Value!;
         returnedProblem.StatusCode.Should().Be(500);
         returnedProblem.Title.Should().Be("Operation failed");
@@ -152,7 +152,7 @@ public class ControllerExtensionsTests
         var problem = Problem.Create("Business Error", "Invalid operation for current state", 422);
         problem.Extensions["errorCode"] = "INVALID_STATE";
         problem.Extensions["timestamp"] = "2024-01-01";
-        
+
         var result = Result<object>.Fail(problem);
 
         // Act
@@ -184,7 +184,7 @@ public class ControllerExtensionsTests
         actionResult.Should().BeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
         objectResult.StatusCode.Should().Be(statusCode);
-        
+
         var returnedProblem = (Problem)objectResult.Value!;
         returnedProblem.StatusCode.Should().Be(statusCode);
         returnedProblem.Title.Should().Be(title);
@@ -230,7 +230,7 @@ public class ControllerExtensionsTests
     public void ToActionResult_NonGenericWithNoProblem_ReturnsDefaultError()
     {
         // Arrange - manually create failed result without problem
-        var result = new Result { IsSuccess = false, Problem = null };
+        var result =  Result.Fail();
 
         // Act
         var actionResult = result.ToActionResult();
@@ -239,7 +239,7 @@ public class ControllerExtensionsTests
         actionResult.Should().BeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
         objectResult.StatusCode.Should().Be(500);
-        
+
         var returnedProblem = (Problem)objectResult.Value!;
         returnedProblem.StatusCode.Should().Be(500);
         returnedProblem.Title.Should().Be("Operation failed");
@@ -250,7 +250,7 @@ public class ControllerExtensionsTests
     public void ToHttpResult_NonGenericWithNoProblem_ReturnsDefaultError()
     {
         // Arrange - manually create failed result without problem
-        var result = new Result { IsSuccess = false, Problem = null };
+        var result = Result.Fail();
 
         // Act
         var httpResult = result.ToHttpResult();
