@@ -2,6 +2,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
+using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 
@@ -11,7 +12,7 @@ public class CommunicationModelValidationFilter(ILogger<CommunicationModelValida
     {
         if (!context.ModelState.IsValid)
         {
-            logger.LogWarning("Model validation failed for {ActionName}", context.ActionDescriptor.DisplayName);
+            LoggerCenter.LogValidationFailed(logger, context.ActionDescriptor.DisplayName ?? "Unknown");
 
             var validationErrors = context.ModelState
                 .Where(x => x.Value?.Errors.Count > 0)

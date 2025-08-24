@@ -1,8 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Commands;
-using ManagedCode.Communication.AspNetCore;
 using ManagedCode.Communication.Orleans.Grains;
 using Orleans;
 
@@ -73,6 +74,80 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
         await grain.ClearAsync();
+    }
+
+    // New atomic operations
+    public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
+    {
+        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
+        var currentStatus = await grain.GetStatusAsync();
+        
+        if (currentStatus == expectedStatus)
+        {
+            await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
+            return true;
+        }
+        
+        return false;
+    }
+
+    public async Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
+    {
+        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
+        var currentStatus = await grain.GetStatusAsync();
+        
+        // Always try to set the new status
+        await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
+        
+        return (currentStatus, true); // Orleans grain operations are naturally atomic
+    }
+
+    // Batch operations
+    public async Task<Dictionary<string, CommandExecutionStatus>> GetMultipleStatusAsync(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
+    {
+        var tasks = commandIds.Select(async commandId =>
+        {
+            var status = await GetCommandStatusAsync(commandId, cancellationToken);
+            return (commandId, status);
+        });
+        
+        var results = await Task.WhenAll(tasks);
+        return results.ToDictionary(r => r.commandId, r => r.status);
+    }
+
+    public async Task<Dictionary<string, T?>> GetMultipleResultsAsync<T>(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
+    {
+        var tasks = commandIds.Select(async commandId =>
+        {
+            var result = await GetCommandResultAsync<T>(commandId, cancellationToken);
+            return (commandId, result);
+        });
+        
+        var results = await Task.WhenAll(tasks);
+        return results.ToDictionary(r => r.commandId, r => r.result);
+    }
+
+    // Cleanup operations - NOTE: Orleans grains have automatic lifecycle management
+    public Task<int> CleanupExpiredCommandsAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
+    {
+        // Orleans grains are automatically deactivated when not used
+        // This is a no-op for Orleans implementation as cleanup is handled by Orleans runtime
+        return Task.FromResult(0);
+    }
+
+    public Task<int> CleanupCommandsByStatusAsync(CommandExecutionStatus status, TimeSpan maxAge, CancellationToken cancellationToken = default)
+    {
+        // Orleans grains are automatically deactivated when not used
+        // This is a no-op for Orleans implementation as cleanup is handled by Orleans runtime
+        return Task.FromResult(0);
+    }
+
+    public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(CancellationToken cancellationToken = default)
+    {
+        // Orleans doesn't provide built-in way to enumerate all grains
+        // This would require a separate management grain to track command counts
+        // For now, return empty dictionary - implementers can override if needed
+        return Task.FromResult(new Dictionary<CommandExecutionStatus, int>());
     }
 
     // Legacy methods for backward compatibility

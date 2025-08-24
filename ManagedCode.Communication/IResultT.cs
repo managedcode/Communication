@@ -1,3 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
+
 namespace ManagedCode.Communication;
 
 /// <summary>
@@ -9,12 +12,22 @@ public interface IResult<out T> : IResult
     /// <summary>
     ///     Gets the value from the result.
     /// </summary>
-    /// <value>The value, or null if the result does not contain a value.</value>
+    [JsonPropertyName("value")]
+    [JsonPropertyOrder(2)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     T? Value { get; }
 
     /// <summary>
-    ///     Gets a value indicating whether the result is empty.
+    ///     Gets a value indicating whether the result value is empty (null).
     /// </summary>
-    /// <value>true if the result is empty; otherwise, false.</value>
+    [JsonIgnore]
+    [MemberNotNullWhen(false, nameof(Value))]
     bool IsEmpty { get; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the result has a non-empty value.
+    /// </summary>
+    [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Value))]
+    bool HasValue => !IsEmpty;
 }
