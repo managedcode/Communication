@@ -113,6 +113,45 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
             SetCommandStatusAsync(commandId, newStatus, cancellationToken);
             
             return Task.FromResult((currentStatus, true));
+    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+    public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
+    {
+        await _semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(GetStatusKey(commandId)) ?? CommandExecutionStatus.NotFound;
+            
+            if (currentStatus == expectedStatus)
+            {
+                await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
+                return true;
+            }
+            
+            return false;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    public async Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
+    {
+        await _semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            var statusKey = GetStatusKey(commandId);
+            var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(statusKey) ?? CommandExecutionStatus.NotFound;
+            
+            // Set new status
+            await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
+            
+            return (currentStatus, true);
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
