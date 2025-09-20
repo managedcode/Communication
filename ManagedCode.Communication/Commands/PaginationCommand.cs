@@ -3,6 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace ManagedCode.Communication.Commands;
 
+/// <summary>
+/// Represents a command that carries pagination instructions.
+/// </summary>
 public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValueFactory<PaginationCommand, PaginationRequest>
 {
     private const string DefaultCommandType = "Pagination";
@@ -26,7 +29,26 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
 
     public int PageSize => Value?.PageSize ?? 0;
 
+    /// <summary>
+    /// Creates a command with an explicit identifier, command type, and normalized pagination payload.
+    /// </summary>
+    /// <param name="commandId">Unique command identifier.</param>
+    /// <param name="commandType">Logical command name.</param>
+    /// <param name="value">Pagination payload.</param>
+    /// <param name="options">Optional normalization options.</param>
     public static new PaginationCommand Create(Guid commandId, string commandType, PaginationRequest value)
+    {
+        return Create(commandId, commandType, value, options: null);
+    }
+
+    /// <summary>
+    /// Creates a command with an explicit identifier, command type, and normalized pagination payload.
+    /// </summary>
+    /// <param name="commandId">Unique command identifier.</param>
+    /// <param name="commandType">Logical command name.</param>
+    /// <param name="value">Pagination payload.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand Create(Guid commandId, string commandType, PaginationRequest value, PaginationOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(value);
 
@@ -37,49 +59,102 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
             normalizedCommandType = DefaultCommandType;
         }
 
-        return new PaginationCommand(commandId, normalizedCommandType, value);
+        var normalizedPayload = value.Normalize(options);
+
+        return new PaginationCommand(commandId, normalizedCommandType, normalizedPayload);
     }
 
-    public static new PaginationCommand Create(PaginationRequest request)
+    /// <summary>
+    /// Creates a command with a generated identifier from the supplied pagination request.
+    /// </summary>
+    /// <param name="request">Pagination payload.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand Create(PaginationRequest request, PaginationOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return CommandValueFactoryBridge.Create<PaginationCommand, PaginationRequest>(request);
+        var normalized = request.Normalize(options);
+        return Create(Guid.CreateVersion7(), DefaultCommandType, normalized, options);
     }
 
-    public static new PaginationCommand Create(Guid commandId, PaginationRequest request)
+    /// <summary>
+    /// Creates a command using the provided identifier and pagination request.
+    /// </summary>
+    /// <param name="commandId">Unique command identifier.</param>
+    /// <param name="request">Pagination payload.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand Create(Guid commandId, PaginationRequest request, PaginationOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return CommandValueFactoryBridge.Create<PaginationCommand, PaginationRequest>(commandId, request);
+        var normalized = request.Normalize(options);
+        return Create(commandId, DefaultCommandType, normalized, options);
     }
 
-    public static PaginationCommand Create(int skip, int take)
+    /// <summary>
+    /// Creates a command from skip/take parameters.
+    /// </summary>
+    /// <param name="skip">Items to skip.</param>
+    /// <param name="take">Items to take.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand Create(int skip, int take, PaginationOptions? options = null)
     {
-        return Create(new PaginationRequest(skip, take));
+        return Create(new PaginationRequest(skip, take), options);
     }
 
-    public static PaginationCommand Create(Guid commandId, int skip, int take)
+    /// <summary>
+    /// Creates a command with an explicit identifier from skip/take parameters.
+    /// </summary>
+    /// <param name="commandId">Unique command identifier.</param>
+    /// <param name="skip">Items to skip.</param>
+    /// <param name="take">Items to take.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand Create(Guid commandId, int skip, int take, PaginationOptions? options = null)
     {
-        return Create(commandId, new PaginationRequest(skip, take));
+        return Create(commandId, new PaginationRequest(skip, take), options);
     }
 
-    public static new PaginationCommand From(PaginationRequest request)
+    /// <summary>
+    /// Creates a command from the provided pagination payload, preserving compatibility with legacy factory syntax.
+    /// </summary>
+    /// <param name="request">Pagination payload.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand From(PaginationRequest request, PaginationOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return CommandValueFactoryBridge.From<PaginationCommand, PaginationRequest>(request);
+        var normalized = request.Normalize(options);
+        return Create(normalized, options);
     }
 
-    public static PaginationCommand From(int skip, int take)
+    /// <summary>
+    /// Creates a command from skip/take parameters using legacy naming.
+    /// </summary>
+    /// <param name="skip">Items to skip.</param>
+    /// <param name="take">Items to take.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand From(int skip, int take, PaginationOptions? options = null)
     {
-        return From(new PaginationRequest(skip, take));
+        return Create(skip, take, options);
     }
 
-    public static PaginationCommand From(Guid commandId, int skip, int take)
+    /// <summary>
+    /// Creates a command from skip/take parameters with an explicit identifier using legacy naming.
+    /// </summary>
+    /// <param name="commandId">Unique command identifier.</param>
+    /// <param name="skip">Items to skip.</param>
+    /// <param name="take">Items to take.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand From(Guid commandId, int skip, int take, PaginationOptions? options = null)
     {
-        return CommandValueFactoryBridge.From<PaginationCommand, PaginationRequest>(commandId, new PaginationRequest(skip, take));
+        return Create(commandId, new PaginationRequest(skip, take), options);
     }
 
-    public static PaginationCommand FromPage(int pageNumber, int pageSize)
+    /// <summary>
+    /// Creates a command from 1-based page values.
+    /// </summary>
+    /// <param name="pageNumber">1-based page number.</param>
+    /// <param name="pageSize">Requested page size.</param>
+    /// <param name="options">Optional normalization options.</param>
+    public static PaginationCommand FromPage(int pageNumber, int pageSize, PaginationOptions? options = null)
     {
-        return From(PaginationRequest.FromPage(pageNumber, pageSize));
+        return Create(PaginationRequest.FromPage(pageNumber, pageSize, options), options);
     }
 }

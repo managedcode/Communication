@@ -2,6 +2,9 @@ using System;
 
 namespace ManagedCode.Communication.Commands;
 
+/// <summary>
+/// Lightweight façade that allows concrete command types to reuse factory defaults without repeating boilerplate.
+/// </summary>
 internal static class CommandFactoryBridge
 {
     public static TSelf Create<TSelf>(string commandType)
@@ -57,6 +60,9 @@ internal static class CommandFactoryBridge
     }
 }
 
+/// <summary>
+/// Helper methods for invoking <see cref="ICommandValueFactory{TSelf, TValue}"/> static interface members from concrete command types.
+/// </summary>
 internal static class CommandValueFactoryBridge
 {
     public static TSelf Create<TSelf, TValue>(TValue value)

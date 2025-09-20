@@ -7,6 +7,9 @@ using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication.Results;
 
+/// <summary>
+/// Shared helper that centralises creation of failure <see cref="Problem"/> instances for result factories.
+/// </summary>
 internal static class ResultFactoryBridge
 {
     public static TSelf Succeed<TSelf>()
@@ -30,7 +33,7 @@ internal static class ResultFactoryBridge
     public static TSelf Fail<TSelf>(string title)
         where TSelf : struct, IResultFactory<TSelf>
     {
-        return TSelf.Fail(Problem.Create(title, title, HttpStatusCode.InternalServerError));
+        return TSelf.Fail(Problem.Create(title, title, (int)HttpStatusCode.InternalServerError));
     }
 
     public static TSelf Fail<TSelf>(string title, string detail)
@@ -195,6 +198,9 @@ internal static class ResultFactoryBridge
     }
 }
 
+/// <summary>
+/// Simplified facade that exposes the shared functionality purely through the target result type.
+/// </summary>
 internal static class ResultFactoryBridge<TSelf>
     where TSelf : struct, IResultFactory<TSelf>
 {
@@ -303,16 +309,15 @@ internal static class ResultFactoryBridge<TSelf>
     }
 }
 
-internal static class ResultValueFactoryBridge
+/// <summary>
+/// Helper that forwards value factory calls to <see cref="IResultValueFactory{TSelf, TValue}"/> members.
+/// </summary>
+internal static class ResultValueFactoryBridge<TSelf, TValue>
+    where TSelf : struct, IResultValueFactory<TSelf, TValue>
 {
-    public static TSelf Succeed<TSelf, TValue>(TValue value)
-        where TSelf : struct, IResultValueFactory<TSelf, TValue>
-    {
-        return TSelf.Succeed(value);
-    }
+    public static TSelf Succeed(TValue value) => TSelf.Succeed(value);
 
-    public static TSelf Succeed<TSelf, TValue>(Func<TValue> valueFactory)
-        where TSelf : struct, IResultValueFactory<TSelf, TValue>
+    public static TSelf Succeed(Func<TValue> valueFactory)
     {
         if (valueFactory is null)
         {
@@ -323,66 +328,31 @@ internal static class ResultValueFactoryBridge
     }
 }
 
-internal static class ResultValueFactoryBridge<TSelf, TValue>
-    where TSelf : struct, IResultValueFactory<TSelf, TValue>
-{
-    public static TSelf Succeed(TValue value) => ResultValueFactoryBridge.Succeed<TSelf, TValue>(value);
-
-    public static TSelf Succeed(Func<TValue> valueFactory)
-    {
-        return ResultValueFactoryBridge.Succeed<TSelf, TValue>(valueFactory);
-    }
-}
-
-internal static class CollectionResultFactoryBridge
-{
-    public static TSelf Fail<TSelf, TValue>(TValue[] items)
-        where TSelf : struct, ICollectionResultFactory<TSelf, TValue>
-    {
-        return TSelf.Fail(Problem.GenericError(), items);
-    }
-
-    public static TSelf Fail<TSelf, TValue>(IEnumerable<TValue> items)
-        where TSelf : struct, ICollectionResultFactory<TSelf, TValue>
-    {
-        var array = items as TValue[] ?? items.ToArray();
-        return TSelf.Fail(Problem.GenericError(), array);
-    }
-
-    public static TSelf Fail<TSelf, TValue>(Problem problem, TValue[] items)
-        where TSelf : struct, ICollectionResultFactory<TSelf, TValue>
-    {
-        return TSelf.Fail(problem, items);
-    }
-
-    public static TSelf Fail<TSelf, TValue>(Problem problem, IEnumerable<TValue> items)
-        where TSelf : struct, ICollectionResultFactory<TSelf, TValue>
-    {
-        var array = items as TValue[] ?? items.ToArray();
-        return TSelf.Fail(problem, array);
-    }
-}
-
+/// <summary>
+/// Helper that forwards collection factory calls to <see cref="ICollectionResultFactory{TSelf, TValue}"/> members.
+/// </summary>
 internal static class CollectionResultFactoryBridge<TSelf, TValue>
     where TSelf : struct, ICollectionResultFactory<TSelf, TValue>
 {
     public static TSelf Fail(TValue[] items)
     {
-        return CollectionResultFactoryBridge.Fail<TSelf, TValue>(items);
+        return TSelf.Fail(Problem.GenericError(), items);
     }
 
     public static TSelf Fail(IEnumerable<TValue> items)
     {
-        return CollectionResultFactoryBridge.Fail<TSelf, TValue>(items);
+        var array = items as TValue[] ?? items.ToArray();
+        return TSelf.Fail(Problem.GenericError(), array);
     }
 
     public static TSelf Fail(Problem problem, TValue[] items)
     {
-        return CollectionResultFactoryBridge.Fail<TSelf, TValue>(problem, items);
+        return TSelf.Fail(problem, items);
     }
 
     public static TSelf Fail(Problem problem, IEnumerable<TValue> items)
     {
-        return CollectionResultFactoryBridge.Fail<TSelf, TValue>(problem, items);
+        var array = items as TValue[] ?? items.ToArray();
+        return TSelf.Fail(problem, array);
     }
 }

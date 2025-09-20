@@ -55,6 +55,19 @@ The Result pattern solves these issues by:
 - **`CollectionResult<T>`**: Represents collections with built-in pagination
 - **`Problem`**: RFC 7807 compliant error details
 
+### ⚙️ Static Factory Abstractions
+
+- Leverage C# static interface members to centralize factory overloads for every result, command, and collection type.
+- `IResultFactory<T>` and `ICommandFactory<T>` deliver a consistent surface while bridge helpers remove repetitive boilerplate.
+- Extending the library now only requires implementing the minimal `Succeed`/`Fail` contract—the shared helpers provide the rest.
+
+### 🧭 Pagination Utilities
+
+- `PaginationRequest` encapsulates skip/take semantics, built-in normalization, and clamping helpers.
+- `PaginationOptions` lets you define default, minimum, and maximum page sizes for a bounded API surface.
+- `PaginationCommand` captures pagination intent as a first-class command with generated overloads for skip/take, page numbers, and enum command types.
+- `CollectionResult<T>.Succeed(..., PaginationRequest request, int totalItems)` keeps result metadata aligned with pagination commands.
+
 ### 🚂 Railway-Oriented Programming
 
 Complete set of functional combinators for composing operations:
@@ -72,6 +85,12 @@ Complete set of functional combinators for composing operations:
 - **SignalR**: Hub filters for real-time error handling
 - **Microsoft Orleans**: Grain call filters and surrogates
 - **Command Pattern**: Built-in command infrastructure with idempotency
+
+### 🔍 Observability Built In
+
+- Source-generated `LoggerCenter` APIs provide zero-allocation logging across ASP.NET Core filters, SignalR hubs, and command stores.
+- Call sites automatically check log levels, so you only pay for the logs you emit.
+- Extend logging with additional `[LoggerMessage]` partials to keep high-volume paths allocation free.
 
 ### 🛡️ Error Types
 
@@ -445,6 +464,28 @@ var command = new Command("command-id", "ProcessPayment")
     SpanId = Activity.Current?.SpanId.ToString()
 };
 ```
+
+### Pagination Commands
+
+Pagination is now a first-class command concept that keeps factories DRY and metadata consistent:
+
+```csharp
+var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 100);
+var request = PaginationRequest.Create(skip: 0, take: 0, options); // take defaults to 25
+
+// Rich factory surface without duplicate overloads
+var paginationCommand = PaginationCommand.Create(request, options)
+    .WithCorrelationId(Guid.NewGuid().ToString());
+
+// Apply to results without manually recalculating metadata
+var page = CollectionResult<Order>.Succeed(orders, paginationCommand.Value!, totalItems: 275, options);
+
+// Use enum-based command types when desired
+enum PaginationCommandType { ListCustomers }
+var typedCommand = PaginationCommand.Create(PaginationCommandType.ListCustomers);
+```
+
+`PaginationRequest` exposes helpers such as `Normalize`, `ClampToTotal`, and `ToSlice` to keep skip/take logic predictable. Configure bounds globally with `PaginationOptions` to protect APIs from oversized queries.
 
 ### Idempotent Command Execution
 

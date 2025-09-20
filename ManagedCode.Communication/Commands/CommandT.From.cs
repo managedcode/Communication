@@ -9,6 +9,9 @@ public partial class Command<T>
         return CommandValueFactoryBridge.Create<Command<T>, T>(value);
     }
 
+    /// <summary>
+    /// Creates a command with a specific identifier using the provided value.
+    /// </summary>
     public static Command<T> Create(Guid id, T value)
     {
         return CommandValueFactoryBridge.Create<Command<T>, T>(id, value);
