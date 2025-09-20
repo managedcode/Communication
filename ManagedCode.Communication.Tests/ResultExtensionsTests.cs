@@ -1,8 +1,9 @@
 using System;
 using System.Globalization;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Results.Extensions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests;
@@ -26,11 +27,9 @@ public class ResultExtensionsTests
         });
 
         // Assert
-        executed.Should()
-            .BeTrue();
+        executed.ShouldBeTrue();
         bound.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
     }
 
     [Fact]
@@ -48,15 +47,12 @@ public class ResultExtensionsTests
         });
 
         // Assert
-        executed.Should()
-            .BeFalse();
+        executed.ShouldBeFalse();
         bound.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         bound.Problem
             ?.Title
-            .Should()
-            .Be("Error");
+            .ShouldBe("Error");
     }
 
     [Fact]
@@ -70,11 +66,9 @@ public class ResultExtensionsTests
 
         // Assert
         bound.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         bound.Value
-            .Should()
-            .Be(42);
+            .ShouldBe(42);
     }
 
     [Fact]
@@ -88,10 +82,8 @@ public class ResultExtensionsTests
         var tapped = result.Tap(() => executed = true);
 
         // Assert
-        executed.Should()
-            .BeTrue();
-        tapped.Should()
-            .Be(result);
+        executed.ShouldBeTrue();
+        tapped.ShouldBe(result);
     }
 
     [Fact]
@@ -108,10 +100,8 @@ public class ResultExtensionsTests
         failedResult.Finally(r => failedExecuted = true);
 
         // Assert
-        successExecuted.Should()
-            .BeTrue();
-        failedExecuted.Should()
-            .BeTrue();
+        successExecuted.ShouldBeTrue();
+        failedExecuted.ShouldBeTrue();
     }
 
     [Fact]
@@ -125,8 +115,7 @@ public class ResultExtensionsTests
 
         // Assert
         alternative.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
     }
 
     #endregion
@@ -144,11 +133,9 @@ public class ResultExtensionsTests
 
         // Assert
         mapped.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         mapped.Value
-            .Should()
-            .Be(20);
+            .ShouldBe(20);
     }
 
     [Fact]
@@ -162,12 +149,10 @@ public class ResultExtensionsTests
 
         // Assert
         mapped.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         mapped.Problem
             ?.Title
-            .Should()
-            .Be("Error");
+            .ShouldBe("Error");
     }
 
     [Fact]
@@ -181,11 +166,9 @@ public class ResultExtensionsTests
 
         // Assert
         bound.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         bound.Value
-            .Should()
-            .Be("Value is 10");
+            .ShouldBe("Value is 10");
     }
 
     [Fact]
@@ -200,12 +183,10 @@ public class ResultExtensionsTests
 
         // Assert
         ensured.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         ensured.Problem
             ?.Title
-            .Should()
-            .Be("Value too small");
+            .ShouldBe("Value too small");
     }
 
     [Fact]
@@ -219,10 +200,8 @@ public class ResultExtensionsTests
         var tapped = result.Tap(value => capturedValue = value);
 
         // Assert
-        capturedValue.Should()
-            .Be("test");
-        tapped.Should()
-            .Be(result);
+        capturedValue.ShouldBe("test");
+        tapped.ShouldBe(result);
     }
 
     #endregion
@@ -244,8 +223,7 @@ public class ResultExtensionsTests
 
         // Assert
         bound.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
     }
 
     [Fact]
@@ -263,11 +241,9 @@ public class ResultExtensionsTests
 
         // Assert
         bound.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         bound.Value
-            .Should()
-            .Be("Value: 10");
+            .ShouldBe("Value: 10");
     }
 
     [Fact]
@@ -285,11 +261,9 @@ public class ResultExtensionsTests
 
         // Assert
         mapped.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         mapped.Value
-            .Should()
-            .Be(15);
+            .ShouldBe(15);
     }
 
     [Fact]
@@ -307,14 +281,11 @@ public class ResultExtensionsTests
         });
 
         // Assert
-        executed.Should()
-            .BeTrue();
+        executed.ShouldBeTrue();
         tapped.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         tapped.Value
-            .Should()
-            .Be("async");
+            .ShouldBe("async");
     }
 
     #endregion
@@ -334,10 +305,8 @@ public class ResultExtensionsTests
         var failedValue = failedResult.Match(onSuccess: value => $"Success: {value}", onFailure: problem => $"Failed: {problem.Title}");
 
         // Assert
-        successValue.Should()
-            .Be("Success: 42");
-        failedValue.Should()
-            .Be("Failed: Error");
+        successValue.ShouldBe("Success: 42");
+        failedValue.ShouldBe("Failed: Error");
     }
 
     [Fact]
@@ -352,10 +321,8 @@ public class ResultExtensionsTests
         result.Match(onSuccess: () => successExecuted = true, onFailure: _ => failureExecuted = true);
 
         // Assert
-        successExecuted.Should()
-            .BeTrue();
-        failureExecuted.Should()
-            .BeFalse();
+        successExecuted.ShouldBeTrue();
+        failureExecuted.ShouldBeFalse();
     }
 
     #endregion
@@ -385,16 +352,12 @@ public class ResultExtensionsTests
 
         // Assert
         final.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         final.Problem
             ?.Title
-            .Should()
-            .Be("Step 1 failed");
-        step2Executed.Should()
-            .BeFalse();
-        step3Executed.Should()
-            .BeFalse();
+            .ShouldBe("Step 1 failed");
+        step2Executed.ShouldBeFalse();
+        step3Executed.ShouldBeFalse();
     }
 
     [Fact]
@@ -414,11 +377,9 @@ public class ResultExtensionsTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Value
-            .Should()
-            .Be("Final result: 10.00");
+            .ShouldBe("Final result: 10.00");
     }
 
     #endregion

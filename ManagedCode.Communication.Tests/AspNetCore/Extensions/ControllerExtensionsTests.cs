@@ -1,8 +1,9 @@
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
@@ -19,10 +20,10 @@ public class ControllerExtensionsTests
         var actionResult = result.ToActionResult();
 
         // Assert
-        actionResult.Should().BeOfType<OkObjectResult>();
+        actionResult.ShouldBeOfType<OkObjectResult>();
         var okResult = (OkObjectResult)actionResult;
-        okResult.Value.Should().Be(expectedValue);
-        okResult.StatusCode.Should().Be(200);
+        okResult.Value.ShouldBe(expectedValue);
+        okResult.StatusCode.ShouldBe(200);
     }
 
     [Fact]
@@ -35,9 +36,9 @@ public class ControllerExtensionsTests
         var actionResult = result.ToActionResult();
 
         // Assert
-        actionResult.Should().BeOfType<NoContentResult>();
+        actionResult.ShouldBeOfType<NoContentResult>();
         var noContentResult = (NoContentResult)actionResult;
-        noContentResult.StatusCode.Should().Be(204);
+        noContentResult.StatusCode.ShouldBe(204);
     }
 
     [Fact]
@@ -51,15 +52,15 @@ public class ControllerExtensionsTests
         var actionResult = result.ToActionResult();
 
         // Assert
-        actionResult.Should().BeOfType<ObjectResult>();
+        actionResult.ShouldBeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
-        objectResult.StatusCode.Should().Be(404);
-        objectResult.Value.Should().BeOfType<Problem>();
-        
+        objectResult.StatusCode.ShouldBe(404);
+        objectResult.Value.ShouldBeOfType<Problem>();
+
         var returnedProblem = (Problem)objectResult.Value!;
-        returnedProblem.StatusCode.Should().Be(404);
-        returnedProblem.Title.Should().Be("Not Found");
-        returnedProblem.Detail.Should().Be("Resource not found");
+        returnedProblem.StatusCode.ShouldBe(404);
+        returnedProblem.Title.ShouldBe("Not Found");
+        returnedProblem.Detail.ShouldBe("Resource not found");
     }
 
     [Fact]
@@ -73,13 +74,13 @@ public class ControllerExtensionsTests
         var actionResult = result.ToActionResult();
 
         // Assert
-        actionResult.Should().BeOfType<ObjectResult>();
+        actionResult.ShouldBeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
-        objectResult.StatusCode.Should().Be(400);
-        
+        objectResult.StatusCode.ShouldBe(400);
+
         var returnedProblem = (Problem)objectResult.Value!;
-        returnedProblem.StatusCode.Should().Be(400);
-        returnedProblem.Title.Should().Be("Validation Error");
+        returnedProblem.StatusCode.ShouldBe(400);
+        returnedProblem.Title.ShouldBe("Validation Error");
     }
 
     [Fact]
@@ -92,13 +93,13 @@ public class ControllerExtensionsTests
         var actionResult = result.ToActionResult();
 
         // Assert
-        actionResult.Should().BeOfType<ObjectResult>();
+        actionResult.ShouldBeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
-        objectResult.StatusCode.Should().Be(500);
-        
+        objectResult.StatusCode.ShouldBe(500);
+
         var returnedProblem = (Problem)objectResult.Value!;
-        returnedProblem.StatusCode.Should().Be(500);
-        returnedProblem.Title.Should().Be("Operation failed");
+        returnedProblem.StatusCode.ShouldBe(500);
+        returnedProblem.Title.ShouldBe("Operation failed");
     }
 
     [Fact]
@@ -112,8 +113,8 @@ public class ControllerExtensionsTests
         var httpResult = result.ToHttpResult();
 
         // Assert
-        httpResult.Should().NotBeNull();
-        httpResult.GetType().Name.Should().Contain("Ok");
+        httpResult.ShouldNotBeNull();
+        httpResult.GetType().Name.ShouldContain("Ok");
     }
 
     [Fact]
@@ -126,8 +127,8 @@ public class ControllerExtensionsTests
         var httpResult = result.ToHttpResult();
 
         // Assert
-        httpResult.Should().NotBeNull();
-        httpResult.GetType().Name.Should().Contain("NoContent");
+        httpResult.ShouldNotBeNull();
+        httpResult.GetType().Name.ShouldContain("NoContent");
     }
 
     [Fact]
@@ -141,8 +142,8 @@ public class ControllerExtensionsTests
         var httpResult = result.ToHttpResult();
 
         // Assert
-        httpResult.Should().NotBeNull();
-        httpResult.GetType().Name.Should().Contain("Problem");
+        httpResult.ShouldNotBeNull();
+        httpResult.GetType().Name.ShouldContain("Problem");
     }
 
     [Fact]
@@ -152,15 +153,15 @@ public class ControllerExtensionsTests
         var problem = Problem.Create("Business Error", "Invalid operation for current state", 422);
         problem.Extensions["errorCode"] = "INVALID_STATE";
         problem.Extensions["timestamp"] = "2024-01-01";
-        
+
         var result = Result<object>.Fail(problem);
 
         // Act
         var httpResult = result.ToHttpResult();
 
         // Assert
-        httpResult.Should().NotBeNull();
-        httpResult.GetType().Name.Should().Contain("Problem");
+        httpResult.ShouldNotBeNull();
+        httpResult.GetType().Name.ShouldContain("Problem");
     }
 
     [Theory]
@@ -181,13 +182,13 @@ public class ControllerExtensionsTests
         var actionResult = result.ToActionResult();
 
         // Assert
-        actionResult.Should().BeOfType<ObjectResult>();
+        actionResult.ShouldBeOfType<ObjectResult>();
         var objectResult = (ObjectResult)actionResult;
-        objectResult.StatusCode.Should().Be(statusCode);
-        
+        objectResult.StatusCode.ShouldBe(statusCode);
+
         var returnedProblem = (Problem)objectResult.Value!;
-        returnedProblem.StatusCode.Should().Be(statusCode);
-        returnedProblem.Title.Should().Be(title);
+        returnedProblem.StatusCode.ShouldBe(statusCode);
+        returnedProblem.Title.ShouldBe(title);
     }
 
     [Fact]
@@ -206,9 +207,9 @@ public class ControllerExtensionsTests
         var actionResult = result.ToActionResult();
 
         // Assert
-        actionResult.Should().BeOfType<OkObjectResult>();
+        actionResult.ShouldBeOfType<OkObjectResult>();
         var okResult = (OkObjectResult)actionResult;
-        okResult.Value.Should().BeEquivalentTo(complexObject);
+        okResult.Value.ShouldBe(complexObject);
     }
 
     [Fact]
@@ -222,7 +223,41 @@ public class ControllerExtensionsTests
         var httpResult = result.ToHttpResult();
 
         // Assert
-        httpResult.Should().NotBeNull();
-        httpResult.GetType().Name.Should().Contain("Ok");
+        httpResult.ShouldNotBeNull();
+        httpResult.GetType().Name.ShouldContain("Ok");
+    }
+
+    [Fact]
+    public void ToActionResult_NonGenericWithNoProblem_ReturnsDefaultError()
+    {
+        // Arrange - manually create failed result without problem
+        var result =  Result.Fail();
+
+        // Act
+        var actionResult = result.ToActionResult();
+
+        // Assert
+        actionResult.ShouldBeOfType<ObjectResult>();
+        var objectResult = (ObjectResult)actionResult;
+        objectResult.StatusCode.ShouldBe(500);
+
+        var returnedProblem = (Problem)objectResult.Value!;
+        returnedProblem.StatusCode.ShouldBe(500);
+        returnedProblem.Title.ShouldBe("Operation failed");
+        returnedProblem.Detail.ShouldBe("Unknown error occurred");
+    }
+
+    [Fact]
+    public void ToHttpResult_NonGenericWithNoProblem_ReturnsDefaultError()
+    {
+        // Arrange - manually create failed result without problem
+        var result = Result.Fail();
+
+        // Act
+        var httpResult = result.ToHttpResult();
+
+        // Assert
+        httpResult.ShouldNotBeNull();
+        httpResult.GetType().Name.ShouldContain("Problem");
     }
 }

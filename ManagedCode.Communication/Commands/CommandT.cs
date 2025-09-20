@@ -7,21 +7,20 @@ namespace ManagedCode.Communication.Commands;
 
 [Serializable]
 [DebuggerDisplay("CommandId: {CommandId}; {Value?.ToString()}")]
-public partial class Command<T> : ICommand<T>
+public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, T>
 {
     [JsonConstructor]
     protected Command()
     {
-        CommandType = string.Empty;
+        CommandType = typeof(T).Name;
     }
-    
+
     protected Command(Guid commandId, T? value)
     {
         CommandId = commandId;
         Value = value;
         CommandType = Value?.GetType()
-            .Name ?? string.Empty;
-        Timestamp = DateTimeOffset.UtcNow;
+            .Name ?? typeof(T).Name;
     }
 
     protected Command(Guid commandId, string commandType, T? value)
@@ -29,7 +28,6 @@ public partial class Command<T> : ICommand<T>
         CommandId = commandId;
         Value = value;
         CommandType = commandType;
-        Timestamp = DateTimeOffset.UtcNow;
     }
 
     [JsonPropertyName("commandId")]
@@ -93,7 +91,7 @@ public partial class Command<T> : ICommand<T>
     /// </summary>
     public Result<TEnum> GetCommandTypeAsEnum<TEnum>() where TEnum : struct, Enum
     {
-        if (Enum.TryParse<TEnum>(CommandType, true, out var result))
+        if (Enum.TryParse<TEnum>(CommandType, true, out TEnum result))
         {
             return Result<TEnum>.Succeed(result);
         }

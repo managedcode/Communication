@@ -6,7 +6,7 @@ namespace ManagedCode.Communication.Commands;
 
 [Serializable]
 [DebuggerDisplay("CommandId: {CommandId}")]
-public partial class Command : ICommand
+public partial class Command : ICommand, ICommandFactory<Command>
 {
     [JsonConstructor]
     protected Command()
@@ -73,15 +73,45 @@ public partial class Command : ICommand
     /// </summary>
     public static Command Create(string commandType)
     {
-        return new Command(Guid.CreateVersion7(), commandType);
+        return CommandFactoryBridge.Create<Command>(commandType);
+    }
+
+    /// <summary>
+    /// Creates a new command with a generated identifier using an enum value as the command type.
+    /// </summary>
+    /// <typeparam name="TEnum">Enum that represents the command type.</typeparam>
+    /// <param name="commandType">Enum value converted to the command type string.</param>
+    public static Command Create<TEnum>(TEnum commandType)
+        where TEnum : Enum
+    {
+        return CommandFactoryBridge.Create<Command, TEnum>(commandType);
     }
     
     /// <summary>
-    /// Creates a new command with specific ID and type
+    /// Creates a new command with a specific identifier and command type.
     /// </summary>
+    /// <param name="commandId">Unique command identifier.</param>
+    /// <param name="commandType">Logical command type.</param>
     public static Command Create(Guid commandId, string commandType)
     {
+        if (string.IsNullOrWhiteSpace(commandType))
+        {
+            throw new ArgumentException("Command type must be provided.", nameof(commandType));
+        }
+
         return new Command(commandId, commandType);
+    }
+
+    /// <summary>
+    /// Creates a new command with a specific identifier using an enum value as the command type.
+    /// </summary>
+    /// <typeparam name="TEnum">Enum that represents the command type.</typeparam>
+    /// <param name="commandId">Unique command identifier.</param>
+    /// <param name="commandType">Enum value converted to the command type string.</param>
+    public static Command Create<TEnum>(Guid commandId, TEnum commandType)
+        where TEnum : Enum
+    {
+        return CommandFactoryBridge.Create<Command, TEnum>(commandId, commandType);
     }
 
     /// <summary>

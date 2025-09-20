@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
@@ -21,14 +21,14 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-        result.Collection.Should().BeEmpty();
-        result.PageNumber.Should().Be(0);
-        result.PageSize.Should().Be(0);
-        result.TotalItems.Should().Be(0);
-        result.TotalPages.Should().Be(0);
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.Collection.ShouldBeEmpty();
+        result.PageNumber.ShouldBe(0);
+        result.PageSize.ShouldBe(0);
+        result.TotalItems.ShouldBe(0);
+        result.TotalPages.ShouldBe(0);
+        result.HasProblem.ShouldBeTrue();
     }
 
     #endregion
@@ -45,10 +45,10 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.Fail(items);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(items);
-        result.Collection.Should().HaveCount(5);
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(items);
+        result.Collection.ShouldHaveCount(5);
+        result.HasProblem.ShouldBeTrue();
     }
 
     [Fact]
@@ -61,10 +61,10 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(items);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.IsEmpty.Should().BeTrue();
-        result.HasItems.Should().BeFalse();
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.IsEmpty.ShouldBeTrue();
+        result.HasItems.ShouldBeFalse();
     }
 
     #endregion
@@ -81,10 +81,10 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(items);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(items);
-        result.Collection.Should().HaveCount(3);
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(items);
+        result.Collection.ShouldHaveCount(3);
+        result.HasProblem.ShouldBeTrue();
     }
 
     [Fact]
@@ -94,9 +94,9 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<User>.Fail(Array.Empty<User>());
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.IsEmpty.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.IsEmpty.ShouldBeTrue();
     }
 
     #endregion
@@ -113,10 +113,10 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.Fail(problem);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.HasProblem.Should().BeTrue();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.HasProblem.ShouldBeTrue();
+        result.Problem.ShouldBe(problem);
         result.ShouldHaveProblem().WithTitle("Test Error");
         result.ShouldHaveProblem().WithDetail("Test Detail");
         result.ShouldHaveProblem().WithStatusCode(400);
@@ -136,12 +136,12 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<User>.Fail(title);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(title);
         result.ShouldHaveProblem().WithDetail(title);
         result.ShouldHaveProblem().WithStatusCode(500);
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     #endregion
@@ -159,8 +159,8 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.Fail(title, detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(title);
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(500);
@@ -182,8 +182,8 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(title, detail, status);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(title);
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(404);
@@ -219,13 +219,13 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(exception);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("InvalidOperationException");
         result.ShouldHaveProblem().WithDetail("Test exception");
         result.ShouldHaveProblem().WithStatusCode(500);
         result.ShouldHaveProblem().WithErrorCode(exception.GetType().FullName ?? exception.GetType().Name);
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -239,7 +239,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.Fail(exception);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("InvalidOperationException");
         result.ShouldHaveProblem().WithDetail("Outer exception");
     }
@@ -259,8 +259,8 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<User>.Fail(exception, status);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("UnauthorizedAccessException");
         result.ShouldHaveProblem().WithDetail("Access denied");
         result.ShouldHaveProblem().WithStatusCode(403);
@@ -278,14 +278,14 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.FailValidation(("email", "Email is required"));
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(400);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.ValidationFailed);
         var errors = result.AssertValidationErrors();
-        errors.Should().ContainKey("email");
-        errors["email"].Should().Contain("Email is required");
-        result.Collection.Should().BeEmpty();
+        errors.ShouldContainKey("email");
+        errors["email"].ShouldContain("Email is required");
+        result.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -299,13 +299,13 @@ public class CollectionResultFailMethodsTests
         );
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(400);
         var errors = result.AssertValidationErrors();
-        errors.Should().HaveCount(3);
-        errors["name"].Should().Contain("Name is required");
-        errors["email"].Should().Contain("Invalid email format");
-        errors["age"].Should().Contain("Must be 18 or older");
+        errors.ShouldHaveCount(3);
+        errors["name"].ShouldContain("Name is required");
+        errors["email"].ShouldContain("Invalid email format");
+        errors["age"].ShouldContain("Must be 18 or older");
     }
 
     [Fact]
@@ -319,12 +319,12 @@ public class CollectionResultFailMethodsTests
         );
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         var errors = result.AssertValidationErrors();
-        errors["password"].Should().HaveCount(3);
-        errors["password"].Should().Contain("Too short");
-        errors["password"].Should().Contain("Must contain numbers");
-        errors["password"].Should().Contain("Must contain special characters");
+        errors["password"].ShouldHaveCount(3);
+        errors["password"].ShouldContain("Too short");
+        errors["password"].ShouldContain("Must contain numbers");
+        errors["password"].ShouldContain("Must contain special characters");
     }
 
     #endregion
@@ -338,12 +338,12 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.FailUnauthorized();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(401);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Unauthorized);
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.UnauthorizedAccess);
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -356,7 +356,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.FailUnauthorized(detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(401);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Unauthorized);
         result.ShouldHaveProblem().WithDetail(detail);
@@ -373,12 +373,12 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<User>.FailForbidden();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(403);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Forbidden);
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ForbiddenAccess);
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -391,7 +391,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.FailForbidden(detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(403);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Forbidden);
         result.ShouldHaveProblem().WithDetail(detail);
@@ -408,12 +408,12 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<User>.FailNotFound();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(404);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.NotFound);
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ResourceNotFound);
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -426,7 +426,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<User>.FailNotFound(detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(404);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.NotFound);
         result.ShouldHaveProblem().WithDetail(detail);
@@ -443,11 +443,11 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(TestError.InvalidInput);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("InvalidInput");
         result.ShouldHaveProblem().WithStatusCode(400); // Default for domain errors
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -460,7 +460,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.Fail(TestError.ValidationFailed, detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("ValidationFailed");
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(400);
@@ -473,7 +473,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<User>.Fail(TestError.SystemError, HttpStatusCode.InternalServerError);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("SystemError");
         result.ShouldHaveProblem().WithTitle("SystemError");
         result.ShouldHaveProblem().WithStatusCode(500);
@@ -490,7 +490,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(TestError.DatabaseError, detail, status);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("DatabaseError");
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(503);
@@ -503,7 +503,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.Fail(HttpError.NotFound404);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(404);
         result.ShouldHaveProblem().WithErrorCode("NotFound404");
     }
@@ -522,17 +522,17 @@ public class CollectionResultFailMethodsTests
         var result4 = CollectionResult<User>.Fail(TestError.SystemError);
 
         // Assert
-        result1.IsFailed.Should().BeTrue();
-        result1.Collection.Should().BeEmpty();
+        result1.IsFailed.ShouldBeTrue();
+        result1.Collection.ShouldBeEmpty();
 
-        result2.IsFailed.Should().BeTrue();
-        result2.Collection.Should().BeEmpty();
+        result2.IsFailed.ShouldBeTrue();
+        result2.Collection.ShouldBeEmpty();
 
-        result3.IsFailed.Should().BeTrue();
-        result3.Collection.Should().BeEmpty();
+        result3.IsFailed.ShouldBeTrue();
+        result3.Collection.ShouldBeEmpty();
 
-        result4.IsFailed.Should().BeTrue();
-        result4.Collection.Should().BeEmpty();
+        result4.IsFailed.ShouldBeTrue();
+        result4.Collection.ShouldBeEmpty();
     }
 
     #endregion
@@ -550,7 +550,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(longTitle, longDetail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(longTitle);
         result.ShouldHaveProblem().WithDetail(longDetail);
     }
@@ -566,7 +566,7 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<string>.Fail(title, detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(title);
         result.ShouldHaveProblem().WithDetail(detail);
     }
@@ -587,11 +587,11 @@ public class CollectionResultFailMethodsTests
             : CollectionResult<bool>.Succeed(new[] { true });
 
         // Assert
-        result1.IsFailed.Should().BeTrue();
-        result2.IsFailed.Should().BeTrue();
-        result3.IsFailed.Should().BeTrue();
-        result3.Problem!.Title.Should().Be("Initial Error");
-        result3.Problem.Detail.Should().Be("Initial Detail");
+        result1.IsFailed.ShouldBeTrue();
+        result2.IsFailed.ShouldBeTrue();
+        result3.IsFailed.ShouldBeTrue();
+        result3.Problem!.Title.ShouldBe("Initial Error");
+        result3.Problem.Detail.ShouldBe("Initial Detail");
     }
 
     [Fact]
@@ -604,10 +604,10 @@ public class CollectionResultFailMethodsTests
         var result = CollectionResult<int>.Fail(items);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().HaveCount(10000);
-        result.Collection.First().Should().Be(1);
-        result.Collection.Last().Should().Be(10000);
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldHaveCount(10000);
+        result.Collection.First().ShouldBe(1);
+        result.Collection.Last().ShouldBe(10000);
     }
 
     #endregion

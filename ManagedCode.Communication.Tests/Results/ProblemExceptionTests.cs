@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using Shouldly;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
@@ -17,14 +17,14 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.Problem.Should().Be(problem);
-        exception.StatusCode.Should().Be(404);
-        exception.Type.Should().Be("https://httpstatuses.io/404");
-        exception.Title.Should().Be("Not Found");
-        exception.Detail.Should().Be("Resource not found");
-        exception.Message.Should().Contain("Not Found");
-        exception.Message.Should().Contain("Resource not found");
-        exception.Message.Should().Contain("404");
+        exception.Problem.ShouldBe(problem);
+        exception.StatusCode.ShouldBe(404);
+        exception.Type.ShouldBe("https://httpstatuses.io/404");
+        exception.Title.ShouldBe("Not Found");
+        exception.Detail.ShouldBe("Resource not found");
+        exception.Message.ShouldContain("Not Found");
+        exception.Message.ShouldContain("Resource not found");
+        exception.Message.ShouldContain("404");
     }
 
     [Fact]
@@ -34,13 +34,13 @@ public class ProblemExceptionTests
         var exception = new ProblemException("Server Error", "Database connection failed", 503);
 
         // Assert
-        exception.StatusCode.Should().Be(503);
-        exception.Title.Should().Be("Server Error");
-        exception.Detail.Should().Be("Database connection failed");
-        exception.Problem.Should().NotBeNull();
-        exception.Problem.StatusCode.Should().Be(503);
-        exception.Problem.Title.Should().Be("Server Error");
-        exception.Problem.Detail.Should().Be("Database connection failed");
+        exception.StatusCode.ShouldBe(503);
+        exception.Title.ShouldBe("Server Error");
+        exception.Detail.ShouldBe("Database connection failed");
+        exception.Problem.ShouldNotBeNull();
+        exception.Problem.StatusCode.ShouldBe(503);
+        exception.Problem.Title.ShouldBe("Server Error");
+        exception.Problem.Detail.ShouldBe("Database connection failed");
     }
 
     [Fact]
@@ -50,9 +50,9 @@ public class ProblemExceptionTests
         var exception = new ProblemException("Bad Request");
 
         // Assert
-        exception.StatusCode.Should().Be(500);
-        exception.Title.Should().Be("Bad Request");
-        exception.Detail.Should().Be("Bad Request");
+        exception.StatusCode.ShouldBe(500);
+        exception.Title.ShouldBe("Bad Request");
+        exception.Detail.ShouldBe("Bad Request");
     }
 
     [Fact]
@@ -65,10 +65,10 @@ public class ProblemExceptionTests
         var exception = new ProblemException(innerException);
 
         // Assert
-        exception.Problem.Should().NotBeNull();
-        exception.Problem.Title.Should().Be("ArgumentNullException");
-        exception.Problem.Detail.Should().Contain("Parameter cannot be null");
-        exception.Problem.ErrorCode.Should().Be("System.ArgumentNullException");
+        exception.Problem.ShouldNotBeNull();
+        exception.Problem!.Title.ShouldBe("ArgumentNullException");
+        exception.Problem.Detail!.ShouldContain("Parameter cannot be null");
+        exception.Problem.ErrorCode.ShouldBe("System.ArgumentNullException");
     }
 
     [Fact]
@@ -81,9 +81,9 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.ErrorCode.Should().Be("InvalidInput");
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.ErrorCode)}").Should().BeTrue();
-        exception.Data[$"{nameof(Problem)}.{nameof(problem.ErrorCode)}"].Should().Be("InvalidInput");
+        exception.ErrorCode.ShouldBe("InvalidInput");
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.ErrorCode)}").ShouldBeTrue();
+        exception.Data[$"{nameof(Problem)}.{nameof(problem.ErrorCode)}"].ShouldBe("InvalidInput");
     }
 
     [Fact]
@@ -96,19 +96,19 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.IsValidationProblem.Should().BeTrue();
-        exception.ValidationErrors.Should().NotBeNull();
-        exception.ValidationErrors!["email"].Should().Contain("Email is required");
-        exception.ValidationErrors["age"].Should().Contain("Age must be positive");
+        exception.IsValidationProblem.ShouldBeTrue();
+        exception.ValidationErrors.ShouldNotBeNull();
+        exception.ValidationErrors!["email"].ShouldContain("Email is required");
+        exception.ValidationErrors["age"].ShouldContain("Age must be positive");
         
-        exception.Data.Contains($"{nameof(Problem)}.ValidationError.email").Should().BeTrue();
-        exception.Data[$"{nameof(Problem)}.ValidationError.email"].Should().Be("Email is required");
-        exception.Data.Contains($"{nameof(Problem)}.ValidationError.age").Should().BeTrue();
-        exception.Data[$"{nameof(Problem)}.ValidationError.age"].Should().Be("Age must be positive");
+        exception.Data.Contains($"{nameof(Problem)}.ValidationError.email").ShouldBeTrue();
+        exception.Data[$"{nameof(Problem)}.ValidationError.email"].ShouldBe("Email is required");
+        exception.Data.Contains($"{nameof(Problem)}.ValidationError.age").ShouldBeTrue();
+        exception.Data[$"{nameof(Problem)}.ValidationError.age"].ShouldBe("Age must be positive");
         
-        exception.Message.Should().Contain("Validation failed");
-        exception.Message.Should().Contain("email: Email is required");
-        exception.Message.Should().Contain("age: Age must be positive");
+        exception.Message.ShouldContain("Validation failed");
+        exception.Message.ShouldContain("email: Email is required");
+        exception.Message.ShouldContain("age: Age must be positive");
     }
 
     [Fact]
@@ -123,10 +123,10 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.customKey").Should().BeTrue();
-        exception.Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.customKey"].Should().Be("customValue");
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.retryAfter").Should().BeTrue();
-        exception.Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.retryAfter"].Should().Be(60);
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.customKey").ShouldBeTrue();
+        exception.Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.customKey"].ShouldBe("customValue");
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.retryAfter").ShouldBeTrue();
+        exception.Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.retryAfter"].ShouldBe(60);
     }
 
     [Fact]
@@ -139,11 +139,11 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.Type.Should().BeNull();
-        exception.Title.Should().BeNull();
-        exception.Detail.Should().BeNull();
-        exception.StatusCode.Should().Be(0);
-        exception.Message.Should().Be("An error occurred");
+        exception.Type.ShouldBeNull();
+        exception.Title.ShouldBeNull();
+        exception.Detail.ShouldBeNull();
+        exception.StatusCode.ShouldBe(0);
+        exception.Message.ShouldBe("An error occurred");
     }
 
     [Fact]
@@ -156,9 +156,9 @@ public class ProblemExceptionTests
         var exception = ProblemException.FromProblem(problem);
 
         // Assert
-        exception.Should().NotBeNull();
-        exception.Problem.Should().Be(problem);
-        exception.StatusCode.Should().Be(409);
+        exception.ShouldNotBeNull();
+        exception.Problem.ShouldBe(problem);
+        exception.StatusCode.ShouldBe(409);
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Act & Assert
-        exception.IsValidationProblem.Should().BeFalse();
+        exception.IsValidationProblem.ShouldBeFalse();
     }
 
     [Fact]
@@ -180,7 +180,7 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Act & Assert
-        exception.ValidationErrors.Should().BeNull();
+        exception.ValidationErrors.ShouldBeNull();
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.Data[$"{nameof(Problem)}.ValidationError.email"].Should().Be("Email is required; Email format is invalid; Email domain is not allowed");
+        exception.Data[$"{nameof(Problem)}.ValidationError.email"].ShouldBe("Email is required; Email format is invalid; Email domain is not allowed");
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.Message.Should().Contain("[ResourceLocked]");
+        exception.Message.ShouldContain("[ResourceLocked]");
     }
 
     [Fact]
@@ -224,11 +224,11 @@ public class ProblemExceptionTests
         var exception = new ProblemException(problem);
 
         // Assert
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Type)}").Should().BeTrue();
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Title)}").Should().BeTrue();
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.StatusCode)}").Should().BeTrue();
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Detail)}").Should().BeTrue();
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Instance)}").Should().BeTrue();
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.ErrorCode)}").Should().BeTrue();
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Type)}").ShouldBeTrue();
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Title)}").ShouldBeTrue();
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.StatusCode)}").ShouldBeTrue();
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Detail)}").ShouldBeTrue();
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Instance)}").ShouldBeTrue();
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.ErrorCode)}").ShouldBeTrue();
     }
 }

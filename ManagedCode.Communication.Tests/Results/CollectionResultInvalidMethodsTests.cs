@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -17,13 +18,13 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<string>.Invalid();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Title.Should().Be("Validation Failed");
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().ContainKey("message");
-        errors!["message"].Should().Contain("Invalid");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.Title.ShouldBe("Validation Failed");
+        var errors = result.AssertValidationErrors();
+        errors.ShouldContainKey("message");
+        errors!["message"].ShouldContain("Invalid");
     }
 
     #endregion
@@ -37,13 +38,13 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<int>.Invalid(TestError.InvalidInput);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().ContainKey("message");
-        errors!["message"].Should().Contain("Invalid");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
+        var errors = result.AssertValidationErrors();
+        errors.ShouldContainKey("message");
+        errors!["message"].ShouldContain("Invalid");
     }
 
     #endregion
@@ -60,12 +61,12 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<User>.Invalid(message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().ContainKey("message");
-        errors!["message"].Should().Contain(message);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        var errors = result.AssertValidationErrors();
+        errors.ShouldContainKey("message");
+        errors!["message"].ShouldContain(message);
     }
 
     #endregion
@@ -82,13 +83,13 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<string>.Invalid(TestError.ValidationFailed, message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("ValidationFailed");
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().ContainKey("message");
-        errors!["message"].Should().Contain(message);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("ValidationFailed");
+        var errors = result.AssertValidationErrors();
+        errors.ShouldContainKey("message");
+        errors!["message"].ShouldContain(message);
     }
 
     #endregion
@@ -106,12 +107,12 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<User>.Invalid(key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().ContainKey(key);
-        errors![key].Should().Contain(value);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        var errors = result.AssertValidationErrors();
+        errors.ShouldContainKey(key);
+        errors![key].ShouldContain(value);
     }
 
     #endregion
@@ -129,13 +130,13 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<string>.Invalid(TestError.DuplicateEntry, key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("DuplicateEntry");
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().ContainKey(key);
-        errors![key].Should().Contain(value);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("DuplicateEntry");
+        var errors = result.AssertValidationErrors();
+        errors.ShouldContainKey(key);
+        errors![key].ShouldContain(value);
     }
 
     #endregion
@@ -157,15 +158,15 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<User>.Invalid(validationErrors);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!.Should().HaveCount(3);
-        errors!["email"].Should().Contain("Email is required");
-        errors["password"].Should().Contain("Password must be at least 8 characters");
-        errors["age"].Should().Contain("Age must be between 18 and 100");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        var errors = result.AssertValidationErrors();
+        errors.ShouldNotBeNull();
+        errors!.ShouldHaveCount(3);
+        errors!["email"].ShouldContain("Email is required");
+        errors["password"].ShouldContain("Password must be at least 8 characters");
+        errors["age"].ShouldContain("Age must be between 18 and 100");
     }
 
     [Fact]
@@ -178,14 +179,14 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<string>.Invalid(validationErrors);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        var errors = result.Problem.GetValidationErrors();
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        var errors = result.AssertValidationErrors();
         if (errors != null)
-            errors.Should().BeEmpty();
+            errors.ShouldBeEmpty();
         else
-            false.Should().BeTrue("errors should not be null");
+            false.ShouldBeTrue("errors should not be null");
     }
 
     #endregion
@@ -206,15 +207,15 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<int>.Invalid(TestError.ValidationFailed, validationErrors);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("ValidationFailed");
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!.Should().HaveCount(2);
-        errors!["field1"].Should().Contain("Error 1");
-        errors["field2"].Should().Contain("Error 2");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("ValidationFailed");
+        var errors = result.AssertValidationErrors();
+        errors.ShouldNotBeNull();
+        errors!.ShouldHaveCount(2);
+        errors!["field1"].ShouldContain("Error 1");
+        errors["field2"].ShouldContain("Error 2");
     }
 
     #endregion
@@ -236,10 +237,10 @@ public class CollectionResultInvalidMethodsTests
         results.Add(CollectionResult<string>.Invalid(new Dictionary<string, string> { { "key", "value" } }));
 
         // Assert
-        results.Should().HaveCount(6);
-        results.Should().OnlyContain(r => r.IsFailed);
-        results.Should().OnlyContain(r => r.Problem != null);
-        results.Should().OnlyContain(r => r.Problem!.StatusCode == 400);
+        results.ShouldHaveCount(6);
+        results.ShouldAllBe(r => r.IsFailed);
+        results.ShouldAllBe(r => r.Problem != null);
+        results.ShouldAllBe(r => r.Problem!.StatusCode == 400);
     }
 
     [Fact]
@@ -247,15 +248,14 @@ public class CollectionResultInvalidMethodsTests
     {
         // Act & Assert - null message
         var result1 = CollectionResult<string>.Invalid((string)null!);
-        result1.IsFailed.Should().BeTrue();
-        var errors1 = result1.Problem!.GetValidationErrors();
-        errors1.Should().NotBeNull();
-        errors1!["message"].Should().Contain((string)null!);
+        result1.IsFailed.ShouldBeTrue();
+        var errors1 = result1.AssertValidationErrors();
+        errors1.ShouldContainKey("message");
+        errors1["message"].ShouldContain((string)null!);
 
         // Act & Assert - null key/value (should throw or handle gracefully)
-        var action = () => CollectionResult<string>.Invalid(null!, null!);
-        action.Should().Throw<ArgumentNullException>()
-            .WithMessage("*key*");
+        var exception = Should.Throw<ArgumentNullException>(() => CollectionResult<string>.Invalid(null!, null!));
+        exception.ParamName.ShouldBe("key");
     }
 
     [Fact]
@@ -269,11 +269,11 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<string>.Invalid(key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        var errors = result.Problem!.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!.Should().ContainKey(key);
-        errors![key].Should().Contain(value);
+        result.IsFailed.ShouldBeTrue();
+        var errors = result.AssertValidationErrors();
+        errors.ShouldNotBeNull();
+        errors!.ShouldContainKey(key);
+        errors![key].ShouldContain(value);
     }
 
     [Fact]
@@ -284,12 +284,12 @@ public class CollectionResultInvalidMethodsTests
         var failValidationResult = CollectionResult<string>.FailValidation(("email", "Invalid email"));
 
         // Assert
-        invalidResult.IsFailed.Should().Be(failValidationResult.IsFailed);
-        invalidResult.Problem!.StatusCode.Should().Be(failValidationResult.Problem!.StatusCode);
-        invalidResult.Problem.Title.Should().Be(failValidationResult.Problem.Title);
-        var invalidErrors = invalidResult.Problem.GetValidationErrors();
-        var failValidationErrors = failValidationResult.Problem.GetValidationErrors();
-        invalidErrors.Should().BeEquivalentTo(failValidationErrors);
+        invalidResult.IsFailed.ShouldBe(failValidationResult.IsFailed);
+        invalidResult.Problem!.StatusCode.ShouldBe(failValidationResult.Problem!.StatusCode);
+        invalidResult.Problem.Title.ShouldBe(failValidationResult.Problem.Title);
+        var invalidErrors = invalidResult.AssertValidationErrors();
+        var failValidationErrors = failValidationResult.AssertValidationErrors();
+        invalidErrors.ShouldBeEquivalentTo(failValidationErrors);
     }
 
     #endregion
@@ -303,12 +303,12 @@ public class CollectionResultInvalidMethodsTests
         var result = CollectionResult<string>.Invalid("page", "Invalid page number");
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.TotalItems.Should().Be(0);
-        result.PageNumber.Should().Be(0);
-        result.PageSize.Should().Be(0);
-        result.TotalPages.Should().Be(0);
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.TotalItems.ShouldBe(0);
+        result.PageNumber.ShouldBe(0);
+        result.PageSize.ShouldBe(0);
+        result.TotalPages.ShouldBe(0);
     }
 
     #endregion

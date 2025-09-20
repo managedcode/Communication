@@ -1,13 +1,14 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
 using Orleans;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
@@ -47,22 +48,21 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         var echoed = await grain.EchoCollectionResultAsync(collectionResult);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.Collection.Should().NotBeNull();
-        echoed.Collection.Should().HaveCount(5);
-        echoed.PageNumber.Should().Be(2);
-        echoed.PageSize.Should().Be(5);
-        echoed.TotalItems.Should().Be(50);
-        echoed.TotalPages.Should().Be(10);
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.Collection.ShouldNotBeNull();
+        echoed.Collection.ShouldHaveCount(5);
+        echoed.PageNumber.ShouldBe(2);
+        echoed.PageSize.ShouldBe(5);
+        echoed.TotalItems.ShouldBe(50);
+        echoed.TotalPages.ShouldBe(10);
         
         for (int i = 0; i < 5; i++)
         {
-            echoed.Collection[i].Id.Should().Be(i + 1);
-            echoed.Collection[i].Name.Should().Be($"Item {i + 1}");
-            echoed.Collection[i].Tags.Should().NotBeNull();
-            echoed.Collection[i].Tags.Should().Contain($"tag{i + 1}");
-            echoed.Collection[i].Tags.Should().Contain("common");
+            echoed.Collection[i].Id.ShouldBe(i + 1);
+            echoed.Collection[i].Name.ShouldBe($"Item {i + 1}");
+            echoed.Collection[i].Tags.ShouldNotBeNull();
+            echoed.Collection[i].Tags.ShouldContain($"tag{i + 1}");
+            echoed.Collection[i].Tags.ShouldContain("common");
         }
     }
 
@@ -83,14 +83,13 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         var echoed = await grain.EchoCollectionResultAsync(collectionResult);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.Collection.Should().NotBeNull();
-        echoed.Collection.Should().BeEmpty();
-        echoed.PageNumber.Should().Be(1);
-        echoed.PageSize.Should().Be(10);
-        echoed.TotalItems.Should().Be(0);
-        echoed.TotalPages.Should().Be(0);
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.Collection.ShouldNotBeNull();
+        echoed.Collection.ShouldBeEmpty();
+        echoed.PageNumber.ShouldBe(1);
+        echoed.PageSize.ShouldBe(10);
+        echoed.TotalItems.ShouldBe(0);
+        echoed.TotalPages.ShouldBe(0);
     }
 
     [Fact]
@@ -106,14 +105,13 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         var echoed = await grain.EchoCollectionResultAsync(collectionResult);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeFalse();
-        echoed.HasProblem.Should().BeTrue();
-        echoed.Problem.Should().NotBeNull();
-        echoed.Problem!.StatusCode.Should().Be(503);
-        echoed.Problem!.Title.Should().Be("ServiceUnavailable");
-        echoed.Problem!.Detail.Should().Be("Database connection failed");
-        echoed.Collection.Should().BeEmpty();
+        echoed.IsSuccess.ShouldBeFalse();
+        echoed.HasProblem.ShouldBeTrue();
+        echoed.Problem.ShouldNotBeNull();
+        echoed.Problem!.StatusCode.ShouldBe(503);
+        echoed.Problem!.Title.ShouldBe("ServiceUnavailable");
+        echoed.Problem!.Detail.ShouldBe("Database connection failed");
+        echoed.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -146,22 +144,21 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         var echoed = await grain.EchoCollectionResultAsync(collectionResult);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.Collection.Should().NotBeNull();
-        echoed.Collection.Should().HaveCount(3);
-        echoed.TotalItems.Should().Be(100);
-        echoed.TotalPages.Should().Be(34); // ceiling(100/3)
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.Collection.ShouldNotBeNull();
+        echoed.Collection.ShouldHaveCount(3);
+        echoed.TotalItems.ShouldBe(100);
+        echoed.TotalPages.ShouldBe(34); // ceiling(100/3)
         
         for (int i = 0; i < 3; i++)
         {
-            echoed.Collection[i].Id.Should().Be(profiles[i].Id);
-            echoed.Collection[i].Email.Should().Be(profiles[i].Email);
-            echoed.Collection[i].Name.Should().Be(profiles[i].Name);
-            echoed.Collection[i].CreatedAt.Should().BeCloseTo(profiles[i].CreatedAt, TimeSpan.FromSeconds(1));
-            echoed.Collection[i].Attributes.Should().NotBeNull();
-            echoed.Collection[i].Attributes["level"].Should().Be((i + 1) * 10);
-            echoed.Collection[i].Attributes["active"].Should().Be((i + 1) % 2 == 0);
+            echoed.Collection[i].Id.ShouldBe(profiles[i].Id);
+            echoed.Collection[i].Email.ShouldBe(profiles[i].Email);
+            echoed.Collection[i].Name.ShouldBe(profiles[i].Name);
+            echoed.Collection[i].CreatedAt.ShouldBeCloseTo(profiles[i].CreatedAt, TimeSpan.FromSeconds(1));
+            echoed.Collection[i].Attributes.ShouldNotBeNull();
+            echoed.Collection[i].Attributes["level"].ShouldBe((i + 1) * 10);
+            echoed.Collection[i].Attributes["active"].ShouldBe((i + 1) % 2 == 0);
         }
     }
 
@@ -189,19 +186,18 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         var echoed = await grain.EchoCollectionResultAsync(collectionResult);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.Collection.Should().HaveCount(10);
-        echoed.PageNumber.Should().Be(100);
-        echoed.PageSize.Should().Be(10);
-        echoed.TotalItems.Should().Be(10000);
-        echoed.TotalPages.Should().Be(1000);
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.Collection.ShouldHaveCount(10);
+        echoed.PageNumber.ShouldBe(100);
+        echoed.PageSize.ShouldBe(10);
+        echoed.TotalItems.ShouldBe(10000);
+        echoed.TotalPages.ShouldBe(1000);
         // Pagination properties
-        (echoed.PageNumber < echoed.TotalPages).Should().BeTrue(); // Has next page
-        (echoed.PageNumber > 1).Should().BeTrue(); // Has previous page
+        (echoed.PageNumber < echoed.TotalPages).ShouldBeTrue(); // Has next page
+        (echoed.PageNumber > 1).ShouldBeTrue(); // Has previous page
         
         // Verify items start from 991
-        echoed.Collection[0].Id.Should().Be(991);
-        echoed.Collection[9].Id.Should().Be(1000);
+        echoed.Collection[0].Id.ShouldBe(991);
+        echoed.Collection[9].Id.ShouldBe(1000);
     }
 }

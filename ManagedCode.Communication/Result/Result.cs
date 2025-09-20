@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication;
 
@@ -13,7 +14,7 @@ namespace ManagedCode.Communication;
 /// </summary>
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Problem: {Problem?.Title}")]
-public partial struct Result : IResult
+public partial struct Result : IResult, IResultFactory<Result>
 {
     /// <summary>
     ///     Initializes a new instance of the <see cref="Result" /> struct.
@@ -85,6 +86,15 @@ public partial struct Result : IResult
     [MemberNotNullWhen(true, nameof(Problem))]
     public bool HasProblem => !IsSuccess;
 
+    /// <summary>
+    ///     Gets a value indicating whether the result is valid (successful and has no problems).
+    /// </summary>
+    [JsonIgnore]
+    public bool IsValid => IsSuccess && !HasProblem;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, List<string>>? InvalidObject => Problem?.GetValidationErrors();
+
 
     /// <summary>
     ///     Get the Problem assigned to the result without falling back to a generic error if no problem is assigned.
@@ -121,8 +131,10 @@ public partial struct Result : IResult
 
     #region IResultInvalid Implementation
 
+    [JsonIgnore]
     public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
 
+    [JsonIgnore]
     public bool IsNotInvalid => !IsInvalid;
 
     public bool InvalidField(string fieldName)
@@ -150,6 +162,7 @@ public partial struct Result : IResult
         if (!IsSuccess)
             Problem.AddValidationError(key, value);
     }
+
 
     #endregion
 }

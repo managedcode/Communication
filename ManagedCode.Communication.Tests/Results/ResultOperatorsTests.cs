@@ -1,9 +1,10 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -19,10 +20,10 @@ public class ResultOperatorsTests
         Result result = exception;
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Detail.Should().Be("Test exception");
-        result.Problem.Title.Should().Be("InvalidOperationException");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Detail.ShouldBe("Test exception");
+        result.Problem.Title.ShouldBe("InvalidOperationException");
     }
 
     [Fact]
@@ -35,8 +36,8 @@ public class ResultOperatorsTests
         Result result = problem;
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -49,9 +50,9 @@ public class ResultOperatorsTests
         Result<string> result = value;
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(value);
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(value);
+        result.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -64,10 +65,10 @@ public class ResultOperatorsTests
         Result<string> result = exception;
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Title.Should().Be("ArgumentNullException");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Title.ShouldBe("ArgumentNullException");
     }
 
 
@@ -86,8 +87,8 @@ public class ResultOperatorsTests
         var result = Result.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        executed.Should().BeTrue();
+        result.IsSuccess.ShouldBeTrue();
+        executed.ShouldBeTrue();
     }
 
 
@@ -102,10 +103,10 @@ public class ResultOperatorsTests
         }, HttpStatusCode.BadRequest);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Detail.Should().Be("Async exception");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.Detail.ShouldBe("Async exception");
     }
 
     [Fact]
@@ -122,8 +123,8 @@ public class ResultOperatorsTests
         });
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        executed.Should().BeTrue();
+        result.IsSuccess.ShouldBeTrue();
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -133,12 +134,12 @@ public class ResultOperatorsTests
         var result = Result.Fail(TestError.InvalidInput, "Custom error message");
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.ErrorCode.Should().Be("InvalidInput");
-        result.Problem.Detail.Should().Be("Custom error message");
-        result.Problem.Title.Should().Be("InvalidInput");
-        result.Problem.Extensions["errorType"].Should().Be("TestError");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.ErrorCode.ShouldBe("InvalidInput");
+        result.Problem.Detail.ShouldBe("Custom error message");
+        result.Problem.Title.ShouldBe("InvalidInput");
+        result.Problem.Extensions["errorType"].ShouldBe("TestError");
     }
 
     [Fact]
@@ -149,8 +150,8 @@ public class ResultOperatorsTests
         var result = Result<int>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(42);
     }
 
     [Fact]
@@ -161,10 +162,10 @@ public class ResultOperatorsTests
         var result = Result<int>.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(default(int));
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Detail.Should().Be("Cannot divide by zero");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(default(int));
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Detail.ShouldBe("Cannot divide by zero");
     }
 
 
@@ -178,11 +179,11 @@ public class ResultOperatorsTests
         var result = CollectionResult<string>.Succeed(items);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(items);
-        result.PageNumber.Should().Be(1);
-        result.PageSize.Should().Be(items.Length);
-        result.TotalItems.Should().Be(items.Length);
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(items);
+        result.PageNumber.ShouldBe(1);
+        result.PageSize.ShouldBe(items.Length);
+        result.TotalItems.ShouldBe(items.Length);
     }
 
     [Fact]
@@ -193,8 +194,8 @@ public class ResultOperatorsTests
         var failResult = CollectionResult<int>.Fail("Failed", "Failed");
 
         // Act & Assert
-        ((bool)successResult).Should().BeTrue();
-        ((bool)failResult).Should().BeFalse();
+        ((bool)successResult).ShouldBeTrue();
+        ((bool)failResult).ShouldBeFalse();
     }
 
     [Fact]
@@ -207,10 +208,10 @@ public class ResultOperatorsTests
         CollectionResult<string> result = exception;
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Detail.Should().Be("Collection error");
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Detail.ShouldBe("Collection error");
     }
 
     [Fact]
@@ -223,9 +224,9 @@ public class ResultOperatorsTests
         CollectionResult<int> result = problem;
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -235,12 +236,12 @@ public class ResultOperatorsTests
         var result = Result<string>.Fail(TestError.ResourceLocked, "Resource is locked");
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.ErrorCode.Should().Be("ResourceLocked");
-        result.Problem.StatusCode.Should().Be(400);
-        result.Problem.Detail.Should().Be("Resource is locked");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.ErrorCode.ShouldBe("ResourceLocked");
+        result.Problem.StatusCode.ShouldBe(400);
+        result.Problem.Detail.ShouldBe("Resource is locked");
     }
 
     [Fact]
@@ -250,10 +251,10 @@ public class ResultOperatorsTests
         var result = CollectionResult<int>.Fail(TestError.InvalidInput, "Invalid collection query");
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.ErrorCode.Should().Be("InvalidInput");
-        result.Problem.Detail.Should().Be("Invalid collection query");
+        result.IsFailed.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.ErrorCode.ShouldBe("InvalidInput");
+        result.Problem.Detail.ShouldBe("Invalid collection query");
     }
 }

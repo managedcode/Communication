@@ -1,6 +1,6 @@
 using System;
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
 using Xunit;
 
@@ -18,12 +18,12 @@ public class ProblemCreationExtensionsTests
         var problem = exception.ToProblem();
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Type.Should().Be("https://httpstatuses.io/500");
-        problem.Title.Should().Be("InvalidOperationException");
-        problem.Detail.Should().Be("Operation not allowed");
-        problem.StatusCode.Should().Be(500);
-        problem.ErrorCode.Should().Be("System.InvalidOperationException");
+        problem.ShouldNotBeNull();
+        problem.Type.ShouldBe("https://httpstatuses.io/500");
+        problem.Title.ShouldBe("InvalidOperationException");
+        problem.Detail.ShouldBe("Operation not allowed");
+        problem.StatusCode.ShouldBe(500);
+        problem.ErrorCode.ShouldBe("System.InvalidOperationException");
     }
 
     [Fact]
@@ -36,8 +36,8 @@ public class ProblemCreationExtensionsTests
         var problem = exception.ToProblem(400);
 
         // Assert
-        problem.StatusCode.Should().Be(400);
-        problem.Type.Should().Be("https://httpstatuses.io/400");
+        problem.StatusCode.ShouldBe(400);
+        problem.Type.ShouldBe("https://httpstatuses.io/400");
     }
 
     [Fact]
@@ -50,10 +50,10 @@ public class ProblemCreationExtensionsTests
         var problem = exception.ToProblem(HttpStatusCode.Forbidden);
 
         // Assert
-        problem.StatusCode.Should().Be(403);
-        problem.Type.Should().Be("https://httpstatuses.io/403");
-        problem.Title.Should().Be("UnauthorizedAccessException");
-        problem.Detail.Should().Be("Access denied");
+        problem.StatusCode.ShouldBe(403);
+        problem.Type.ShouldBe("https://httpstatuses.io/403");
+        problem.Title.ShouldBe("UnauthorizedAccessException");
+        problem.Detail.ShouldBe("Access denied");
     }
 
     [Fact]
@@ -63,12 +63,12 @@ public class ProblemCreationExtensionsTests
         var problem = TestError.InvalidInput.ToProblem();
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Type.Should().Be("https://httpstatuses.io/400");
-        problem.Title.Should().Be("InvalidInput");
-        problem.Detail.Should().Be("An error occurred: InvalidInput");
-        problem.StatusCode.Should().Be(400);
-        problem.ErrorCode.Should().Be("InvalidInput");
+        problem.ShouldNotBeNull();
+        problem.Type.ShouldBe("https://httpstatuses.io/400");
+        problem.Title.ShouldBe("InvalidInput");
+        problem.Detail.ShouldBe("An error occurred: InvalidInput");
+        problem.StatusCode.ShouldBe(400);
+        problem.ErrorCode.ShouldBe("InvalidInput");
     }
 
     [Fact]
@@ -78,8 +78,8 @@ public class ProblemCreationExtensionsTests
         var problem = TestError.ResourceLocked.ToProblem("The resource is locked by another user");
 
         // Assert
-        problem.Detail.Should().Be("The resource is locked by another user");
-        problem.Title.Should().Be("ResourceLocked");
+        problem.Detail.ShouldBe("The resource is locked by another user");
+        problem.Title.ShouldBe("ResourceLocked");
     }
 
     [Fact]
@@ -89,9 +89,9 @@ public class ProblemCreationExtensionsTests
         var problem = TestError.ResourceLocked.ToProblem("Resource locked", 423);
 
         // Assert
-        problem.StatusCode.Should().Be(423);
-        problem.Type.Should().Be("https://httpstatuses.io/423");
-        problem.Detail.Should().Be("Resource locked");
+        problem.StatusCode.ShouldBe(423);
+        problem.Type.ShouldBe("https://httpstatuses.io/423");
+        problem.Detail.ShouldBe("Resource locked");
     }
 
     [Fact]
@@ -101,10 +101,10 @@ public class ProblemCreationExtensionsTests
         var problem = TestError.InvalidInput.ToProblem("Invalid input data", HttpStatusCode.UnprocessableEntity);
 
         // Assert
-        problem.StatusCode.Should().Be(422);
-        problem.Type.Should().Be("https://httpstatuses.io/422");
-        problem.Detail.Should().Be("Invalid input data");
-        problem.ErrorCode.Should().Be("InvalidInput");
+        problem.StatusCode.ShouldBe(422);
+        problem.Type.ShouldBe("https://httpstatuses.io/422");
+        problem.Detail.ShouldBe("Invalid input data");
+        problem.ErrorCode.ShouldBe("InvalidInput");
     }
 
     [Fact]
@@ -117,12 +117,12 @@ public class ProblemCreationExtensionsTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<ProblemException>();
+        exception.ShouldBeOfType<ProblemException>();
         var problemException = (ProblemException)exception;
-        problemException.Problem.Should().Be(problem);
-        problemException.StatusCode.Should().Be(409);
-        problemException.Title.Should().Be("Conflict");
-        problemException.Detail.Should().Be("Resource conflict detected");
+        problemException.Problem.ShouldBe(problem);
+        problemException.StatusCode.ShouldBe(409);
+        problemException.Title.ShouldBe("Conflict");
+        problemException.Detail.ShouldBe("Resource conflict detected");
     }
 
     [Fact]
@@ -137,10 +137,10 @@ public class ProblemCreationExtensionsTests
         var problem = exception.ToProblem();
 
         // Assert
-        problem.Extensions.Should().ContainKey("exception.UserId");
-        problem.Extensions["exception.UserId"].Should().Be(123);
-        problem.Extensions.Should().ContainKey("exception.CorrelationId");
-        problem.Extensions["exception.CorrelationId"].Should().Be("abc-123");
+        problem.Extensions.ShouldContainKey("exception.UserId");
+        problem.Extensions["exception.UserId"].ShouldBe(123);
+        problem.Extensions.ShouldContainKey("exception.CorrelationId");
+        problem.Extensions["exception.CorrelationId"].ShouldBe("abc-123");
     }
 
     [Fact]
@@ -155,10 +155,10 @@ public class ProblemCreationExtensionsTests
 
         // Assert
         var problemException = (ProblemException)exception;
-        problemException.IsValidationProblem.Should().BeTrue();
-        problemException.ValidationErrors.Should().NotBeNull();
-        problemException.ValidationErrors!["field1"].Should().Contain("Error 1");
-        problemException.ValidationErrors["field2"].Should().Contain("Error 2");
-        problemException.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.customData").Should().BeTrue();
+        problemException.IsValidationProblem.ShouldBeTrue();
+        problemException.ValidationErrors.ShouldNotBeNull();
+        problemException.ValidationErrors!["field1"].ShouldContain("Error 1");
+        problemException.ValidationErrors["field2"].ShouldContain("Error 2");
+        problemException.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.customData").ShouldBeTrue();
     }
 }

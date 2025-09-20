@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using ManagedCode.Communication.Logging;
 using static ManagedCode.Communication.AspNetCore.Helpers.HttpStatusCodeHelper;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
@@ -16,8 +17,7 @@ public class CommunicationHubExceptionFilter(ILogger<CommunicationHubExceptionFi
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in hub method {HubType}.{HubMethod}", invocationContext.Hub.GetType()
-                .Name, invocationContext.HubMethodName);
+            LoggerCenter.LogHubException(logger, ex, invocationContext.Hub.GetType().Name, invocationContext.HubMethodName);
 
             var statusCode = GetStatusCodeForException(ex);
             return Result.Fail(ex, statusCode);

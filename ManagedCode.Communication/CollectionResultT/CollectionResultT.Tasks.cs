@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using ManagedCode.Communication.CollectionResults.Extensions;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
@@ -6,11 +7,11 @@ public partial struct CollectionResult<T>
 {
     public Task<CollectionResult<T>> AsTask()
     {
-        return Task.FromResult(this);
+        return CollectionResultTaskExtensions.AsTask(this);
     }
 
     public ValueTask<CollectionResult<T>> AsValueTask()
     {
-        return ValueTask.FromResult(this);
+        return CollectionResultTaskExtensions.AsValueTask(this);
     }
 }

@@ -4,13 +4,14 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 
 [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%207.0%20%7C%206.0-512BD4)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-9.0)](https://dotnet.microsoft.com/)
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Installation](#installation)
+- [Logging Configuration](#logging-configuration)
 - [Core Concepts](#core-concepts)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
@@ -54,6 +55,19 @@ The Result pattern solves these issues by:
 - **`CollectionResult<T>`**: Represents collections with built-in pagination
 - **`Problem`**: RFC 7807 compliant error details
 
+### ⚙️ Static Factory Abstractions
+
+- Leverage C# static interface members to centralize factory overloads for every result, command, and collection type.
+- `IResultFactory<T>` and `ICommandFactory<T>` deliver a consistent surface while bridge helpers remove repetitive boilerplate.
+- Extending the library now only requires implementing the minimal `Succeed`/`Fail` contract—the shared helpers provide the rest.
+
+### 🧭 Pagination Utilities
+
+- `PaginationRequest` encapsulates skip/take semantics, built-in normalization, and clamping helpers.
+- `PaginationOptions` lets you define default, minimum, and maximum page sizes for a bounded API surface.
+- `PaginationCommand` captures pagination intent as a first-class command with generated overloads for skip/take, page numbers, and enum command types.
+- `CollectionResult<T>.Succeed(..., PaginationRequest request, int totalItems)` keeps result metadata aligned with pagination commands.
+
 ### 🚂 Railway-Oriented Programming
 
 Complete set of functional combinators for composing operations:
@@ -71,6 +85,12 @@ Complete set of functional combinators for composing operations:
 - **SignalR**: Hub filters for real-time error handling
 - **Microsoft Orleans**: Grain call filters and surrogates
 - **Command Pattern**: Built-in command infrastructure with idempotency
+
+### 🔍 Observability Built In
+
+- Source-generated `LoggerCenter` APIs provide zero-allocation logging across ASP.NET Core filters, SignalR hubs, and command stores.
+- Call sites automatically check log levels, so you only pay for the logs you emit.
+- Extend logging with additional `[LoggerMessage]` partials to keep high-volume paths allocation free.
 
 ### 🛡️ Error Types
 
@@ -118,6 +138,48 @@ dotnet add package ManagedCode.Communication.Orleans
 <PackageReference Include="ManagedCode.Communication.AspNetCore" Version="9.6.0" />
 <PackageReference Include="ManagedCode.Communication.Orleans" Version="9.6.0" />
 ```
+
+## Logging Configuration
+
+The library includes integrated logging for error scenarios. Configure logging to capture detailed error information:
+
+### ASP.NET Core Setup
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Add your logging configuration
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
+// Register other services
+builder.Services.AddControllers();
+
+// Configure Communication library - this enables automatic error logging
+builder.Services.ConfigureCommunication();
+
+var app = builder.Build();
+```
+
+### Console Application Setup
+
+```csharp
+var services = new ServiceCollection();
+
+// Add logging
+services.AddLogging(builder => 
+{
+    builder.AddConsole()
+           .SetMinimumLevel(LogLevel.Information);
+});
+
+// Configure Communication library
+services.ConfigureCommunication();
+
+var serviceProvider = services.BuildServiceProvider();
+```
+
+The library automatically logs errors in Result factory methods (`From`, `Try`, etc.) with detailed context including file names, line numbers, and method names for easier debugging.
 
 ## Core Concepts
 
@@ -402,6 +464,28 @@ var command = new Command("command-id", "ProcessPayment")
     SpanId = Activity.Current?.SpanId.ToString()
 };
 ```
+
+### Pagination Commands
+
+Pagination is now a first-class command concept that keeps factories DRY and metadata consistent:
+
+```csharp
+var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 100);
+var request = PaginationRequest.Create(skip: 0, take: 0, options); // take defaults to 25
+
+// Rich factory surface without duplicate overloads
+var paginationCommand = PaginationCommand.Create(request, options)
+    .WithCorrelationId(Guid.NewGuid().ToString());
+
+// Apply to results without manually recalculating metadata
+var page = CollectionResult<Order>.Succeed(orders, paginationCommand.Value!, totalItems: 275, options);
+
+// Use enum-based command types when desired
+enum PaginationCommandType { ListCustomers }
+var typedCommand = PaginationCommand.Create(PaginationCommandType.ListCustomers);
+```
+
+`PaginationRequest` exposes helpers such as `Normalize`, `ClampToTotal`, and `ToSlice` to keep skip/take logic predictable. Configure bounds globally with `PaginationOptions` to protect APIs from oversized queries.
 
 ### Idempotent Command Execution
 
@@ -888,6 +972,15 @@ public class UserGrain : Grain, IUserGrain
 3. **Chain operations**: Use railway-oriented programming to avoid intermediate variables
 4. **Async properly**: Use `ConfigureAwait(false)` in library code
 5. **Cache problems**: Reuse common Problem instances for frequent errors
+
+## Testing
+
+The repository uses xUnit with [Shouldly](https://github.com/shouldly/shouldly) for assertions. Shared matchers such as `ShouldBeEquivalentTo` and `AssertProblem()` live in `ManagedCode.Communication.Tests/TestHelpers`, keeping tests fluent without FluentAssertions.
+
+- Run the full suite: `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj`
+- Generate lcov coverage: `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj /p:CollectCoverage=true /p:CoverletOutputFormat=lcov`
+
+Execution helpers (`Result.From`, `Result<T>.From`, task/value-task shims) and the command metadata extensions now have direct tests, pushing the core assembly above 80% line coverage. Mirror those patterns when adding APIs—exercise both success and failure paths and prefer invoking the public fluent surface instead of internal helpers.
 
 ## Comparison
 
@@ -1398,4 +1491,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - RFC 7807 Problem Details for HTTP APIs
 - Built for seamless integration with Microsoft Orleans
 - Optimized for ASP.NET Core applications
-

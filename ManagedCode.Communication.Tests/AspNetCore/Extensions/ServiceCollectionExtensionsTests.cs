@@ -2,7 +2,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Tests.Common.TestApp;
 using Xunit;
 
@@ -21,9 +21,9 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/result-success");
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("Test Success");
+        content.ShouldContain("Test Success");
     }
 
     [Fact]
@@ -36,9 +36,9 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/result-failure");
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.BadRequest);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("400");
+        content.ShouldContain("400");
     }
 
     [Fact]
@@ -51,9 +51,9 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/result-notfound");
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.NotFound);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("404");
+        content.ShouldContain("404");
     }
 
     [Fact]
@@ -66,10 +66,10 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/collection-success");
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("collection");
-        content.Should().Contain("totalItems");
+        content.ShouldContain("collection");
+        content.ShouldContain("totalItems");
     }
 
     [Fact]
@@ -82,9 +82,9 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/collection-empty");
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("collection");
+        content.ShouldContain("collection");
     }
 
     [Fact]
@@ -97,9 +97,9 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/enum-error");
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.BadRequest);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("400");
+        content.ShouldContain("400");
     }
 
     [Fact]
@@ -114,9 +114,9 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
             new StringContent(validModel, Encoding.UTF8, "application/json"));
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("Validation passed");
+        content.ShouldContain("Validation passed");
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
             new StringContent(invalidModel, Encoding.UTF8, "application/json"));
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -144,9 +144,9 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/custom-problem");
 
         // Assert
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
+        response.StatusCode.ShouldBe(System.Net.HttpStatusCode.Conflict);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("409");
+        content.ShouldContain("409");
     }
 
     [Fact]
@@ -159,6 +159,6 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         var response = await client.GetAsync("/test/throw-exception");
 
         // Assert - Could be 400 or 500 depending on how ASP.NET handles it
-        response.IsSuccessStatusCode.Should().BeFalse();
+        response.IsSuccessStatusCode.ShouldBeFalse();
     }
 }

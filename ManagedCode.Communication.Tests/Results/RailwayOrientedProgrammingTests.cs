@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Results.Extensions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
@@ -21,11 +22,9 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         finalResult.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         finalResult.Value
-            .Should()
-            .Be("13");
+            .ShouldBe("13");
     }
 
     [Fact]
@@ -41,11 +40,9 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         finalResult.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         finalResult.Problem!.Detail
-            .Should()
-            .Be("Initial failure");
+            .ShouldBe("Initial failure");
     }
 
     [Fact]
@@ -60,11 +57,9 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         finalResult.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         finalResult.Value
-            .Should()
-            .Be("10");
+            .ShouldBe("10");
     }
 
     [Fact]
@@ -79,11 +74,9 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         finalResult.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         finalResult.Problem!.Detail
-            .Should()
-            .Be("Bind failure");
+            .ShouldBe("Bind failure");
     }
 
     [Fact]
@@ -97,13 +90,10 @@ public class RailwayOrientedProgrammingTests
         var tapResult = result.Tap(x => sideEffectValue = x * 2);
 
         // Assert
-        tapResult.Should()
-            .Be(result); // Same reference
+        tapResult.ShouldBe(result); // Same reference
         tapResult.Value
-            .Should()
-            .Be(5); // Value unchanged
-        sideEffectValue.Should()
-            .Be(10); // Side effect executed
+            .ShouldBe(5); // Value unchanged
+        sideEffectValue.ShouldBe(10); // Side effect executed
     }
 
     [Fact]
@@ -117,10 +107,8 @@ public class RailwayOrientedProgrammingTests
         var tapResult = result.Tap(x => sideEffectExecuted = true);
 
         // Assert
-        tapResult.Should()
-            .Be(result);
-        sideEffectExecuted.Should()
-            .BeFalse();
+        tapResult.ShouldBe(result);
+        sideEffectExecuted.ShouldBeFalse();
     }
 
     [Fact]
@@ -133,8 +121,7 @@ public class RailwayOrientedProgrammingTests
         var output = result.Match(onSuccess: x => $"Success: {x}", onFailure: p => $"Failed: {p.Detail}");
 
         // Assert
-        output.Should()
-            .Be("Success: 42");
+        output.ShouldBe("Success: 42");
     }
 
     [Fact]
@@ -147,8 +134,7 @@ public class RailwayOrientedProgrammingTests
         var output = result.Match(onSuccess: x => $"Success: {x}", onFailure: p => $"Failed: {p.Detail}");
 
         // Assert
-        output.Should()
-            .Be("Failed: Something went wrong");
+        output.ShouldBe("Failed: Something went wrong");
     }
 
     [Fact]
@@ -170,13 +156,16 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Value
-            .Should()
-            .Be("Large number: 246");
-        log.Should()
-            .Equal("Starting with: 123", "Parsed to: 123", "Doubled to: 246", "Final result: Large number: 246");
+            .ShouldBe("Large number: 246");
+        log.ShouldBe(new[]
+        {
+            "Starting with: 123",
+            "Parsed to: 123",
+            "Doubled to: 246",
+            "Final result: Large number: 246"
+        });
     }
 
     [Fact]
@@ -197,13 +186,10 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem!.Detail
-            .Should()
-            .Be("Not a valid number");
-        log.Should()
-            .Equal("Starting with: abc"); // Only first tap executed
+            .ShouldBe("Not a valid number");
+        log.ShouldBe(new[] { "Starting with: abc" }); // Only first tap executed
     }
 
     [Fact]
@@ -214,11 +200,9 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Value
-            .Should()
-            .Be(42);
+            .ShouldBe(42);
     }
 
     [Fact]
@@ -229,14 +213,11 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
-        result.Problem!.Detail
-            .Should()
-            .Contain("not-a-number");
+            .ShouldNotBeNull();
+        result.Problem!.Detail!
+            .ShouldContain("not-a-number");
     }
 
     [Fact]
@@ -250,10 +231,8 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
-        executed.Should()
-            .BeTrue();
+            .ShouldBeTrue();
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -264,13 +243,10 @@ public class RailwayOrientedProgrammingTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.Detail
-            .Should()
-            .Be("Test failure");
+            .ShouldBe("Test failure");
     }
 }

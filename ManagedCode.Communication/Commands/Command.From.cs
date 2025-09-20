@@ -6,11 +6,16 @@ public partial class Command
 {
     public static Command<T> From<T>(Guid id, T value)
     {
-        return Command<T>.Create(id, value);
+        return Command<T>.From(id, value);
     }
 
     public static Command<T> From<T>(T value)
     {
-        return Command<T>.Create(value);
+        return Command<T>.From(value);
+    }
+
+    public static Command<T> From<T>(Guid id, string commandType, T value)
+    {
+        return Command<T>.From(id, commandType, value);
     }
 }

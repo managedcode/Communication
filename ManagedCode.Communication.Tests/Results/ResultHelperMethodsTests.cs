@@ -1,10 +1,12 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Results.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -20,8 +22,8 @@ public class ResultHelperMethodsTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeFalse();
-        problem.Should().BeNull();
+        hasProblem.ShouldBeFalse();
+        problem.ShouldBeNull();
     }
 
     [Fact]
@@ -35,9 +37,9 @@ public class ResultHelperMethodsTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeTrue();
-        problem.Should().NotBeNull();
-        problem.Should().Be(expectedProblem);
+        hasProblem.ShouldBeTrue();
+        problem.ShouldNotBeNull();
+        problem.ShouldBe(expectedProblem);
     }
 
     [Fact]
@@ -50,7 +52,7 @@ public class ResultHelperMethodsTests
         var threw = result.ThrowIfFail();
 
         // Assert
-        threw.Should().BeFalse();
+        threw.ShouldBeFalse();
     }
 
     [Fact]
@@ -61,9 +63,8 @@ public class ResultHelperMethodsTests
         var result = Result.Fail(problem);
 
         // Act & Assert
-        var action = () => result.ThrowIfFail();
-        action.Should().Throw<ProblemException>()
-            .Where(ex => ex.Problem == problem);
+        var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
+        exception.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -76,8 +77,8 @@ public class ResultHelperMethodsTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeFalse();
-        problem.Should().BeNull();
+        hasProblem.ShouldBeFalse();
+        problem.ShouldBeNull();
     }
 
     [Fact]
@@ -91,9 +92,9 @@ public class ResultHelperMethodsTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeTrue();
-        problem.Should().NotBeNull();
-        problem.Should().Be(expectedProblem);
+        hasProblem.ShouldBeTrue();
+        problem.ShouldNotBeNull();
+        problem.ShouldBe(expectedProblem);
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class ResultHelperMethodsTests
         var threw = result.ThrowIfFail();
 
         // Assert
-        threw.Should().BeFalse();
+        threw.ShouldBeFalse();
     }
 
     [Fact]
@@ -117,9 +118,8 @@ public class ResultHelperMethodsTests
         var result = Result<string>.Fail(problem);
 
         // Act & Assert
-        var action = () => result.ThrowIfFail();
-        action.Should().Throw<ProblemException>()
-            .Where(ex => ex.Problem == problem);
+        var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
+        exception.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -132,8 +132,8 @@ public class ResultHelperMethodsTests
         var result = Result.Try(() => { executed = true; });
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        executed.Should().BeTrue();
+        result.IsSuccess.ShouldBeTrue();
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -143,10 +143,10 @@ public class ResultHelperMethodsTests
         var result = Result.Try(() => throw new InvalidOperationException("Test error"));
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Detail.Should().Be("Test error");
-        result.Problem.StatusCode.Should().Be(500);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Detail.ShouldBe("Test error");
+        result.Problem.StatusCode.ShouldBe(500);
     }
 
     [Fact]
@@ -159,8 +159,8 @@ public class ResultHelperMethodsTests
         );
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.StatusCode.Should().Be(403);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.StatusCode.ShouldBe(403);
     }
 
     [Fact]
@@ -170,8 +170,8 @@ public class ResultHelperMethodsTests
         var result = Result.Try<int>(() => 42);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(42);
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(42);
     }
 
     [Fact]
@@ -181,10 +181,10 @@ public class ResultHelperMethodsTests
         var result = Result.Try<string>(() => throw new ArgumentException("Invalid arg"));
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Detail.Should().Be("Invalid arg");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Detail.ShouldBe("Invalid arg");
     }
 
     [Fact]
@@ -201,8 +201,8 @@ public class ResultHelperMethodsTests
         });
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        executed.Should().BeTrue();
+        result.IsSuccess.ShouldBeTrue();
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -216,9 +216,9 @@ public class ResultHelperMethodsTests
         });
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Detail.Should().Be("Async error");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Detail.ShouldBe("Async error");
     }
 
     [Fact]
@@ -232,8 +232,8 @@ public class ResultHelperMethodsTests
         });
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("async result");
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("async result");
     }
 
     [Fact]
@@ -247,10 +247,10 @@ public class ResultHelperMethodsTests
         });
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(0);
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Detail.Should().Be("Cannot divide");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(0);
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Detail.ShouldBe("Cannot divide");
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public class ResultHelperMethodsTests
         var result = Result.From(() => Result.Succeed());
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
+        result.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -273,8 +273,8 @@ public class ResultHelperMethodsTests
         var result = Result.From(() => Result.Fail(problem));
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -285,8 +285,8 @@ public class ResultHelperMethodsTests
         var result = Result.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.Detail.Should().Be("From error");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.Detail.ShouldBe("From error");
     }
 
     [Fact]
@@ -299,7 +299,7 @@ public class ResultHelperMethodsTests
         });
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
+        result.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -309,8 +309,8 @@ public class ResultHelperMethodsTests
         var result = Result<int>.From(() => Result<int>.Succeed(100));
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(100);
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(100);
     }
 
     [Fact]
@@ -320,11 +320,11 @@ public class ResultHelperMethodsTests
         var result = Result.FailNotFound("Resource not found");
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(404);
-        result.Problem.Title.Should().Be("Not Found");
-        result.Problem.Detail.Should().Be("Resource not found");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(404);
+        result.Problem.Title.ShouldBe("Not Found");
+        result.Problem.Detail.ShouldBe("Resource not found");
     }
 
     [Fact]
@@ -334,11 +334,11 @@ public class ResultHelperMethodsTests
         var result = Result<string>.FailNotFound("User not found");
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem!.StatusCode.Should().Be(404);
-        result.Problem.Title.Should().Be("Not Found");
-        result.Problem.Detail.Should().Be("User not found");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem!.StatusCode.ShouldBe(404);
+        result.Problem.Title.ShouldBe("Not Found");
+        result.Problem.Detail.ShouldBe("User not found");
     }
 
     [Fact]
@@ -351,14 +351,14 @@ public class ResultHelperMethodsTests
         );
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Type.Should().Be("https://tools.ietf.org/html/rfc7231#section-6.5.1");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.Type.ShouldBe("https://tools.ietf.org/html/rfc7231#section-6.5.1");
         
-        var errors = result.Problem.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!["username"].Should().Contain("Username is required");
-        errors["password"].Should().Contain("Password is too short");
+        var errors = result.AssertValidationErrors();
+        errors.ShouldNotBeNull();
+        errors!["username"].ShouldContain("Username is required");
+        errors["password"].ShouldContain("Password is too short");
     }
 
     [Fact]
@@ -371,13 +371,13 @@ public class ResultHelperMethodsTests
         );
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(0);
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(0);
         
-        var errors = result.Problem!.GetValidationErrors();
-        errors!["value"].Should().HaveCount(2);
-        errors["value"].Should().Contain("Value must be positive");
-        errors["value"].Should().Contain("Value must be less than 100");
+        var errors = result.AssertValidationErrors();
+        errors!["value"].ShouldHaveCount(2);
+        errors["value"].ShouldContain("Value must be positive");
+        errors["value"].ShouldContain("Value must be less than 100");
     }
 
     [Fact]
@@ -387,9 +387,9 @@ public class ResultHelperMethodsTests
         var result = Result.Fail("ServiceUnavailable", "Service is temporarily unavailable", HttpStatusCode.ServiceUnavailable);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.StatusCode.Should().Be(503);
-        result.Problem.Title.Should().Be("ServiceUnavailable");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.StatusCode.ShouldBe(503);
+        result.Problem.Title.ShouldBe("ServiceUnavailable");
     }
 
     [Fact]
@@ -399,9 +399,9 @@ public class ResultHelperMethodsTests
         var result = Result<string>.Fail("GatewayTimeout", "Gateway timeout occurred", HttpStatusCode.GatewayTimeout);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.StatusCode.Should().Be(504);
-        result.Problem.Title.Should().Be("GatewayTimeout");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.StatusCode.ShouldBe(504);
+        result.Problem.Title.ShouldBe("GatewayTimeout");
     }
 
     [Fact]
@@ -427,9 +427,9 @@ public class ResultHelperMethodsTests
         );
 
         // Assert
-        successCalled.Should().BeTrue();
-        failureCalled.Should().BeFalse();
-        output.Should().Be("success");
+        successCalled.ShouldBeTrue();
+        failureCalled.ShouldBeFalse();
+        output.ShouldBe("success");
     }
 
     [Fact]
@@ -456,9 +456,9 @@ public class ResultHelperMethodsTests
         );
 
         // Assert
-        successCalled.Should().BeFalse();
-        failureCalled.Should().BeTrue();
-        output.Should().Be("title");
+        successCalled.ShouldBeFalse();
+        failureCalled.ShouldBeTrue();
+        output.ShouldBe("title");
     }
 
     [Fact]
@@ -474,7 +474,7 @@ public class ResultHelperMethodsTests
         );
 
         // Assert
-        output.Should().Be(84);
+        output.ShouldBe(84);
     }
 
     [Fact]
@@ -490,6 +490,6 @@ public class ResultHelperMethodsTests
         );
 
         // Assert
-        output.Should().Be(500);
+        output.ShouldBe(500);
     }
 }

@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -20,35 +21,25 @@ public class CollectionResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.IsFailed
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Collection
-            .Should()
-            .BeEquivalentTo(items);
+            .ShouldBeEquivalentTo(items);
         result.PageNumber
-            .Should()
-            .Be(1);
+            .ShouldBe(1);
         result.PageSize
-            .Should()
-            .Be(10);
+            .ShouldBe(10);
         result.TotalItems
-            .Should()
-            .Be(3);
+            .ShouldBe(3);
         result.TotalPages
-            .Should()
-            .Be(1);
+            .ShouldBe(1);
         result.HasItems
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.IsEmpty
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .BeNull();
+            .ShouldBeNull();
     }
 
     [Fact]
@@ -62,20 +53,15 @@ public class CollectionResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Collection
-            .Should()
-            .BeEquivalentTo(items);
+            .ShouldBeEquivalentTo(items);
         result.PageNumber
-            .Should()
-            .Be(1);
+            .ShouldBe(1);
         result.PageSize
-            .Should()
-            .Be(10);
+            .ShouldBe(10);
         result.TotalItems
-            .Should()
-            .Be(3);
+            .ShouldBe(3);
     }
 
     [Fact]
@@ -89,23 +75,17 @@ public class CollectionResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Collection
-            .Should()
-            .BeEquivalentTo(items);
+            .ShouldBeEquivalentTo(items);
         result.PageNumber
-            .Should()
-            .Be(1);
+            .ShouldBe(1);
         result.PageSize
-            .Should()
-            .Be(3);
+            .ShouldBe(3);
         result.TotalItems
-            .Should()
-            .Be(3);
+            .ShouldBe(3);
         result.TotalPages
-            .Should()
-            .Be(1);
+            .ShouldBe(1);
     }
 
     [Fact]
@@ -119,23 +99,17 @@ public class CollectionResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Collection
-            .Should()
-            .BeEquivalentTo(items);
+            .ShouldBeEquivalentTo(items);
         result.PageNumber
-            .Should()
-            .Be(1);
+            .ShouldBe(1);
         result.PageSize
-            .Should()
-            .Be(3);
+            .ShouldBe(3);
         result.TotalItems
-            .Should()
-            .Be(3);
+            .ShouldBe(3);
         result.TotalPages
-            .Should()
-            .Be(1);
+            .ShouldBe(1);
     }
 
     [Fact]
@@ -146,29 +120,21 @@ public class CollectionResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Collection
-            .Should()
-            .BeEmpty();
+            .ShouldBeEmpty();
         result.PageNumber
-            .Should()
-            .Be(0);
+            .ShouldBe(0);
         result.PageSize
-            .Should()
-            .Be(0);
+            .ShouldBe(0);
         result.TotalItems
-            .Should()
-            .Be(0);
+            .ShouldBe(0);
         result.TotalPages
-            .Should()
-            .Be(0);
+            .ShouldBe(0);
         result.HasItems
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.IsEmpty
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
     }
 
     [Fact]
@@ -183,28 +149,21 @@ public class CollectionResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Collection
-            .Should()
-            .BeEmpty();
+            .ShouldBeEmpty();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.Title
-            .Should()
-            .Be(title);
+            .ShouldBe(title);
         result.Problem
             .Detail
-            .Should()
-            .Be(detail);
+            .ShouldBe(detail);
         result.Problem
             .StatusCode
-            .Should()
-            .Be(400);
+            .ShouldBe(400);
     }
 
     [Fact]
@@ -218,17 +177,13 @@ public class CollectionResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Collection
-            .Should()
-            .BeEmpty();
+            .ShouldBeEmpty();
         result.Problem
-            .Should()
-            .Be(problem);
+            .ShouldBe(problem);
     }
 
     [Fact]
@@ -241,14 +196,11 @@ public class CollectionResultTests
 
         // Assert
         result1.TotalPages
-            .Should()
-            .Be(3); // 25 items / 10 per page = 3 pages
+            .ShouldBe(3); // 25 items / 10 per page = 3 pages
         result2.TotalPages
-            .Should()
-            .Be(3); // 30 items / 10 per page = 3 pages
+            .ShouldBe(3); // 30 items / 10 per page = 3 pages
         result3.TotalPages
-            .Should()
-            .Be(1); // 10 items / 10 per page = 1 page
+            .ShouldBe(1); // 10 items / 10 per page = 1 page
     }
 
     [Fact]
@@ -259,14 +211,11 @@ public class CollectionResultTests
 
         // Act & Assert
         result.InvalidField("email")
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.InvalidField("age")
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.InvalidField("name")
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
     }
 
     [Fact]
@@ -282,14 +231,10 @@ public class CollectionResultTests
         var nameErrors = result.InvalidFieldError("name");
 
         // Assert
-        emailErrors.Should()
-            .Contain("Email is required");
-        emailErrors.Should()
-            .Contain("Email format is invalid");
-        ageErrors.Should()
-            .Be("Age must be greater than 0");
-        nameErrors.Should()
-            .BeEmpty();
+        emailErrors.ShouldContain("Email is required");
+        emailErrors.ShouldContain("Email format is invalid");
+        ageErrors.ShouldBe("Age must be greater than 0");
+        nameErrors.ShouldBeEmpty();
     }
 
     [Fact]
@@ -299,9 +244,7 @@ public class CollectionResultTests
         var result = CollectionResult<string>.Succeed(new[] { "item1" });
 
         // Act & Assert
-        result.Invoking(r => r.ThrowIfFail())
-            .Should()
-            .NotThrow();
+        Should.NotThrow(() => result.ThrowIfFail());
     }
 
     [Fact]
@@ -311,12 +254,8 @@ public class CollectionResultTests
         var result = CollectionResult<string>.Fail("Operation failed", "Something went wrong", HttpStatusCode.BadRequest);
 
         // Act & Assert
-        result.Invoking(r => r.ThrowIfFail())
-            .Should()
-            .Throw<ProblemException>()
-            .Which.Problem.Title
-            .Should()
-            .Be("Operation failed");
+        var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
+        exception.Problem.Title.ShouldBe("Operation failed");
     }
 
     [Fact]
@@ -327,10 +266,8 @@ public class CollectionResultTests
         var failResult = CollectionResult<string>.Fail("Failed", "Failed", HttpStatusCode.BadRequest);
 
         // Act & Assert
-        ((bool)successResult).Should()
-            .BeTrue();
-        ((bool)failResult).Should()
-            .BeFalse();
+        ((bool)successResult).ShouldBeTrue();
+        ((bool)failResult).ShouldBeFalse();
     }
 
     [Fact]
@@ -343,8 +280,8 @@ public class CollectionResultTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeFalse();
-        problem.Should().BeNull();
+        hasProblem.ShouldBeFalse();
+        problem.ShouldBeNull();
     }
 
     [Fact]
@@ -358,9 +295,9 @@ public class CollectionResultTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeTrue();
-        problem.Should().NotBeNull();
-        problem.Should().Be(expectedProblem);
+        hasProblem.ShouldBeTrue();
+        problem.ShouldNotBeNull();
+        problem.ShouldBe(expectedProblem);
     }
 
     [Fact]
@@ -373,10 +310,10 @@ public class CollectionResultTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeFalse();
-        problem.Should().BeNull();
-        result.IsEmpty.Should().BeTrue();
-        result.IsSuccess.Should().BeTrue();
+        hasProblem.ShouldBeFalse();
+        problem.ShouldBeNull();
+        result.IsEmpty.ShouldBeTrue();
+        result.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -388,13 +325,10 @@ public class CollectionResultTests
         var result = CollectionResult<string>.Fail(problem);
 
         // Act & Assert
-        var exception = result.Invoking(r => r.ThrowIfFail())
-            .Should()
-            .Throw<ProblemException>()
-            .Which;
+        var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
 
-        exception.Problem.Should().BeEquivalentTo(problem);
-        exception.Problem.Extensions["retryAfter"].Should().Be(60);
+        exception.Problem.ShouldBe(problem);
+        exception.Problem.Extensions["retryAfter"].ShouldBe(60);
     }
 
     [Fact]
@@ -404,17 +338,14 @@ public class CollectionResultTests
         var result = CollectionResult<string>.FailValidation(("filter", "Invalid filter format"), ("pageSize", "Page size must be between 1 and 100"));
 
         // Act & Assert
-        var exception = result.Invoking(r => r.ThrowIfFail())
-            .Should()
-            .Throw<ProblemException>()
-            .Which;
+        var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
 
-        exception.Problem.Title.Should().Be("Validation Failed");
-        exception.Problem.StatusCode.Should().Be(400);
+        exception.Problem.Title.ShouldBe("Validation Failed");
+        exception.Problem.StatusCode.ShouldBe(400);
 
         var validationErrors = exception.Problem.GetValidationErrors();
-        validationErrors.Should().NotBeNull();
-        validationErrors!["filter"].Should().Contain("Invalid filter format");
-        validationErrors!["pageSize"].Should().Contain("Page size must be between 1 and 100");
+        validationErrors.ShouldNotBeNull();
+        validationErrors!["filter"].ShouldContain("Invalid filter format");
+        validationErrors!["pageSize"].ShouldContain("Page size must be between 1 and 100");
     }
 }

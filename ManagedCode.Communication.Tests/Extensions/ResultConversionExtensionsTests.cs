@@ -1,6 +1,7 @@
 using System;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Results.Extensions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.Extensions;
@@ -19,9 +20,9 @@ public class ResultConversionExtensionsTests
         var result = value.AsResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("test string");
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("test string");
+        result.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -34,9 +35,9 @@ public class ResultConversionExtensionsTests
         var result = value.AsResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(42);
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(42);
+        result.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -49,9 +50,9 @@ public class ResultConversionExtensionsTests
         var result = value.AsResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -64,10 +65,10 @@ public class ResultConversionExtensionsTests
         var result = value.AsResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(value);
-        result.Value!.Id.Should().Be(1);
-        result.Value.Name.Should().Be("Test");
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(value);
+        result.Value!.Id.ShouldBe(1);
+        result.Value.Name.ShouldBe("Test");
     }
 
     #endregion
@@ -84,12 +85,12 @@ public class ResultConversionExtensionsTests
         var result = exception.AsResult<string>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Title.Should().Be("InvalidOperationException");
-        result.Problem.Detail.Should().Be("Something went wrong");
-        result.Problem.StatusCode.Should().Be(500);
+        result.IsSuccess.ShouldBeFalse();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Title.ShouldBe("InvalidOperationException");
+        result.Problem.Detail.ShouldBe("Something went wrong");
+        result.Problem.StatusCode.ShouldBe(500);
     }
 
     [Fact]
@@ -102,12 +103,12 @@ public class ResultConversionExtensionsTests
         var result = exception.AsResult<int>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Title.Should().Be("ArgumentException");
-        result.Problem.Detail.Should().Be("Invalid argument provided (Parameter 'paramName')");
-        result.Problem.StatusCode.Should().Be(500);
-        result.Problem.ErrorCode.Should().Be("System.ArgumentException");
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Title.ShouldBe("ArgumentException");
+        result.Problem.Detail.ShouldBe("Invalid argument provided (Parameter 'paramName')");
+        result.Problem.StatusCode.ShouldBe(500);
+        result.Problem.ErrorCode.ShouldBe("System.ArgumentException");
     }
 
     [Fact]
@@ -120,10 +121,10 @@ public class ResultConversionExtensionsTests
         var result = exception.AsResult<bool>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.Title.Should().Be("TestException");
-        result.Problem.Detail.Should().Be("Custom error occurred");
-        result.Problem.ErrorCode.Should().Be("ManagedCode.Communication.Tests.Extensions.ResultConversionExtensionsTests+TestException");
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.Title.ShouldBe("TestException");
+        result.Problem.Detail.ShouldBe("Custom error occurred");
+        result.Problem.ErrorCode.ShouldBe("ManagedCode.Communication.Tests.Extensions.ResultConversionExtensionsTests+TestException");
     }
 
     #endregion
@@ -142,8 +143,8 @@ public class ResultConversionExtensionsTests
             .Bind(x => x.Length > 5 ? Result<int>.Succeed(x.Length) : Result<int>.Fail("Too short"));
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(7); // "INITIAL".Length
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(7); // "INITIAL".Length
     }
 
     [Fact]
@@ -158,8 +159,8 @@ public class ResultConversionExtensionsTests
             .Else(() => Result<string>.Succeed("fallback"));
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("fallback");
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("fallback");
     }
 
     #endregion
@@ -175,9 +176,9 @@ public class ResultConversionExtensionsTests
         var boolResult = true.AsResult();
 
         // Assert
-        stringResult.Should().BeOfType<Result<string>>();
-        intResult.Should().BeOfType<Result<int>>();
-        boolResult.Should().BeOfType<Result<bool>>();
+        stringResult.ShouldBeOfType<Result<string>>();
+        intResult.ShouldBeOfType<Result<int>>();
+        boolResult.ShouldBeOfType<Result<bool>>();
     }
 
     [Fact]
@@ -190,8 +191,8 @@ public class ResultConversionExtensionsTests
         var result = exception.AsResult<decimal>();
 
         // Assert
-        result.Should().BeOfType<Result<decimal>>();
-        result.IsSuccess.Should().BeFalse();
+        result.ShouldBeOfType<Result<decimal>>();
+        result.IsSuccess.ShouldBeFalse();
     }
 
     #endregion

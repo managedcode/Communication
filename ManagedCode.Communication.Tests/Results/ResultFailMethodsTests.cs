@@ -1,6 +1,6 @@
 using System;
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Constants;
 using Xunit;
 
@@ -18,9 +18,9 @@ public class ResultFailMethodsTests
         var result = Result.Fail();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.HasProblem.ShouldBeTrue();
     }
 
     #endregion
@@ -37,9 +37,9 @@ public class ResultFailMethodsTests
         var result = Result.Fail(problem);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
+        result.Problem.ShouldBe(problem);
         result.ShouldHaveProblem().WithTitle("Error");
         result.ShouldHaveProblem().WithDetail("Error detail");
         result.ShouldHaveProblem().WithStatusCode(400);
@@ -59,8 +59,8 @@ public class ResultFailMethodsTests
         var result = Result.Fail(title);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(title);
         result.ShouldHaveProblem().WithDetail(title);
         result.ShouldHaveProblem().WithStatusCode(500);
@@ -81,8 +81,8 @@ public class ResultFailMethodsTests
         var result = Result.Fail(title, detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(title);
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(500);
@@ -104,8 +104,8 @@ public class ResultFailMethodsTests
         var result = Result.Fail(title, detail, status);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle(title);
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(404);
@@ -140,8 +140,8 @@ public class ResultFailMethodsTests
         var result = Result.Fail(exception);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("InvalidOperationException");
         result.ShouldHaveProblem().WithDetail("Test exception");
         result.ShouldHaveProblem().WithStatusCode(500);
@@ -159,7 +159,7 @@ public class ResultFailMethodsTests
         var result = Result.Fail(exception);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("InvalidOperationException");
         result.ShouldHaveProblem().WithDetail("Outer exception");
     }
@@ -179,8 +179,8 @@ public class ResultFailMethodsTests
         var result = Result.Fail(exception, status);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("UnauthorizedAccessException");
         result.ShouldHaveProblem().WithDetail("Access denied");
         result.ShouldHaveProblem().WithStatusCode(403);
@@ -197,13 +197,13 @@ public class ResultFailMethodsTests
         var result = Result.FailValidation(("email", "Email is required"));
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(400);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.ValidationFailed);
         var errors = result.AssertValidationErrors();
-        errors.Should().ContainKey("email");
-        errors["email"].Should().Contain("Email is required");
+        errors.ShouldContainKey("email");
+        errors["email"].ShouldContain("Email is required");
     }
 
     [Fact]
@@ -217,14 +217,14 @@ public class ResultFailMethodsTests
         );
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(400);
         var errors = result.AssertValidationErrors();
-        errors.Should().NotBeNull();
-        errors.Should().HaveCount(3);
-        errors["name"].Should().Contain("Name is required");
-        errors["email"].Should().Contain("Invalid email format");
-        errors["age"].Should().Contain("Must be 18 or older");
+        errors.ShouldNotBeNull();
+        errors.ShouldHaveCount(3);
+        errors["name"].ShouldContain("Name is required");
+        errors["email"].ShouldContain("Invalid email format");
+        errors["age"].ShouldContain("Must be 18 or older");
     }
 
     #endregion
@@ -238,8 +238,8 @@ public class ResultFailMethodsTests
         var result = Result.FailUnauthorized();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(401);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Unauthorized);
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.UnauthorizedAccess);
@@ -255,7 +255,7 @@ public class ResultFailMethodsTests
         var result = Result.FailUnauthorized(detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(401);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Unauthorized);
         result.ShouldHaveProblem().WithDetail(detail);
@@ -272,8 +272,8 @@ public class ResultFailMethodsTests
         var result = Result.FailForbidden();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(403);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Forbidden);
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ForbiddenAccess);
@@ -289,7 +289,7 @@ public class ResultFailMethodsTests
         var result = Result.FailForbidden(detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(403);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.Forbidden);
         result.ShouldHaveProblem().WithDetail(detail);
@@ -306,8 +306,8 @@ public class ResultFailMethodsTests
         var result = Result.FailNotFound();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(404);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.NotFound);
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ResourceNotFound);
@@ -323,7 +323,7 @@ public class ResultFailMethodsTests
         var result = Result.FailNotFound(detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(404);
         result.ShouldHaveProblem().WithTitle(ProblemConstants.Titles.NotFound);
         result.ShouldHaveProblem().WithDetail(detail);
@@ -340,8 +340,8 @@ public class ResultFailMethodsTests
         var result = Result.Fail(TestError.InvalidInput);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("InvalidInput");
         result.ShouldHaveProblem().WithStatusCode(400); // Default for domain errors
     }
@@ -356,7 +356,7 @@ public class ResultFailMethodsTests
         var result = Result.Fail(TestError.ValidationFailed, detail);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("ValidationFailed");
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(400);
@@ -369,7 +369,7 @@ public class ResultFailMethodsTests
         var result = Result.Fail(TestError.SystemError, HttpStatusCode.InternalServerError);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("SystemError");
         result.ShouldHaveProblem().WithTitle("SystemError");
         result.ShouldHaveProblem().WithStatusCode(500);
@@ -386,7 +386,7 @@ public class ResultFailMethodsTests
         var result = Result.Fail(TestError.DatabaseError, detail, status);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithErrorCode("DatabaseError");
         result.ShouldHaveProblem().WithDetail(detail);
         result.ShouldHaveProblem().WithStatusCode(503);

@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using ManagedCode.Communication.Results.Extensions;
 
 namespace ManagedCode.Communication;
 
@@ -11,7 +12,7 @@ public partial struct Result<T>
     /// <returns>ProblemException if result has a problem, null otherwise.</returns>
     public Exception? ToException()
     {
-        return Problem != null ? new ProblemException(Problem) : null;
+        return ResultProblemExtensions.ToException(this);
     }
 
     /// <summary>
@@ -20,9 +21,6 @@ public partial struct Result<T>
     [MemberNotNullWhen(false, nameof(Value))]
     public void ThrowIfProblem()
     {
-        if (Problem != null)
-        {
-            throw new ProblemException(Problem);
-        }
+        ResultProblemExtensions.ThrowIfProblem(this);
     }
 }

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
-using FluentAssertions;
-using FluentAssertions.Execution;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 
 namespace ManagedCode.Communication.Tests.TestHelpers;
@@ -15,15 +14,11 @@ public static class ResultTestExtensions
     /// </summary>
     public static Problem AssertProblem(this Result result)
     {
-        using (new AssertionScope())
-        {
-            result.HasProblem.Should().BeTrue("result should have a problem");
-            if (result.TryGetProblem(out var problem))
-            {
-                return problem;
-            }
-            throw new AssertionFailedException("Result has no problem but HasProblem returned true");
-        }
+        result.HasProblem.ShouldBeTrue("result should have a problem");
+        result.TryGetProblem(out var problem)
+            .ShouldBeTrue("result should expose the problem instance");
+
+        return problem ?? throw new ShouldAssertException("Result reported a problem but none was returned.");
     }
     
     /// <summary>
@@ -31,15 +26,11 @@ public static class ResultTestExtensions
     /// </summary>
     public static Problem AssertProblem<T>(this Result<T> result)
     {
-        using (new AssertionScope())
-        {
-            result.HasProblem.Should().BeTrue("result should have a problem");
-            if (result.TryGetProblem(out var problem))
-            {
-                return problem;
-            }
-            throw new AssertionFailedException("Result has no problem but HasProblem returned true");
-        }
+        result.HasProblem.ShouldBeTrue("result should have a problem");
+        result.TryGetProblem(out var problem)
+            .ShouldBeTrue("result should expose the problem instance");
+
+        return problem ?? throw new ShouldAssertException("Result reported a problem but none was returned.");
     }
     
     /// <summary>
@@ -49,7 +40,7 @@ public static class ResultTestExtensions
     {
         var problem = result.AssertProblem();
         var errors = problem.GetValidationErrors();
-        errors.Should().NotBeNull("problem should have validation errors");
+        errors.ShouldNotBeNull("problem should have validation errors");
         return errors ?? new Dictionary<string, List<string>>();
     }
     
@@ -60,7 +51,7 @@ public static class ResultTestExtensions
     {
         var problem = result.AssertProblem();
         var errors = problem.GetValidationErrors();
-        errors.Should().NotBeNull("problem should have validation errors");
+        errors.ShouldNotBeNull("problem should have validation errors");
         return errors ?? new Dictionary<string, List<string>>();
     }
     
@@ -85,7 +76,7 @@ public static class ResultTestExtensions
     /// </summary>
     public static void ShouldNotHaveProblem(this Result result)
     {
-        result.HasProblem.Should().BeFalse("result should not have a problem");
+        result.HasProblem.ShouldBeFalse("result should not have a problem");
     }
     
     /// <summary>
@@ -93,7 +84,7 @@ public static class ResultTestExtensions
     /// </summary>
     public static void ShouldNotHaveProblem<T>(this Result<T> result)
     {
-        result.HasProblem.Should().BeFalse("result should not have a problem");
+        result.HasProblem.ShouldBeFalse("result should not have a problem");
     }
     
     // CollectionResult extensions
@@ -103,15 +94,11 @@ public static class ResultTestExtensions
     /// </summary>
     public static Problem AssertProblem<T>(this CollectionResult<T> result)
     {
-        using (new AssertionScope())
-        {
-            result.HasProblem.Should().BeTrue("collection result should have a problem");
-            if (result.TryGetProblem(out var problem))
-            {
-                return problem;
-            }
-            throw new AssertionFailedException("CollectionResult has no problem but HasProblem returned true");
-        }
+        result.HasProblem.ShouldBeTrue("collection result should have a problem");
+        result.TryGetProblem(out var problem)
+            .ShouldBeTrue("collection result should expose the problem instance");
+
+        return problem ?? throw new ShouldAssertException("CollectionResult reported a problem but none was returned.");
     }
     
     /// <summary>
@@ -121,7 +108,7 @@ public static class ResultTestExtensions
     {
         var problem = result.AssertProblem();
         var errors = problem.GetValidationErrors();
-        errors.Should().NotBeNull("problem should have validation errors");
+        errors.ShouldNotBeNull("problem should have validation errors");
         return errors ?? new Dictionary<string, List<string>>();
     }
     
@@ -138,7 +125,7 @@ public static class ResultTestExtensions
     /// </summary>
     public static void ShouldNotHaveProblem<T>(this CollectionResult<T> result)
     {
-        result.HasProblem.Should().BeFalse("collection result should not have a problem");
+        result.HasProblem.ShouldBeFalse("collection result should not have a problem");
     }
 }
 
@@ -156,37 +143,37 @@ public class ProblemAssertions
     
     public ProblemAssertions WithTitle(string expectedTitle)
     {
-        _problem.Title.Should().Be(expectedTitle);
+        _problem.Title.ShouldBe(expectedTitle);
         return this;
     }
     
     public ProblemAssertions WithDetail(string expectedDetail)
     {
-        _problem.Detail.Should().Be(expectedDetail);
+        _problem.Detail.ShouldBe(expectedDetail);
         return this;
     }
     
     public ProblemAssertions WithStatusCode(int expectedStatusCode)
     {
-        _problem.StatusCode.Should().Be(expectedStatusCode);
+        _problem.StatusCode.ShouldBe(expectedStatusCode);
         return this;
     }
     
     public ProblemAssertions WithErrorCode(string expectedErrorCode)
     {
-        _problem.ErrorCode.Should().Be(expectedErrorCode);
+        _problem.ErrorCode.ShouldBe(expectedErrorCode);
         return this;
     }
     
     public ProblemAssertions WithValidationError(string field, string expectedMessage)
     {
         var errors = _problem.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors.Should().ContainKey(field);
+        errors.ShouldNotBeNull();
+        errors.ShouldContainKey(field);
         
         if (errors != null && errors.TryGetValue(field, out var fieldErrors))
         {
-            fieldErrors.Should().Contain(expectedMessage);
+            fieldErrors.ShouldContain(expectedMessage);
         }
         
         return this;
@@ -195,16 +182,16 @@ public class ProblemAssertions
     public ProblemAssertions WithValidationErrors(params (string field, string message)[] expectedErrors)
     {
         var errors = _problem.GetValidationErrors();
-        errors.Should().NotBeNull();
+        errors.ShouldNotBeNull();
         
         if (errors != null)
         {
             foreach (var (field, message) in expectedErrors)
             {
-                errors.Should().ContainKey(field);
+                errors.ShouldContainKey(field);
                 if (errors.TryGetValue(field, out var fieldErrors))
                 {
-                    fieldErrors.Should().Contain(message);
+                    fieldErrors.ShouldContain(message);
                 }
             }
         }
@@ -215,7 +202,7 @@ public class ProblemAssertions
     public Dictionary<string, List<string>> GetValidationErrors()
     {
         var errors = _problem.GetValidationErrors();
-        errors.Should().NotBeNull();
+        errors.ShouldNotBeNull();
         return errors ?? new Dictionary<string, List<string>>();
     }
 }

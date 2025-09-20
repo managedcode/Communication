@@ -1,5 +1,9 @@
+using System;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using ManagedCode.Communication;
+using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Results.Extensions;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
@@ -10,7 +14,7 @@ public static class ControllerExtensions
         if (result.IsSuccess)
             return new OkObjectResult(result.Value);
         
-        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
+        var problem = NormalizeProblem(result.GetProblemNoFallback());
         return new ObjectResult(problem)
         {
             StatusCode = problem.StatusCode
@@ -22,7 +26,7 @@ public static class ControllerExtensions
         if (result.IsSuccess)
             return new NoContentResult();
         
-        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
+        var problem = NormalizeProblem(result.GetProblemNoFallback());
         return new ObjectResult(problem)
         {
             StatusCode = problem.StatusCode
@@ -32,10 +36,10 @@ public static class ControllerExtensions
     public static Microsoft.AspNetCore.Http.IResult ToHttpResult<T>(this Result<T> result)
     {
         if (result.IsSuccess)
-            return Results.Ok(result.Value);
+            return Microsoft.AspNetCore.Http.Results.Ok(result.Value);
         
-        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
-        return Results.Problem(
+        var problem = NormalizeProblem(result.GetProblemNoFallback());
+        return Microsoft.AspNetCore.Http.Results.Problem(
             title: problem.Title,
             detail: problem.Detail,
             statusCode: problem.StatusCode,
@@ -48,10 +52,10 @@ public static class ControllerExtensions
     public static Microsoft.AspNetCore.Http.IResult ToHttpResult(this Result result)
     {
         if (result.IsSuccess)
-            return Results.NoContent();
+            return Microsoft.AspNetCore.Http.Results.NoContent();
         
-        var problem = result.GetProblemNoFallback() ?? Problem.Create("Operation failed", "Unknown error occurred", 500);
-        return Results.Problem(
+        var problem = NormalizeProblem(result.GetProblemNoFallback());
+        return Microsoft.AspNetCore.Http.Results.Problem(
             title: problem.Title,
             detail: problem.Detail,
             statusCode: problem.StatusCode,
@@ -59,5 +63,21 @@ public static class ControllerExtensions
             instance: problem.Instance,
             extensions: problem.Extensions
         );
+    }
+
+    private static Problem NormalizeProblem(Problem? problem)
+    {
+        if (problem is null || IsGeneric(problem))
+        {
+            return Problem.Create("Operation failed", "Unknown error occurred", 500);
+        }
+
+        return problem;
+    }
+
+    private static bool IsGeneric(Problem problem)
+    {
+        return string.Equals(problem.Title, ProblemConstants.Titles.Error, StringComparison.OrdinalIgnoreCase)
+               && string.Equals(problem.Detail, ProblemConstants.Messages.GenericError, StringComparison.OrdinalIgnoreCase);
     }
 }

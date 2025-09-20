@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Results.Extensions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.Extensions;
@@ -24,8 +25,8 @@ public class RailwayExtensionsTests
         });
 
         // Assert
-        chainedResult.IsSuccess.Should().BeTrue();
-        executed.Should().BeTrue();
+        chainedResult.IsSuccess.ShouldBeTrue();
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -43,9 +44,9 @@ public class RailwayExtensionsTests
         });
 
         // Assert
-        chainedResult.IsSuccess.Should().BeFalse();
-        chainedResult.Problem!.Title.Should().Be("Initial error");
-        executed.Should().BeFalse();
+        chainedResult.IsSuccess.ShouldBeFalse();
+        chainedResult.Problem!.Title.ShouldBe("Initial error");
+        executed.ShouldBeFalse();
     }
 
     [Fact]
@@ -58,8 +59,8 @@ public class RailwayExtensionsTests
         var chainedResult = result.Bind(() => Result<string>.Succeed("value"));
 
         // Assert
-        chainedResult.IsSuccess.Should().BeTrue();
-        chainedResult.Value.Should().Be("value");
+        chainedResult.IsSuccess.ShouldBeTrue();
+        chainedResult.Value.ShouldBe("value");
     }
 
     #endregion
@@ -76,8 +77,8 @@ public class RailwayExtensionsTests
         var mappedResult = result.Map(x => x.ToString());
 
         // Assert
-        mappedResult.IsSuccess.Should().BeTrue();
-        mappedResult.Value.Should().Be("42");
+        mappedResult.IsSuccess.ShouldBeTrue();
+        mappedResult.Value.ShouldBe("42");
     }
 
     [Fact]
@@ -90,8 +91,8 @@ public class RailwayExtensionsTests
         var mappedResult = result.Map(x => x.ToString());
 
         // Assert
-        mappedResult.IsSuccess.Should().BeFalse();
-        mappedResult.Problem!.Title.Should().Be("Error");
+        mappedResult.IsSuccess.ShouldBeFalse();
+        mappedResult.Problem!.Title.ShouldBe("Error");
     }
 
     #endregion
@@ -108,8 +109,8 @@ public class RailwayExtensionsTests
         var chainedResult = result.Bind(x => Result<string>.Succeed($"Value: {x}"));
 
         // Assert
-        chainedResult.IsSuccess.Should().BeTrue();
-        chainedResult.Value.Should().Be("Value: 10");
+        chainedResult.IsSuccess.ShouldBeTrue();
+        chainedResult.Value.ShouldBe("Value: 10");
     }
 
     [Fact]
@@ -122,8 +123,8 @@ public class RailwayExtensionsTests
         var chainedResult = result.Bind(x => Result<string>.Succeed($"Value: {x}"));
 
         // Assert
-        chainedResult.IsSuccess.Should().BeFalse();
-        chainedResult.Problem!.Title.Should().Be("Input error");
+        chainedResult.IsSuccess.ShouldBeFalse();
+        chainedResult.Problem!.Title.ShouldBe("Input error");
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public class RailwayExtensionsTests
             value.Length > 0 ? Result.Succeed() : Result.Fail("Empty string"));
 
         // Assert
-        chainedResult.IsSuccess.Should().BeTrue();
+        chainedResult.IsSuccess.ShouldBeTrue();
     }
 
     #endregion
@@ -155,8 +156,8 @@ public class RailwayExtensionsTests
         var tappedResult = result.Tap(() => executed = true);
 
         // Assert
-        tappedResult.Should().Be(result);
-        executed.Should().BeTrue();
+        tappedResult.ShouldBe(result);
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -170,8 +171,8 @@ public class RailwayExtensionsTests
         var tappedResult = result.Tap(() => executed = true);
 
         // Assert
-        tappedResult.Should().Be(result);
-        executed.Should().BeFalse();
+        tappedResult.ShouldBe(result);
+        executed.ShouldBeFalse();
     }
 
     [Fact]
@@ -185,8 +186,8 @@ public class RailwayExtensionsTests
         var tappedResult = result.Tap(value => capturedValue = value);
 
         // Assert
-        tappedResult.Should().Be(result);
-        capturedValue.Should().Be(42);
+        tappedResult.ShouldBe(result);
+        capturedValue.ShouldBe(42);
     }
 
     #endregion
@@ -204,8 +205,8 @@ public class RailwayExtensionsTests
         var ensuredResult = result.Ensure(x => x > 10, problem);
 
         // Assert
-        ensuredResult.IsSuccess.Should().BeTrue();
-        ensuredResult.Value.Should().Be(42);
+        ensuredResult.IsSuccess.ShouldBeTrue();
+        ensuredResult.Value.ShouldBe(42);
     }
 
     [Fact]
@@ -219,8 +220,8 @@ public class RailwayExtensionsTests
         var ensuredResult = result.Ensure(x => x > 10, problem);
 
         // Assert
-        ensuredResult.IsSuccess.Should().BeFalse();
-        ensuredResult.Problem.Should().Be(problem);
+        ensuredResult.IsSuccess.ShouldBeFalse();
+        ensuredResult.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -235,8 +236,8 @@ public class RailwayExtensionsTests
         var ensuredResult = result.Ensure(x => x > 10, validationProblem);
 
         // Assert
-        ensuredResult.IsSuccess.Should().BeFalse();
-        ensuredResult.Problem.Should().Be(originalProblem);
+        ensuredResult.IsSuccess.ShouldBeFalse();
+        ensuredResult.Problem.ShouldBe(originalProblem);
     }
 
     #endregion
@@ -253,8 +254,8 @@ public class RailwayExtensionsTests
         var elseResult = result.Else(() => Result.Fail("Alternative"));
 
         // Assert
-        elseResult.Should().Be(result);
-        elseResult.IsSuccess.Should().BeTrue();
+        elseResult.ShouldBe(result);
+        elseResult.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -267,7 +268,7 @@ public class RailwayExtensionsTests
         var elseResult = result.Else(() => Result.Succeed());
 
         // Assert
-        elseResult.IsSuccess.Should().BeTrue();
+        elseResult.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -280,8 +281,8 @@ public class RailwayExtensionsTests
         var elseResult = result.Else(() => Result<string>.Succeed("Alternative"));
 
         // Assert
-        elseResult.IsSuccess.Should().BeTrue();
-        elseResult.Value.Should().Be("Alternative");
+        elseResult.IsSuccess.ShouldBeTrue();
+        elseResult.Value.ShouldBe("Alternative");
     }
 
     #endregion
@@ -299,8 +300,8 @@ public class RailwayExtensionsTests
         var finalResult = result.Finally(r => executed = true);
 
         // Assert
-        finalResult.Should().Be(result);
-        executed.Should().BeTrue();
+        finalResult.ShouldBe(result);
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -314,8 +315,8 @@ public class RailwayExtensionsTests
         var finalResult = result.Finally(r => executed = true);
 
         // Assert
-        finalResult.Should().Be(result);
-        executed.Should().BeTrue();
+        finalResult.ShouldBe(result);
+        executed.ShouldBeTrue();
     }
 
     #endregion
@@ -335,7 +336,7 @@ public class RailwayExtensionsTests
         );
 
         // Assert
-        output.Should().Be("Success");
+        output.ShouldBe("Success");
     }
 
     [Fact]
@@ -351,7 +352,7 @@ public class RailwayExtensionsTests
         );
 
         // Assert
-        output.Should().Be("Failure: Error");
+        output.ShouldBe("Failure: Error");
     }
 
     [Fact]
@@ -367,7 +368,7 @@ public class RailwayExtensionsTests
         );
 
         // Assert
-        output.Should().Be("Value: 42");
+        output.ShouldBe("Value: 42");
     }
 
     [Fact]
@@ -385,8 +386,8 @@ public class RailwayExtensionsTests
         );
 
         // Assert
-        successCalled.Should().BeTrue();
-        failureCalled.Should().BeFalse();
+        successCalled.ShouldBeTrue();
+        failureCalled.ShouldBeFalse();
     }
 
     #endregion
@@ -403,7 +404,7 @@ public class RailwayExtensionsTests
         var chainedResult = await resultTask.BindAsync(() => Task.FromResult(Result.Succeed()));
 
         // Assert
-        chainedResult.IsSuccess.Should().BeTrue();
+        chainedResult.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -416,8 +417,8 @@ public class RailwayExtensionsTests
         var chainedResult = await resultTask.BindAsync(() => Task.FromResult(Result.Succeed()));
 
         // Assert
-        chainedResult.IsSuccess.Should().BeFalse();
-        chainedResult.Problem!.Title.Should().Be("Error");
+        chainedResult.IsSuccess.ShouldBeFalse();
+        chainedResult.Problem!.Title.ShouldBe("Error");
     }
 
     [Fact]
@@ -430,8 +431,8 @@ public class RailwayExtensionsTests
         var mappedResult = await resultTask.MapAsync(value => Task.FromResult(value.ToString()));
 
         // Assert
-        mappedResult.IsSuccess.Should().BeTrue();
-        mappedResult.Value.Should().Be("42");
+        mappedResult.IsSuccess.ShouldBeTrue();
+        mappedResult.Value.ShouldBe("42");
     }
 
     [Fact]
@@ -449,8 +450,8 @@ public class RailwayExtensionsTests
         });
 
         // Assert
-        tappedResult.IsSuccess.Should().BeTrue();
-        capturedValue.Should().Be(42);
+        tappedResult.IsSuccess.ShouldBeTrue();
+        capturedValue.ShouldBe(42);
     }
 
     #endregion
@@ -473,9 +474,9 @@ public class RailwayExtensionsTests
             .Finally(r => { /* cleanup logic */ });
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("Value: 20");
-        sideEffectCalled.Should().BeTrue();
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("Value: 20");
+        sideEffectCalled.ShouldBeTrue();
     }
 
     [Fact]
@@ -493,9 +494,9 @@ public class RailwayExtensionsTests
             .Finally(r => { /* cleanup always runs */ });
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.Title.Should().Be("Positive check");
-        sideEffectCalled.Should().BeFalse();
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.Title.ShouldBe("Positive check");
+        sideEffectCalled.ShouldBeFalse();
     }
 
     #endregion

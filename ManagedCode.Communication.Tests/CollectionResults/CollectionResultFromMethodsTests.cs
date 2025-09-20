@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
@@ -25,13 +25,13 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.IsFailed.Should().BeFalse();
-        result.Collection.Should().BeEquivalentTo(new[] { 1, 2, 3, 4, 5 });
-        result.HasProblem.Should().BeFalse();
-        result.PageNumber.Should().Be(1);
-        result.PageSize.Should().Be(5);
-        result.TotalItems.Should().Be(5);
+        result.IsSuccess.ShouldBeTrue();
+        result.IsFailed.ShouldBeFalse();
+        result.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3, 4, 5 });
+        result.HasProblem.ShouldBeFalse();
+        result.PageNumber.ShouldBe(1);
+        result.PageSize.ShouldBe(5);
+        result.TotalItems.ShouldBe(5);
     }
 
     [Fact]
@@ -44,10 +44,10 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<string>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEmpty();
-        result.IsEmpty.Should().BeTrue();
-        result.HasItems.Should().BeFalse();
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.IsEmpty.ShouldBeTrue();
+        result.HasItems.ShouldBeFalse();
     }
 
     [Fact]
@@ -60,13 +60,13 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<User>.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("InvalidOperationException");
         result.ShouldHaveProblem().WithDetail("Test exception");
         result.ShouldHaveProblem().WithStatusCode(500);
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     [Fact]
@@ -79,10 +79,10 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("NullReferenceException");
-        result.Collection.Should().BeEmpty();
+        result.Collection.ShouldBeEmpty();
     }
 
     #endregion
@@ -99,9 +99,9 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<string>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { "a", "b", "c" });
-        result.TotalItems.Should().Be(3);
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { "a", "b", "c" });
+        result.TotalItems.ShouldBe(3);
     }
 
     [Fact]
@@ -115,8 +115,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 3, 4, 5 });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 3, 4, 5 });
     }
 
     [Fact]
@@ -129,8 +129,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3 });
     }
 
     #endregion
@@ -148,8 +148,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(func);
 
         // Assert
-        result.Should().Be(expectedResult);
-        result.Collection.Should().BeEquivalentTo(new[] { 10, 20, 30 });
+        result.ShouldBe(expectedResult);
+        result.Collection.ShouldBeEquivalentTo(new[] { 10, 20, 30 });
     }
 
     [Fact]
@@ -163,8 +163,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<string>.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("ArgumentException");
         result.ShouldHaveProblem().WithDetail("Invalid argument");
     }
@@ -196,8 +196,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<int>.From(task);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3 });
     }
 
     [Fact]
@@ -214,8 +214,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<string>.From(task);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { "delayed", "result" });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { "delayed", "result" });
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<User>.From(task);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("InvalidOperationException");
         result.ShouldHaveProblem().WithDetail("Task failed");
     }
@@ -245,8 +245,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<int>.From(task);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
     }
 
     #endregion
@@ -263,8 +263,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<decimal>.From(task);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 1.5m, 2.5m, 3.5m });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 1.5m, 2.5m, 3.5m });
     }
 
     [Fact]
@@ -277,8 +277,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<string>.From(task);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { "x", "y", "z" });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { "x", "y", "z" });
     }
 
     #endregion
@@ -296,7 +296,7 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<int>.From(task);
 
         // Assert
-        result.Should().Be(expectedResult);
+        result.ShouldBe(expectedResult);
     }
 
     [Fact]
@@ -309,7 +309,7 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<string>.From(task);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithStatusCode(404);
         result.ShouldHaveProblem().WithDetail("Items not found");
     }
@@ -332,8 +332,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<int>.From(func, CancellationToken.None);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 5, 10, 15 });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 5, 10, 15 });
     }
 
     [Fact]
@@ -352,8 +352,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<string>.From(func, cts.Token);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
     }
 
     [Fact]
@@ -366,7 +366,7 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<User>.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("NotSupportedException");
         result.ShouldHaveProblem().WithDetail("Not supported");
     }
@@ -389,8 +389,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<char>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 'a', 'b', 'c' });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 'a', 'b', 'c' });
     }
 
     #endregion
@@ -411,8 +411,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<int>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 7, 8, 9 });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 7, 8, 9 });
     }
 
     #endregion
@@ -429,9 +429,9 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<string>.From(originalResult);
 
         // Assert
-        result.Should().Be(originalResult);
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { "test1", "test2" });
+        result.ShouldBe(originalResult);
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { "test1", "test2" });
     }
 
     [Fact]
@@ -445,8 +445,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(originalResult);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -459,8 +459,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<User>.From(originalResult);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
     }
 
     #endregion
@@ -477,8 +477,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(collectionResult);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.IsFailed.Should().BeFalse();
+        result.IsSuccess.ShouldBeTrue();
+        result.IsFailed.ShouldBeFalse();
     }
 
     [Fact]
@@ -492,8 +492,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<string>.From(collectionResult);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -506,8 +506,8 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(collectionResult);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.HasProblem.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
+        result.HasProblem.ShouldBeTrue();
     }
 
     #endregion
@@ -524,8 +524,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<int>.From(valueTask);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 11, 22, 33 });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 11, 22, 33 });
     }
 
     [Fact]
@@ -538,7 +538,7 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<string>.From(valueTask);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("ArgumentNullException");
     }
 
@@ -556,8 +556,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<bool>.From(valueTask);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { true, false, true });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { true, false, true });
     }
 
     #endregion
@@ -575,7 +575,7 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<Guid>.From(valueTask);
 
         // Assert
-        result.Should().Be(expectedResult);
+        result.ShouldBe(expectedResult);
     }
 
     #endregion
@@ -592,8 +592,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<DateTime>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().HaveCount(2);
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldHaveCount(2);
     }
 
     [Fact]
@@ -606,7 +606,7 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<int>.From(func);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
+        result.IsFailed.ShouldBeTrue();
         result.ShouldHaveProblem().WithTitle("InvalidCastException");
         result.ShouldHaveProblem().WithDetail("Invalid cast");
     }
@@ -626,8 +626,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<double>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { 1.1, 2.2, 3.3 });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { 1.1, 2.2, 3.3 });
     }
 
     #endregion
@@ -645,8 +645,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<string>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { "value" });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { "value" });
     }
 
     #endregion
@@ -667,10 +667,10 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<Dictionary<string, int>>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().HaveCount(2);
-        result.Collection[0].Should().ContainKey("key1");
-        result.Collection[1].Should().ContainKey("key2");
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldHaveCount(2);
+        result.Collection[0].ShouldContainKey("key1");
+        result.Collection[1].ShouldContainKey("key2");
     }
 
     [Fact]
@@ -687,10 +687,10 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<(int Id, string Name)>.From(task);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().HaveCount(2);
-        result.Collection[0].Id.Should().Be(1);
-        result.Collection[0].Name.Should().Be("First");
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldHaveCount(2);
+        result.Collection[0].Id.ShouldBe(1);
+        result.Collection[0].Name.ShouldBe("First");
     }
 
     #endregion
@@ -714,9 +714,9 @@ public class CollectionResultFromMethodsTests
         var collection2 = result.Collection;
 
         // Assert
-        executionCount.Should().Be(1);
-        collection1.Should().BeEquivalentTo(new[] { 1 });
-        collection2.Should().BeEquivalentTo(new[] { 1 });
+        executionCount.ShouldBe(1);
+        collection1.ShouldBeEquivalentTo(new[] { 1 });
+        collection2.ShouldBeEquivalentTo(new[] { 1 });
     }
 
     [Fact]
@@ -729,10 +729,10 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<int>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.TotalItems.Should().Be(10000);
-        result.Collection.First().Should().Be(1);
-        result.Collection.Last().Should().Be(10000);
+        result.IsSuccess.ShouldBeTrue();
+        result.TotalItems.ShouldBe(10000);
+        result.Collection.First().ShouldBe(1);
+        result.Collection.Last().ShouldBe(10000);
     }
 
     [Fact]
@@ -749,8 +749,8 @@ public class CollectionResultFromMethodsTests
         var result = await CollectionResult<string>.From(task);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().BeEquivalentTo(new[] { "slow", "operation" });
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEquivalentTo(new[] { "slow", "operation" });
     }
 
     [Fact]
@@ -768,10 +768,10 @@ public class CollectionResultFromMethodsTests
         var result = CollectionResult<Node>.From(func);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Collection.Should().HaveCount(2);
-        result.Collection[0].Value.Should().Be(1);
-        result.Collection[1].Value.Should().Be(2);
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldHaveCount(2);
+        result.Collection[0].Value.ShouldBe(1);
+        result.Collection[1].Value.ShouldBe(2);
     }
 
     #endregion
