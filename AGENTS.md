@@ -10,6 +10,7 @@ If I tell you to remember something, you do the same, update
 
 ## Rules to follow
 always check all test are passed.
+- Prefer static interface members for result/command factories to centralize shared overloads and avoid duplication across result-like types.
 
 # Repository Guidelines
 

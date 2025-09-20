@@ -22,7 +22,7 @@ public partial struct CollectionResult<T>
 
     public static CollectionResult<T> Fail(Problem problem, T[] items)
     {
-        return CollectionResultFactoryBridge<CollectionResult<T>, T>.Fail(problem, items);
+        return CollectionResult<T>.CreateFailed(problem, items);
     }
 
     public static CollectionResult<T> Fail(string title) => ResultFactoryBridge<CollectionResult<T>>.Fail(title);

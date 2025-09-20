@@ -6,6 +6,7 @@
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <EnablePreviewFeatures>true</EnablePreviewFeatures>
     </PropertyGroup>
 
     <!--NuGet-->

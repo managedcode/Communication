@@ -6,7 +6,7 @@ namespace ManagedCode.Communication.Commands;
 
 [Serializable]
 [DebuggerDisplay("CommandId: {CommandId}")]
-public partial class Command : ICommand
+public partial class Command : ICommand, ICommandFactory<Command>
 {
     [JsonConstructor]
     protected Command()
@@ -73,7 +73,13 @@ public partial class Command : ICommand
     /// </summary>
     public static Command Create(string commandType)
     {
-        return new Command(Guid.CreateVersion7(), commandType);
+        return CommandFactoryBridge.Create<Command>(commandType);
+    }
+
+    public static Command Create<TEnum>(TEnum commandType)
+        where TEnum : Enum
+    {
+        return CommandFactoryBridge.Create<Command, TEnum>(commandType);
     }
     
     /// <summary>
@@ -81,7 +87,18 @@ public partial class Command : ICommand
     /// </summary>
     public static Command Create(Guid commandId, string commandType)
     {
+        if (string.IsNullOrWhiteSpace(commandType))
+        {
+            throw new ArgumentException("Command type must be provided.", nameof(commandType));
+        }
+
         return new Command(commandId, commandType);
+    }
+
+    public static Command Create<TEnum>(Guid commandId, TEnum commandType)
+        where TEnum : Enum
+    {
+        return CommandFactoryBridge.Create<Command, TEnum>(commandId, commandType);
     }
 
     /// <summary>

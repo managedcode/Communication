@@ -7,7 +7,7 @@ namespace ManagedCode.Communication.Commands;
 
 [Serializable]
 [DebuggerDisplay("CommandId: {CommandId}; {Value?.ToString()}")]
-public partial class Command<T> : ICommand<T>
+public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, T>
 {
     [JsonConstructor]
     protected Command()
