@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Results.Extensions;
 
 namespace ManagedCode.Communication;
 
@@ -8,55 +9,17 @@ public partial struct Result
 {
     public static Result From(Action action)
     {
-        try
-        {
-            action();
-            return Succeed();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return action.ToResult();
     }
 
     public static Result From(Func<Result> func)
     {
-        try
-        {
-            return func();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return func.ToResult();
     }
 
     public static async Task<Result> From(Task task)
     {
-        try
-        {
-            if (task.IsCompleted)
-            {
-                return Succeed();
-            }
-
-            if (task.IsCanceled)
-            {
-                return Fail(new TaskCanceledException());
-            }
-
-            if (task.IsFaulted && task.Exception != null)
-            {
-                return Fail(task.Exception);
-            }
-
-            await task;
-            return Succeed();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await task.ToResultAsync().ConfigureAwait(false);
     }
 
     public static Result From(Result result)
@@ -66,80 +29,41 @@ public partial struct Result
 
     public static Result From<T>(Result<T> result)
     {
-        if (result.IsSuccess)
-        {
-            return Succeed();
-        }
-
-        return result.Problem != null ? Fail(result.Problem) : Fail("Operation failed");
+        return result.ToResult();
     }
 
     public static async Task<Result> From(Func<Task> task, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await Task.Run(task, cancellationToken);
-            return Succeed();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await task.ToResultAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public static async ValueTask<Result> From(ValueTask valueTask)
     {
-        try
-        {
-            if (valueTask.IsCompleted)
-            {
-                return Succeed();
-            }
-
-            if (valueTask.IsCanceled || valueTask.IsFaulted)
-            {
-                return Fail();
-            }
-
-            await valueTask;
-            return Succeed();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await valueTask.ToResultAsync().ConfigureAwait(false);
     }
 
     public static async Task<Result> From(Func<ValueTask> valueTask)
     {
-        try
-        {
-            await valueTask();
-            return Succeed();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await valueTask.ToResultAsync().ConfigureAwait(false);
     }
 
     public static Result From(bool condition)
     {
-        return condition ? Succeed() : Fail();
+        return condition.ToResult();
     }
 
     public static Result From(bool condition, Problem problem)
     {
-        return condition ? Succeed() : Fail(problem);
+        return condition.ToResult(problem);
     }
 
     public static Result From(Func<bool> condition)
     {
-        return condition() ? Succeed() : Fail();
+        return condition.ToResult();
     }
 
     public static Result From(Func<bool> condition, Problem problem)
     {
-        return condition() ? Succeed() : Fail(problem);
-    }
+        return condition.ToResult(problem);
+}
 }

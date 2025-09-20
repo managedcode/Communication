@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
+using ManagedCode.Communication.CollectionResults.Factories;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
@@ -7,22 +7,21 @@ public partial struct CollectionResult<T>
 {
     public static CollectionResult<T> Succeed(T[] value, int pageNumber, int pageSize, int totalItems)
     {
-        return CreateSuccess(value, pageNumber, pageSize, totalItems);
+        return CollectionResultFactory.Success(value, pageNumber, pageSize, totalItems);
     }
 
     public static CollectionResult<T> Succeed(IEnumerable<T> value, int pageNumber, int pageSize, int totalItems)
     {
-        return CreateSuccess(value.ToArray(), pageNumber, pageSize, totalItems);
+        return CollectionResultFactory.Success(value, pageNumber, pageSize, totalItems);
     }
 
     public static CollectionResult<T> Succeed(T[] value)
     {
-        return CreateSuccess(value, 1, value.Length, value.Length);
+        return CollectionResultFactory.Success(value);
     }
 
     public static CollectionResult<T> Succeed(IEnumerable<T> value)
     {
-        var array = value.ToArray();
-        return CreateSuccess(array, 1, array.Length, array.Length);
+        return CollectionResultFactory.Success(value);
     }
 }

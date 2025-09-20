@@ -19,7 +19,6 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     private readonly IMemoryCache _memoryCache;
     private readonly ILogger<MemoryCacheCommandIdempotencyStore> _logger;
     private readonly ConcurrentDictionary<string, DateTimeOffset> _commandTimestamps;
-    private readonly object _lockObject = new();
     private bool _disposed;
 
     public MemoryCacheCommandIdempotencyStore(
@@ -85,34 +84,6 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.CompletedTask;
     }
 
-    // Atomic operations
-    public Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
-    {
-        lock (_lockObject)
-        {
-            var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(GetStatusKey(commandId)) ?? CommandExecutionStatus.NotFound;
-            
-            if (currentStatus == expectedStatus)
-            {
-                SetCommandStatusAsync(commandId, newStatus, cancellationToken);
-                return Task.FromResult(true);
-            }
-            
-            return Task.FromResult(false);
-        }
-    }
-
-    public Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
-    {
-        lock (_lockObject)
-        {
-            var statusKey = GetStatusKey(commandId);
-            var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(statusKey) ?? CommandExecutionStatus.NotFound;
-            
-            // Set new status
-            SetCommandStatusAsync(commandId, newStatus, cancellationToken);
-            
-            return Task.FromResult((currentStatus, true));
     private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)

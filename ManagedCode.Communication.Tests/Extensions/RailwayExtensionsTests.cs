@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Results.Extensions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.Extensions;

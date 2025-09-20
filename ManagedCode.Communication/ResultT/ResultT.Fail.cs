@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Results.Factories;
 
 namespace ManagedCode.Communication;
 
@@ -15,7 +16,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail()
     {
-        return CreateFailed(Problem.GenericError());
+        return ResultFactory.Failure<T>();
     }
 
     /// <summary>
@@ -23,7 +24,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(T value)
     {
-        return CreateFailed(Problem.GenericError(), value);
+        return Result<T>.CreateFailed(Problem.GenericError(), value);
     }
 
     /// <summary>
@@ -31,7 +32,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(Problem problem)
     {
-        return CreateFailed(problem);
+        return ResultFactory.Failure<T>(problem);
     }
 
 
@@ -40,8 +41,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(string title)
     {
-        var problem = Problem.Create(title, title, (int)HttpStatusCode.InternalServerError);
-        return CreateFailed(problem);
+        return ResultFactory.Failure<T>(title);
     }
 
     /// <summary>
@@ -49,8 +49,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(string title, string detail)
     {
-        var problem = Problem.Create(title, detail);
-        return CreateFailed(problem);
+        return ResultFactory.Failure<T>(title, detail);
     }
 
     /// <summary>
@@ -58,8 +57,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(string title, string detail, HttpStatusCode status)
     {
-        var problem = Problem.Create(title, detail, (int)status);
-        return CreateFailed(problem);
+        return ResultFactory.Failure<T>(title, detail, status);
     }
 
     /// <summary>
@@ -67,7 +65,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(Exception exception)
     {
-        return CreateFailed(Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
+        return ResultFactory.Failure<T>(exception);
     }
 
     /// <summary>
@@ -75,7 +73,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail(Exception exception, HttpStatusCode status)
     {
-        return CreateFailed(Problem.Create(exception, (int)status));
+        return ResultFactory.Failure<T>(exception, status);
     }
 
     /// <summary>
@@ -83,7 +81,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailValidation(params (string field, string message)[] errors)
     {
-        return CreateFailed(Problem.Validation(errors));
+        return ResultFactory.FailureValidation<T>(errors);
     }
 
     /// <summary>
@@ -91,12 +89,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailBadRequest()
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.BadRequest,
-            ProblemConstants.Messages.BadRequest,
-            (int)HttpStatusCode.BadRequest);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureBadRequest<T>();
     }
 
     /// <summary>
@@ -104,12 +97,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailBadRequest(string detail)
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.BadRequest,
-            detail,
-            (int)HttpStatusCode.BadRequest);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureBadRequest<T>(detail);
     }
 
     /// <summary>
@@ -117,12 +105,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailUnauthorized()
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.Unauthorized,
-            ProblemConstants.Messages.UnauthorizedAccess,
-            (int)HttpStatusCode.Unauthorized);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureUnauthorized<T>();
     }
 
     /// <summary>
@@ -130,12 +113,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailUnauthorized(string detail)
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.Unauthorized,
-            detail,
-            (int)HttpStatusCode.Unauthorized);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureUnauthorized<T>(detail);
     }
 
     /// <summary>
@@ -143,12 +121,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailForbidden()
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.Forbidden,
-            ProblemConstants.Messages.ForbiddenAccess,
-            (int)HttpStatusCode.Forbidden);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureForbidden<T>();
     }
 
     /// <summary>
@@ -156,12 +129,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailForbidden(string detail)
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.Forbidden,
-            detail,
-            (int)HttpStatusCode.Forbidden);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureForbidden<T>(detail);
     }
 
     /// <summary>
@@ -169,12 +137,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailNotFound()
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.NotFound,
-            ProblemConstants.Messages.ResourceNotFound,
-            (int)HttpStatusCode.NotFound);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureNotFound<T>();
     }
 
     /// <summary>
@@ -182,12 +145,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> FailNotFound(string detail)
     {
-        var problem = Problem.Create(
-            ProblemConstants.Titles.NotFound,
-            detail,
-            (int)HttpStatusCode.NotFound);
-
-        return CreateFailed(problem);
+        return ResultFactory.FailureNotFound<T>(detail);
     }
 
     /// <summary>
@@ -195,7 +153,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode) where TEnum : Enum
     {
-        return CreateFailed(Problem.Create(errorCode));
+        return ResultFactory.Failure<T, TEnum>(errorCode);
     }
 
     /// <summary>
@@ -203,7 +161,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode, string detail) where TEnum : Enum
     {
-        return CreateFailed(Problem.Create(errorCode, detail));
+        return ResultFactory.Failure<T, TEnum>(errorCode, detail);
     }
 
     /// <summary>
@@ -211,7 +169,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode, HttpStatusCode status) where TEnum : Enum
     {
-        return CreateFailed(Problem.Create(errorCode, errorCode.ToString(), (int)status));
+        return ResultFactory.Failure<T, TEnum>(errorCode, status);
     }
 
     /// <summary>
@@ -219,6 +177,6 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
-        return CreateFailed(Problem.Create(errorCode, detail, (int)status));
+        return ResultFactory.Failure<T, TEnum>(errorCode, detail, status);
     }
 }

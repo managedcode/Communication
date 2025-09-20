@@ -1,4 +1,5 @@
 using System;
+using ManagedCode.Communication.Results.Factories;
 
 namespace ManagedCode.Communication;
 
@@ -6,18 +7,21 @@ public partial struct Result
 {
     public static Result Succeed()
     {
-        return CreateSuccess();
+        return ResultFactory.Success();
     }
 
     public static Result<T> Succeed<T>(T value)
     {
-        return Result<T>.Succeed(value);
+        return ResultFactory.Success(value);
     }
 
     public static Result<T> Succeed<T>(Action<T> action) where T : new()
     {
-        var result = new T();
-        action?.Invoke(result);
-        return Result<T>.Succeed(result);
+        return ResultFactory.Success(() =>
+        {
+            var instance = new T();
+            action?.Invoke(instance);
+            return instance;
+        });
     }
 }

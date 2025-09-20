@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FluentAssertions;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Results.Extensions;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;

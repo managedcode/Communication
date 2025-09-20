@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Results.Extensions;
 
 namespace ManagedCode.Communication;
 
@@ -8,74 +9,32 @@ public partial struct Result<T>
 {
     public static Result<T> From(Func<T> func)
     {
-        try
-        {
-            return Succeed(func());
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return func.ToResult();
     }
 
     public static Result<T> From(Func<Result<T>> func)
     {
-        try
-        {
-            return func();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return func.ToResult();
     }
 
     public static async Task<Result<T>> From(Task<T> task)
     {
-        try
-        {
-            return Succeed(await task);
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await task.ToResultAsync().ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> From(Task<Result<T>> task)
     {
-        try
-        {
-            return await task;
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await task.ToResultAsync().ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> From(Func<Task<T>> task, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            return Succeed(await Task.Run(task, cancellationToken));
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await task.ToResultAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> From(Func<Task<Result<T>>> task, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            return await Task.Run(task, cancellationToken);
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await task.ToResultAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public static Result<T> From(Result<T> result)
@@ -85,59 +44,26 @@ public partial struct Result<T>
 
     public static Result From<U>(Result<U> result)
     {
-        if (result)
-        {
-            return Result.Succeed();
-        }
-
-        return result.Problem != null ? Result.Fail(result.Problem) : Result.Fail();
+        return result.ToResult();
     }
 
     public static async ValueTask<Result<T>> From(ValueTask<T> valueTask)
     {
-        try
-        {
-            return Succeed(await valueTask);
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await valueTask.ToResultAsync().ConfigureAwait(false);
     }
 
     public static async ValueTask<Result<T>> From(ValueTask<Result<T>> valueTask)
     {
-        try
-        {
-            return await valueTask;
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await valueTask.ToResultAsync().ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> From(Func<ValueTask<T>> valueTask)
     {
-        try
-        {
-            return Succeed(await valueTask());
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await valueTask.ToResultAsync().ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> From(Func<ValueTask<Result<T>>> valueTask)
     {
-        try
-        {
-            return await valueTask();
-        }
-        catch (Exception e)
-        {
-            return Fail(e);
-        }
+        return await valueTask.ToResultAsync().ConfigureAwait(false);
     }
 }

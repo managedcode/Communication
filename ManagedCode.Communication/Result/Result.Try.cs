@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Results.Extensions;
 
 namespace ManagedCode.Communication;
 
@@ -11,15 +12,7 @@ public partial struct Result
     /// </summary>
     public static Result Try(Action action, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
-        try
-        {
-            action();
-            return Succeed();
-        }
-        catch (Exception ex)
-        {
-            return Fail(ex, errorStatus);
-        }
+        return action.TryAsResult(errorStatus);
     }
 
     /// <summary>
@@ -27,14 +20,7 @@ public partial struct Result
     /// </summary>
     public static Result<T> Try<T>(Func<T> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
-        try
-        {
-            return Result<T>.Succeed(func());
-        }
-        catch (Exception ex)
-        {
-            return Result<T>.Fail(ex, errorStatus);
-        }
+        return func.TryAsResult(errorStatus);
     }
 
     /// <summary>
@@ -42,15 +28,7 @@ public partial struct Result
     /// </summary>
     public static async Task<Result> TryAsync(Func<Task> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
-        try
-        {
-            await func();
-            return Succeed();
-        }
-        catch (Exception ex)
-        {
-            return Fail(ex, errorStatus);
-        }
+        return await func.TryAsResultAsync(errorStatus).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -58,14 +36,6 @@ public partial struct Result
     /// </summary>
     public static async Task<Result<T>> TryAsync<T>(Func<Task<T>> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
-        try
-        {
-            var result = await func();
-            return Result<T>.Succeed(result);
-        }
-        catch (Exception ex)
-        {
-            return Result<T>.Fail(ex, errorStatus);
-        }
+        return await func.TryAsResultAsync(errorStatus).ConfigureAwait(false);
     }
 }
