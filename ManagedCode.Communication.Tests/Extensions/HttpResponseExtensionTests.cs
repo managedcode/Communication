@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
 using Xunit;
 
@@ -29,10 +29,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<TestData>();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeNull();
-        result.Value!.Id.Should().Be(42);
-        result.Value.Name.Should().Be("Test");
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldNotBeNull();
+        result.Value!.Id.ShouldBe(42);
+        result.Value.Name.ShouldBe("Test");
     }
 
     [Fact]
@@ -51,10 +51,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<TestData>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Title.Should().Be("Error");
-        result.Problem.Detail.Should().Be("Something went wrong");
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Title.ShouldBe("Error");
+        result.Problem.Detail.ShouldBe("Something went wrong");
     }
 
     [Fact]
@@ -71,11 +71,11 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<TestData>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Title.Should().Be("Internal Server Error");
-        result.Problem.Detail.Should().Be("Internal Server Error");
-        result.Problem.StatusCode.Should().Be(500);
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Title.ShouldBe("Internal Server Error");
+        result.Problem.Detail.ShouldBe("Internal Server Error");
+        result.Problem.StatusCode.ShouldBe(500);
     }
 
     [Fact]
@@ -92,10 +92,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<string>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Title.Should().Be("Bad Request - Invalid input");
-        result.Problem.Detail.Should().Be("Bad Request - Invalid input");
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.Title.ShouldBe("Bad Request - Invalid input");
+        result.Problem.Detail.ShouldBe("Bad Request - Invalid input");
     }
 
     [Fact]
@@ -112,10 +112,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<TestData>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be(404);
-        result.Problem.Title.Should().Be("Resource not found");
-        result.Problem.Detail.Should().Be("Resource not found");
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe(404);
+        result.Problem.Title.ShouldBe("Resource not found");
+        result.Problem.Detail.ShouldBe("Resource not found");
     }
 
     [Fact]
@@ -131,10 +131,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<TestData>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be(401);
-        result.Problem.Title.Should().BeEmpty();
-        result.Problem.Detail.Should().BeEmpty();
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe(401);
+        result.Problem.Title.ShouldBeEmpty();
+        result.Problem.Detail.ShouldBeEmpty();
     }
 
     #endregion
@@ -154,8 +154,8 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -171,8 +171,8 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -185,8 +185,8 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -203,11 +203,11 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Title.Should().Be("Internal Server Error");
-        result.Problem.Detail.Should().Be("Internal Server Error");
-        result.Problem.StatusCode.Should().Be(500);
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Title.ShouldBe("Internal Server Error");
+        result.Problem.Detail.ShouldBe("Internal Server Error");
+        result.Problem.StatusCode.ShouldBe(500);
     }
 
     [Fact]
@@ -224,10 +224,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be(403);
-        result.Problem.Title.Should().Be("Access forbidden");
-        result.Problem.Detail.Should().Be("Access forbidden");
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe(403);
+        result.Problem.Title.ShouldBe("Access forbidden");
+        result.Problem.Detail.ShouldBe("Access forbidden");
     }
 
     [Fact]
@@ -244,10 +244,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be(409);
-        result.Problem.Title.Should().Be("Resource conflict");
-        result.Problem.Detail.Should().Be("Resource conflict");
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe(409);
+        result.Problem.Title.ShouldBe("Resource conflict");
+        result.Problem.Detail.ShouldBe("Resource conflict");
     }
 
     #endregion
@@ -265,8 +265,8 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<TestData>();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe(400);
     }
 
     [Fact]
@@ -280,8 +280,8 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe(400);
     }
 
     #endregion
@@ -305,8 +305,8 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Problem.Should().BeNull();
+        result.IsSuccess.ShouldBeTrue();
+        result.Problem.ShouldBeNull();
     }
 
     [Theory]
@@ -329,10 +329,10 @@ public class HttpResponseExtensionTests
         var result = await response.FromRequestToResult();
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Problem!.StatusCode.Should().Be((int)statusCode);
-        result.Problem.Title.Should().Be(errorContent);
-        result.Problem.Detail.Should().Be(errorContent);
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem!.StatusCode.ShouldBe((int)statusCode);
+        result.Problem.Title.ShouldBe(errorContent);
+        result.Problem.Detail.ShouldBe(errorContent);
     }
 
     #endregion

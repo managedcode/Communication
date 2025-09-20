@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Commands.Extensions;
 using ManagedCode.Communication.Commands.Stores;
@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
@@ -28,7 +29,7 @@ public class CommandIdempotencyTests
         var serviceProvider = services.BuildServiceProvider();
         var store = serviceProvider.GetService<ICommandIdempotencyStore>();
         
-        store.Should().BeOfType<MemoryCacheCommandIdempotencyStore>();
+        store.ShouldBeOfType<MemoryCacheCommandIdempotencyStore>();
     }
 
     [Fact]
@@ -46,7 +47,7 @@ public class CommandIdempotencyTests
         var serviceProvider = services.BuildServiceProvider();
         var store = serviceProvider.GetService<ICommandIdempotencyStore>();
         
-        store.Should().BeOfType<TestCommandIdempotencyStore>();
+        store.ShouldBeOfType<TestCommandIdempotencyStore>();
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public class CommandIdempotencyTests
         var serviceProvider = services.BuildServiceProvider();
         var store = serviceProvider.GetService<ICommandIdempotencyStore>();
         
-        store.Should().BeSameAs(customStore);
+        store.ShouldBeSameAs(customStore);
     }
 }
 
@@ -91,7 +92,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var status = await _store.GetCommandStatusAsync("test-command-1");
 
         // Assert
-        status.Should().Be(CommandExecutionStatus.NotFound);
+        status.ShouldBe(CommandExecutionStatus.NotFound);
     }
 
     [Fact]
@@ -105,7 +106,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var status = await _store.GetCommandStatusAsync(commandId);
 
         // Assert
-        status.Should().Be(CommandExecutionStatus.InProgress);
+        status.ShouldBe(CommandExecutionStatus.InProgress);
     }
 
     [Fact]
@@ -120,7 +121,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var result = await _store.GetCommandResultAsync<string>(commandId);
 
         // Assert
-        result.Should().Be(expectedResult);
+        result.ShouldBe(expectedResult);
     }
 
     [Fact]
@@ -138,8 +139,8 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var status = await _store.GetCommandStatusAsync(commandId);
         var result = await _store.GetCommandResultAsync<string>(commandId);
         
-        status.Should().Be(CommandExecutionStatus.NotFound);
-        result.Should().BeNull();
+        status.ShouldBe(CommandExecutionStatus.NotFound);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -153,9 +154,9 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var result = await _store.TrySetCommandStatusAsync(commandId, CommandExecutionStatus.InProgress, CommandExecutionStatus.Completed);
 
         // Assert
-        result.Should().BeTrue();
+        result.ShouldBeTrue();
         var status = await _store.GetCommandStatusAsync(commandId);
-        status.Should().Be(CommandExecutionStatus.Completed);
+        status.ShouldBe(CommandExecutionStatus.Completed);
     }
 
     [Fact]
@@ -169,9 +170,9 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var result = await _store.TrySetCommandStatusAsync(commandId, CommandExecutionStatus.Completed, CommandExecutionStatus.Failed);
 
         // Assert
-        result.Should().BeFalse();
+        result.ShouldBeFalse();
         var status = await _store.GetCommandStatusAsync(commandId);
-        status.Should().Be(CommandExecutionStatus.InProgress); // Unchanged
+        status.ShouldBe(CommandExecutionStatus.InProgress); // Unchanged
     }
 
     [Fact]
@@ -185,11 +186,11 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var (currentStatus, wasSet) = await _store.GetAndSetStatusAsync(commandId, CommandExecutionStatus.Completed);
 
         // Assert
-        currentStatus.Should().Be(CommandExecutionStatus.InProgress);
-        wasSet.Should().BeTrue();
+        currentStatus.ShouldBe(CommandExecutionStatus.InProgress);
+        wasSet.ShouldBeTrue();
         
         var newStatus = await _store.GetCommandStatusAsync(commandId);
-        newStatus.Should().Be(CommandExecutionStatus.Completed);
+        newStatus.ShouldBe(CommandExecutionStatus.Completed);
     }
 
     [Fact]
@@ -205,10 +206,10 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var statuses = await _store.GetMultipleStatusAsync(commandIds);
 
         // Assert
-        statuses.Should().HaveCount(3);
-        statuses["cmd1"].Should().Be(CommandExecutionStatus.Completed);
-        statuses["cmd2"].Should().Be(CommandExecutionStatus.InProgress);
-        statuses["cmd3"].Should().Be(CommandExecutionStatus.NotFound);
+        statuses.ShouldHaveCount(3);
+        statuses["cmd1"].ShouldBe(CommandExecutionStatus.Completed);
+        statuses["cmd2"].ShouldBe(CommandExecutionStatus.InProgress);
+        statuses["cmd3"].ShouldBe(CommandExecutionStatus.NotFound);
     }
 
     [Fact]
@@ -224,10 +225,10 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var results = await _store.GetMultipleResultsAsync<string>(commandIds);
 
         // Assert
-        results.Should().HaveCount(3);
-        results["cmd1"].Should().Be("result1");
-        results["cmd2"].Should().Be("result2");
-        results["cmd3"].Should().BeNull();
+        results.ShouldHaveCount(3);
+        results["cmd1"].ShouldBe("result1");
+        results["cmd2"].ShouldBe("result2");
+        results["cmd3"].ShouldBeNull();
     }
 
     [Fact]
@@ -247,14 +248,14 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         });
 
         // Assert
-        result.Should().Be(expectedResult);
-        executionCount.Should().Be(1);
+        result.ShouldBe(expectedResult);
+        executionCount.ShouldBe(1);
         
         var status = await _store.GetCommandStatusAsync(commandId);
-        status.Should().Be(CommandExecutionStatus.Completed);
+        status.ShouldBe(CommandExecutionStatus.Completed);
         
         var storedResult = await _store.GetCommandResultAsync<string>(commandId);
-        storedResult.Should().Be(expectedResult);
+        storedResult.ShouldBe(expectedResult);
     }
 
     [Fact]
@@ -279,8 +280,8 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var result = await _store.ExecuteIdempotentAsync(commandId, operation);
 
         // Assert
-        result.Should().Be(expectedResult);
-        executionCount.Should().Be(1); // Should not execute second time
+        result.ShouldBe(expectedResult);
+        executionCount.ShouldBe(1); // Should not execute second time
     }
 
     [Fact]
@@ -297,11 +298,11 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
             throw expectedException;
         });
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Test exception");
+        var exception = await Should.ThrowAsync<InvalidOperationException>(act);
+        exception.Message.ShouldBe("Test exception");
 
         var status = await _store.GetCommandStatusAsync(commandId);
-        status.Should().Be(CommandExecutionStatus.Failed);
+        status.ShouldBe(CommandExecutionStatus.Failed);
     }
 
     [Fact]
@@ -319,10 +320,10 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var results = await _store.ExecuteBatchIdempotentAsync<string>(operations);
 
         // Assert
-        results.Should().HaveCount(3);
-        results["batch-cmd-1"].Should().Be("result-1");
-        results["batch-cmd-2"].Should().Be("result-2");
-        results["batch-cmd-3"].Should().Be("result-3");
+        results.ShouldHaveCount(3);
+        results["batch-cmd-1"].ShouldBe("result-1");
+        results["batch-cmd-2"].ShouldBe("result-2");
+        results["batch-cmd-3"].ShouldBe("result-3");
     }
 
     [Fact]
@@ -339,8 +340,8 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var (hasResult, result) = await _store.TryGetCachedResultAsync<string>(commandId);
 
         // Assert
-        hasResult.Should().BeTrue();
-        result.Should().Be(expectedResult);
+        hasResult.ShouldBeTrue();
+        result.ShouldBe(expectedResult);
     }
 
     [Fact]
@@ -353,8 +354,8 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         var (hasResult, result) = await _store.TryGetCachedResultAsync<string>(commandId);
 
         // Assert
-        hasResult.Should().BeFalse();
-        result.Should().BeNull();
+        hasResult.ShouldBeFalse();
+        result.ShouldBeNull();
     }
 
     public void Dispose()

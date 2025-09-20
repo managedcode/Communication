@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
@@ -9,6 +9,7 @@ using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
 using Orleans;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Orleans;
 
@@ -53,9 +54,9 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         };
         
         var echoedCommand = await grain.EchoCommandAsync(command);
-        echoedCommand.Should().NotBeNull();
-        echoedCommand.CommandId.Should().Be(commandId);
-        echoedCommand.Value!.OrderId.Should().Be("order-999");
+        echoedCommand.ShouldNotBeNull();
+        echoedCommand.CommandId.ShouldBe(commandId);
+        echoedCommand.Value!.OrderId.ShouldBe("order-999");
         
         // Step 2: Return a successful result
         var paymentResponse = new PaymentResponse
@@ -72,9 +73,8 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         
         var successResult = Result<PaymentResponse>.Succeed(paymentResponse);
         var echoedResult = await grain.EchoResultAsync(successResult);
-        echoedResult.Should().NotBeNull();
-        echoedResult.IsSuccess.Should().BeTrue();
-        echoedResult.Value!.TransactionId.Should().Be("txn-999");
+        echoedResult.IsSuccess.ShouldBeTrue();
+        echoedResult.Value!.TransactionId.ShouldBe("txn-999");
         
         // Step 3: Handle a failure case
         var failureProblem = Problem.FromStatusCode(System.Net.HttpStatusCode.PaymentRequired, "Insufficient funds");
@@ -83,10 +83,9 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         
         var failureResult = Result<PaymentResponse>.Fail(failureProblem);
         var echoedFailure = await grain.EchoResultAsync(failureResult);
-        echoedFailure.Should().NotBeNull();
-        echoedFailure.IsSuccess.Should().BeFalse();
-        echoedFailure.Problem!.StatusCode.Should().Be(402);
-        echoedFailure.Problem!.Extensions["balance"].Should().Be(50.00m);
+        echoedFailure.IsSuccess.ShouldBeFalse();
+        echoedFailure.Problem!.StatusCode.ShouldBe(402);
+        echoedFailure.Problem!.Extensions["balance"].ShouldBe(50.00m);
         
         // Step 4: Return a collection of results
         var transactions = new[]
@@ -104,9 +103,8 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         );
         
         var echoedCollection = await grain.EchoCollectionResultAsync(collectionResult);
-        echoedCollection.Should().NotBeNull();
-        echoedCollection.Collection.Should().HaveCount(3);
-        echoedCollection.Collection[2].Status.Should().Be("pending");
+        echoedCollection.Collection.ShouldHaveCount(3);
+        echoedCollection.Collection[2].Status.ShouldBe("pending");
     }
 
     [Fact]
@@ -149,20 +147,20 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         
         var echoedMetadata = await grain.EchoMetadataAsync(metadata);
         
-        echoedMetadata.Should().NotBeNull();
-        echoedMetadata.Extensions.Should().NotBeNull();
+        echoedMetadata.ShouldNotBeNull();
+        echoedMetadata.Extensions.ShouldNotBeNull();
         
         var user = echoedMetadata.Extensions!["user"] as UserProfile;
-        user.Should().NotBeNull();
-        user!.Email.Should().Be("test@example.com");
+        user.ShouldNotBeNull();
+        user!.Email.ShouldBe("test@example.com");
         
         var permissions = user.Attributes["permissions"] as string[];
-        permissions.Should().NotBeNull();
-        permissions!.Should().Contain("admin");
+        permissions.ShouldNotBeNull();
+        permissions!.ShouldContain("admin");
         
         var audit = echoedMetadata.Extensions["audit"] as Dictionary<string, object>;
-        audit.Should().NotBeNull();
-        audit!["ip"].Should().Be("192.168.1.1");
+        audit.ShouldNotBeNull();
+        audit!["ip"].ShouldBe("192.168.1.1");
     }
 
     [Fact]
@@ -180,16 +178,15 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         
         var result = Result.Fail(validationProblem);
         var echoed = await grain.EchoResultAsync(result);
+
+        echoed.Problem.ShouldNotBeNull();
+
+        var errors = echoed.AssertValidationErrors();
+        errors.ShouldHaveCount(3);
+        errors["field1"].ShouldContain("Error 1");
+        errors["field2"].ShouldContain("Error 2");
+        errors["field3"].ShouldContain("Error 3");
         
-        echoed.Should().NotBeNull();
-        echoed.Problem.Should().NotBeNull();
-        
-        var errors = echoed.Problem!.GetValidationErrors();
-        errors.Should().HaveCount(3);
-        errors!["field1"].Should().Contain("Error 1");
-        errors!["field2"].Should().Contain("Error 2");
-        errors!["field3"].Should().Contain("Error 3");
-        
-        echoed.Problem!.Extensions["requestId"].Should().NotBeNull();
+        echoed.Problem!.Extensions["requestId"].ShouldNotBeNull();
     }
 }

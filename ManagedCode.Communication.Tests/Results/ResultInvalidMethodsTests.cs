@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using FluentAssertions;
+using Shouldly;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -17,15 +18,15 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Type.Should().Be("https://tools.ietf.org/html/rfc7231#section-6.5.1");
-        result.Problem.Title.Should().Be("Validation Failed");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.Type.ShouldBe("https://tools.ietf.org/html/rfc7231#section-6.5.1");
+        result.Problem.Title.ShouldBe("Validation Failed");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors.Should().NotBeNull();
-        validationErrors!["message"].Should().Contain("Invalid");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors.ShouldNotBeNull();
+        validationErrors!["message"].ShouldContain("Invalid");
     }
 
     [Fact]
@@ -35,13 +36,13 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(TestError.InvalidInput);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain("Invalid");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain("Invalid");
     }
 
     [Fact]
@@ -54,12 +55,12 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain(message);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain(message);
     }
 
     [Fact]
@@ -72,13 +73,13 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(TestError.ResourceLocked, message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("ResourceLocked");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("ResourceLocked");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain(message);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain(message);
     }
 
     [Fact]
@@ -92,12 +93,12 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors![key].Should().Contain(value);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors![key].ShouldContain(value);
     }
 
     [Fact]
@@ -111,13 +112,13 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(TestError.InvalidInput, key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors![key].Should().Contain(value);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors![key].ShouldContain(value);
     }
 
     [Fact]
@@ -135,14 +136,14 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(values);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["email"].Should().Contain("Invalid email format");
-        validationErrors["age"].Should().Contain("Age must be positive");
-        validationErrors["name"].Should().Contain("Name is required");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["email"].ShouldContain("Invalid email format");
+        validationErrors["age"].ShouldContain("Age must be positive");
+        validationErrors["name"].ShouldContain("Name is required");
     }
 
     // Note: This test removed due to enum validation complexity
@@ -158,14 +159,14 @@ public class ResultInvalidMethodsTests
         var result = Result<string>.Invalid();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Title.Should().Be("Validation Failed");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.Title.ShouldBe("Validation Failed");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain("Invalid");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain("Invalid");
     }
 
     [Fact]
@@ -175,14 +176,14 @@ public class ResultInvalidMethodsTests
         var result = Result<int>.Invalid(TestError.InvalidInput);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(default(int));
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(default(int));
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain("Invalid");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain("Invalid");
     }
 
     [Fact]
@@ -195,13 +196,13 @@ public class ResultInvalidMethodsTests
         var result = Result<bool>.Invalid(message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(default(bool));
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(default(bool));
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain(message);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain(message);
     }
 
     [Fact]
@@ -214,14 +215,14 @@ public class ResultInvalidMethodsTests
         var result = Result<decimal>.Invalid(TestError.ResourceLocked, message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(default(decimal));
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("ResourceLocked");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(default(decimal));
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("ResourceLocked");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain(message);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain(message);
     }
 
     [Fact]
@@ -235,13 +236,13 @@ public class ResultInvalidMethodsTests
         var result = Result<User>.Invalid(key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors![key].Should().Contain(value);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors![key].ShouldContain(value);
     }
 
     [Fact]
@@ -255,14 +256,14 @@ public class ResultInvalidMethodsTests
         var result = Result<User>.Invalid(TestError.InvalidInput, key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors![key].Should().Contain(value);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors![key].ShouldContain(value);
     }
 
     [Fact]
@@ -280,15 +281,15 @@ public class ResultInvalidMethodsTests
         var result = Result<User>.Invalid(values);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["email"].Should().Contain("Invalid email format");
-        validationErrors["age"].Should().Contain("Age must be positive");
-        validationErrors["name"].Should().Contain("Name is required");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["email"].ShouldContain("Invalid email format");
+        validationErrors["age"].ShouldContain("Age must be positive");
+        validationErrors["name"].ShouldContain("Name is required");
     }
 
     [Fact]
@@ -305,15 +306,15 @@ public class ResultInvalidMethodsTests
         var result = Result<User>.Invalid(TestError.InvalidInput, values);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["field1"].Should().Contain("Error 1");
-        validationErrors["field2"].Should().Contain("Error 2");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["field1"].ShouldContain("Error 1");
+        validationErrors["field2"].ShouldContain("Error 2");
     }
 
     #endregion
@@ -327,14 +328,14 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<string>();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.Title.Should().Be("Validation Failed");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.Title.ShouldBe("Validation Failed");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain("Invalid");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain("Invalid");
     }
 
     [Fact]
@@ -344,14 +345,14 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<int, TestError>(TestError.InvalidInput);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(default(int));
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(default(int));
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain("Invalid");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain("Invalid");
     }
 
     [Fact]
@@ -364,13 +365,13 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<bool>(message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(default(bool));
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(default(bool));
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain(message);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain(message);
     }
 
     [Fact]
@@ -383,14 +384,14 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<decimal, TestError>(TestError.ResourceLocked, message);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().Be(default(decimal));
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("ResourceLocked");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBe(default(decimal));
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("ResourceLocked");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["message"].Should().Contain(message);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["message"].ShouldContain(message);
     }
 
     [Fact]
@@ -404,13 +405,13 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<User>(key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors![key].Should().Contain(value);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors![key].ShouldContain(value);
     }
 
     [Fact]
@@ -424,14 +425,14 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<User, TestError>(TestError.InvalidInput, key, value);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors![key].Should().Contain(value);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors![key].ShouldContain(value);
     }
 
     [Fact]
@@ -448,14 +449,14 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<User>(values);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["email"].Should().Contain("Invalid email format");
-        validationErrors["age"].Should().Contain("Age must be positive");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["email"].ShouldContain("Invalid email format");
+        validationErrors["age"].ShouldContain("Age must be positive");
     }
 
     [Fact]
@@ -472,15 +473,15 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid<User, TestError>(TestError.InvalidInput, values);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
-        result.Problem.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
+        result.Problem.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["field1"].Should().Contain("Error 1");
-        validationErrors["field2"].Should().Contain("Error 2");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["field1"].ShouldContain("Error 1");
+        validationErrors["field2"].ShouldContain("Error 2");
     }
 
     #endregion
@@ -497,13 +498,13 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(emptyValues);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors.Should().NotBeNull();
-        validationErrors!.Should().BeEmpty();
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors.ShouldNotBeNull();
+        validationErrors!.ShouldBeEmpty();
     }
 
     [Fact]
@@ -520,13 +521,13 @@ public class ResultInvalidMethodsTests
         var result = Result<string>.Invalid(values);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.StatusCode.Should().Be(400);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.StatusCode.ShouldBe(400);
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors!["field1"].Should().Contain("Valid error");
-        validationErrors["field2"].Should().Contain(string.Empty);
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors!["field1"].ShouldContain("Valid error");
+        validationErrors["field2"].ShouldContain(string.Empty);
     }
 
     [Fact]
@@ -544,13 +545,13 @@ public class ResultInvalidMethodsTests
         var result = Result.Invalid(TestError.InvalidInput, values);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.ErrorCode.Should().Be("InvalidInput");
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.ErrorCode.ShouldBe("InvalidInput");
         
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors![key].Should().Contain("Second error");
-        validationErrors[key].Should().NotContain("First error");
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors![key].ShouldContain("Second error");
+        validationErrors[key].ShouldNotContain("First error");
     }
 
     [Fact]
@@ -561,8 +562,8 @@ public class ResultInvalidMethodsTests
         var result2 = Result.Invalid(TestStatus.Pending);
 
         // Assert
-        result1.Problem!.ErrorCode.Should().Be("InvalidInput");
-        result2.Problem!.ErrorCode.Should().Be("Pending");
+        result1.Problem!.ErrorCode.ShouldBe("InvalidInput");
+        result2.Problem!.ErrorCode.ShouldBe("Pending");
     }
 
     #endregion

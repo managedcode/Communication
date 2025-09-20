@@ -1,6 +1,7 @@
 using System.Text.Json;
-using FluentAssertions;
+using Shouldly;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Serialization;
 
@@ -22,10 +23,10 @@ public class ProblemJsonConverterTests
         var json = JsonSerializer.Serialize(problem, _jsonOptions);
 
         // Assert
-        json.Should().Contain("\"type\": \"https://example.com/validation\"");
-        json.Should().Contain("\"title\": \"Validation Error\"");
-        json.Should().Contain("\"status\": 400");
-        json.Should().Contain("\"detail\": \"Field is required\"");
+        json.ShouldContain("\"type\": \"https://example.com/validation\"");
+        json.ShouldContain("\"title\": \"Validation Error\"");
+        json.ShouldContain("\"status\": 400");
+        json.ShouldContain("\"detail\": \"Field is required\"");
     }
 
     [Fact]
@@ -46,12 +47,12 @@ public class ProblemJsonConverterTests
         var problem = JsonSerializer.Deserialize<Problem>(json, _jsonOptions);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem!.Type.Should().Be("https://example.com/test-error");
-        problem.Title.Should().Be("Test Error");
-        problem.StatusCode.Should().Be(422);
-        problem.Detail.Should().Be("Something went wrong");
-        problem.Instance.Should().Be("/api/test");
+        problem.ShouldNotBeNull();
+        problem!.Type.ShouldBe("https://example.com/test-error");
+        problem.Title.ShouldBe("Test Error");
+        problem.StatusCode.ShouldBe(422);
+        problem.Detail.ShouldBe("Something went wrong");
+        problem.Instance.ShouldBe("/api/test");
     }
 
     [Fact]
@@ -68,16 +69,16 @@ public class ProblemJsonConverterTests
         var deserializedProblem = JsonSerializer.Deserialize<Problem>(json, _jsonOptions);
 
         // Assert
-        deserializedProblem.Should().NotBeNull();
-        deserializedProblem!.Type.Should().Be(originalProblem.Type);
-        deserializedProblem.Title.Should().Be(originalProblem.Title);
-        deserializedProblem.StatusCode.Should().Be(originalProblem.StatusCode);
-        deserializedProblem.Detail.Should().Be(originalProblem.Detail);
+        deserializedProblem.ShouldNotBeNull();
+        deserializedProblem!.Type.ShouldBe(originalProblem.Type);
+        deserializedProblem.Title.ShouldBe(originalProblem.Title);
+        deserializedProblem.StatusCode.ShouldBe(originalProblem.StatusCode);
+        deserializedProblem.Detail.ShouldBe(originalProblem.Detail);
         
-        deserializedProblem.Extensions.Should().HaveCount(3);
-        deserializedProblem.Extensions.Should().ContainKey("errorCode");
-        deserializedProblem.Extensions.Should().ContainKey("timestamp");
-        deserializedProblem.Extensions.Should().ContainKey("userId");
+        deserializedProblem.Extensions.ShouldHaveCount(3);
+        deserializedProblem.Extensions.ShouldContainKey("errorCode");
+        deserializedProblem.Extensions.ShouldContainKey("timestamp");
+        deserializedProblem.Extensions.ShouldContainKey("userId");
     }
 
     [Fact]
@@ -90,8 +91,8 @@ public class ProblemJsonConverterTests
         var json = JsonSerializer.Serialize(problem, _jsonOptions);
 
         // Assert
-        json.Should().Contain("\"errorCode\": \"InvalidInput\"");
-        json.Should().Contain("\"status\": 400");
+        json.ShouldContain("\"errorCode\": \"InvalidInput\"");
+        json.ShouldContain("\"status\": 400");
     }
 
     [Fact]
@@ -112,10 +113,10 @@ public class ProblemJsonConverterTests
         var problem = JsonSerializer.Deserialize<Problem>(json, _jsonOptions);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem!.ErrorCode.Should().Be("InvalidInput");
-        problem.StatusCode.Should().Be(400);
-        problem.Title.Should().Be("Invalid Input");
+        problem.ShouldNotBeNull();
+        problem!.ErrorCode.ShouldBe("InvalidInput");
+        problem.StatusCode.ShouldBe(400);
+        problem.Title.ShouldBe("Invalid Input");
     }
 
     [Fact]
@@ -132,11 +133,11 @@ public class ProblemJsonConverterTests
         var json = JsonSerializer.Serialize(problem, _jsonOptions);
 
         // Assert
-        json.Should().Contain("\"errors\":");
-        json.Should().Contain("email");
-        json.Should().Contain("Email is required");
-        json.Should().Contain("password");
-        json.Should().Contain("Password must be at least 8 characters");
+        json.ShouldContain("\"errors\":");
+        json.ShouldContain("email");
+        json.ShouldContain("Email is required");
+        json.ShouldContain("password");
+        json.ShouldContain("Password must be at least 8 characters");
     }
 
     [Fact]
@@ -158,13 +159,13 @@ public class ProblemJsonConverterTests
         var roundTripProblem = JsonSerializer.Deserialize<Problem>(json, _jsonOptions);
 
         // Assert
-        roundTripProblem.Should().NotBeNull();
-        roundTripProblem!.Type.Should().Be(originalProblem.Type);
-        roundTripProblem.Title.Should().Be(originalProblem.Title);
-        roundTripProblem.StatusCode.Should().Be(originalProblem.StatusCode);
-        roundTripProblem.Detail.Should().Be(originalProblem.Detail);
-        roundTripProblem.Instance.Should().Be(originalProblem.Instance);
-        roundTripProblem.Extensions.Should().ContainKey("custom");
+        roundTripProblem.ShouldNotBeNull();
+        roundTripProblem!.Type.ShouldBe(originalProblem.Type);
+        roundTripProblem.Title.ShouldBe(originalProblem.Title);
+        roundTripProblem.StatusCode.ShouldBe(originalProblem.StatusCode);
+        roundTripProblem.Detail.ShouldBe(originalProblem.Detail);
+        roundTripProblem.Instance.ShouldBe(originalProblem.Instance);
+        roundTripProblem.Extensions.ShouldContainKey("custom");
     }
 
     [Theory]
@@ -186,7 +187,7 @@ public class ProblemJsonConverterTests
         var deserialized = JsonSerializer.Deserialize<Problem>(json, _jsonOptions);
 
         // Assert
-        deserialized!.Type.Should().Be(expectedType);
+        deserialized!.Type.ShouldBe(expectedType);
     }
 
     public enum TestErrorEnum

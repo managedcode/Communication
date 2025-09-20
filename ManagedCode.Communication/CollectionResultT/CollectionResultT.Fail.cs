@@ -2,120 +2,93 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using ManagedCode.Communication.CollectionResults.Factories;
-using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
 public partial struct CollectionResult<T>
 {
-    public static CollectionResult<T> Fail()
-    {
-        return CollectionResultFactory.Failure<T>();
-    }
+    public static CollectionResult<T> Fail() => ResultFactoryBridge<CollectionResult<T>>.Fail();
 
     public static CollectionResult<T> Fail(IEnumerable<T> value)
     {
-        return CollectionResultFactory.Failure(value);
+        var array = value as T[] ?? value.ToArray();
+        return CollectionResultFactoryBridge<CollectionResult<T>, T>.Fail(array);
     }
 
-    public static CollectionResult<T> Fail(T[] value)
+    public static CollectionResult<T> Fail(T[] value) => CollectionResultFactoryBridge<CollectionResult<T>, T>.Fail(value);
+
+    public static CollectionResult<T> Fail(Problem problem) => CollectionResult<T>.CreateFailed(problem);
+
+    public static CollectionResult<T> Fail(Problem problem, T[] items)
     {
-        return CollectionResultFactory.Failure(value);
+        return CollectionResultFactoryBridge<CollectionResult<T>, T>.Fail(problem, items);
     }
 
-    public static CollectionResult<T> Fail(Problem problem)
-    {
-        return CollectionResultFactory.Failure<T>(problem);
-    }
-
-    public static CollectionResult<T> Fail(string title)
-    {
-        return CollectionResultFactory.Failure<T>(title);
-    }
+    public static CollectionResult<T> Fail(string title) => ResultFactoryBridge<CollectionResult<T>>.Fail(title);
 
     public static CollectionResult<T> Fail(string title, string detail)
     {
-        return CollectionResultFactory.Failure<T>(title, detail);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(title, detail);
     }
 
     public static CollectionResult<T> Fail(string title, string detail, HttpStatusCode status)
     {
-        return CollectionResultFactory.Failure<T>(title, detail, status);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(title, detail, status);
     }
 
     public static CollectionResult<T> Fail(Exception exception)
     {
-        return CollectionResultFactory.Failure<T>(exception);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(exception);
     }
 
     public static CollectionResult<T> Fail(Exception exception, HttpStatusCode status)
     {
-        return CollectionResultFactory.Failure<T>(exception, status);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(exception, status);
     }
 
     public static CollectionResult<T> FailValidation(params (string field, string message)[] errors)
     {
-        return CollectionResultFactory.FailureValidation<T>(errors);
+        return ResultFactoryBridge<CollectionResult<T>>.FailValidation(errors);
     }
 
-    public static CollectionResult<T> FailBadRequest()
+    public static CollectionResult<T> FailBadRequest(string? detail = null)
     {
-        return CollectionResultFactory.FailureBadRequest<T>();
+        return ResultFactoryBridge<CollectionResult<T>>.FailBadRequest(detail);
     }
 
-    public static CollectionResult<T> FailBadRequest(string detail)
+    public static CollectionResult<T> FailUnauthorized(string? detail = null)
     {
-        return CollectionResultFactory.FailureBadRequest<T>(detail);
+        return ResultFactoryBridge<CollectionResult<T>>.FailUnauthorized(detail);
     }
 
-    public static CollectionResult<T> FailUnauthorized()
+    public static CollectionResult<T> FailForbidden(string? detail = null)
     {
-        return CollectionResultFactory.FailureUnauthorized<T>();
+        return ResultFactoryBridge<CollectionResult<T>>.FailForbidden(detail);
     }
 
-    public static CollectionResult<T> FailUnauthorized(string detail)
+    public static CollectionResult<T> FailNotFound(string? detail = null)
     {
-        return CollectionResultFactory.FailureUnauthorized<T>(detail);
-    }
-
-    public static CollectionResult<T> FailForbidden()
-    {
-        return CollectionResultFactory.FailureForbidden<T>();
-    }
-
-    public static CollectionResult<T> FailForbidden(string detail)
-    {
-        return CollectionResultFactory.FailureForbidden<T>(detail);
-    }
-
-    public static CollectionResult<T> FailNotFound()
-    {
-        return CollectionResultFactory.FailureNotFound<T>();
-    }
-
-    public static CollectionResult<T> FailNotFound(string detail)
-    {
-        return CollectionResultFactory.FailureNotFound<T>(detail);
+        return ResultFactoryBridge<CollectionResult<T>>.FailNotFound(detail);
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode) where TEnum : Enum
     {
-        return CollectionResultFactory.Failure<T, TEnum>(errorCode);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(errorCode);
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, string detail) where TEnum : Enum
     {
-        return CollectionResultFactory.Failure<T, TEnum>(errorCode, detail);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(errorCode, detail);
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, HttpStatusCode status) where TEnum : Enum
     {
-        return CollectionResultFactory.Failure<T, TEnum>(errorCode, status);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(errorCode, status);
     }
 
     public static CollectionResult<T> Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
-        return CollectionResultFactory.Failure<T, TEnum>(errorCode, detail, status);
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(errorCode, detail, status);
     }
 }

@@ -1,7 +1,8 @@
 using System;
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -15,14 +16,11 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.IsFailed
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .BeNull();
+            .ShouldBeNull();
     }
 
     [Fact]
@@ -37,25 +35,19 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.Title
-            .Should()
-            .Be(title);
+            .ShouldBe(title);
         result.Problem
             .Detail
-            .Should()
-            .Be(detail);
+            .ShouldBe(detail);
         result.Problem
             .StatusCode
-            .Should()
-            .Be(400);
+            .ShouldBe(400);
     }
 
     [Fact]
@@ -69,14 +61,11 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.IsFailed
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         result.Problem
-            .Should()
-            .Be(problem);
+            .ShouldBe(problem);
     }
 
     [Fact]
@@ -87,28 +76,21 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.StatusCode
-            .Should()
-            .Be(400);
+            .ShouldBe(400);
         result.Problem
             .Title
-            .Should()
-            .Be("Validation Failed");
+            .ShouldBe("Validation Failed");
 
-        var validationErrors = result.Problem.GetValidationErrors();
-        validationErrors.Should()
-            .NotBeNull();
+        var validationErrors = result.AssertValidationErrors();
+        validationErrors.ShouldNotBeNull();
         validationErrors!["email"]
-            .Should()
-            .Contain("Email is required");
+            .ShouldContain("Email is required");
         validationErrors["age"]
-            .Should()
-            .Contain("Age must be greater than 0");
+            .ShouldContain("Age must be greater than 0");
     }
 
     [Fact]
@@ -119,18 +101,14 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.StatusCode
-            .Should()
-            .Be(404);
+            .ShouldBe(404);
         result.Problem
             .Detail
-            .Should()
-            .Be("Resource not found");
+            .ShouldBe("Resource not found");
     }
 
     [Fact]
@@ -141,18 +119,14 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.StatusCode
-            .Should()
-            .Be(401);
+            .ShouldBe(401);
         result.Problem
             .Detail
-            .Should()
-            .Be("Authentication required");
+            .ShouldBe("Authentication required");
     }
 
     [Fact]
@@ -163,18 +137,14 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.StatusCode
-            .Should()
-            .Be(403);
+            .ShouldBe(403);
         result.Problem
             .Detail
-            .Should()
-            .Be("Access denied");
+            .ShouldBe("Access denied");
     }
 
     [Fact]
@@ -184,9 +154,7 @@ public class ResultTests
         var result = Result.Succeed();
 
         // Act & Assert
-        result.Invoking(r => r.ThrowIfFail())
-            .Should()
-            .NotThrow();
+        Should.NotThrow(() => result.ThrowIfFail());
     }
 
     [Fact]
@@ -196,12 +164,8 @@ public class ResultTests
         var result = Result.Fail("Operation failed", "Something went wrong", HttpStatusCode.BadRequest);
 
         // Act & Assert
-        result.Invoking(r => r.ThrowIfFail())
-            .Should()
-            .Throw<ProblemException>()
-            .Which.Problem.Title
-            .Should()
-            .Be("Operation failed");
+        var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
+        exception.Problem.Title.ShouldBe("Operation failed");
     }
 
     [Fact]
@@ -212,8 +176,7 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
     }
 
     [Fact]
@@ -224,8 +187,7 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
     }
 
     [Fact]
@@ -236,10 +198,8 @@ public class ResultTests
         var failResult = Result.Fail("Failed", "Failed");
 
         // Act & Assert
-        ((bool)successResult).Should()
-            .BeTrue();
-        ((bool)failResult).Should()
-            .BeFalse();
+        ((bool)successResult).ShouldBeTrue();
+        ((bool)failResult).ShouldBeFalse();
     }
 
     [Fact]
@@ -254,14 +214,11 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.Detail
-            .Should()
-            .Be("Test exception");
+            .ShouldBe("Test exception");
     }
 
     [Fact]
@@ -275,10 +232,8 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeTrue();
-        executed.Should()
-            .BeTrue();
+            .ShouldBeTrue();
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -289,14 +244,11 @@ public class ResultTests
 
         // Assert
         result.IsSuccess
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
         result.Problem
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Problem!.Detail
-            .Should()
-            .Be("Test exception");
+            .ShouldBe("Test exception");
     }
 
     [Fact]
@@ -309,8 +261,8 @@ public class ResultTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeFalse();
-        problem.Should().BeNull();
+        hasProblem.ShouldBeFalse();
+        problem.ShouldBeNull();
     }
 
     [Fact]
@@ -324,9 +276,9 @@ public class ResultTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeTrue();
-        problem.Should().NotBeNull();
-        problem.Should().Be(expectedProblem);
+        hasProblem.ShouldBeTrue();
+        problem.ShouldNotBeNull();
+        problem.ShouldBe(expectedProblem);
     }
 
     [Fact]
@@ -339,14 +291,14 @@ public class ResultTests
         var hasProblem = result.TryGetProblem(out var problem);
 
         // Assert
-        hasProblem.Should().BeTrue();
-        problem.Should().NotBeNull();
-        problem!.Title.Should().Be("Validation Failed");
-        problem.StatusCode.Should().Be(400);
+        hasProblem.ShouldBeTrue();
+        problem.ShouldNotBeNull();
+        problem!.Title.ShouldBe("Validation Failed");
+        problem.StatusCode.ShouldBe(400);
         
         var validationErrors = problem.GetValidationErrors();
-        validationErrors.Should().NotBeNull();
-        validationErrors!["email"].Should().Contain("Email is required");
+        validationErrors.ShouldNotBeNull();
+        validationErrors!["email"].ShouldContain("Email is required");
     }
 
     [Fact]
@@ -357,11 +309,7 @@ public class ResultTests
         var result = Result.Fail(problem);
 
         // Act & Assert
-        result.Invoking(r => r.ThrowIfFail())
-            .Should()
-            .Throw<ProblemException>()
-            .Which.Problem
-            .Should()
-            .BeEquivalentTo(problem);
+        var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
+        exception.Problem.ShouldBe(problem);
     }
 }

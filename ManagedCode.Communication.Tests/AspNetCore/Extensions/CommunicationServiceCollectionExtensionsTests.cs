@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +28,7 @@ public class CommunicationServiceCollectionExtensionsTests
         var serviceProvider = services.BuildServiceProvider();
         var hostedServices = serviceProvider.GetServices<IHostedService>();
         
-        hostedServices.Should().Contain(x => x.GetType().Name == "CommunicationLoggerConfigurationService");
+        hostedServices.ShouldContain(x => x.GetType().Name == "CommunicationLoggerConfigurationService");
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class CommunicationServiceCollectionExtensionsTests
         // Assert
         // Verify that CommunicationLogger was configured
         var logger = CommunicationLogger.GetLogger();
-        logger.Should().NotBeNull();
+        logger.ShouldNotBeNull();
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class CommunicationServiceCollectionExtensionsTests
         var result = services.AddCommunicationAspNetCore();
 
         // Assert
-        result.Should().BeSameAs(services);
+        result.ShouldBeSameAs(services);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class CommunicationServiceCollectionExtensionsTests
         var result = services.AddCommunicationAspNetCore(loggerFactory);
 
         // Assert
-        result.Should().BeSameAs(services);
+        result.ShouldBeSameAs(services);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class CommunicationServiceCollectionExtensionsTests
 
         // Assert
         var logger = CommunicationLogger.GetLogger();
-        logger.Should().NotBeNull();
+        logger.ShouldNotBeNull();
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class CommunicationServiceCollectionExtensionsTests
 
         // Act & Assert
         var act = () => hostedService.StopAsync(CancellationToken.None);
-        await act.Should().NotThrowAsync();
+        await Should.NotThrowAsync(act);
     }
 
     [Fact]

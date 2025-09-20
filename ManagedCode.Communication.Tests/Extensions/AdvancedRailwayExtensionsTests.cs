@@ -1,10 +1,11 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -24,8 +25,8 @@ public class AdvancedRailwayExtensionsTests
             .Then(s => Result<string>.Succeed($"Value: {s}"));
 
         // Assert
-        final.IsSuccess.Should().BeTrue();
-        final.Value.Should().Be("Value: 5");
+        final.IsSuccess.ShouldBeTrue();
+        final.Value.ShouldBe("Value: 5");
     }
 
     [Fact]
@@ -38,8 +39,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.Then(x => Result<string>.Succeed(x.ToString()));
 
         // Assert
-        final.IsFailed.Should().BeTrue();
-        final.Problem!.Title.Should().Be("Initial error");
+        final.IsFailed.ShouldBeTrue();
+        final.Problem!.Title.ShouldBe("Initial error");
     }
 
     [Fact]
@@ -56,8 +57,8 @@ public class AdvancedRailwayExtensionsTests
         });
 
         // Assert
-        final.IsSuccess.Should().BeTrue();
-        final.Value.Should().Be("Async: 10");
+        final.IsSuccess.ShouldBeTrue();
+        final.Value.ShouldBe("Async: 10");
     }
 
     #endregion
@@ -75,8 +76,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.FailIf(x => x < 10, problem);
 
         // Assert
-        final.IsFailed.Should().BeTrue();
-        final.Problem.Should().Be(problem);
+        final.IsFailed.ShouldBeTrue();
+        final.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -90,8 +91,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.FailIf(x => x < 10, problem);
 
         // Assert
-        final.IsSuccess.Should().BeTrue();
-        final.Value.Should().Be(15);
+        final.IsSuccess.ShouldBeTrue();
+        final.Value.ShouldBe(15);
     }
 
     [Fact]
@@ -104,8 +105,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.FailIf(s => s.Length < 5, TestErrorEnum.InvalidInput);
 
         // Assert
-        final.IsFailed.Should().BeTrue();
-        final.Problem!.ErrorCode.Should().Be("InvalidInput");
+        final.IsFailed.ShouldBeTrue();
+        final.Problem!.ErrorCode.ShouldBe("InvalidInput");
     }
 
     [Fact]
@@ -122,10 +123,10 @@ public class AdvancedRailwayExtensionsTests
         );
 
         // Assert
-        final.IsFailed.Should().BeTrue();
+        final.IsFailed.ShouldBeTrue();
         var errors = final.Problem!.GetValidationErrors();
-        errors!["name"].Should().Contain("Name is required");
-        errors["age"].Should().Contain("Must be 18 or older");
+        errors!["name"].ShouldContain("Name is required");
+        errors["age"].ShouldContain("Must be 18 or older");
     }
 
     [Fact]
@@ -139,8 +140,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.OkIf(x => x > 10, problem);
 
         // Assert
-        final.IsSuccess.Should().BeTrue();
-        final.Value.Should().Be(15);
+        final.IsSuccess.ShouldBeTrue();
+        final.Value.ShouldBe(15);
     }
 
     [Fact]
@@ -154,8 +155,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.OkIf(x => x > 10, problem);
 
         // Assert
-        final.IsFailed.Should().BeTrue();
-        final.Problem.Should().Be(problem);
+        final.IsFailed.ShouldBeTrue();
+        final.Problem.ShouldBe(problem);
     }
 
     #endregion
@@ -174,7 +175,7 @@ public class AdvancedRailwayExtensionsTests
         var merged = AdvancedRailwayExtensions.Merge(result1, result2, result3);
 
         // Assert
-        merged.IsSuccess.Should().BeTrue();
+        merged.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -189,8 +190,8 @@ public class AdvancedRailwayExtensionsTests
         var merged = AdvancedRailwayExtensions.Merge(result1, result2, result3);
 
         // Assert
-        merged.IsFailed.Should().BeTrue();
-        merged.Problem!.Title.Should().Be("Error 2");
+        merged.IsFailed.ShouldBeTrue();
+        merged.Problem!.Title.ShouldBe("Error 2");
     }
 
     [Fact]
@@ -205,11 +206,11 @@ public class AdvancedRailwayExtensionsTests
         var merged = AdvancedRailwayExtensions.MergeAll(result1, result2, result3);
 
         // Assert
-        merged.IsFailed.Should().BeTrue();
+        merged.IsFailed.ShouldBeTrue();
         var errors = merged.Problem!.GetValidationErrors();
-        errors!["field1"].Should().Contain("Error 1");
-        errors["field2"].Should().Contain("Error 2");
-        errors["field3"].Should().Contain("Error 3");
+        errors!["field1"].ShouldContain("Error 1");
+        errors["field2"].ShouldContain("Error 2");
+        errors["field3"].ShouldContain("Error 3");
     }
 
     [Fact]
@@ -224,8 +225,8 @@ public class AdvancedRailwayExtensionsTests
         var combined = AdvancedRailwayExtensions.Combine(result1, result2, result3);
 
         // Assert
-        combined.IsSuccess.Should().BeTrue();
-        combined.Collection.Should().BeEquivalentTo(new[] { 1, 2, 3 });
+        combined.IsSuccess.ShouldBeTrue();
+        combined.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3 });
     }
 
     [Fact]
@@ -240,10 +241,10 @@ public class AdvancedRailwayExtensionsTests
         var combined = AdvancedRailwayExtensions.CombineAll(result1, result2, result3);
 
         // Assert
-        combined.IsFailed.Should().BeTrue();
+        combined.IsFailed.ShouldBeTrue();
         var errors = combined.Problem!.GetValidationErrors();
-        errors!["error1"].Should().Contain("First error");
-        errors["error2"].Should().Contain("Second error");
+        errors!["error1"].ShouldContain("First error");
+        errors["error2"].ShouldContain("Second error");
     }
 
     #endregion
@@ -265,8 +266,8 @@ public class AdvancedRailwayExtensionsTests
         );
 
         // Assert
-        successExecuted.Should().BeTrue();
-        failureExecuted.Should().BeFalse();
+        successExecuted.ShouldBeTrue();
+        failureExecuted.ShouldBeFalse();
     }
 
     [Fact]
@@ -283,8 +284,8 @@ public class AdvancedRailwayExtensionsTests
         );
 
         // Assert
-        final.IsSuccess.Should().BeTrue();
-        final.Value.Should().Be("Medium");
+        final.IsSuccess.ShouldBeTrue();
+        final.Value.ShouldBe("Medium");
     }
 
     #endregion
@@ -301,8 +302,8 @@ public class AdvancedRailwayExtensionsTests
         var recovered = result.Compensate(problem => Result<string>.Succeed("Recovered"));
 
         // Assert
-        recovered.IsSuccess.Should().BeTrue();
-        recovered.Value.Should().Be("Recovered");
+        recovered.IsSuccess.ShouldBeTrue();
+        recovered.Value.ShouldBe("Recovered");
     }
 
     [Fact]
@@ -315,8 +316,8 @@ public class AdvancedRailwayExtensionsTests
         var recovered = result.Compensate(problem => Result<string>.Succeed("Recovered"));
 
         // Assert
-        recovered.IsSuccess.Should().BeTrue();
-        recovered.Value.Should().Be("Original");
+        recovered.IsSuccess.ShouldBeTrue();
+        recovered.Value.ShouldBe("Original");
     }
 
     [Fact]
@@ -329,8 +330,8 @@ public class AdvancedRailwayExtensionsTests
         var recovered = result.CompensateWith(100);
 
         // Assert
-        recovered.IsSuccess.Should().BeTrue();
-        recovered.Value.Should().Be(100);
+        recovered.IsSuccess.ShouldBeTrue();
+        recovered.Value.ShouldBe(100);
     }
 
     [Fact]
@@ -347,8 +348,8 @@ public class AdvancedRailwayExtensionsTests
         });
 
         // Assert
-        recovered.IsSuccess.Should().BeTrue();
-        recovered.Value.Should().Be("Async recovered");
+        recovered.IsSuccess.ShouldBeTrue();
+        recovered.Value.ShouldBe("Async recovered");
     }
 
     #endregion
@@ -366,8 +367,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.Check(x => checked_ = true);
 
         // Assert
-        final.IsSuccess.Should().BeTrue();
-        checked_.Should().BeTrue();
+        final.IsSuccess.ShouldBeTrue();
+        checked_.ShouldBeTrue();
     }
 
     [Fact]
@@ -383,8 +384,8 @@ public class AdvancedRailwayExtensionsTests
         });
 
         // Assert
-        final.IsFailed.Should().BeTrue();
-        final.Problem!.Title.Should().Be("InvalidOperationException");
+        final.IsFailed.ShouldBeTrue();
+        final.Problem!.Title.ShouldBe("InvalidOperationException");
     }
 
     [Fact]
@@ -397,7 +398,7 @@ public class AdvancedRailwayExtensionsTests
         var verified = result.Verify(x => x > 0, "must be positive");
 
         // Assert
-        verified.IsSuccess.Should().BeTrue();
+        verified.IsSuccess.ShouldBeTrue();
     }
 
     [Fact]
@@ -410,9 +411,9 @@ public class AdvancedRailwayExtensionsTests
         var verified = result.Verify(x => x > 0, "must be positive");
 
         // Assert
-        verified.IsFailed.Should().BeTrue();
-        verified.Problem!.Title.Should().Contain("Verification failed");
-        verified.Problem.Detail.Should().Contain("must be positive");
+        verified.IsFailed.ShouldBeTrue();
+        verified.Problem!.Title!.ShouldContain("Verification failed");
+        verified.Problem.Detail!.ShouldContain("must be positive");
     }
 
     #endregion
@@ -429,8 +430,8 @@ public class AdvancedRailwayExtensionsTests
         var result = value.ToResult();
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("test");
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("test");
     }
 
     [Fact]
@@ -443,8 +444,8 @@ public class AdvancedRailwayExtensionsTests
         var result = value.ToResult();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.Problem!.StatusCode.Should().Be(404);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -460,10 +461,10 @@ public class AdvancedRailwayExtensionsTests
         var result2 = noValue.ToResult(problem);
 
         // Assert
-        result1.IsSuccess.Should().BeTrue();
-        result1.Value.Should().Be(42);
-        result2.IsFailed.Should().BeTrue();
-        result2.Problem.Should().Be(problem);
+        result1.IsSuccess.ShouldBeTrue();
+        result1.Value.ShouldBe(42);
+        result2.IsFailed.ShouldBeTrue();
+        result2.Problem.ShouldBe(problem);
     }
 
     #endregion
@@ -481,8 +482,8 @@ public class AdvancedRailwayExtensionsTests
         var final = result.Do(x => executed = true);
 
         // Assert
-        final.Should().Be(result);
-        executed.Should().BeTrue();
+        final.ShouldBe(result);
+        executed.ShouldBeTrue();
     }
 
     [Fact]
@@ -500,8 +501,8 @@ public class AdvancedRailwayExtensionsTests
         });
 
         // Assert
-        final.Should().Be(result);
-        executed.Should().BeTrue();
+        final.ShouldBe(result);
+        executed.ShouldBeTrue();
     }
 
     #endregion
@@ -518,8 +519,8 @@ public class AdvancedRailwayExtensionsTests
         var filtered = result.Where(x => x > 10, "Value must be greater than 10");
 
         // Assert
-        filtered.IsSuccess.Should().BeTrue();
-        filtered.Value.Should().Be(42);
+        filtered.IsSuccess.ShouldBeTrue();
+        filtered.Value.ShouldBe(42);
     }
 
     [Fact]
@@ -533,8 +534,8 @@ public class AdvancedRailwayExtensionsTests
         var filtered = result.Where(x => x > 10, problem);
 
         // Assert
-        filtered.IsFailed.Should().BeTrue();
-        filtered.Problem.Should().Be(problem);
+        filtered.IsFailed.ShouldBeTrue();
+        filtered.Problem.ShouldBe(problem);
     }
 
     #endregion
@@ -567,8 +568,8 @@ public class AdvancedRailwayExtensionsTests
         });
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be("Final: 20");
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("Final: 20");
     }
 
     [Fact]
@@ -593,13 +594,13 @@ public class AdvancedRailwayExtensionsTests
         var result = AdvancedRailwayExtensions.MergeAll(nameValidation, emailValidation, ageValidation);
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        var errors = result.Problem!.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!.Should().HaveCount(3);
-        errors!["name"].Should().Contain("Name is required");
-        errors["email"].Should().Contain("Invalid email format");
-        errors["age"].Should().Contain("Must be 18 or older");
+        result.IsFailed.ShouldBeTrue();
+        var errors = result.AssertValidationErrors();
+        errors.ShouldNotBeNull();
+        errors!.ShouldHaveCount(3);
+        errors!["name"].ShouldContain("Name is required");
+        errors["email"].ShouldContain("Invalid email format");
+        errors["age"].ShouldContain("Must be 18 or older");
     }
 
     #endregion

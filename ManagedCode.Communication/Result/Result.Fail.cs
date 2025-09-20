@@ -1,170 +1,58 @@
 using System;
 using System.Net;
-using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Results.Factories;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication;
 
 public partial struct Result
 {
-    /// <summary>
-    ///     Creates a failed result.
-    /// </summary>
-    public static Result Fail()
-    {
-        return ResultFactory.Failure();
-    }
+    public static Result Fail() => ResultFactoryBridge<Result>.Fail();
 
-    /// <summary>
-    ///     Creates a failed result with a problem.
-    /// </summary>
-    public static Result Fail(Problem problem)
-    {
-        return ResultFactory.Failure(problem);
-    }
+    public static Result Fail(Problem problem) => CreateFailed(problem);
 
+    public static Result Fail(string title) => ResultFactoryBridge<Result>.Fail(title);
 
-    /// <summary>
-    ///     Creates a failed result with a title.
-    /// </summary>
-    public static Result Fail(string title)
-    {
-        return ResultFactory.Failure(title);
-    }
+    public static Result Fail(string title, string detail) => ResultFactoryBridge<Result>.Fail(title, detail);
 
-    /// <summary>
-    ///     Creates a failed result with a title and detail.
-    /// </summary>
-    public static Result Fail(string title, string detail)
-    {
-        return ResultFactory.Failure(title, detail);
-    }
-
-    /// <summary>
-    ///     Creates a failed result with a title, detail and status.
-    /// </summary>
     public static Result Fail(string title, string detail, HttpStatusCode status)
     {
-        return ResultFactory.Failure(title, detail, status);
+        return ResultFactoryBridge<Result>.Fail(title, detail, status);
     }
 
-    /// <summary>
-    ///     Creates a failed result from an exception.
-    /// </summary>
-    public static Result Fail(Exception exception)
-    {
-        return ResultFactory.Failure(exception);
-    }
+    public static Result Fail(Exception exception) => ResultFactoryBridge<Result>.Fail(exception);
 
-    /// <summary>
-    ///     Creates a failed result from an exception with specific status.
-    /// </summary>
     public static Result Fail(Exception exception, HttpStatusCode status)
     {
-        return ResultFactory.Failure(exception, status);
+        return ResultFactoryBridge<Result>.Fail(exception, status);
     }
 
-    /// <summary>
-    ///     Creates a failed result with validation errors.
-    /// </summary>
     public static Result FailValidation(params (string field, string message)[] errors)
     {
-        return ResultFactory.FailureValidation(errors);
+        return ResultFactoryBridge<Result>.FailValidation(errors);
     }
 
-    /// <summary>
-    ///     Creates a failed result for bad request.
-    /// </summary>
-    public static Result FailBadRequest()
-    {
-        return ResultFactory.FailureBadRequest();
-    }
+    public static Result FailBadRequest(string? detail = null) => ResultFactoryBridge<Result>.FailBadRequest(detail);
 
-    /// <summary>
-    ///     Creates a failed result for bad request with custom detail.
-    /// </summary>
-    public static Result FailBadRequest(string detail)
-    {
-        return ResultFactory.FailureBadRequest(detail);
-    }
+    public static Result FailUnauthorized(string? detail = null) => ResultFactoryBridge<Result>.FailUnauthorized(detail);
 
-    /// <summary>
-    ///     Creates a failed result for unauthorized access.
-    /// </summary>
-    public static Result FailUnauthorized()
-    {
-        return ResultFactory.FailureUnauthorized();
-    }
+    public static Result FailForbidden(string? detail = null) => ResultFactoryBridge<Result>.FailForbidden(detail);
 
-    /// <summary>
-    ///     Creates a failed result for unauthorized access with custom detail.
-    /// </summary>
-    public static Result FailUnauthorized(string detail)
-    {
-        return ResultFactory.FailureUnauthorized(detail);
-    }
+    public static Result FailNotFound(string? detail = null) => ResultFactoryBridge<Result>.FailNotFound(detail);
 
-    /// <summary>
-    ///     Creates a failed result for forbidden access.
-    /// </summary>
-    public static Result FailForbidden()
-    {
-        return ResultFactory.FailureForbidden();
-    }
+    public static Result Fail<TEnum>(TEnum errorCode) where TEnum : Enum => ResultFactoryBridge<Result>.Fail(errorCode);
 
-    /// <summary>
-    ///     Creates a failed result for forbidden access with custom detail.
-    /// </summary>
-    public static Result FailForbidden(string detail)
-    {
-        return ResultFactory.FailureForbidden(detail);
-    }
-
-    /// <summary>
-    ///     Creates a failed result for not found.
-    /// </summary>
-    public static Result FailNotFound()
-    {
-        return ResultFactory.FailureNotFound();
-    }
-
-    /// <summary>
-    ///     Creates a failed result for not found with custom detail.
-    /// </summary>
-    public static Result FailNotFound(string detail)
-    {
-        return ResultFactory.FailureNotFound(detail);
-    }
-
-    /// <summary>
-    ///     Creates a failed result from a custom error enum.
-    /// </summary>
-    public static Result Fail<TEnum>(TEnum errorCode) where TEnum : Enum
-    {
-        return ResultFactory.Failure(errorCode);
-    }
-
-    /// <summary>
-    ///     Creates a failed result from a custom error enum with detail.
-    /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode, string detail) where TEnum : Enum
     {
-        return ResultFactory.Failure(errorCode, detail);
+        return ResultFactoryBridge<Result>.Fail(errorCode, detail);
     }
 
-    /// <summary>
-    ///     Creates a failed result from a custom error enum with specific HTTP status.
-    /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode, HttpStatusCode status) where TEnum : Enum
     {
-        return ResultFactory.Failure(errorCode, status);
+        return ResultFactoryBridge<Result>.Fail(errorCode, status);
     }
 
-    /// <summary>
-    ///     Creates a failed result from a custom error enum with detail and specific HTTP status.
-    /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode, string detail, HttpStatusCode status) where TEnum : Enum
     {
-        return ResultFactory.Failure(errorCode, detail, status);
+        return ResultFactoryBridge<Result>.Fail(errorCode, detail, status);
     }
 }

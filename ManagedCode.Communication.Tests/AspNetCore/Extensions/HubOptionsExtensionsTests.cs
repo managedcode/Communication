@@ -1,5 +1,5 @@
 using System;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using Microsoft.AspNetCore.SignalR;
 using Xunit;
@@ -16,7 +16,7 @@ public class HubOptionsExtensionsTests
 
         // Act & Assert - Should complete without throwing
         var act = () => hubOptions.AddCommunicationHubFilter();
-        act.Should().NotThrow();
+        Should.NotThrow(act);
     }
 
     [Fact]
@@ -27,8 +27,8 @@ public class HubOptionsExtensionsTests
 
         // Act & Assert
         var act = () => hubOptions!.AddCommunicationHubFilter();
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("options");
+        var exception = Should.Throw<ArgumentNullException>(act);
+        exception.ParamName.ShouldBe("options");
     }
 
     [Fact]
@@ -45,6 +45,6 @@ public class HubOptionsExtensionsTests
             hubOptions.AddCommunicationHubFilter();
         };
         
-        act.Should().NotThrow();
+        Should.NotThrow(act);
     }
 }

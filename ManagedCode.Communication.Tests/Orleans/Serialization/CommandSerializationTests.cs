@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
 using Orleans;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
@@ -78,36 +79,36 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var result = await grain.EchoCommandAsync(command);
 
         // Assert
-        result.Should().NotBeNull();
-        result.CommandId.Should().Be(command.CommandId);
-        result.CommandType.Should().Be(command.CommandType);
-        result.Timestamp.Should().BeCloseTo(command.Timestamp, TimeSpan.FromSeconds(1));
-        result.CorrelationId.Should().Be(command.CorrelationId);
-        result.CausationId.Should().Be(command.CausationId);
+        result.ShouldNotBeNull();
+        result.CommandId.ShouldBe(command.CommandId);
+        result.CommandType.ShouldBe(command.CommandType);
+        result.Timestamp.ShouldBeCloseTo(command.Timestamp, TimeSpan.FromSeconds(1));
+        result.CorrelationId.ShouldBe(command.CorrelationId);
+        result.CausationId.ShouldBe(command.CausationId);
         
         // Verify metadata
-        result.Metadata.Should().NotBeNull();
-        result.Metadata!.InitiatedBy.Should().Be(metadata.InitiatedBy);
-        result.Metadata.Source.Should().Be(metadata.Source);
-        result.Metadata.Target.Should().Be(metadata.Target);
-        result.Metadata.IpAddress.Should().Be(metadata.IpAddress);
-        result.Metadata.UserAgent.Should().Be(metadata.UserAgent);
-        result.Metadata.SessionId.Should().Be(metadata.SessionId);
-        result.Metadata.TraceId.Should().Be(metadata.TraceId);
-        result.Metadata.SpanId.Should().Be(metadata.SpanId);
-        result.Metadata.Version.Should().Be(metadata.Version);
-        result.Metadata.Priority.Should().Be(metadata.Priority);
-        result.Metadata.TimeToLiveSeconds.Should().Be(metadata.TimeToLiveSeconds);
+        result.Metadata.ShouldNotBeNull();
+        result.Metadata!.InitiatedBy.ShouldBe(metadata.InitiatedBy);
+        result.Metadata.Source.ShouldBe(metadata.Source);
+        result.Metadata.Target.ShouldBe(metadata.Target);
+        result.Metadata.IpAddress.ShouldBe(metadata.IpAddress);
+        result.Metadata.UserAgent.ShouldBe(metadata.UserAgent);
+        result.Metadata.SessionId.ShouldBe(metadata.SessionId);
+        result.Metadata.TraceId.ShouldBe(metadata.TraceId);
+        result.Metadata.SpanId.ShouldBe(metadata.SpanId);
+        result.Metadata.Version.ShouldBe(metadata.Version);
+        result.Metadata.Priority.ShouldBe(metadata.Priority);
+        result.Metadata.TimeToLiveSeconds.ShouldBe(metadata.TimeToLiveSeconds);
         
-        result.Metadata.Tags.Should().NotBeNull();
-        result.Metadata.Tags.Should().HaveCount(2);
-        result.Metadata.Tags!["environment"].Should().Be("production");
-        result.Metadata.Tags!["region"].Should().Be("us-west");
+        result.Metadata.Tags.ShouldNotBeNull();
+        result.Metadata.Tags.ShouldHaveCount(2);
+        result.Metadata.Tags!["environment"].ShouldBe("production");
+        result.Metadata.Tags!["region"].ShouldBe("us-west");
         
-        result.Metadata.Extensions.Should().NotBeNull();
-        result.Metadata.Extensions.Should().HaveCount(2);
-        result.Metadata.Extensions!["customField"].Should().Be("customValue");
-        result.Metadata.Extensions!["retryCount"].Should().Be(3);
+        result.Metadata.Extensions.ShouldNotBeNull();
+        result.Metadata.Extensions.ShouldHaveCount(2);
+        result.Metadata.Extensions!["customField"].ShouldBe("customValue");
+        result.Metadata.Extensions!["retryCount"].ShouldBe(3);
     }
 
     [Fact]
@@ -121,13 +122,13 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var result = await grain.EchoCommandAsync(command);
 
         // Assert
-        result.Should().NotBeNull();
-        result.CommandId.Should().Be(command.CommandId);
-        result.CommandType.Should().Be("SimpleCommand");
-        result.Timestamp.Should().BeCloseTo(command.Timestamp, TimeSpan.FromSeconds(1));
-        result.CorrelationId.Should().BeNull();
-        result.CausationId.Should().BeNull();
-        result.Metadata.Should().BeNull();
+        result.ShouldNotBeNull();
+        result.CommandId.ShouldBe(command.CommandId);
+        result.CommandType.ShouldBe("SimpleCommand");
+        result.Timestamp.ShouldBeCloseTo(command.Timestamp, TimeSpan.FromSeconds(1));
+        result.CorrelationId.ShouldBeNull();
+        result.CausationId.ShouldBeNull();
+        result.Metadata.ShouldBeNull();
     }
 
     [Fact]
@@ -168,30 +169,30 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var result = await grain.EchoCommandAsync(command);
 
         // Assert
-        result.Should().NotBeNull();
-        result.CommandId.Should().Be(command.CommandId);
-        result.CommandType.Should().Be("ProcessPayment");
-        result.CorrelationId.Should().Be("correlation-789");
-        result.CausationId.Should().Be("causation-012");
+        result.ShouldNotBeNull();
+        result.CommandId.ShouldBe(command.CommandId);
+        result.CommandType.ShouldBe("ProcessPayment");
+        result.CorrelationId.ShouldBe("correlation-789");
+        result.CausationId.ShouldBe("causation-012");
         
-        result.Value.Should().NotBeNull();
-        result.Value!.OrderId.Should().Be(payload.OrderId);
-        result.Value.Amount.Should().Be(payload.Amount);
-        result.Value.Currency.Should().Be(payload.Currency);
+        result.Value.ShouldNotBeNull();
+        result.Value!.OrderId.ShouldBe(payload.OrderId);
+        result.Value.Amount.ShouldBe(payload.Amount);
+        result.Value.Currency.ShouldBe(payload.Currency);
         
-        result.Value!.Items.Should().NotBeNull();
-        result.Value.Items.Should().HaveCount(2);
-        result.Value.Items[0].ProductId.Should().Be("prod-1");
-        result.Value.Items[0].Quantity.Should().Be(2);
-        result.Value.Items[0].Price.Should().Be(25.50m);
+        result.Value!.Items.ShouldNotBeNull();
+        result.Value.Items.ShouldHaveCount(2);
+        result.Value.Items[0].ProductId.ShouldBe("prod-1");
+        result.Value.Items[0].Quantity.ShouldBe(2);
+        result.Value.Items[0].Price.ShouldBe(25.50m);
         
-        result.Value.Metadata.Should().NotBeNull();
-        result.Value.Metadata["customer"].Should().Be("cust-456");
-        result.Value.Metadata["promotion"].Should().Be("SUMMER20");
+        result.Value.Metadata.ShouldNotBeNull();
+        result.Value.Metadata["customer"].ShouldBe("cust-456");
+        result.Value.Metadata["promotion"].ShouldBe("SUMMER20");
         
-        result.Metadata!.InitiatedBy.Should().Be("system");
-        result.Metadata.Priority.Should().Be(CommandPriority.Critical);
-        result.Metadata.Tags!["urgent"].Should().Be("true");
+        result.Metadata!.InitiatedBy.ShouldBe("system");
+        result.Metadata.Priority.ShouldBe(CommandPriority.Critical);
+        result.Metadata.Tags!["urgent"].ShouldBe("true");
     }
 
     [Fact]
@@ -212,12 +213,12 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var result = await grain.EchoCommandAsync(command);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Value.Should().Be("test-data");
-        result.CommandType.Should().Be("CreateUser");
-        result.GetCommandTypeAsEnum<TestCommandType>().Value.Should().Be(TestCommandType.CreateUser);
-        result.Metadata!.InitiatedBy.Should().Be("admin");
-        result.Metadata.TimeToLiveSeconds.Should().Be(60);
+        result.ShouldNotBeNull();
+        result.Value.ShouldBe("test-data");
+        result.CommandType.ShouldBe("CreateUser");
+        result.GetCommandTypeAsEnum<TestCommandType>().Value.ShouldBe(TestCommandType.CreateUser);
+        result.Metadata!.InitiatedBy.ShouldBe("admin");
+        result.Metadata.TimeToLiveSeconds.ShouldBe(60);
     }
 
     [Fact]
@@ -231,9 +232,9 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var result = await grain.EchoCommandAsync(command);
 
         // Assert
-        result.Should().NotBeNull();
-        result.Value.Should().BeNull();
-        result.IsEmpty.Should().BeTrue();
+        result.ShouldNotBeNull();
+        result.Value.ShouldBeNull();
+        result.IsEmpty.ShouldBeTrue();
     }
 
     [Fact]
@@ -276,29 +277,29 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var result = await grain.EchoMetadataAsync(metadata);
 
         // Assert
-        result.Should().NotBeNull();
-        result.InitiatedBy.Should().Be(metadata.InitiatedBy);
-        result.Source.Should().Be(metadata.Source);
-        result.Target.Should().Be(metadata.Target);
-        result.IpAddress.Should().Be(metadata.IpAddress);
-        result.UserAgent.Should().Be(metadata.UserAgent);
-        result.SessionId.Should().Be(metadata.SessionId);
-        result.TraceId.Should().Be(metadata.TraceId);
-        result.SpanId.Should().Be(metadata.SpanId);
-        result.Version.Should().Be(metadata.Version);
-        result.Priority.Should().Be(metadata.Priority);
-        result.TimeToLiveSeconds.Should().Be(metadata.TimeToLiveSeconds);
+        result.ShouldNotBeNull();
+        result.InitiatedBy.ShouldBe(metadata.InitiatedBy);
+        result.Source.ShouldBe(metadata.Source);
+        result.Target.ShouldBe(metadata.Target);
+        result.IpAddress.ShouldBe(metadata.IpAddress);
+        result.UserAgent.ShouldBe(metadata.UserAgent);
+        result.SessionId.ShouldBe(metadata.SessionId);
+        result.TraceId.ShouldBe(metadata.TraceId);
+        result.SpanId.ShouldBe(metadata.SpanId);
+        result.Version.ShouldBe(metadata.Version);
+        result.Priority.ShouldBe(metadata.Priority);
+        result.TimeToLiveSeconds.ShouldBe(metadata.TimeToLiveSeconds);
         
-        result.Tags.Should().NotBeNull();
-        result.Tags.Should().HaveCount(3);
-        result.Tags!["feature"].Should().Be("payments");
-        result.Tags!["client"].Should().Be("ios");
-        result.Tags!["version"].Should().Be("14.5");
+        result.Tags.ShouldNotBeNull();
+        result.Tags.ShouldHaveCount(3);
+        result.Tags!["feature"].ShouldBe("payments");
+        result.Tags!["client"].ShouldBe("ios");
+        result.Tags!["version"].ShouldBe("14.5");
         
-        result.Extensions.Should().NotBeNull();
-        result.Extensions.Should().HaveCount(3);
-        result.Extensions!["rateLimitRemaining"].Should().Be(50);
-        result.Extensions!["beta"].Should().Be(true);
-        result.Extensions!["metadata"].Should().NotBeNull();
+        result.Extensions.ShouldNotBeNull();
+        result.Extensions.ShouldHaveCount(3);
+        result.Extensions!["rateLimitRemaining"].ShouldBe(50);
+        result.Extensions!["beta"].ShouldBe(true);
+        result.Extensions!["metadata"].ShouldNotBeNull();
     }
 }

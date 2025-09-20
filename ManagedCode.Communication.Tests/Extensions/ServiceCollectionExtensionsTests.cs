@@ -1,5 +1,5 @@
 using System;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,7 +24,7 @@ public class ServiceCollectionExtensionsTests
         LoggerCenter.LogCommandCleanupExpired(logger, 5, TimeSpan.FromHours(1));
         
         // This test passes if Source Generators work correctly
-        true.Should().BeTrue();
+        true.ShouldBeTrue();
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public class ServiceCollectionExtensionsTests
         var logger1 = CommunicationLogger.GetLogger();
         var logger2 = CommunicationLogger.GetLogger();
 
-        logger1.Should().BeSameAs(logger2);
+        logger1.ShouldBeSameAs(logger2);
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public class ServiceCollectionExtensionsTests
         var result = services.ConfigureCommunication(loggerFactory);
 
         // Assert
-        result.Should().BeSameAs(services);
+        result.ShouldBeSameAs(services);
         var logger = CommunicationLogger.GetLogger();
-        logger.Should().NotBeNull();
+        logger.ShouldNotBeNull();
     }
 }

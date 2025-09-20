@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Constants;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -22,10 +23,10 @@ public class ProblemToExceptionTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Should().BeOfType<InvalidOperationException>();
-        reconstructedException.Message.Should().Be("Operation not allowed");
-        reconstructedException.Data["UserId"].Should().Be(123);
-        reconstructedException.Data["CorrelationId"].Should().Be("abc-123");
+        reconstructedException.ShouldBeOfType<InvalidOperationException>();
+        reconstructedException.Message.ShouldBe("Operation not allowed");
+        reconstructedException.Data["UserId"].ShouldBe(123);
+        reconstructedException.Data["CorrelationId"].ShouldBe("abc-123");
     }
 
     [Fact]
@@ -39,8 +40,8 @@ public class ProblemToExceptionTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Should().BeOfType<ArgumentException>();
-        reconstructedException.Message.Should().Contain("Invalid argument provided");
+        reconstructedException.ShouldBeOfType<ArgumentException>();
+        reconstructedException.Message.ShouldContain("Invalid argument provided");
     }
 
     [Fact]
@@ -54,8 +55,8 @@ public class ProblemToExceptionTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Should().BeOfType<NullReferenceException>();
-        reconstructedException.Message.Should().Be("Object reference not set");
+        reconstructedException.ShouldBeOfType<NullReferenceException>();
+        reconstructedException.Message.ShouldBe("Object reference not set");
     }
 
     [Fact]
@@ -68,9 +69,9 @@ public class ProblemToExceptionTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<ProblemException>();
+        exception.ShouldBeOfType<ProblemException>();
         var problemException = (ProblemException)exception;
-        problemException.Problem.Should().Be(problem);
+        problemException.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -83,9 +84,9 @@ public class ProblemToExceptionTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<ProblemException>();
+        exception.ShouldBeOfType<ProblemException>();
         var problemException = (ProblemException)exception;
-        problemException.Problem.Should().BeEquivalentTo(problem);
+        problemException.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -100,9 +101,9 @@ public class ProblemToExceptionTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Should().BeOfType<CustomTestException>();
-        reconstructedException.Message.Should().Be("Custom error message");
-        reconstructedException.Data["CustomKey"].Should().Be("CustomValue");
+        reconstructedException.ShouldBeOfType<CustomTestException>();
+        reconstructedException.Message.ShouldBe("Custom error message");
+        reconstructedException.Data["CustomKey"].ShouldBe("CustomValue");
     }
 
     [Fact]
@@ -116,7 +117,7 @@ public class ProblemToExceptionTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<ProblemException>();
+        exception.ShouldBeOfType<ProblemException>();
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public class ProblemToExceptionTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<ProblemException>();
+        exception.ShouldBeOfType<ProblemException>();
     }
 
     [Fact]
@@ -149,10 +150,10 @@ public class ProblemToExceptionTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Data["StringValue"].Should().Be("test");
-        reconstructedException.Data["IntValue"].Should().Be(42);
-        reconstructedException.Data["BoolValue"].Should().Be(true);
-        reconstructedException.Data["DateValue"].Should().BeOfType<DateTime>();
+        reconstructedException.Data["StringValue"].ShouldBe("test");
+        reconstructedException.Data["IntValue"].ShouldBe(42);
+        reconstructedException.Data["BoolValue"].ShouldBe(true);
+        reconstructedException.Data["DateValue"].ShouldBeOfType<DateTime>();
     }
 
     [Fact]
@@ -165,10 +166,10 @@ public class ProblemToExceptionTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<ProblemException>();
+        exception.ShouldBeOfType<ProblemException>();
         var problemException = (ProblemException)exception;
-        problemException.IsValidationProblem.Should().BeTrue();
-        problemException.ValidationErrors.Should().NotBeNull();
+        problemException.IsValidationProblem.ShouldBeTrue();
+        problemException.ValidationErrors.ShouldNotBeNull();
     }
 }
 

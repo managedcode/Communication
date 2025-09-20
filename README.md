@@ -932,6 +932,15 @@ public class UserGrain : Grain, IUserGrain
 4. **Async properly**: Use `ConfigureAwait(false)` in library code
 5. **Cache problems**: Reuse common Problem instances for frequent errors
 
+## Testing
+
+The repository uses xUnit with [Shouldly](https://github.com/shouldly/shouldly) for assertions. Shared matchers such as `ShouldBeEquivalentTo` and `AssertProblem()` live in `ManagedCode.Communication.Tests/TestHelpers`, keeping tests fluent without FluentAssertions.
+
+- Run the full suite: `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj`
+- Generate lcov coverage: `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj /p:CollectCoverage=true /p:CoverletOutputFormat=lcov`
+
+Execution helpers (`Result.From`, `Result<T>.From`, task/value-task shims) and the command metadata extensions now have direct tests, pushing the core assembly above 80% line coverage. Mirror those patterns when adding APIs—exercise both success and failure paths and prefer invoking the public fluent surface instead of internal helpers.
+
 ## Comparison
 
 ### Comparison with Other Libraries
@@ -1441,4 +1450,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - RFC 7807 Problem Details for HTTP APIs
 - Built for seamless integration with Microsoft Orleans
 - Optimized for ASP.NET Core applications
-

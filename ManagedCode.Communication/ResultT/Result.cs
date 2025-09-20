@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication;
 
@@ -14,7 +15,7 @@ namespace ManagedCode.Communication;
 /// <typeparam name="T">The type of the result value.</typeparam>
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Problem: {Problem?.Title}")]
-public partial struct Result<T> : IResult<T>
+public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResultValueFactory<Result<T>, T>
 {
     /// <summary>
     ///     Initializes a new instance of the Result struct.

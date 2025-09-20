@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Constants;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -35,23 +36,17 @@ public class ProblemTests
 
         // Assert
         problem.Type
-            .Should()
-            .Be(type);
+            .ShouldBe(type);
         problem.Title
-            .Should()
-            .Be(title);
+            .ShouldBe(title);
         problem.StatusCode
-            .Should()
-            .Be(statusCode);
+            .ShouldBe(statusCode);
         problem.Detail
-            .Should()
-            .Be(detail);
+            .ShouldBe(detail);
         problem.Instance
-            .Should()
-            .Be(instance);
+            .ShouldBe(instance);
         problem.Extensions
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
     }
 
     [Fact]
@@ -62,17 +57,13 @@ public class ProblemTests
 
         // Assert
         problem.Type
-            .Should()
-            .Be("https://httpstatuses.io/404");
+            .ShouldBe("https://httpstatuses.io/404");
         problem.Title
-            .Should()
-            .Be("NotFound");
+            .ShouldBe("NotFound");
         problem.StatusCode
-            .Should()
-            .Be(404);
+            .ShouldBe(404);
         problem.Detail
-            .Should()
-            .Be("User not found");
+            .ShouldBe("User not found");
     }
 
     [Fact]
@@ -83,23 +74,17 @@ public class ProblemTests
 
         // Assert
         problem.Type
-            .Should()
-            .Be("https://httpstatuses.io/422");
+            .ShouldBe("https://httpstatuses.io/422");
         problem.Title
-            .Should()
-            .Be("InvalidInput");
+            .ShouldBe("InvalidInput");
         problem.StatusCode
-            .Should()
-            .Be(422);
+            .ShouldBe(422);
         problem.Detail
-            .Should()
-            .Be("The input provided is not valid");
+            .ShouldBe("The input provided is not valid");
         problem.ErrorCode
-            .Should()
-            .Be("InvalidInput");
+            .ShouldBe("InvalidInput");
         problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType]
-            .Should()
-            .Be("TestError");
+            .ShouldBe("TestError");
     }
 
     [Fact]
@@ -114,23 +99,17 @@ public class ProblemTests
 
         // Assert
         problem.Type
-            .Should()
-            .Be("https://httpstatuses.io/500");
+            .ShouldBe("https://httpstatuses.io/500");
         problem.Title
-            .Should()
-            .Be("InvalidOperationException");
+            .ShouldBe("InvalidOperationException");
         problem.Detail
-            .Should()
-            .Be("This operation is not allowed");
+            .ShouldBe("This operation is not allowed");
         problem.StatusCode
-            .Should()
-            .Be(500);
+            .ShouldBe(500);
         problem.ErrorCode
-            .Should()
-            .Be("System.InvalidOperationException");
+            .ShouldBe("System.InvalidOperationException");
         problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}CustomKey"]
-            .Should()
-            .Be("CustomValue");
+            .ShouldBe("CustomValue");
     }
 
     [Fact]
@@ -141,33 +120,24 @@ public class ProblemTests
 
         // Assert
         problem.Type
-            .Should()
-            .Be("https://tools.ietf.org/html/rfc7231#section-6.5.1");
+            .ShouldBe("https://tools.ietf.org/html/rfc7231#section-6.5.1");
         problem.Title
-            .Should()
-            .Be("Validation Failed");
+            .ShouldBe("Validation Failed");
         problem.StatusCode
-            .Should()
-            .Be(400);
+            .ShouldBe(400);
         problem.Detail
-            .Should()
-            .Be("One or more validation errors occurred.");
+            .ShouldBe("One or more validation errors occurred.");
 
         var validationErrors = problem.GetValidationErrors();
-        validationErrors.Should()
-            .NotBeNull();
+        validationErrors.ShouldNotBeNull();
         validationErrors!["email"]
-            .Should()
-            .HaveCount(2);
+            .ShouldHaveCount(2);
         validationErrors["email"]
-            .Should()
-            .Contain("Email is required");
+            .ShouldContain("Email is required");
         validationErrors["email"]
-            .Should()
-            .Contain("Email format is invalid");
+            .ShouldContain("Email format is invalid");
         validationErrors["age"]
-            .Should()
-            .Contain("Age must be greater than 0");
+            .ShouldContain("Age must be greater than 0");
     }
 
     [Fact]
@@ -181,11 +151,9 @@ public class ProblemTests
 
         // Assert
         problem.ErrorCode
-            .Should()
-            .Be("TEST_ERROR");
+            .ShouldBe("TEST_ERROR");
         problem.Extensions[ProblemConstants.ExtensionKeys.ErrorCode]
-            .Should()
-            .Be("TEST_ERROR");
+            .ShouldBe("TEST_ERROR");
     }
 
     [Fact]
@@ -200,11 +168,9 @@ public class ProblemTests
 
         // Assert
         problem.ErrorCode
-            .Should()
-            .BeEmpty();
+            .ShouldBeEmpty();
         problem.Extensions
-            .Should()
-            .NotContainKey(ProblemConstants.ExtensionKeys.ErrorCode);
+            .ShouldNotContainKey(ProblemConstants.ExtensionKeys.ErrorCode);
     }
 
     [Fact]
@@ -215,11 +181,9 @@ public class ProblemTests
 
         // Act & Assert
         problem.HasErrorCode(TestError.InvalidInput)
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         problem.HasErrorCode(TestError.ResourceLocked)
-            .Should()
-            .BeFalse();
+            .ShouldBeFalse();
     }
 
     [Fact]
@@ -232,8 +196,7 @@ public class ProblemTests
         var errorCode = problem.GetErrorCodeAs<TestError>();
 
         // Assert
-        errorCode.Should()
-            .Be(TestError.InvalidInput);
+        errorCode.ShouldBe(TestError.InvalidInput);
     }
 
     [Fact]
@@ -246,8 +209,7 @@ public class ProblemTests
         var errorCode = problem.GetErrorCodeAs<OtherError>();
 
         // Assert
-        errorCode.Should()
-            .BeNull();
+        errorCode.ShouldBeNull();
     }
 
     [Fact]
@@ -260,16 +222,12 @@ public class ProblemTests
         var errors = problem.GetValidationErrors();
 
         // Assert
-        errors.Should()
-            .NotBeNull();
-        errors.Should()
-            .HaveCount(2);
+        errors.ShouldNotBeNull();
+        errors.ShouldHaveCount(2);
         errors!["email"]
-            .Should()
-            .Contain("Email is required");
+            .ShouldContain("Email is required");
         errors["age"]
-            .Should()
-            .Contain("Age must be greater than 0");
+            .ShouldContain("Age must be greater than 0");
     }
 
     [Fact]
@@ -282,8 +240,7 @@ public class ProblemTests
         var errors = problem.GetValidationErrors();
 
         // Assert
-        errors.Should()
-            .BeNull();
+        errors.ShouldBeNull();
     }
 
     [Fact]
@@ -294,11 +251,9 @@ public class ProblemTests
 
         // Assert
         problem.Extensions
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         problem.Extensions
-            .Should()
-            .BeEmpty();
+            .ShouldBeEmpty();
     }
 
     [Fact]
@@ -309,23 +264,17 @@ public class ProblemTests
 
         // Assert
         problem.Type
-            .Should()
-            .Be("type");
+            .ShouldBe("type");
         problem.Title
-            .Should()
-            .Be("title");
+            .ShouldBe("title");
         problem.StatusCode
-            .Should()
-            .Be(400);
+            .ShouldBe(400);
         problem.Detail
-            .Should()
-            .Be("detail");
+            .ShouldBe("detail");
         problem.Instance
-            .Should()
-            .Be("instance");
+            .ShouldBe("instance");
         problem.Extensions
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
     }
 
     [Fact]
@@ -345,18 +294,18 @@ public class ProblemTests
         var newProblem = originalProblem.WithExtensions(additionalExtensions);
 
         // Assert
-        newProblem.Type.Should().Be(originalProblem.Type);
-        newProblem.Title.Should().Be(originalProblem.Title);
-        newProblem.StatusCode.Should().Be(originalProblem.StatusCode);
-        newProblem.Detail.Should().Be(originalProblem.Detail);
-        newProblem.Instance.Should().Be(originalProblem.Instance);
+        newProblem.Type.ShouldBe(originalProblem.Type);
+        newProblem.Title.ShouldBe(originalProblem.Title);
+        newProblem.StatusCode.ShouldBe(originalProblem.StatusCode);
+        newProblem.Detail.ShouldBe(originalProblem.Detail);
+        newProblem.Instance.ShouldBe(originalProblem.Instance);
         
-        newProblem.Extensions.Should().ContainKey("existing");
-        newProblem.Extensions["existing"].Should().Be("value");
-        newProblem.Extensions.Should().ContainKey("new");
-        newProblem.Extensions["new"].Should().Be("newValue");
-        newProblem.Extensions.Should().ContainKey("another");
-        newProblem.Extensions["another"].Should().Be(123);
+        newProblem.Extensions.ShouldContainKey("existing");
+        newProblem.Extensions["existing"].ShouldBe("value");
+        newProblem.Extensions.ShouldContainKey("new");
+        newProblem.Extensions["new"].ShouldBe("newValue");
+        newProblem.Extensions.ShouldContainKey("another");
+        newProblem.Extensions["another"].ShouldBe(123);
     }
 
     [Fact]
@@ -375,7 +324,7 @@ public class ProblemTests
         var newProblem = originalProblem.WithExtensions(additionalExtensions);
 
         // Assert
-        newProblem.Extensions["key"].Should().Be("newValue");
+        newProblem.Extensions["key"].ShouldBe("newValue");
     }
 
     [Fact]
@@ -385,8 +334,8 @@ public class ProblemTests
         var problem = Problem.FromEnum(TestError.InvalidInput);
 
         // Assert
-        problem.StatusCode.Should().Be(400);
-        problem.Detail.Should().Be("An error occurred: InvalidInput");
+        problem.StatusCode.ShouldBe(400);
+        problem.Detail.ShouldBe("An error occurred: InvalidInput");
     }
 
     [Fact]
@@ -396,7 +345,7 @@ public class ProblemTests
         var problem = Problem.FromEnum(TestError.InvalidInput);
 
         // Act & Assert
-        problem.HasErrorCode(OtherError.SomethingElse).Should().BeFalse();
+        problem.HasErrorCode(OtherError.SomethingElse).ShouldBeFalse();
     }
 
     [Fact]
@@ -409,7 +358,7 @@ public class ProblemTests
         var errorCode = problem.GetErrorCodeAs<TestError>();
 
         // Assert
-        errorCode.Should().BeNull();
+        errorCode.ShouldBeNull();
     }
 
     [Fact]
@@ -422,10 +371,10 @@ public class ProblemTests
         ProblemException exception = problem;
 
         // Assert
-        exception.Should().NotBeNull();
-        exception.Problem.Should().Be(problem);
-        exception.StatusCode.Should().Be(404);
-        exception.Title.Should().Be("Not Found");
-        exception.Detail.Should().Be("Resource not found");
+        exception.ShouldNotBeNull();
+        exception.Problem.ShouldBe(problem);
+        exception.StatusCode.ShouldBe(404);
+        exception.Title.ShouldBe("Not Found");
+        exception.Detail.ShouldBe("Resource not found");
     }
 }

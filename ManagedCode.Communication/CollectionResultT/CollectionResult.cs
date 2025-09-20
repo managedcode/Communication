@@ -6,12 +6,13 @@ using System.Linq;
 using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Count: {Collection?.Length ?? 0}; Problem: {Problem?.Title}")]
-public partial struct CollectionResult<T> : IResultCollection<T>
+public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionResultFactory<CollectionResult<T>, T>
 {
     private CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Problem? problem) : this(
         isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, problem)

@@ -1,9 +1,10 @@
 using System.Collections.Generic;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.AspNetCore;
 using ManagedCode.Communication.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -21,16 +22,16 @@ public class ProblemExtensionsTests
         var problemDetails = problem.ToProblemDetails();
 
         // Assert
-        problemDetails.Should().NotBeNull();
-        problemDetails.Type.Should().Be("https://httpstatuses.io/400");
-        problemDetails.Title.Should().Be("Bad Request");
-        problemDetails.Status.Should().Be(400);
-        problemDetails.Detail.Should().Be("Invalid input");
-        problemDetails.Instance.Should().Be("/api/users");
-        problemDetails.Extensions.Should().ContainKey("traceId");
-        problemDetails.Extensions["traceId"].Should().Be("12345");
-        problemDetails.Extensions.Should().ContainKey("timestamp");
-        problemDetails.Extensions["timestamp"].Should().Be("2024-01-01T00:00:00Z");
+        problemDetails.ShouldNotBeNull();
+        problemDetails.Type.ShouldBe("https://httpstatuses.io/400");
+        problemDetails.Title.ShouldBe("Bad Request");
+        problemDetails.Status.ShouldBe(400);
+        problemDetails.Detail.ShouldBe("Invalid input");
+        problemDetails.Instance.ShouldBe("/api/users");
+        problemDetails.Extensions.ShouldContainKey("traceId");
+        problemDetails.Extensions["traceId"].ShouldBe("12345");
+        problemDetails.Extensions.ShouldContainKey("timestamp");
+        problemDetails.Extensions["timestamp"].ShouldBe("2024-01-01T00:00:00Z");
     }
 
     [Fact]
@@ -43,7 +44,7 @@ public class ProblemExtensionsTests
         var problemDetails = problem.ToProblemDetails();
 
         // Assert
-        problemDetails.Status.Should().BeNull();
+        problemDetails.Status.ShouldBeNull();
     }
 
     [Fact]
@@ -64,16 +65,16 @@ public class ProblemExtensionsTests
         var problem = ProblemExtensions.FromProblemDetails(problemDetails);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Type.Should().Be("https://httpstatuses.io/404");
-        problem.Title.Should().Be("Not Found");
-        problem.StatusCode.Should().Be(404);
-        problem.Detail.Should().Be("Resource not found");
-        problem.Instance.Should().Be("/api/items/123");
-        problem.Extensions.Should().ContainKey("correlationId");
-        problem.Extensions["correlationId"].Should().Be("abc-123");
-        problem.Extensions.Should().ContainKey("userId");
-        problem.Extensions["userId"].Should().Be(42);
+        problem.ShouldNotBeNull();
+        problem.Type.ShouldBe("https://httpstatuses.io/404");
+        problem.Title.ShouldBe("Not Found");
+        problem.StatusCode.ShouldBe(404);
+        problem.Detail.ShouldBe("Resource not found");
+        problem.Instance.ShouldBe("/api/items/123");
+        problem.Extensions.ShouldContainKey("correlationId");
+        problem.Extensions["correlationId"].ShouldBe("abc-123");
+        problem.Extensions.ShouldContainKey("userId");
+        problem.Extensions["userId"].ShouldBe(42);
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class ProblemExtensionsTests
         var problem = ProblemExtensions.FromProblemDetails(problemDetails);
 
         // Assert
-        problem.StatusCode.Should().Be(0);
+        problem.StatusCode.ShouldBe(0);
     }
 
     [Fact]
@@ -105,11 +106,11 @@ public class ProblemExtensionsTests
         var problemDetails = problem.AsProblemDetails();
 
         // Assert
-        problemDetails.Should().NotBeNull();
-        problemDetails.Type.Should().Be("type");
-        problemDetails.Title.Should().Be("title");
-        problemDetails.Status.Should().Be(400);
-        problemDetails.Detail.Should().Be("detail");
+        problemDetails.ShouldNotBeNull();
+        problemDetails.Type.ShouldBe("type");
+        problemDetails.Title.ShouldBe("title");
+        problemDetails.Status.ShouldBe(400);
+        problemDetails.Detail.ShouldBe("detail");
     }
 
     [Fact]
@@ -127,11 +128,11 @@ public class ProblemExtensionsTests
         var problem = problemDetails.AsProblem();
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Type.Should().Be("type");
-        problem.Title.Should().Be("title");
-        problem.StatusCode.Should().Be(500);
-        problem.Detail.Should().Be("detail");
+        problem.ShouldNotBeNull();
+        problem.Type.ShouldBe("type");
+        problem.Title.ShouldBe("title");
+        problem.StatusCode.ShouldBe(500);
+        problem.Detail.ShouldBe("detail");
     }
 
     [Fact]
@@ -150,13 +151,13 @@ public class ProblemExtensionsTests
         var result = problemDetails.ToFailedResult();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Type.Should().Be("https://httpstatuses.io/400");
-        result.Problem.Title.Should().Be("Validation Error");
-        result.Problem.StatusCode.Should().Be(400);
-        result.Problem.Detail.Should().Be("Invalid input data");
+        result.IsFailed.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Type.ShouldBe("https://httpstatuses.io/400");
+        result.Problem.Title.ShouldBe("Validation Error");
+        result.Problem.StatusCode.ShouldBe(400);
+        result.Problem.Detail.ShouldBe("Invalid input data");
     }
 
     [Fact]
@@ -175,14 +176,14 @@ public class ProblemExtensionsTests
         var result = problemDetails.ToFailedResult<string>();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-        result.Value.Should().BeNull();
-        result.Problem.Should().NotBeNull();
-        result.Problem!.Type.Should().Be("https://httpstatuses.io/404");
-        result.Problem.Title.Should().Be("Not Found");
-        result.Problem.StatusCode.Should().Be(404);
-        result.Problem.Detail.Should().Be("User not found");
+        result.IsFailed.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.Value.ShouldBeNull();
+        result.Problem.ShouldNotBeNull();
+        result.Problem!.Type.ShouldBe("https://httpstatuses.io/404");
+        result.Problem.Title.ShouldBe("Not Found");
+        result.Problem.StatusCode.ShouldBe(404);
+        result.Problem.Detail.ShouldBe("User not found");
     }
 
     [Fact]
@@ -195,9 +196,9 @@ public class ProblemExtensionsTests
         var result = problem.ToFailedResult();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -210,10 +211,10 @@ public class ProblemExtensionsTests
         var result = problem.ToFailedResult<int>();
 
         // Assert
-        result.IsFailed.Should().BeTrue();
-        result.IsSuccess.Should().BeFalse();
-        result.Value.Should().Be(default(int));
-        result.Problem.Should().Be(problem);
+        result.IsFailed.ShouldBeTrue();
+        result.IsSuccess.ShouldBeFalse();
+        result.Value.ShouldBe(default(int));
+        result.Problem.ShouldBe(problem);
     }
 
     [Fact]
@@ -230,12 +231,12 @@ public class ProblemExtensionsTests
         var convertedProblem = problemDetails.AsProblem();
 
         // Assert
-        convertedProblem.Type.Should().Be(originalProblem.Type);
-        convertedProblem.Title.Should().Be(originalProblem.Title);
-        convertedProblem.StatusCode.Should().Be(originalProblem.StatusCode);
-        convertedProblem.Detail.Should().Be(originalProblem.Detail);
-        convertedProblem.Instance.Should().Be(originalProblem.Instance);
-        convertedProblem.Extensions.Should().BeEquivalentTo(originalProblem.Extensions);
+        convertedProblem.Type.ShouldBe(originalProblem.Type);
+        convertedProblem.Title.ShouldBe(originalProblem.Title);
+        convertedProblem.StatusCode.ShouldBe(originalProblem.StatusCode);
+        convertedProblem.Detail.ShouldBe(originalProblem.Detail);
+        convertedProblem.Instance.ShouldBe(originalProblem.Instance);
+        convertedProblem.Extensions.ShouldBeEquivalentTo(originalProblem.Extensions);
     }
 
     [Fact]
@@ -256,11 +257,11 @@ public class ProblemExtensionsTests
         var convertedProblemDetails = problem.AsProblemDetails();
 
         // Assert
-        problem.Type.Should().BeNull();
-        problem.Title.Should().BeNull();
-        problem.StatusCode.Should().Be(0);
-        problem.Detail.Should().BeNull();
-        problem.Instance.Should().BeNull();
+        problem.Type.ShouldBeNull();
+        problem.Title.ShouldBeNull();
+        problem.StatusCode.ShouldBe(0);
+        problem.Detail.ShouldBeNull();
+        problem.Instance.ShouldBeNull();
     }
 
     [Fact]
@@ -279,12 +280,12 @@ public class ProblemExtensionsTests
         var result = problemDetails.ToFailedResult();
 
         // Assert
-        result.Problem!.Extensions.Should().ContainKey("errors");
+        result.Problem!.Extensions.ShouldContainKey("errors");
         var errors = result.Problem.Extensions["errors"] as Dictionary<string, List<string>>;
-        errors.Should().NotBeNull();
-        errors!["email"].Should().Contain("Invalid format");
-        errors["email"].Should().Contain("Already exists");
-        errors["password"].Should().Contain("Too short");
+        errors.ShouldNotBeNull();
+        errors!["email"].ShouldContain("Invalid format");
+        errors["email"].ShouldContain("Already exists");
+        errors["password"].ShouldContain("Too short");
     }
 
     [Fact]
@@ -299,13 +300,10 @@ public class ProblemExtensionsTests
 
         // Assert
         problem.InvalidField("email")
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         var emailErrors = problem.InvalidFieldError("email");
-        emailErrors.Should()
-            .Contain("Email is required");
-        emailErrors.Should()
-            .Contain("Email format is invalid");
+        emailErrors.ShouldContain("Email is required");
+        emailErrors.ShouldContain("Email format is invalid");
     }
 
     [Fact]
@@ -319,10 +317,8 @@ public class ProblemExtensionsTests
 
         // Assert
         problem.InvalidField("_general")
-            .Should()
-            .BeTrue();
+            .ShouldBeTrue();
         var generalErrors = problem.InvalidFieldError("_general");
-        generalErrors.Should()
-            .Be("General error occurred");
+        generalErrors.ShouldBe("General error occurred");
     }
 }

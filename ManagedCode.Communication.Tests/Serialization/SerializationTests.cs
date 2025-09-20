@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Constants;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Serialization;
 
@@ -32,14 +33,14 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Problem>(json, _options);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Type.Should().Be(original.Type);
-        deserialized.Title.Should().Be(original.Title);
-        deserialized.StatusCode.Should().Be(original.StatusCode);
-        deserialized.Detail.Should().Be(original.Detail);
-        deserialized.Instance.Should().Be(original.Instance);
-        deserialized.Extensions["customKey"]?.ToString().Should().Be("customValue");
-        deserialized.Extensions["number"]?.ToString().Should().Be("42");
+        deserialized.ShouldNotBeNull();
+        deserialized!.Type.ShouldBe(original.Type);
+        deserialized.Title.ShouldBe(original.Title);
+        deserialized.StatusCode.ShouldBe(original.StatusCode);
+        deserialized.Detail.ShouldBe(original.Detail);
+        deserialized.Instance.ShouldBe(original.Instance);
+        deserialized.Extensions["customKey"]?.ToString().ShouldBe("customValue");
+        deserialized.Extensions["number"]?.ToString().ShouldBe("42");
     }
 
     [Fact]
@@ -56,15 +57,15 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Problem>(json, _options);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Type.Should().Be(ProblemConstants.Types.ValidationFailed);
-        deserialized.Title.Should().Be(ProblemConstants.Titles.ValidationFailed);
-        deserialized.StatusCode.Should().Be(400);
+        deserialized.ShouldNotBeNull();
+        deserialized!.Type.ShouldBe(ProblemConstants.Types.ValidationFailed);
+        deserialized.Title.ShouldBe(ProblemConstants.Titles.ValidationFailed);
+        deserialized.StatusCode.ShouldBe(400);
 
         var errors = deserialized.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!["email"].Should().Contain("Invalid format");
-        errors["password"].Should().Contain("Too short");
+        errors.ShouldNotBeNull();
+        errors!["email"].ShouldContain("Invalid format");
+        errors["password"].ShouldContain("Too short");
     }
 
     [Fact]
@@ -80,11 +81,11 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Problem>(json, _options);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.Title.Should().Be("InvalidOperationException");
-        deserialized.Detail.Should().Be("Test exception");
-        deserialized.StatusCode.Should().Be(500);
-        deserialized.ErrorCode.Should().Be(exception.GetType().FullName);
+        deserialized.ShouldNotBeNull();
+        deserialized!.Title.ShouldBe("InvalidOperationException");
+        deserialized.Detail.ShouldBe("Test exception");
+        deserialized.StatusCode.ShouldBe(500);
+        deserialized.ErrorCode.ShouldBe(exception.GetType().FullName);
     }
 
     #endregion
@@ -102,8 +103,8 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Result>(json, _options);
 
         // Assert
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Problem.Should().BeNull();
+        deserialized.IsSuccess.ShouldBeTrue();
+        deserialized.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -117,11 +118,11 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Result>(json, _options);
 
         // Assert
-        deserialized.IsFailed.Should().BeTrue();
-        deserialized.Problem.Should().NotBeNull();
-        deserialized.Problem!.Title.Should().Be("Error Title");
-        deserialized.Problem.Detail.Should().Be("Error Detail");
-        deserialized.Problem.StatusCode.Should().Be(400);
+        deserialized.IsFailed.ShouldBeTrue();
+        deserialized.Problem.ShouldNotBeNull();
+        deserialized.Problem!.Title.ShouldBe("Error Title");
+        deserialized.Problem.Detail.ShouldBe("Error Detail");
+        deserialized.Problem.StatusCode.ShouldBe(400);
     }
 
     [Fact]
@@ -135,9 +136,9 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Result<string>>(json, _options);
 
         // Assert
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Value.Should().Be("Test Value");
-        deserialized.Problem.Should().BeNull();
+        deserialized.IsSuccess.ShouldBeTrue();
+        deserialized.Value.ShouldBe("Test Value");
+        deserialized.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -157,11 +158,11 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Result<TestModel>>(json, _options);
 
         // Assert
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Value.Should().NotBeNull();
-        deserialized.Value!.Id.Should().Be(123);
-        deserialized.Value.Name.Should().Be("Test");
-        deserialized.Value.Tags.Should().BeEquivalentTo(new[] { "tag1", "tag2" });
+        deserialized.IsSuccess.ShouldBeTrue();
+        deserialized.Value.ShouldNotBeNull();
+        deserialized.Value!.Id.ShouldBe(123);
+        deserialized.Value.Name.ShouldBe("Test");
+        deserialized.Value!.Tags!.ShouldBeEquivalentTo(new[] { "tag1", "tag2" });
     }
 
     [Fact]
@@ -175,12 +176,12 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Result<int>>(json, _options);
 
         // Assert
-        deserialized.IsFailed.Should().BeTrue();
-        deserialized.Value.Should().Be(default(int));
-        deserialized.Problem.Should().NotBeNull();
-        deserialized.Problem!.Title.Should().Be(ProblemConstants.Titles.NotFound);
-        deserialized.Problem!.Detail.Should().Be("Resource not found");
-        deserialized.Problem!.StatusCode.Should().Be(404);
+        deserialized.IsFailed.ShouldBeTrue();
+        deserialized.Value.ShouldBe(default(int));
+        deserialized.Problem.ShouldNotBeNull();
+        deserialized.Problem!.Title.ShouldBe(ProblemConstants.Titles.NotFound);
+        deserialized.Problem!.Detail.ShouldBe("Resource not found");
+        deserialized.Problem!.StatusCode.ShouldBe(404);
     }
 
     #endregion
@@ -199,12 +200,12 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<CollectionResult<string>>(json, _options);
 
         // Assert
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Collection.Should().BeEquivalentTo(items);
-        deserialized.PageNumber.Should().Be(1);
-        deserialized.PageSize.Should().Be(10);
-        deserialized.TotalItems.Should().Be(25);
-        deserialized.TotalPages.Should().Be(3);
+        deserialized.IsSuccess.ShouldBeTrue();
+        deserialized.Collection.ShouldBeEquivalentTo(items);
+        deserialized.PageNumber.ShouldBe(1);
+        deserialized.PageSize.ShouldBe(10);
+        deserialized.TotalItems.ShouldBe(25);
+        deserialized.TotalPages.ShouldBe(3);
     }
 
     [Fact]
@@ -218,11 +219,11 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<CollectionResult<int>>(json, _options);
 
         // Assert
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Collection.Should().BeEmpty();
-        deserialized.PageNumber.Should().Be(0);
-        deserialized.PageSize.Should().Be(0);
-        deserialized.TotalItems.Should().Be(0);
+        deserialized.IsSuccess.ShouldBeTrue();
+        deserialized.Collection.ShouldBeEmpty();
+        deserialized.PageNumber.ShouldBe(0);
+        deserialized.PageSize.ShouldBe(0);
+        deserialized.TotalItems.ShouldBe(0);
     }
 
     [Fact]
@@ -236,12 +237,12 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<CollectionResult<TestModel>>(json, _options);
 
         // Assert
-        deserialized.IsFailed.Should().BeTrue();
-        deserialized.Collection.Should().BeEmpty();
-        deserialized.Problem.Should().NotBeNull();
-        deserialized.Problem!.Title.Should().Be(ProblemConstants.Titles.Unauthorized);
-        deserialized.Problem!.Detail.Should().Be("Access denied");
-        deserialized.Problem!.StatusCode.Should().Be(401);
+        deserialized.IsFailed.ShouldBeTrue();
+        deserialized.Collection.ShouldBeEmpty();
+        deserialized.Problem.ShouldNotBeNull();
+        deserialized.Problem!.Title.ShouldBe(ProblemConstants.Titles.Unauthorized);
+        deserialized.Problem!.Detail.ShouldBe("Access denied");
+        deserialized.Problem!.StatusCode.ShouldBe(401);
     }
 
     #endregion
@@ -268,16 +269,16 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Command>(json, _options);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.CommandId.Should().Be(original.CommandId);
-        deserialized.CommandType.Should().Be("TestCommand");
-        deserialized.CorrelationId.Should().Be("corr-123");
-        deserialized.UserId.Should().Be("user-456");
-        deserialized.TraceId.Should().Be("trace-789");
-        deserialized.Metadata.Should().NotBeNull();
-        deserialized.Metadata!.RetryCount.Should().Be(3);
-        deserialized.Metadata!.Priority.Should().Be(CommandPriority.High);
-        deserialized.Metadata!.Tags["env"].Should().Be("test");
+        deserialized.ShouldNotBeNull();
+        deserialized!.CommandId.ShouldBe(original.CommandId);
+        deserialized.CommandType.ShouldBe("TestCommand");
+        deserialized.CorrelationId.ShouldBe("corr-123");
+        deserialized.UserId.ShouldBe("user-456");
+        deserialized.TraceId.ShouldBe("trace-789");
+        deserialized.Metadata.ShouldNotBeNull();
+        deserialized.Metadata!.RetryCount.ShouldBe(3);
+        deserialized.Metadata!.Priority.ShouldBe(CommandPriority.High);
+        deserialized.Metadata!.Tags["env"].ShouldBe("test");
     }
 
     [Fact]
@@ -300,15 +301,15 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Command<TestModel>>(json, _options);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.CommandId.Should().Be(commandId);
-        deserialized.CommandType.Should().Be("TestModel");
-        deserialized.Value.Should().NotBeNull();
-        deserialized.Value!.Id.Should().Be(999);
-        deserialized.Value!.Name.Should().Be("Command Test");
-        deserialized.Value!.Tags.Should().BeEquivalentTo(new[] { "cmd", "test" });
-        deserialized.SessionId.Should().Be("session-123");
-        deserialized.SpanId.Should().Be("span-456");
+        deserialized.ShouldNotBeNull();
+        deserialized!.CommandId.ShouldBe(commandId);
+        deserialized.CommandType.ShouldBe("TestModel");
+        deserialized.Value.ShouldNotBeNull();
+        deserialized.Value!.Id.ShouldBe(999);
+        deserialized.Value!.Name.ShouldBe("Command Test");
+        deserialized.Value!.Tags!.ShouldBeEquivalentTo(new[] { "cmd", "test" });
+        deserialized.SessionId.ShouldBe("session-123");
+        deserialized.SpanId.ShouldBe("span-456");
     }
 
     [Fact]
@@ -324,11 +325,11 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Command<string>>(json, _options);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.CommandId.Should().Be(commandId);
-        deserialized.CommandType.Should().Be("CustomType");
-        deserialized.Value.Should().Be("Test Value");
-        deserialized.CausationId.Should().Be("cause-123");
+        deserialized.ShouldNotBeNull();
+        deserialized!.CommandId.ShouldBe(commandId);
+        deserialized.CommandType.ShouldBe("CustomType");
+        deserialized.Value.ShouldBe("Test Value");
+        deserialized.CausationId.ShouldBe("cause-123");
     }
 
     #endregion
@@ -358,15 +359,15 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<CommandMetadata>(json, _options);
 
         // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.RetryCount.Should().Be(5);
-        deserialized.MaxRetries.Should().Be(10);
-        deserialized.Priority.Should().Be(CommandPriority.Low);
-        deserialized.TimeoutSeconds.Should().Be(30);
-        deserialized.ExecutionTime.Should().Be(TimeSpan.FromMilliseconds(1500));
-        deserialized.Tags.Should().NotBeNull();
-        deserialized.Tags["environment"].Should().Be("production");
-        deserialized.Tags["version"].Should().Be("1.0.0");
+        deserialized.ShouldNotBeNull();
+        deserialized!.RetryCount.ShouldBe(5);
+        deserialized.MaxRetries.ShouldBe(10);
+        deserialized.Priority.ShouldBe(CommandPriority.Low);
+        deserialized.TimeoutSeconds.ShouldBe(30);
+        deserialized.ExecutionTime.ShouldBe(TimeSpan.FromMilliseconds(1500));
+        deserialized.Tags.ShouldNotBeNull();
+        deserialized.Tags["environment"].ShouldBe("production");
+        deserialized.Tags["version"].ShouldBe("1.0.0");
     }
 
     #endregion
@@ -392,13 +393,12 @@ public class SerializationTests
         var deserialized = JsonSerializer.Deserialize<Result<Command<Result<TestModel>>>>(json, _options);
 
         // Assert
-        deserialized.IsSuccess.Should().BeTrue();
-        deserialized.Value.Should().NotBeNull();
-        deserialized.Value!.Value.Should().NotBeNull();
-        deserialized.Value!.Value.IsSuccess.Should().BeTrue();
-        deserialized.Value!.Value.Value.Should().NotBeNull();
-        deserialized.Value!.Value.Value!.Id.Should().Be(1);
-        deserialized.Value.Value.Value.Name.Should().Be("Inner");
+        deserialized.IsSuccess.ShouldBeTrue();
+        deserialized.Value.ShouldNotBeNull();
+        deserialized.Value!.Value.IsSuccess.ShouldBeTrue();
+        deserialized.Value.Value.Value.ShouldNotBeNull();
+        deserialized.Value.Value.Value!.Id.ShouldBe(1);
+        deserialized.Value.Value.Value.Name.ShouldBe("Inner");
     }
 
     [Fact]
@@ -419,13 +419,13 @@ public class SerializationTests
         var deserialized2 = JsonSerializer.Deserialize<Problem>(json2, _options);
 
         // Assert
-        deserialized2.Should().NotBeNull();
-        deserialized2!.Type.Should().Be(problem.Type);
-        deserialized2!.Title.Should().Be(problem.Title);
-        deserialized2!.StatusCode.Should().Be(problem.StatusCode);
-        deserialized2!.Detail.Should().Be(problem.Detail);
-        deserialized2!.Instance.Should().Be(problem.Instance);
-        deserialized2!.Extensions["key1"]?.ToString().Should().Be("value1");
+        deserialized2.ShouldNotBeNull();
+        deserialized2!.Type.ShouldBe(problem.Type);
+        deserialized2!.Title.ShouldBe(problem.Title);
+        deserialized2!.StatusCode.ShouldBe(problem.StatusCode);
+        deserialized2!.Detail.ShouldBe(problem.Detail);
+        deserialized2!.Instance.ShouldBe(problem.Instance);
+        deserialized2!.Extensions["key1"]?.ToString().ShouldBe("value1");
     }
 
     #endregion

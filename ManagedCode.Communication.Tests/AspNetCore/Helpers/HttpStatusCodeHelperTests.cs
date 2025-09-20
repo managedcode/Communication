@@ -1,6 +1,6 @@
 using System;
 using System.Net;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.AspNetCore.Helpers;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
@@ -31,7 +31,7 @@ public class HttpStatusCodeHelperTests
         var result = HttpStatusCodeHelper.GetStatusCodeForException(exception);
 
         // Assert
-        result.Should().Be(expectedStatusCode);
+        result.ShouldBe(expectedStatusCode);
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class HttpStatusCodeHelperTests
 
         // Assert
         // Should fall back to base Communication.Helpers.HttpStatusCodeHelper
-        result.Should().Be(HttpStatusCode.BadRequest); // ArgumentException maps to BadRequest in base helper
+        result.ShouldBe(HttpStatusCode.BadRequest); // ArgumentException maps to BadRequest in base helper
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class HttpStatusCodeHelperTests
 
         // Assert
         // Should fall back to base helper which returns InternalServerError for unknown exceptions
-        result.Should().Be(HttpStatusCode.InternalServerError);
+        result.ShouldBe(HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class HttpStatusCodeHelperTests
 
         // Assert
         // Base helper should handle null (likely throw or return default)
-        act.Should().NotThrow(); // Assuming base helper handles null gracefully
+        Should.NotThrow(act); // Assuming base helper handles null gracefully
     }
 
     private static Exception CreateException(Type exceptionType)

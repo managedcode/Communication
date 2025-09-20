@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
 using Orleans;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
@@ -33,10 +34,9 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoResultAsync(result);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.HasProblem.Should().BeFalse();
-        echoed.Problem.Should().BeNull();
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.HasProblem.ShouldBeFalse();
+        echoed.Problem.ShouldBeNull();
     }
 
     [Fact]
@@ -59,24 +59,23 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoResultAsync(result);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeFalse();
-        echoed.HasProblem.Should().BeTrue();
-        echoed.Problem.Should().NotBeNull();
-        echoed.Problem!.Type.Should().Be(problem.Type);
-        echoed.Problem!.Title.Should().Be(problem.Title);
-        echoed.Problem!.StatusCode.Should().Be(problem.StatusCode);
-        echoed.Problem!.Detail.Should().Be(problem.Detail);
+        echoed.IsSuccess.ShouldBeFalse();
+        echoed.HasProblem.ShouldBeTrue();
+        echoed.Problem.ShouldNotBeNull();
+        echoed.Problem!.Type.ShouldBe(problem.Type);
+        echoed.Problem!.Title.ShouldBe(problem.Title);
+        echoed.Problem!.StatusCode.ShouldBe(problem.StatusCode);
+        echoed.Problem!.Detail.ShouldBe(problem.Detail);
         
         var errors = echoed.Problem!.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors.Should().HaveCount(3);
-        errors!["email"].Should().Contain("Invalid email format");
-        errors["password"].Should().Contain("Password too weak");
-        errors["username"].Should().Contain("Username already taken");
+        errors.ShouldNotBeNull();
+        errors.ShouldHaveCount(3);
+        errors!["email"].ShouldContain("Invalid email format");
+        errors["password"].ShouldContain("Password too weak");
+        errors["username"].ShouldContain("Username already taken");
         
-        echoed.Problem!.Extensions["requestId"].Should().Be("req-123");
-        echoed.Problem!.Extensions["timestamp"].Should().NotBeNull();
+        echoed.Problem!.Extensions["requestId"].ShouldBe("req-123");
+        echoed.Problem!.Extensions["timestamp"].ShouldNotBeNull();
     }
 
     [Fact]
@@ -104,17 +103,16 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoResultAsync(result);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.HasProblem.Should().BeFalse();
-        echoed.Value.Should().NotBeNull();
-        echoed.Value!.TransactionId.Should().Be("txn-123");
-        echoed.Value.Status.Should().Be("completed");
-        echoed.Value.ProcessedAt.Should().BeCloseTo(response.ProcessedAt, TimeSpan.FromSeconds(1));
-        echoed.Value.Details.Should().NotBeNull();
-        echoed.Value.Details["gateway"].Should().Be("stripe");
-        echoed.Value.Details["fee"].Should().Be(2.99m);
-        echoed.Value.Details["net"].Should().Be(97.01m);
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.HasProblem.ShouldBeFalse();
+        echoed.Value.ShouldNotBeNull();
+        echoed.Value!.TransactionId.ShouldBe("txn-123");
+        echoed.Value.Status.ShouldBe("completed");
+        echoed.Value.ProcessedAt.ShouldBeCloseTo(response.ProcessedAt, TimeSpan.FromSeconds(1));
+        echoed.Value.Details.ShouldNotBeNull();
+        echoed.Value.Details["gateway"].ShouldBe("stripe");
+        echoed.Value.Details["fee"].ShouldBe(2.99m);
+        echoed.Value.Details["net"].ShouldBe(97.01m);
     }
 
     [Fact]
@@ -128,9 +126,8 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoResultAsync(result);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.Value.Should().BeNull();
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.Value.ShouldBeNull();
     }
 
     [Fact]
@@ -157,12 +154,11 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
             var echoed = await grain.EchoResultAsync(testCase);
 
             // Assert
-            echoed.Should().NotBeNull();
-            echoed.IsSuccess.Should().BeFalse();
-            echoed.Problem.Should().NotBeNull();
-            echoed.Problem!.StatusCode.Should().Be(testCase.Problem!.StatusCode);
-            echoed.Problem!.Title.Should().Be(testCase.Problem!.Title);
-            echoed.Problem!.Detail.Should().Be(testCase.Problem!.Detail);
+            echoed.IsSuccess.ShouldBeFalse();
+            echoed.Problem.ShouldNotBeNull();
+            echoed.Problem!.StatusCode.ShouldBe(testCase.Problem!.StatusCode);
+            echoed.Problem!.Title.ShouldBe(testCase.Problem!.Title);
+            echoed.Problem!.Detail.ShouldBe(testCase.Problem!.Detail);
         }
     }
 
@@ -197,26 +193,25 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoResultAsync(result);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.IsSuccess.Should().BeTrue();
-        echoed.Value.Should().NotBeNull();
-        echoed.Value!.Id.Should().Be(profile.Id);
-        echoed.Value.Email.Should().Be(profile.Email);
-        echoed.Value.Name.Should().Be(profile.Name);
-        echoed.Value.CreatedAt.Should().BeCloseTo(profile.CreatedAt, TimeSpan.FromSeconds(1));
+        echoed.IsSuccess.ShouldBeTrue();
+        echoed.Value.ShouldNotBeNull();
+        echoed.Value!.Id.ShouldBe(profile.Id);
+        echoed.Value.Email.ShouldBe(profile.Email);
+        echoed.Value.Name.ShouldBe(profile.Name);
+        echoed.Value.CreatedAt.ShouldBeCloseTo(profile.CreatedAt, TimeSpan.FromSeconds(1));
         
-        echoed.Value.Attributes.Should().NotBeNull();
-        echoed.Value.Attributes["age"].Should().Be(30);
-        echoed.Value.Attributes["verified"].Should().Be(true);
-        echoed.Value.Attributes["preferences"].Should().NotBeNull();
+        echoed.Value.Attributes.ShouldNotBeNull();
+        echoed.Value.Attributes["age"].ShouldBe(30);
+        echoed.Value.Attributes["verified"].ShouldBe(true);
+        echoed.Value.Attributes["preferences"].ShouldNotBeNull();
         
         var preferences = echoed.Value.Attributes["preferences"] as Dictionary<string, string>;
-        preferences.Should().NotBeNull();
-        preferences!["theme"].Should().Be("dark");
-        preferences["language"].Should().Be("en");
+        preferences.ShouldNotBeNull();
+        preferences!["theme"].ShouldBe("dark");
+        preferences["language"].ShouldBe("en");
         
         var scores = echoed.Value.Attributes["scores"] as int[];
-        scores.Should().NotBeNull();
-        scores.Should().BeEquivalentTo(new[] { 85, 92, 78 });
+        scores.ShouldNotBeNull();
+        scores.ShouldBeEquivalentTo(new[] { 85, 92, 78 });
     }
 }

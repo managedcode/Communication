@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Constants;
 using Xunit;
 
@@ -20,10 +20,10 @@ public class ProblemToExceptionErrorTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Should().BeOfType<ArgumentException>();
-        reconstructedException.Message.Should().Contain("Outer error");
+        reconstructedException.ShouldBeOfType<ArgumentException>();
+        reconstructedException.Message.ShouldContain("Outer error");
         // Note: Inner exceptions are not preserved in Problem, so this won't have InnerException
-        reconstructedException.InnerException.Should().BeNull();
+        reconstructedException.InnerException.ShouldBeNull();
     }
 
     [Fact]
@@ -38,8 +38,8 @@ public class ProblemToExceptionErrorTests
 
         // Assert
         // ArgumentNullException can be reconstructed with just the message
-        reconstructedException.Should().BeOfType<ArgumentNullException>();
-        reconstructedException.Message.Should().Contain("Parameter cannot be null");
+        reconstructedException.ShouldBeOfType<ArgumentNullException>();
+        reconstructedException.Message.ShouldContain("Parameter cannot be null");
     }
 
     [Fact]
@@ -59,9 +59,9 @@ public class ProblemToExceptionErrorTests
 
         // Assert
         // AggregateException can be reconstructed with just the message
-        reconstructedException.Should().BeOfType<AggregateException>();
+        reconstructedException.ShouldBeOfType<AggregateException>();
         // AggregateException's message includes inner exception messages
-        reconstructedException.Message.Should().Contain("Multiple errors");
+        reconstructedException.Message.ShouldContain("Multiple errors");
     }
 
     [Fact]
@@ -75,9 +75,9 @@ public class ProblemToExceptionErrorTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Should().BeOfType<ProblemException>();
+        reconstructedException.ShouldBeOfType<ProblemException>();
         var problemException = (ProblemException)reconstructedException;
-        problemException.Problem.Detail.Should().Be("Custom error");
+        problemException.Problem.Detail.ShouldBe("Custom error");
     }
 
     [Fact]
@@ -100,10 +100,10 @@ public class ProblemToExceptionErrorTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Should().BeOfType<InvalidOperationException>();
-        reconstructedException.Message.Should().Be("Test exception with stack trace");
+        reconstructedException.ShouldBeOfType<InvalidOperationException>();
+        reconstructedException.Message.ShouldBe("Test exception with stack trace");
         // Stack trace is not preserved through Problem conversion
-        reconstructedException.StackTrace.Should().BeNull();
+        reconstructedException.StackTrace.ShouldBeNull();
     }
 
     [Fact]
@@ -122,11 +122,11 @@ public class ProblemToExceptionErrorTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Data["SimpleString"].Should().Be("test");
-        reconstructedException.Data["Number"].Should().Be(123);
-        reconstructedException.Data["Date"].Should().BeOfType<DateTime>();
+        reconstructedException.Data["SimpleString"].ShouldBe("test");
+        reconstructedException.Data["Number"].ShouldBe(123);
+        reconstructedException.Data["Date"].ShouldBeOfType<DateTime>();
         // Complex objects might be serialized differently
-        reconstructedException.Data.Contains("ComplexObject").Should().BeTrue();
+        reconstructedException.Data.Contains("ComplexObject").ShouldBeTrue();
     }
 
     [Fact]
@@ -140,8 +140,8 @@ public class ProblemToExceptionErrorTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<InvalidOperationException>();
-        exception.Message.Should().Be("Server Error");
+        exception.ShouldBeOfType<InvalidOperationException>();
+        exception.Message.ShouldBe("Server Error");
     }
 
     [Fact]
@@ -155,8 +155,8 @@ public class ProblemToExceptionErrorTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<InvalidOperationException>();
-        exception.Message.Should().Be("An error occurred");
+        exception.ShouldBeOfType<InvalidOperationException>();
+        exception.Message.ShouldBe("An error occurred");
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class ProblemToExceptionErrorTests
         var exception = problem.ToException();
 
         // Assert
-        exception.Should().BeOfType<ProblemException>();
+        exception.ShouldBeOfType<ProblemException>();
     }
 
     [Fact]
@@ -187,9 +187,9 @@ public class ProblemToExceptionErrorTests
         var reconstructedException = problem.ToException();
 
         // Assert
-        reconstructedException.Data["key1"].Should().Be("value1");
+        reconstructedException.Data["key1"].ShouldBe("value1");
         // The prefixed key should be handled correctly
-        reconstructedException.Data.Count.Should().BeGreaterOrEqualTo(1);
+        reconstructedException.Data.Count.ShouldBeGreaterThanOrEqualTo(1);
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class ProblemToExceptionErrorTests
 
         // Assert
         // HttpRequestException might need special handling, could fall back to ProblemException
-        reconstructedException.Message.Should().Contain("Network error");
+        reconstructedException.Message.ShouldContain("Network error");
     }
 
     [Fact]
@@ -226,9 +226,9 @@ public class ProblemToExceptionErrorTests
         stopwatch.Stop();
 
         // Assert
-        exception.Should().NotBeNull();
-        stopwatch.ElapsedMilliseconds.Should().BeLessThan(100); // Should be fast
-        exception.Data.Count.Should().Be(100);
+        exception.ShouldNotBeNull();
+        stopwatch.ElapsedMilliseconds.ShouldBeLessThan(100); // Should be fast
+        exception.Data.Count.ShouldBe(100);
     }
 }
 

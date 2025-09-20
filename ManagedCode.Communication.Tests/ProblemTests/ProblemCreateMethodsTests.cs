@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Constants;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.ProblemTests;
 
@@ -17,14 +18,14 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(TestError.InvalidInput, 400);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Type.Should().Be(ProblemConstants.Types.HttpStatus(400));
-        problem.Title.Should().Be("InvalidInput");
-        problem.StatusCode.Should().Be(400);
-        problem.Detail.Should().Be($"{ProblemConstants.Messages.GenericError}: InvalidInput");
-        problem.ErrorCode.Should().Be("InvalidInput");
-        problem.Extensions.Should().ContainKey(ProblemConstants.ExtensionKeys.ErrorType);
-        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].Should().Be("TestError");
+        problem.ShouldNotBeNull();
+        problem.Type.ShouldBe(ProblemConstants.Types.HttpStatus(400));
+        problem.Title.ShouldBe("InvalidInput");
+        problem.StatusCode.ShouldBe(400);
+        problem.Detail.ShouldBe($"{ProblemConstants.Messages.GenericError}: InvalidInput");
+        problem.ErrorCode.ShouldBe("InvalidInput");
+        problem.Extensions.ShouldContainKey(ProblemConstants.ExtensionKeys.ErrorType);
+        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].ShouldBe("TestError");
     }
 
     [Fact]
@@ -37,14 +38,14 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(TestError.ValidationFailed, detail, 422);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Type.Should().Be(ProblemConstants.Types.HttpStatus(422));
-        problem.Title.Should().Be("ValidationFailed");
-        problem.StatusCode.Should().Be(422);
-        problem.Detail.Should().Be(detail);
-        problem.ErrorCode.Should().Be("ValidationFailed");
-        problem.Extensions.Should().ContainKey(ProblemConstants.ExtensionKeys.ErrorType);
-        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].Should().Be("TestError");
+        problem.ShouldNotBeNull();
+        problem.Type.ShouldBe(ProblemConstants.Types.HttpStatus(422));
+        problem.Title.ShouldBe("ValidationFailed");
+        problem.StatusCode.ShouldBe(422);
+        problem.Detail.ShouldBe(detail);
+        problem.ErrorCode.ShouldBe("ValidationFailed");
+        problem.Extensions.ShouldContainKey(ProblemConstants.ExtensionKeys.ErrorType);
+        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].ShouldBe("TestError");
     }
 
     [Theory]
@@ -60,9 +61,9 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(errorEnum, statusCode);
 
         // Assert
-        problem.StatusCode.Should().Be(statusCode);
-        problem.Type.Should().Be(ProblemConstants.Types.HttpStatus(statusCode));
-        problem.ErrorCode.Should().Be(enumValue);
+        problem.StatusCode.ShouldBe(statusCode);
+        problem.Type.ShouldBe(ProblemConstants.Types.HttpStatus(statusCode));
+        problem.ErrorCode.ShouldBe(enumValue);
     }
 
     #endregion
@@ -79,14 +80,14 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(exception);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Type.Should().Be(ProblemConstants.Types.HttpStatus(500));
-        problem.Title.Should().Be("InvalidOperationException");
-        problem.Detail.Should().Be("Test exception message");
-        problem.StatusCode.Should().Be(500);
-        problem.ErrorCode.Should().Be(typeof(InvalidOperationException).FullName);
-        problem.Extensions.Should().ContainKey(ProblemConstants.ExtensionKeys.OriginalExceptionType);
-        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType].Should().Be(typeof(InvalidOperationException).FullName);
+        problem.ShouldNotBeNull();
+        problem.Type.ShouldBe(ProblemConstants.Types.HttpStatus(500));
+        problem.Title.ShouldBe("InvalidOperationException");
+        problem.Detail.ShouldBe("Test exception message");
+        problem.StatusCode.ShouldBe(500);
+        problem.ErrorCode.ShouldBe(typeof(InvalidOperationException).FullName);
+        problem.Extensions.ShouldContainKey(ProblemConstants.ExtensionKeys.OriginalExceptionType);
+        problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType].ShouldBe(typeof(InvalidOperationException).FullName);
     }
 
     [Fact]
@@ -102,12 +103,12 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(exception);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Extensions.Should().ContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}UserId");
-        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}UserId"].Should().Be(123);
-        problem.Extensions.Should().ContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}RequestId");
-        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}RequestId"].Should().Be("ABC-123");
-        problem.Extensions.Should().ContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}Timestamp");
+        problem.ShouldNotBeNull();
+        problem.Extensions.ShouldContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}UserId");
+        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}UserId"].ShouldBe(123);
+        problem.Extensions.ShouldContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}RequestId");
+        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}RequestId"].ShouldBe("ABC-123");
+        problem.Extensions.ShouldContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}Timestamp");
     }
 
     [Fact]
@@ -122,11 +123,11 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(exception);
 
         // Assert
-        problem.Should().NotBeNull();
-        problem.Extensions.Should().ContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}ValidKey");
-        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}ValidKey"].Should().Be("Should be included");
-        problem.Extensions.Should().ContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}AnotherKey");
-        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}AnotherKey"].Should().Be(42);
+        problem.ShouldNotBeNull();
+        problem.Extensions.ShouldContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}ValidKey");
+        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}ValidKey"].ShouldBe("Should be included");
+        problem.Extensions.ShouldContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}AnotherKey");
+        problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}AnotherKey"].ShouldBe(42);
     }
 
     [Fact]
@@ -140,9 +141,9 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(outerException);
 
         // Assert
-        problem.Title.Should().Be("InvalidOperationException");
-        problem.Detail.Should().Be("Outer exception");
-        problem.ErrorCode.Should().Be(typeof(InvalidOperationException).FullName);
+        problem.Title.ShouldBe("InvalidOperationException");
+        problem.Detail.ShouldBe("Outer exception");
+        problem.ErrorCode.ShouldBe(typeof(InvalidOperationException).FullName);
     }
 
     #endregion
@@ -159,9 +160,9 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(flags, 403);
 
         // Assert
-        problem.ErrorCode.Should().Be("Read, Write");
-        problem.Title.Should().Be("Read, Write");
-        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].Should().Be("FlagsError");
+        problem.ErrorCode.ShouldBe("Read, Write");
+        problem.Title.ShouldBe("Read, Write");
+        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].ShouldBe("FlagsError");
     }
 
     [Fact]
@@ -171,8 +172,8 @@ public class ProblemCreateMethodsTests
         var problem = ManagedCode.Communication.Problem.Create(NumericError.Error100, 400);
 
         // Assert
-        problem.ErrorCode.Should().Be("Error100");
-        problem.Title.Should().Be("Error100");
+        problem.ErrorCode.ShouldBe("Error100");
+        problem.Title.ShouldBe("Error100");
     }
 
     #endregion
@@ -189,10 +190,10 @@ public class ProblemCreateMethodsTests
         problem.AddValidationError("email", "Email is required");
 
         // Assert
-        problem.Extensions.Should().ContainKey(ProblemConstants.ExtensionKeys.Errors);
+        problem.Extensions.ShouldContainKey(ProblemConstants.ExtensionKeys.Errors);
         var errors = problem.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!["email"].Should().Contain("Email is required");
+        errors.ShouldNotBeNull();
+        errors!["email"].ShouldContain("Email is required");
     }
 
     [Fact]
@@ -207,10 +208,10 @@ public class ProblemCreateMethodsTests
 
         // Assert
         var errors = problem.GetValidationErrors();
-        errors!["password"].Should().HaveCount(3);
-        errors["password"].Should().Contain("Too short");
-        errors["password"].Should().Contain("Must contain numbers");
-        errors["password"].Should().Contain("Must contain special characters");
+        errors!["password"].ShouldHaveCount(3);
+        errors["password"].ShouldContain("Too short");
+        errors["password"].ShouldContain("Must contain numbers");
+        errors["password"].ShouldContain("Must contain special characters");
     }
 
     [Fact]
@@ -227,10 +228,12 @@ public class ProblemCreateMethodsTests
 
         // Assert
         var errors = problem.GetValidationErrors();
-        errors.Should().HaveCount(3);
-        errors!["name"].Should().HaveCount(1);
-        errors["email"].Should().HaveCount(2);
-        errors["age"].Should().HaveCount(1);
+        errors.ShouldNotBeNull();
+        var errorDictionary = errors!;
+        errorDictionary.ShouldHaveCount(3);
+        errorDictionary["name"].ShouldHaveCount(1);
+        errorDictionary["email"].ShouldHaveCount(2);
+        errorDictionary["age"].ShouldHaveCount(1);
     }
 
     [Fact]
@@ -245,8 +248,8 @@ public class ProblemCreateMethodsTests
 
         // Assert
         var errors = problem.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors!["field"].Should().Contain("error message");
+        errors.ShouldNotBeNull();
+        errors!["field"].ShouldContain("error message");
     }
 
     #endregion
@@ -263,7 +266,7 @@ public class ProblemCreateMethodsTests
         var errors = problem.GetValidationErrors();
 
         // Assert
-        errors.Should().BeNull();
+        errors.ShouldBeNull();
     }
 
     [Fact]
@@ -277,7 +280,7 @@ public class ProblemCreateMethodsTests
         var errors = problem.GetValidationErrors();
 
         // Assert
-        errors.Should().BeNull();
+        errors.ShouldBeNull();
     }
 
     [Fact]
@@ -293,10 +296,10 @@ public class ProblemCreateMethodsTests
         var errors = problem.GetValidationErrors();
 
         // Assert
-        errors.Should().NotBeNull();
-        errors.Should().HaveCount(2);
-        errors!["field1"].Should().Contain("error1");
-        errors["field2"].Should().Contain("error2");
+        errors.ShouldNotBeNull();
+        errors.ShouldHaveCount(2);
+        errors!["field1"].ShouldContain("error1");
+        errors["field2"].ShouldContain("error2");
     }
 
     #endregion

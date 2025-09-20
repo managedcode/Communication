@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using Orleans;
 using Xunit;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
@@ -53,28 +54,28 @@ public class ProblemSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoProblemAsync(problem);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.Type.Should().Be(problem.Type);
-        echoed.Title.Should().Be(problem.Title);
-        echoed.StatusCode.Should().Be(problem.StatusCode);
-        echoed.Detail.Should().Be(problem.Detail);
-        echoed.Instance.Should().Be(problem.Instance);
+        echoed.ShouldNotBeNull();
+        echoed.Type.ShouldBe(problem.Type);
+        echoed.Title.ShouldBe(problem.Title);
+        echoed.StatusCode.ShouldBe(problem.StatusCode);
+        echoed.Detail.ShouldBe(problem.Detail);
+        echoed.Instance.ShouldBe(problem.Instance);
         
-        echoed.Extensions.Should().NotBeNull();
-        echoed.Extensions["traceId"].Should().Be("trace-xyz");
-        echoed.Extensions["accountBalance"].Should().Be(50.25m);
-        echoed.Extensions["requiredAmount"].Should().Be(100.00m);
+        echoed.Extensions.ShouldNotBeNull();
+        echoed.Extensions["traceId"].ShouldBe("trace-xyz");
+        echoed.Extensions["accountBalance"].ShouldBe(50.25m);
+        echoed.Extensions["requiredAmount"].ShouldBe(100.00m);
         
         var errors = echoed.Extensions["errors"] as Dictionary<string, List<string>>;
-        errors.Should().NotBeNull();
-        errors!["payment"].Should().Contain("Insufficient funds");
-        errors["payment"].Should().Contain("Daily limit exceeded");
-        errors["account"].Should().Contain("Account on hold");
+        errors.ShouldNotBeNull();
+        errors!["payment"].ShouldContain("Insufficient funds");
+        errors["payment"].ShouldContain("Daily limit exceeded");
+        errors["account"].ShouldContain("Account on hold");
         
         var metadata = echoed.Extensions["metadata"] as Dictionary<string, string>;
-        metadata.Should().NotBeNull();
-        metadata!["customerId"].Should().Be("cust-789");
-        metadata["attemptNumber"].Should().Be("3");
+        metadata.ShouldNotBeNull();
+        metadata!["customerId"].ShouldBe("cust-789");
+        metadata["attemptNumber"].ShouldBe("3");
     }
 
     [Fact]
@@ -95,20 +96,20 @@ public class ProblemSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoProblemAsync(problem);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.Type.Should().Be("https://tools.ietf.org/html/rfc7231#section-6.5.1");
-        echoed.Title.Should().Be("Validation Failed");
-        echoed.StatusCode.Should().Be(400);
-        echoed.Detail.Should().Be("One or more validation errors occurred.");
+        echoed.ShouldNotBeNull();
+        echoed.Type.ShouldBe("https://tools.ietf.org/html/rfc7231#section-6.5.1");
+        echoed.Title.ShouldBe("Validation Failed");
+        echoed.StatusCode.ShouldBe(400);
+        echoed.Detail.ShouldBe("One or more validation errors occurred.");
         
         var errors = echoed.GetValidationErrors();
-        errors.Should().NotBeNull();
-        errors.Should().HaveCount(5);
-        errors!["firstName"].Should().Contain("First name is required");
-        errors["lastName"].Should().Contain("Last name is required");
-        errors["email"].Should().Contain("Email format is invalid");
-        errors["age"].Should().Contain("Age must be between 18 and 120");
-        errors["password"].Should().Contain("Password must be at least 8 characters");
+        errors.ShouldNotBeNull();
+        errors.ShouldHaveCount(5);
+        errors!["firstName"].ShouldContain("First name is required");
+        errors["lastName"].ShouldContain("Last name is required");
+        errors["email"].ShouldContain("Email format is invalid");
+        errors["age"].ShouldContain("Age must be between 18 and 120");
+        errors["password"].ShouldContain("Password must be at least 8 characters");
     }
 
     [Fact]
@@ -135,12 +136,12 @@ public class ProblemSerializationTests : IClassFixture<OrleansClusterFixture>
             var echoed = await grain.EchoProblemAsync(problem);
 
             // Assert
-            echoed.Should().NotBeNull();
-            echoed.Type.Should().Be(problem.Type);
-            echoed.Title.Should().Be(problem.Title);
-            echoed.StatusCode.Should().Be(problem.StatusCode);
-            echoed.Detail.Should().Be(problem.Detail);
-            echoed.Instance.Should().Be(problem.Instance);
+            echoed.ShouldNotBeNull();
+            echoed.Type.ShouldBe(problem.Type);
+            echoed.Title.ShouldBe(problem.Title);
+            echoed.StatusCode.ShouldBe(problem.StatusCode);
+            echoed.Detail.ShouldBe(problem.Detail);
+            echoed.Instance.ShouldBe(problem.Instance);
         }
     }
 
@@ -168,24 +169,24 @@ public class ProblemSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoProblemAsync(problem);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.Extensions.Should().NotBeNull();
-        echoed.Extensions.Should().HaveCount(6);
+        echoed.ShouldNotBeNull();
+        echoed.Extensions.ShouldNotBeNull();
+        echoed.Extensions.ShouldHaveCount(6);
         
-        echoed.Extensions["correlationId"].Should().NotBeNull();
-        echoed.Extensions["timestamp"].Should().NotBeNull();
-        echoed.Extensions["retryAfter"].Should().Be(60);
-        echoed.Extensions["supportContact"].Should().Be("support@example.com");
+        echoed.Extensions["correlationId"].ShouldNotBeNull();
+        echoed.Extensions["timestamp"].ShouldNotBeNull();
+        echoed.Extensions["retryAfter"].ShouldBe(60);
+        echoed.Extensions["supportContact"].ShouldBe("support@example.com");
         
         var errorCodes = echoed.Extensions["errorCodes"] as string[];
-        errorCodes.Should().NotBeNull();
-        errorCodes.Should().BeEquivalentTo(new[] { "ERR001", "ERR002", "ERR003" });
+        errorCodes.ShouldNotBeNull();
+        errorCodes.ShouldBeEquivalentTo(new[] { "ERR001", "ERR002", "ERR003" });
         
         var nested = echoed.Extensions["nested"] as Dictionary<string, object>;
-        nested.Should().NotBeNull();
+        nested.ShouldNotBeNull();
         var level1 = nested!["level1"] as Dictionary<string, object>;
-        level1.Should().NotBeNull();
-        level1!["level2"].Should().Be("deep value");
+        level1.ShouldNotBeNull();
+        level1!["level2"].ShouldBe("deep value");
     }
 
     [Fact]
@@ -200,14 +201,14 @@ public class ProblemSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoProblemAsync(problem);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.StatusCode.Should().Be(500);
-        echoed.Title.Should().Be("Internal Error");
-        echoed.Type.Should().Be("https://httpstatuses.io/500");
-        echoed.Detail.Should().Be("An error occurred");
-        echoed.Instance.Should().BeNull();
-        echoed.Extensions.Should().NotBeNull();
-        echoed.Extensions.Should().BeEmpty();
+        echoed.ShouldNotBeNull();
+        echoed.StatusCode.ShouldBe(500);
+        echoed.Title.ShouldBe("Internal Error");
+        echoed.Type.ShouldBe("https://httpstatuses.io/500");
+        echoed.Detail.ShouldBe("An error occurred");
+        echoed.Instance.ShouldBeNull();
+        echoed.Extensions.ShouldNotBeNull();
+        echoed.Extensions.ShouldBeEmpty();
     }
 
     [Fact]
@@ -223,10 +224,10 @@ public class ProblemSerializationTests : IClassFixture<OrleansClusterFixture>
         var echoed = await grain.EchoProblemAsync(problem);
 
         // Assert
-        echoed.Should().NotBeNull();
-        echoed.ErrorCode.Should().Be("APP_ERROR_001");
-        echoed.StatusCode.Should().Be(400);
-        echoed.Title.Should().Be("BadRequest");
-        echoed.Detail.Should().Be("Invalid request");
+        echoed.ShouldNotBeNull();
+        echoed.ErrorCode.ShouldBe("APP_ERROR_001");
+        echoed.StatusCode.ShouldBe(400);
+        echoed.Title.ShouldBe("BadRequest");
+        echoed.Detail.ShouldBe("Invalid request");
     }
 }

@@ -1,5 +1,5 @@
 using System;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Commands;
 using Xunit;
 
@@ -12,8 +12,7 @@ public class CommandTests
     {
         var command = Command.From(nameof(Command));
         command.Value
-            .Should()
-            .Be(nameof(Command));
+            .ShouldBe(nameof(Command));
     }
 
     [Fact]
@@ -22,10 +21,8 @@ public class CommandTests
         var expectedId = Guid.NewGuid();
         var command = Command<string>.From(expectedId, nameof(Command));
         command.CommandId
-            .Should()
-            .Be(expectedId);
+            .ShouldBe(expectedId);
         command.Value
-            .Should()
-            .Be(nameof(Command));
+            .ShouldBe(nameof(Command));
     }
 }

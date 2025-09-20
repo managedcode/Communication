@@ -2,7 +2,7 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
-using ManagedCode.Communication.Results.Factories;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication.Results.Extensions;
 
@@ -16,11 +16,11 @@ public static class ResultTryExtensions
         try
         {
             action();
-            return ResultFactory.Success();
+            return Result.Succeed();
         }
         catch (Exception exception)
         {
-            return ResultFactory.Failure(exception, errorStatus);
+            return Result.Fail(exception, errorStatus);
         }
     }
 
@@ -28,11 +28,11 @@ public static class ResultTryExtensions
     {
         try
         {
-            return ResultFactory.Success(func());
+            return Result<T>.Succeed(func());
         }
         catch (Exception exception)
         {
-            return ResultFactory.Failure<T>(exception, errorStatus);
+            return Result<T>.Fail(exception, errorStatus);
         }
     }
 
@@ -41,11 +41,11 @@ public static class ResultTryExtensions
         try
         {
             await func().ConfigureAwait(false);
-            return ResultFactory.Success();
+            return Result.Succeed();
         }
         catch (Exception exception)
         {
-            return ResultFactory.Failure(exception, errorStatus);
+            return Result.Fail(exception, errorStatus);
         }
     }
 
@@ -54,11 +54,11 @@ public static class ResultTryExtensions
         try
         {
             var value = await func().ConfigureAwait(false);
-            return ResultFactory.Success(value);
+            return Result<T>.Succeed(value);
         }
         catch (Exception exception)
         {
-            return ResultFactory.Failure<T>(exception, errorStatus);
+            return Result<T>.Fail(exception, errorStatus);
         }
     }
 }

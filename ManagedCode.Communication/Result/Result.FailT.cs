@@ -1,72 +1,42 @@
 using System;
-using ManagedCode.Communication.Results.Factories;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication;
 
 public partial struct Result
 {
-    public static Result<T> Fail<T>()
-    {
-        return ResultFactory.Failure<T>();
-    }
+    public static Result<T> Fail<T>() => ResultFactoryBridge<Result<T>>.Fail();
 
-    public static Result<T> Fail<T>(string message)
-    {
-        return ResultFactory.Failure<T>(message);
-    }
+    public static Result<T> Fail<T>(string message) => ResultFactoryBridge<Result<T>>.Fail(message);
 
-    public static Result<T> Fail<T>(Problem problem)
-    {
-        return ResultFactory.Failure<T>(problem);
-    }
+    public static Result<T> Fail<T>(Problem problem) => Result<T>.CreateFailed(problem);
 
-    public static Result<T> Fail<T, TEnum>(TEnum code) where TEnum : Enum
-    {
-        return ResultFactory.Failure<T, TEnum>(code);
-    }
+    public static Result<T> Fail<T, TEnum>(TEnum code) where TEnum : Enum => ResultFactoryBridge<Result<T>>.Fail(code);
 
     public static Result<T> Fail<T, TEnum>(TEnum code, string detail) where TEnum : Enum
     {
-        return ResultFactory.Failure<T, TEnum>(code, detail);
+        return ResultFactoryBridge<Result<T>>.Fail(code, detail);
     }
 
-    public static Result<T> Fail<T>(Exception exception)
-    {
-        return ResultFactory.Failure<T>(exception);
-    }
+    public static Result<T> Fail<T>(Exception exception) => ResultFactoryBridge<Result<T>>.Fail(exception);
 
     public static Result<T> FailValidation<T>(params (string field, string message)[] errors)
     {
-        return ResultFactory.FailureValidation<T>(errors);
+        return ResultFactoryBridge<Result<T>>.FailValidation(errors);
     }
 
-    public static Result<T> FailUnauthorized<T>()
+    public static Result<T> FailUnauthorized<T>(string? detail = null)
     {
-        return ResultFactory.FailureUnauthorized<T>();
-    }
-    
-    public static Result<T> FailUnauthorized<T>(string detail)
-    {
-        return ResultFactory.FailureUnauthorized<T>(detail);
+        return ResultFactoryBridge<Result<T>>.FailUnauthorized(detail);
     }
 
-    public static Result<T> FailForbidden<T>()
+    public static Result<T> FailForbidden<T>(string? detail = null)
     {
-        return ResultFactory.FailureForbidden<T>();
-    }
-    
-    public static Result<T> FailForbidden<T>(string detail)
-    {
-        return ResultFactory.FailureForbidden<T>(detail);
+        return ResultFactoryBridge<Result<T>>.FailForbidden(detail);
     }
 
-    public static Result<T> FailNotFound<T>()
+    public static Result<T> FailNotFound<T>(string? detail = null)
     {
-        return ResultFactory.FailureNotFound<T>();
-    }
-    
-    public static Result<T> FailNotFound<T>(string detail)
-    {
-        return ResultFactory.FailureNotFound<T>(detail);
+        return ResultFactoryBridge<Result<T>>.FailNotFound(detail);
     }
 }

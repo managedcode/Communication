@@ -1,22 +1,23 @@
 using System;
-using ManagedCode.Communication.Results.Factories;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication;
 
 public partial struct Result<T>
 {
-    public static Result<T> Succeed(T value)
-    {
-        return ResultFactory.Success(value);
-    }
+    public static Result<T> Succeed() => CreateSuccess(default!);
 
+    public static Result<T> Succeed(T value) => CreateSuccess(value);
+ 
     public static Result<T> Succeed(Action<T> action)
     {
-        return ResultFactory.Success(() =>
+        if (action is null)
         {
-            var instance = Activator.CreateInstance<T>();
-            action?.Invoke(instance);
-            return instance;
-        });
+            return CreateSuccess(default!);
+        }
+
+        var instance = Activator.CreateInstance<T>();
+        action(instance);
+        return CreateSuccess(instance!);
     }
 }

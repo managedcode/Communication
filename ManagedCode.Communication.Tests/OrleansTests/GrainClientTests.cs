@@ -1,9 +1,10 @@
 using System.Threading.Tasks;
-using FluentAssertions;
+using Shouldly;
 using ManagedCode.Communication.Tests.Common.TestApp;
 using ManagedCode.Communication.Tests.Common.TestApp.Grains;
 using Xunit;
 using Xunit.Abstractions;
+using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.OrleansTests;
 
@@ -27,11 +28,9 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestResultInt();
         intResult.IsSuccess
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
         intResult.Value
-            .Should()
-            .Be(5);
+            .ShouldBe(5);
     }
 
     [Fact]
@@ -42,8 +41,7 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestResult();
         intResult.IsSuccess
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
     }
 
     [Fact]
@@ -54,8 +52,7 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestResultIntError();
         intResult.IsFailed
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
     }
 
     [Fact]
@@ -66,8 +63,7 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestResultError();
         intResult.IsFailed
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
     }
 
     [Fact]
@@ -78,8 +74,7 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResult();
         result.IsSuccess
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
     }
 
     [Fact]
@@ -90,11 +85,9 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultString();
         result.IsSuccess
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
         result.Value
-            .Should()
-            .Be("test");
+            .ShouldBe("test");
     }
 
     [Fact]
@@ -105,8 +98,7 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultError();
         result.IsFailed
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
     }
 
     [Fact]
@@ -117,8 +109,7 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultStringError();
         result.IsFailed
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
     }
 
     [Fact]
@@ -129,38 +120,29 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultComplexObject();
         result.IsSuccess
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
         result.Value
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Value!.Id
-            .Should()
-            .Be(123);
+            .ShouldBe(123);
         result.Value
             .Name
-            .Should()
-            .Be("Test Model");
+            .ShouldBe("Test Model");
         result.Value
             .Tags
-            .Should()
-            .HaveCount(3);
+            .ShouldHaveCount(3);
         result.Value
             .Properties
-            .Should()
-            .HaveCount(3);
+            .ShouldHaveCount(3);
         result.Value
             .Nested
-            .Should()
-            .NotBeNull();
+            .ShouldNotBeNull();
         result.Value.Nested!.Value
-            .Should()
-            .Be("nested value");
+            .ShouldBe("nested value");
         result.Value
             .Nested
             .Score
-            .Should()
-            .Be(95.5);
+            .ShouldBe(95.5);
     }
 
     [Fact]
@@ -171,7 +153,6 @@ public class GrainClientTests
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultComplexObjectError();
         result.IsFailed
-            .Should()
-            .Be(true);
+            .ShouldBe(true);
     }
 }

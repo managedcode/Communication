@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Results.Factories;
+using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication.Results.Extensions;
 
@@ -14,15 +14,15 @@ public static class ResultRailwayExtensions
     private static Result<TOut> PropagateFailure<TOut>(this IResult result)
     {
         return result.TryGetProblem(out var problem)
-            ? ResultFactory.Failure<TOut>(problem)
-            : ResultFactory.Failure<TOut>(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+            ? Result<TOut>.Fail(problem)
+            : Result<TOut>.Fail(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
     }
 
     private static Result PropagateFailure(this IResult result)
     {
         return result.TryGetProblem(out var problem)
-            ? ResultFactory.Failure(problem)
-            : ResultFactory.Failure(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
+            ? Result.Fail(problem)
+            : Result.Fail(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
     }
 
     public static Result Bind(this Result result, Func<Result> next)
@@ -59,7 +59,7 @@ public static class ResultRailwayExtensions
     public static Result<TOut> Map<TIn, TOut>(this Result<TIn> result, Func<TIn, TOut> mapper)
     {
         return result.IsSuccess
-            ? ResultFactory.Success(mapper(result.Value))
+            ? Result<TOut>.Succeed(mapper(result.Value))
             : result.PropagateFailure<TOut>();
     }
 
@@ -91,7 +91,7 @@ public static class ResultRailwayExtensions
     {
         if (result.IsSuccess && !predicate(result.Value))
         {
-            return ResultFactory.Failure<T>(problem);
+            return Result<T>.Fail(problem);
         }
 
         return result;
@@ -126,7 +126,7 @@ public static class ResultRailwayExtensions
     {
         var result = await resultTask.ConfigureAwait(false);
         return result.IsSuccess
-            ? ResultFactory.Success(await mapper(result.Value).ConfigureAwait(false))
+            ? Result<TOut>.Succeed(await mapper(result.Value).ConfigureAwait(false))
             : result.PropagateFailure<TOut>();
     }
 
@@ -151,7 +151,7 @@ public static class ResultRailwayExtensions
     public static async Task<Result<TOut>> MapAsync<TIn, TOut>(this Result<TIn> result, Func<TIn, Task<TOut>> mapper)
     {
         return result.IsSuccess
-            ? ResultFactory.Success(await mapper(result.Value).ConfigureAwait(false))
+            ? Result<TOut>.Succeed(await mapper(result.Value).ConfigureAwait(false))
             : result.PropagateFailure<TOut>();
     }
 
