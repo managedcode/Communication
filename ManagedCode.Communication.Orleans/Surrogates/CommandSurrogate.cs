@@ -10,7 +10,7 @@ public struct CommandSurrogate
 {
     [Id(0)] public Guid CommandId;
     [Id(1)] public string CommandType;
-    [Id(2)] public DateTimeOffset Timestamp;
+    [Id(2)] public DateTime Timestamp;
     [Id(3)] public string? CorrelationId;
     [Id(4)] public string? CausationId;
     [Id(5)] public string? TraceId;
@@ -22,7 +22,7 @@ public struct CommandSurrogate
     public CommandSurrogate(
         Guid commandId, 
         string commandType,
-        DateTimeOffset timestamp,
+        DateTime timestamp,
         string? correlationId,
         string? causationId,
         string? traceId,

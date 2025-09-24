@@ -18,7 +18,7 @@ public partial class Command : ICommand, ICommandFactory<Command>
     {
         CommandId = commandId;
         CommandType = commandType;
-        Timestamp = DateTimeOffset.UtcNow;
+        Timestamp = DateTime.UtcNow;
     }
 
     [JsonPropertyName("commandId")]
@@ -31,7 +31,7 @@ public partial class Command : ICommand, ICommandFactory<Command>
 
     [JsonPropertyName("timestamp")]
     [JsonPropertyOrder(3)]
-    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
     [JsonPropertyName("correlationId")]
     [JsonPropertyOrder(4)]

@@ -80,7 +80,7 @@ public struct PaymentResponseSurrogate
 {
     [Id(0)] public string TransactionId;
     [Id(1)] public string Status;
-    [Id(2)] public DateTimeOffset ProcessedAt;
+[Id(2)] public DateTime ProcessedAt;
     [Id(3)] public Dictionary<string, object> Details;
 }
 
@@ -148,7 +148,7 @@ public struct UserProfileSurrogate
     [Id(0)] public Guid Id;
     [Id(1)] public string Email;
     [Id(2)] public string Name;
-    [Id(3)] public DateTimeOffset CreatedAt;
+[Id(3)] public DateTime CreatedAt;
     [Id(4)] public Dictionary<string, object> Attributes;
 }
 

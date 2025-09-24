@@ -38,7 +38,7 @@ public class PaymentResponse
     [Id(1)]
     public string Status { get; set; } = string.Empty;
     [Id(2)]
-    public DateTimeOffset ProcessedAt { get; set; }
+    public DateTime ProcessedAt { get; set; }
     [Id(3)]
     public Dictionary<string, object> Details { get; set; } = new();
 }
@@ -73,7 +73,7 @@ public class UserProfile
     [Id(2)]
     public string Name { get; set; } = string.Empty;
     [Id(3)]
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
     [Id(4)]
     public Dictionary<string, object> Attributes { get; set; } = new();
 }

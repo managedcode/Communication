@@ -68,7 +68,7 @@ public static class CommandCleanupExtensions
             InProgressCommands = counts.GetValueOrDefault(CommandExecutionStatus.InProgress, 0),
             FailedCommands = counts.GetValueOrDefault(CommandExecutionStatus.Failed, 0),
             ProcessingCommands = counts.GetValueOrDefault(CommandExecutionStatus.Processing, 0),
-            Timestamp = DateTimeOffset.UtcNow
+            Timestamp = DateTime.UtcNow
         };
     }
 }
@@ -83,7 +83,7 @@ public record CommandStoreHealthMetrics
     public int InProgressCommands { get; init; }
     public int FailedCommands { get; init; }
     public int ProcessingCommands { get; init; }
-    public DateTimeOffset Timestamp { get; init; }
+    public DateTime Timestamp { get; init; }
     
     /// <summary>
     /// Percentage of commands that are stuck in progress (potential issue)

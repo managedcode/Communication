@@ -11,7 +11,7 @@ public struct CommandTSurrogate<T>
     [Id(0)] public Guid CommandId;
     [Id(1)] public string CommandType;
     [Id(2)] public T? Value;
-    [Id(3)] public DateTimeOffset Timestamp;
+    [Id(3)] public DateTime Timestamp;
     [Id(4)] public string? CorrelationId;
     [Id(5)] public string? CausationId;
     [Id(6)] public string? TraceId;
@@ -24,7 +24,7 @@ public struct CommandTSurrogate<T>
         Guid commandId, 
         string commandType, 
         T? value,
-        DateTimeOffset timestamp,
+        DateTime timestamp,
         string? correlationId,
         string? causationId,
         string? traceId,

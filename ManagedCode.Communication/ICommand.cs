@@ -21,9 +21,9 @@ public interface ICommand
     string CommandType { get; set; }
 
     /// <summary>
-    ///     Gets or sets the timestamp when the command was created.
+    ///     Gets or sets the UTC timestamp when the command was created.
     /// </summary>
-    DateTimeOffset Timestamp { get; set; }
+    DateTime Timestamp { get; set; }
 
     /// <summary>
     ///     Gets or sets the correlation identifier for tracking related commands.

@@ -29,6 +29,16 @@ public interface ITestSerializationGrain : IGrainWithGuidKey
     /// Test Result with value serialization
     /// </summary>
     Task<Result<T>> EchoResultAsync<T>(Result<T> result);
+
+    /// <summary>
+    /// Test pagination command serialization
+    /// </summary>
+    Task<PaginationCommand> EchoPaginationCommandAsync(PaginationCommand command);
+
+    /// <summary>
+    /// Test pagination request serialization
+    /// </summary>
+    Task<PaginationRequest> EchoPaginationRequestAsync(PaginationRequest request);
     
     /// <summary>
     /// Test CollectionResult serialization

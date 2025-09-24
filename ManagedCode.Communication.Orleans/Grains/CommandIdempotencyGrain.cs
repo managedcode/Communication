@@ -16,7 +16,7 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
     public Task<CommandExecutionStatus> GetStatusAsync()
     {
         // Check if expired
-        if (state.State.ExpiresAt.HasValue && DateTimeOffset.UtcNow > state.State.ExpiresAt.Value)
+        if (state.State.ExpiresAt.HasValue && DateTime.UtcNow > state.State.ExpiresAt.Value)
         {
             return Task.FromResult(CommandExecutionStatus.NotFound);
         }
@@ -33,8 +33,8 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
         }
 
         state.State.Status = CommandExecutionStatus.Processing;
-        state.State.StartedAt = DateTimeOffset.UtcNow;
-        state.State.ExpiresAt = DateTimeOffset.UtcNow.AddHours(1); // Default 1 hour expiration
+        state.State.StartedAt = DateTime.UtcNow;
+        state.State.ExpiresAt = DateTime.UtcNow.AddHours(1); // Default 1 hour expiration
 
         await state.WriteStateAsync();
         return true;
@@ -43,9 +43,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
     public async Task MarkCompletedAsync<TResult>(TResult result)
     {
         state.State.Status = CommandExecutionStatus.Completed;
-        state.State.CompletedAt = DateTimeOffset.UtcNow;
+        state.State.CompletedAt = DateTime.UtcNow;
         state.State.Result = result;
-        state.State.ExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
+        state.State.ExpiresAt = DateTime.UtcNow.AddHours(1);
 
         await state.WriteStateAsync();
     }
@@ -53,9 +53,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
     public async Task MarkFailedAsync(string errorMessage)
     {
         state.State.Status = CommandExecutionStatus.Failed;
-        state.State.FailedAt = DateTimeOffset.UtcNow;
+        state.State.FailedAt = DateTime.UtcNow;
         state.State.ErrorMessage = errorMessage;
-        state.State.ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15); // Shorter TTL for failures
+        state.State.ExpiresAt = DateTime.UtcNow.AddMinutes(15); // Shorter TTL for failures
 
         await state.WriteStateAsync();
     }
@@ -100,14 +100,14 @@ public class CommandState
     public string? ErrorMessage { get; set; }
 
     [Id(3)]
-    public DateTimeOffset? StartedAt { get; set; }
+    public DateTime? StartedAt { get; set; }
 
     [Id(4)]
-    public DateTimeOffset? CompletedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
 
     [Id(5)]
-    public DateTimeOffset? FailedAt { get; set; }
+    public DateTime? FailedAt { get; set; }
 
     [Id(6)]
-    public DateTimeOffset? ExpiresAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
 }

@@ -48,12 +48,6 @@ public static class ShouldlyTestExtensions
         }
     }
 
-    public static void ShouldBeCloseTo(this DateTimeOffset actual, DateTimeOffset expected, TimeSpan tolerance, string? customMessage = null)
-    {
-        var delta = (actual - expected).Duration();
-        (delta <= tolerance).ShouldBeTrue(customMessage ?? $"Expected |{actual - expected}| <= {tolerance} but was {delta}.");
-    }
-
     public static void ShouldBeCloseTo(this DateTime actual, DateTime expected, TimeSpan tolerance, string? customMessage = null)
     {
         var delta = (actual - expected).Duration();

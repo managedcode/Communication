@@ -153,7 +153,7 @@ public class ProblemSerializationTests : IClassFixture<OrleansClusterFixture>
         
         var problem = Problem.FromStatusCode(HttpStatusCode.BadRequest, "Validation failed");
         problem.Extensions["correlationId"] = Guid.NewGuid().ToString();
-        problem.Extensions["timestamp"] = DateTimeOffset.UtcNow;
+        problem.Extensions["timestamp"] = DateTime.UtcNow;
         problem.Extensions["retryAfter"] = 60;
         problem.Extensions["supportContact"] = "support@example.com";
         problem.Extensions["errorCodes"] = new[] { "ERR001", "ERR002", "ERR003" };

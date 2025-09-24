@@ -239,13 +239,13 @@ public static class CommandIdempotencyExtensions
         TimeSpan? maxWaitTime = null)
     {
         maxWaitTime ??= TimeSpan.FromSeconds(30); // Reduced from 5 minutes
-        var endTime = DateTimeOffset.UtcNow.Add(maxWaitTime.Value);
+        var endTime = DateTime.UtcNow.Add(maxWaitTime.Value);
         
         // Adaptive polling: start fast, then slow down
         var pollInterval = TimeSpan.FromMilliseconds(10);
         const int maxInterval = 1000; // Max 1 second
 
-        while (DateTimeOffset.UtcNow < endTime)
+        while (DateTime.UtcNow < endTime)
         {
             cancellationToken.ThrowIfCancellationRequested();
 

@@ -51,7 +51,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
             ("username", "Username already taken")
         );
         problem.Extensions["requestId"] = "req-123";
-        problem.Extensions["timestamp"] = DateTimeOffset.UtcNow.ToString("O");
+        problem.Extensions["timestamp"] = DateTime.UtcNow.ToString("O");
         
         var result = Result.Fail(problem);
 
@@ -88,7 +88,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         {
             TransactionId = "txn-123",
             Status = "completed",
-            ProcessedAt = DateTimeOffset.UtcNow,
+            ProcessedAt = DateTime.UtcNow,
             Details = new Dictionary<string, object>
             {
                 ["gateway"] = "stripe",
@@ -173,7 +173,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
             Id = Guid.NewGuid(),
             Email = "user@example.com",
             Name = "John Doe",
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = DateTime.UtcNow,
             Attributes = new Dictionary<string, object>
             {
                 ["age"] = 30,

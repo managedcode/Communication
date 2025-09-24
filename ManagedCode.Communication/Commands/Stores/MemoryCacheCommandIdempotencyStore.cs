@@ -18,7 +18,7 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
 {
     private readonly IMemoryCache _memoryCache;
     private readonly ILogger<MemoryCacheCommandIdempotencyStore> _logger;
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _commandTimestamps;
+    private readonly ConcurrentDictionary<string, DateTime> _commandTimestamps;
     private bool _disposed;
 
     public MemoryCacheCommandIdempotencyStore(
@@ -27,7 +27,7 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     {
         _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _commandTimestamps = new ConcurrentDictionary<string, DateTimeOffset>();
+        _commandTimestamps = new ConcurrentDictionary<string, DateTime>();
     }
 
     public Task<CommandExecutionStatus> GetCommandStatusAsync(string commandId, CancellationToken cancellationToken = default)
@@ -47,7 +47,7 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         };
 
         _memoryCache.Set(statusKey, status, options);
-        _commandTimestamps[commandId] = DateTimeOffset.UtcNow;
+        _commandTimestamps[commandId] = DateTime.UtcNow;
         
         return Task.CompletedTask;
     }
@@ -158,7 +158,7 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     // Cleanup operations
     public Task<int> CleanupExpiredCommandsAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
     {
-        var cutoffTime = DateTimeOffset.UtcNow.Subtract(maxAge);
+        var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
         var expiredCommands = _commandTimestamps
             .Where(kvp => kvp.Value < cutoffTime)
             .Select(kvp => kvp.Key)
@@ -183,7 +183,7 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
 
     public Task<int> CleanupCommandsByStatusAsync(CommandExecutionStatus status, TimeSpan maxAge, CancellationToken cancellationToken = default)
     {
-        var cutoffTime = DateTimeOffset.UtcNow.Subtract(maxAge);
+        var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
         var cleanedCount = 0;
 
         var commandsToCheck = _commandTimestamps

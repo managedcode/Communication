@@ -32,6 +32,16 @@ public class TestSerializationGrain : Grain, ITestSerializationGrain
         return Task.FromResult(result);
     }
 
+    public Task<PaginationCommand> EchoPaginationCommandAsync(PaginationCommand command)
+    {
+        return Task.FromResult(command);
+    }
+
+    public Task<PaginationRequest> EchoPaginationRequestAsync(PaginationRequest request)
+    {
+        return Task.FromResult(request);
+    }
+
     public Task<CollectionResult<T>> EchoCollectionResultAsync<T>(CollectionResult<T> result)
     {
         return Task.FromResult(result);

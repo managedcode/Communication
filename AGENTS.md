@@ -11,6 +11,7 @@ If I tell you to remember something, you do the same, update
 ## Rules to follow
 always check all test are passed.
 - Prefer static interface members for result/command factories to centralize shared overloads and avoid duplication across result-like types.
+- Use `DateTime.UtcNow` (never `DateTimeOffset`) for all timestamps; we assume every stored time is in UTC.
 
 # Repository Guidelines
 

@@ -196,6 +196,47 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
     }
 
     [Fact]
+    public async Task PaginationCommand_ShouldSerializeCorrectly()
+    {
+        // Arrange
+        var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
+        var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 50, minPageSize: 10);
+
+        var command = PaginationCommand.Create(Guid.CreateVersion7(), skip: 25, take: 5, options);
+        command.CorrelationId = "pagination-correlation";
+        command.Metadata = new CommandMetadata
+        {
+            InitiatedBy = "tests",
+            Priority = CommandPriority.Low,
+            Tags = new Dictionary<string, string> { ["scope"] = "pagination" }
+        };
+
+        // Act
+        var pagination = await grain.EchoPaginationCommandAsync(command);
+
+        // Assert
+        pagination.CommandId.ShouldBe(command.CommandId);
+        pagination.CommandType.ShouldBe("Pagination");
+        pagination.Timestamp.ShouldBeCloseTo(command.Timestamp, TimeSpan.FromSeconds(1));
+        pagination.CorrelationId.ShouldBe("pagination-correlation");
+
+        pagination.Skip.ShouldBe(25);
+        pagination.Take.ShouldBe(10); // normalized to minimum page size 10
+        pagination.PageSize.ShouldBe(10);
+        pagination.PageNumber.ShouldBe(3);
+
+        pagination.Value.ShouldNotBeNull();
+        pagination.Value!.Skip.ShouldBe(25);
+        pagination.Value.Take.ShouldBe(10);
+
+        pagination.Metadata.ShouldNotBeNull();
+        pagination.Metadata!.InitiatedBy.ShouldBe("tests");
+        pagination.Metadata.Priority.ShouldBe(CommandPriority.Low);
+        pagination.Metadata.Tags.ShouldNotBeNull();
+        pagination.Metadata.Tags!["scope"].ShouldBe("pagination");
+    }
+
+    [Fact]
     public async Task CommandT_WithEnumType_ShouldSerializeCorrectly()
     {
         // Arrange

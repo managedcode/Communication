@@ -125,7 +125,7 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
             Id = Guid.NewGuid(),
             Email = $"user{i}@example.com",
             Name = $"User {i}",
-            CreatedAt = DateTimeOffset.UtcNow.AddDays(-i),
+            CreatedAt = DateTime.UtcNow.AddDays(-i),
             Attributes = new()
             {
                 ["level"] = i * 10,

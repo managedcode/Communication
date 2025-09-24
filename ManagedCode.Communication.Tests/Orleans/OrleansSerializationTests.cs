@@ -63,7 +63,7 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         {
             TransactionId = "txn-999",
             Status = "completed",
-            ProcessedAt = DateTimeOffset.UtcNow,
+            ProcessedAt = DateTime.UtcNow,
             Details = new Dictionary<string, object>
             {
                 ["gateway"] = "test-gateway",
@@ -135,11 +135,11 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
                 ["audit"] = new Dictionary<string, object>
                 {
                     ["ip"] = "192.168.1.1",
-                    ["timestamp"] = DateTimeOffset.UtcNow,
+                    ["timestamp"] = DateTime.UtcNow,
                     ["actions"] = new List<Dictionary<string, object>>
                     {
-                        new() { ["action"] = "login", ["time"] = DateTimeOffset.UtcNow.AddHours(-1).ToString("o") },
-                        new() { ["action"] = "payment", ["time"] = DateTimeOffset.UtcNow.ToString("o") }
+                        new() { ["action"] = "login", ["time"] = DateTime.UtcNow.AddHours(-1).ToString("o") },
+                        new() { ["action"] = "payment", ["time"] = DateTime.UtcNow.ToString("o") }
                     }
                 }
             }
