@@ -80,6 +80,50 @@ public class CommandTests
             .ShouldBe("value");
     }
 
+    [Fact]
+    public void Create_ShouldStampTimestampWithUtcNow()
+    {
+        var before = DateTime.UtcNow;
+
+        var command = Command.Create("TimestampTest");
+
+        var after = DateTime.UtcNow;
+        command.Timestamp.ShouldBeInRange(before, after);
+        command.Timestamp.Kind.ShouldBe(DateTimeKind.Utc);
+    }
+
+    [Fact]
+    public void Create_ShouldUseVersion7CommandId()
+    {
+        var command = Command.Create("VersionTest");
+
+        GetGuidVersion(command.CommandId).ShouldBe(7);
+    }
+
+    [Fact]
+    public void GenericCreate_WithDerivedValue_ShouldUseDerivedTypeName()
+    {
+        var payload = new DerivedPayload();
+
+        var command = Command<BasePayload>.Create(payload);
+
+        command.CommandType.ShouldBe(nameof(DerivedPayload));
+    }
+
+    private static int GetGuidVersion(Guid guid)
+    {
+        var bytes = guid.ToByteArray();
+        return (bytes[7] >> 4) & 0x0F;
+    }
+
+    private class BasePayload
+    {
+    }
+
+    private sealed class DerivedPayload : BasePayload
+    {
+    }
+
     private enum TestCommandType
     {
         Create,

@@ -17,6 +17,8 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 - [API Reference](#api-reference)
 - [Railway-Oriented Programming](#railway-oriented-programming)
 - [Command Pattern and Idempotency](#command-pattern-and-idempotency)
+  - [Command Correlation and Tracing Identifiers](#command-correlation-and-tracing-identifiers)
+  - [Idempotency Architecture Overview](#idempotency-architecture-overview)
 - [Error Handling Patterns](#error-handling-patterns)
 - [Integration Guides](#integration-guides)
 - [Performance](#performance)
@@ -564,6 +566,91 @@ if (status == CommandExecutionStatus.Completed)
     var result = await _idempotencyStore.GetCommandResultAsync<Order>("command-id");
 }
 ```
+
+### Command Correlation and Tracing Identifiers
+
+Commands implement `ICommand` and surface correlation, causation, trace, span, user, and session identifiers alongside optiona
+l metadata so every hop can attach observability context. The base `Command` and `Command<T>` types keep those properties on the
+root object, and serializers/Orleans surrogates round-trip them without custom plumbing.
+
+#### Identifier lifecycle
+- Static command factories generate monotonic version 7 identifiers via `Guid.CreateVersion7()` and stamp a UTC timestamp so co
+mmands can be sorted chronologically even when sharded.
+- Factory helpers never mutate the correlation or trace identifiers; callers opt in by supplying values through fluent `WithCor
+relationId`, `WithTraceId`, and similar extension methods that return the same command instance.
+- Metadata mirrors the trace/span identifiers for workload-specific diagnostics without coupling transport-level identifiers to
+payload annotations.
+
+#### Field reference
+
+| Field | Purpose | Typical source | Notes |
+| --- | --- | --- | --- |
+| `CommandId` | Unique, monotonic identifier for deduplication | Static command factories | Remains stable for retries and sto
+rage lookups. |
+| `CorrelationId` | Ties a command to an upstream workflow/request | HTTP `X-Correlation-Id`, message headers | Preserved through
+ serialization and Orleans surrogates. |
+| `CausationId` | Records the predecessor command/event | Current command ID | Supports causal chains in telemetry. |
+| `TraceId` | Connects to distributed tracing spans | OpenTelemetry/`Activity` context | The library stores, but never generate
+s, trace identifiers. |
+| `SpanId` | Identifies the originating span | OpenTelemetry/`Activity` context | Often paired with `Metadata.TraceId` for deep
+er traces. |
+| `UserId` / `SessionId` | Attach security/session principals | Authentication middleware | Useful for multi-tenant auditing. |
+
+#### Trace vs. correlation
+- **Correlation IDs** bundle every command spawned from a single business request. Assign them at ingress and keep the value st
+able across retries so dashboards can answer “what commands ran because of this call?”.
+- **Trace/Span IDs** follow distributed tracing semantics. Commands avoid creating new traces and instead persist the ambient `A
+ctivity` identifiers through serialization so telemetry back-ends can stitch spans together.
+- Both identifier sets are serialized together, enabling pivots between business-level correlation and technical call graphs wit
+hout extra configuration.
+
+#### Generation and propagation guidance
+- Use `Command.Create(...)` / `Command<T>.Create(...)` (or the matching `From(...)` helpers) to get a version 7 identifier and U
+TC timestamp automatically.
+- Read or generate correlation IDs from HTTP headers or upstream messages and apply them via `.WithCorrelationId(...)` before d
+ispatching commands.
+- Capture `Activity.TraceId`/`Activity.SpanId` through `.WithTraceId(...)` and `.WithSpanId(...)` (and metadata counterparts) wh
+en bridging to queues, Orleans, or background pipelines.
+- Serialization tests verify the identifiers round-trip, so consumers can rely on receiving the same values they emitted.
+
+#### Operational considerations
+- Factory unit tests ensure commands created through the helpers carry version 7 identifiers, UTC timestamps, and derived `Comma
+ndType` values for traceability.
+- Idempotency regression tests assert that concurrent callers reuse cached results and propagate failures consistently, preservi
+ng correlation integrity when retry storms occur.
+
+### Idempotency Architecture Overview
+
+#### Scope
+The shared idempotency helpers (`CommandIdempotencyExtensions`), default in-memory store, and test coverage work together to pro
+tect concurrency, caching, and retry behaviour across hosts.
+
+#### Strengths
+- **Deterministic status transitions.** `ExecuteIdempotentAsync` only invokes the provided delegate after atomically claiming th
+e command, writes the result, and then flips the status to `Completed`, so retries either reuse cached output or wait for the in
+-flight execution to finish.
+- **Batch reuse of cached outputs.** Batch helpers perform bulk status/result lookups and bypass execution for already completed
+ commands, even when cached results are `null` or default values.
+- **Fine-grained locking in the memory store.** Per-command `SemaphoreSlim` instances eliminate global contention, and reference
+ counting ensures locks are released once no callers use a key.
+- **Concurrency regression tests.** Dedicated unit tests confirm that concurrent callers share a single execution, failed primar
+y runs surface consistent exceptions, and the final status ends up in `Failed` when appropriate.
+
+#### Risks & considerations
+- **Missing-result ambiguity.** If a store reports `Completed` but the result entry expired, the extensions currently return the
+ default value. Stores that can distinguish “missing” from “stored default” should override `TryGetCachedResultAsync` to trigger
+ a re-execution.
+- **Wait semantics rely on polling.** Adaptive polling keeps responsiveness reasonable, but distributed stores can swap in push-
+style notifications if tail latency becomes critical.
+- **Status retention policies.** The memory store’s cleanup removes status and result after a TTL; other implementations must pr
+ovide similar hygiene to avoid unbounded growth while keeping enough history for retries.
+
+#### Recommendations
+1. Document store-specific retention guarantees so callers can tune retry windows.
+2. Consider extending the store contract with a boolean flag (or sentinel wrapper) that differentiates cached `default` values f
+rom missing entries.
+3. Monitor lock-pool growth in long-lived applications and log keys that never release to diagnose misbehaving callers before me
+mory pressure builds up.
 
 ## Error Handling Patterns
 

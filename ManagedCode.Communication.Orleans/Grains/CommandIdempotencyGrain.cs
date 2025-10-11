@@ -26,8 +26,21 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
 
     public async Task<bool> TryStartProcessingAsync()
     {
-        // Check if already processing or completed
-        if (state.State.Status != CommandExecutionStatus.NotFound)
+        // Reject concurrent executions
+        if (state.State.Status is CommandExecutionStatus.InProgress or CommandExecutionStatus.Processing)
+        {
+            return false;
+        }
+
+        // Allow retries from failed or completed states by clearing previous outcome
+        if (state.State.Status is CommandExecutionStatus.Completed or CommandExecutionStatus.Failed)
+        {
+            state.State.Result = null;
+            state.State.ErrorMessage = null;
+            state.State.CompletedAt = null;
+            state.State.FailedAt = null;
+        }
+        else if (state.State.Status is not CommandExecutionStatus.NotFound and not CommandExecutionStatus.NotStarted)
         {
             return false;
         }
