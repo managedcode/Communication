@@ -107,9 +107,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     {
         if (Interlocked.Decrement(ref commandLock.RefCount) == 0)
         {
-            if (_commandLocks.TryRemove(commandId, out var existingLock) && !ReferenceEquals(existingLock, commandLock))
+            if (_commandLocks.TryGetValue(commandId, out var existingLock) && ReferenceEquals(existingLock, commandLock))
             {
-                _commandLocks.TryAdd(commandId, existingLock);
+                _commandLocks.TryRemove(new KeyValuePair<string, CommandLock>(commandId, commandLock));
             }
 
             commandLock.Semaphore.Dispose();

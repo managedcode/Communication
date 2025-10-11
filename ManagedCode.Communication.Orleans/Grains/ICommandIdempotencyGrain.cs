@@ -42,4 +42,12 @@ public interface ICommandIdempotencyGrain : IGrainWithStringKey
     /// Clears the command state from the grain.
     /// </summary>
     Task ClearAsync();
+
+    /// <summary>
+    /// Attempts to transition the command to a new status when the current status matches the expected value.
+    /// </summary>
+    /// <param name="expectedStatus">The status the caller believes the command currently has.</param>
+    /// <param name="newStatus">The desired status to transition to.</param>
+    /// <returns><c>true</c> when the transition succeeds, otherwise <c>false</c>.</returns>
+    Task<bool> TrySetStatusAsync(CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus);
 }

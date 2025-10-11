@@ -27,27 +27,26 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
     public async Task<bool> TryStartProcessingAsync()
     {
         // Reject concurrent executions
-        if (state.State.Status is CommandExecutionStatus.InProgress or CommandExecutionStatus.Processing)
+        switch (state.State.Status)
         {
-            return false;
-        }
+            case CommandExecutionStatus.InProgress:
+            case CommandExecutionStatus.Processing:
+            case CommandExecutionStatus.Completed:
+                return false;
 
-        if (state.State.Status is CommandExecutionStatus.Completed)
-        {
-            return false;
-        }
+            case CommandExecutionStatus.Failed:
+                state.State.Result = null;
+                state.State.ErrorMessage = null;
+                state.State.CompletedAt = null;
+                state.State.FailedAt = null;
+                break;
 
-        // Allow retries after failures by clearing the previous outcome
-        if (state.State.Status is CommandExecutionStatus.Failed)
-        {
-            state.State.Result = null;
-            state.State.ErrorMessage = null;
-            state.State.CompletedAt = null;
-            state.State.FailedAt = null;
-        }
-        else if (state.State.Status is not CommandExecutionStatus.NotFound and not CommandExecutionStatus.NotStarted)
-        {
-            return false;
+            case CommandExecutionStatus.NotFound:
+            case CommandExecutionStatus.NotStarted:
+                break;
+
+            default:
+                return false;
         }
 
         state.State.Status = CommandExecutionStatus.Processing;
@@ -56,6 +55,47 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
 
         await state.WriteStateAsync();
         return true;
+    }
+
+    public async Task<bool> TrySetStatusAsync(CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus)
+    {
+        if (state.State.Status != expectedStatus)
+        {
+            return false;
+        }
+
+        switch (newStatus)
+        {
+            case CommandExecutionStatus.InProgress:
+            case CommandExecutionStatus.Processing:
+                return await TryStartProcessingAsync();
+
+            case CommandExecutionStatus.Completed:
+                await MarkCompletedAsync(state.State.Result);
+                return true;
+
+            case CommandExecutionStatus.Failed:
+                await MarkFailedAsync(state.State.ErrorMessage ?? "Status set to failed");
+                return true;
+
+            case CommandExecutionStatus.NotFound:
+                await ClearAsync();
+                return true;
+
+            case CommandExecutionStatus.NotStarted:
+                state.State.Status = CommandExecutionStatus.NotStarted;
+                state.State.Result = null;
+                state.State.ErrorMessage = null;
+                state.State.StartedAt = null;
+                state.State.CompletedAt = null;
+                state.State.FailedAt = null;
+                state.State.ExpiresAt = null;
+                await state.WriteStateAsync();
+                return true;
+
+            default:
+                return false;
+        }
     }
 
     public async Task MarkCompletedAsync<TResult>(TResult result)
