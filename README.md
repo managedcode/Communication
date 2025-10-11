@@ -583,8 +583,7 @@ payload annotations.
 
 | Field | Purpose | Typical source | Notes |
 | --- | --- | --- | --- |
-| `CommandId` | Unique, monotonic identifier for deduplication | Static command factories | Remains stable for retries and sto
-rage lookups. |
+| `CommandId` | Unique, monotonic identifier for deduplication | Static command factories | Remains stable for retries and storage lookups. |
 | `CorrelationId` | Ties a command to an upstream workflow/request | HTTP `X-Correlation-Id`, message headers | Preserved through
  serialization and Orleans surrogates. |
 | `CausationId` | Records the predecessor command/event | Current command ID | Supports causal chains in telemetry. |
