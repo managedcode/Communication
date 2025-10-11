@@ -569,8 +569,8 @@ if (status == CommandExecutionStatus.Completed)
 
 ### Command Correlation and Tracing Identifiers
 
-Commands implement `ICommand` and surface correlation, causation, trace, span, user, and session identifiers alongside optiona
-l metadata so every hop can attach observability context. The base `Command` and `Command<T>` types keep those properties on the
+Commands implement `ICommand` and surface correlation, causation, trace, span, user, and session identifiers alongside optional metadata so every hop can attach observability context. The base `Command` and `Command<T>` types keep those properties on the
+root object, and serializers/Orleans surrogates round-trip them without custom plumbing.
 root object, and serializers/Orleans surrogates round-trip them without custom plumbing.
 
 #### Identifier lifecycle
