@@ -84,46 +84,64 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.CompletedTask;
     }
 
-    private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+    private readonly ConcurrentDictionary<string, CommandLock> _commandLocks = new();
+
+    private async Task<LockScope> AcquireLockAsync(string commandId, CancellationToken cancellationToken)
+    {
+        var commandLock = _commandLocks.GetOrAdd(commandId, static _ => new CommandLock());
+        Interlocked.Increment(ref commandLock.RefCount);
+
+        try
+        {
+            await commandLock.Semaphore.WaitAsync(cancellationToken);
+            return new LockScope(this, commandId, commandLock);
+        }
+        catch
+        {
+            ReleaseLockReference(commandId, commandLock);
+            throw;
+        }
+    }
+
+    private void ReleaseLockReference(string commandId, CommandLock commandLock)
+    {
+        if (Interlocked.Decrement(ref commandLock.RefCount) == 0)
+        {
+            if (_commandLocks.TryGetValue(commandId, out var existingLock) && ReferenceEquals(existingLock, commandLock))
+            {
+                _commandLocks.TryRemove(new KeyValuePair<string, CommandLock>(commandId, commandLock));
+            }
+
+            commandLock.Semaphore.Dispose();
+        }
+    }
 
     public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
-        await _semaphore.WaitAsync(cancellationToken);
-        try
+        using var scope = await AcquireLockAsync(commandId, cancellationToken);
+
+        var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(GetStatusKey(commandId)) ?? CommandExecutionStatus.NotFound;
+
+        if (currentStatus == expectedStatus)
         {
-            var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(GetStatusKey(commandId)) ?? CommandExecutionStatus.NotFound;
-            
-            if (currentStatus == expectedStatus)
-            {
-                await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
-                return true;
-            }
-            
-            return false;
+            await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
+            return true;
         }
-        finally
-        {
-            _semaphore.Release();
-        }
+
+        return false;
     }
 
     public async Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
-        await _semaphore.WaitAsync(cancellationToken);
-        try
-        {
-            var statusKey = GetStatusKey(commandId);
-            var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(statusKey) ?? CommandExecutionStatus.NotFound;
-            
-            // Set new status
-            await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
-            
-            return (currentStatus, true);
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        using var scope = await AcquireLockAsync(commandId, cancellationToken);
+
+        var statusKey = GetStatusKey(commandId);
+        var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(statusKey) ?? CommandExecutionStatus.NotFound;
+
+        // Set new status
+        await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
+
+        return (currentStatus, true);
     }
 
     // Batch operations
@@ -239,6 +257,39 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         if (!_disposed)
         {
             _commandTimestamps.Clear();
+            _disposed = true;
+        }
+    }
+
+    private sealed class CommandLock
+    {
+        public SemaphoreSlim Semaphore { get; } = new(1, 1);
+        public int RefCount;
+    }
+
+    private sealed class LockScope : IDisposable
+    {
+        private readonly MemoryCacheCommandIdempotencyStore _store;
+        private readonly string _commandId;
+        private readonly CommandLock _commandLock;
+        private bool _disposed;
+
+        public LockScope(MemoryCacheCommandIdempotencyStore store, string commandId, CommandLock commandLock)
+        {
+            _store = store;
+            _commandId = commandId;
+            _commandLock = commandLock;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _commandLock.Semaphore.Release();
+            _store.ReleaseLockReference(_commandId, _commandLock);
             _disposed = true;
         }
     }

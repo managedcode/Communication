@@ -41,7 +41,15 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
                 await grain.MarkFailedAsync("Status set to failed");
                 break;
             case CommandExecutionStatus.Completed:
-                await grain.MarkCompletedAsync<object?>(null);
+                var (hasResult, result) = await grain.TryGetResultAsync();
+                if (hasResult)
+                {
+                    await grain.MarkCompletedAsync(result);
+                }
+                else
+                {
+                    await grain.MarkCompletedAsync<object?>(default);
+                }
                 break;
             case CommandExecutionStatus.NotStarted:
             case CommandExecutionStatus.NotFound:
@@ -80,14 +88,12 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
     public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
-        var currentStatus = await grain.GetStatusAsync();
-        
-        if (currentStatus == expectedStatus)
+
+        if (await grain.TrySetStatusAsync(expectedStatus, newStatus))
         {
-            await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
             return true;
         }
-        
+
         return false;
     }
 
@@ -175,7 +181,21 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
 
     public async Task<(bool success, TResult? result)> TryGetResultAsync<TResult>(Guid commandId, CancellationToken cancellationToken = default)
     {
-        var result = await GetCommandResultAsync<TResult>(commandId.ToString(), cancellationToken);
-        return (result != null, result);
+        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId.ToString());
+        var status = await grain.GetStatusAsync();
+
+        if (status != CommandExecutionStatus.Completed)
+        {
+            return (false, default);
+        }
+
+        var (_, result) = await grain.TryGetResultAsync();
+
+        if (result is TResult typedResult)
+        {
+            return (true, typedResult);
+        }
+
+        return (true, default);
     }
 }
