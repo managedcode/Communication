@@ -34,18 +34,30 @@ public static class CommunicationLogger
 
     private static ILogger<Result> CreateLogger()
     {
-        var logger = _serviceProvider?.GetService<ILogger<Result>>();
-        if (logger != null)
-            return logger;
+        if (_serviceProvider != null)
+        {
+            try
+            {
+                var logger = _serviceProvider.GetService<ILogger<Result>>();
+                if (logger != null)
+                {
+                    return logger;
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                _serviceProvider = null;
+            }
+        }
 
         if (_fallbackLoggerFactory != null)
         {
-            return new Logger<Result>(_fallbackLoggerFactory);
+            return _fallbackLoggerFactory.CreateLogger<Result>();
         }
 
-        _lastResortLoggerFactory ??= LoggerFactory.Create(builder => 
+        _lastResortLoggerFactory ??= LoggerFactory.Create(builder =>
             builder.SetMinimumLevel(LogLevel.Warning));
-            
-        return new Logger<Result>(_lastResortLoggerFactory);
+
+        return _lastResortLoggerFactory.CreateLogger<Result>();
     }
 }
