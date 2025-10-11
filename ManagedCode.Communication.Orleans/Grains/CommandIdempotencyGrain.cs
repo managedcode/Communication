@@ -71,7 +71,7 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
                 return await TryStartProcessingAsync();
 
             case CommandExecutionStatus.Completed:
-                await MarkCompletedAsync<object?>(state.State.Result);
+                await MarkCompletedAsync(state.State.Result);
                 return true;
 
             case CommandExecutionStatus.Failed:
