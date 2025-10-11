@@ -88,14 +88,12 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
     public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
-        var currentStatus = await grain.GetStatusAsync();
-        
-        if (currentStatus == expectedStatus)
+
+        if (await grain.TrySetStatusAsync(expectedStatus, newStatus))
         {
-            await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
             return true;
         }
-        
+
         return false;
     }
 
