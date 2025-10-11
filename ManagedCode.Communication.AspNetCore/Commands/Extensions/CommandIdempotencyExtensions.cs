@@ -34,57 +34,50 @@ public static class CommandIdempotencyExtensions
         CommandMetadata? metadata,
         CancellationToken cancellationToken = default)
     {
-        // Fast path: check for existing completed result
-        var existingResult = await store.GetCommandResultAsync<T>(commandId, cancellationToken);
-        if (existingResult != null)
+        while (true)
         {
-            return existingResult;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var currentStatus = await store.GetCommandStatusAsync(commandId, cancellationToken);
+
+            switch (currentStatus)
+            {
+                case CommandExecutionStatus.Completed:
+                {
+                    var cachedResult = await store.GetCommandResultAsync<T>(commandId, cancellationToken);
+                    return cachedResult ?? default!;
+                }
+
+                case CommandExecutionStatus.InProgress:
+                case CommandExecutionStatus.Processing:
+                    return await WaitForCompletionAsync<T>(store, commandId, cancellationToken);
+
+                case CommandExecutionStatus.NotFound:
+                case CommandExecutionStatus.NotStarted:
+                case CommandExecutionStatus.Failed:
+                default:
+                {
+                    var claimed = await store.TrySetCommandStatusAsync(
+                        commandId,
+                        currentStatus,
+                        CommandExecutionStatus.InProgress,
+                        cancellationToken);
+
+                    if (claimed)
+                    {
+                        goto ExecuteOperation;
+                    }
+
+                    break;
+                }
+            }
         }
 
-        // Atomically try to claim the command for execution
-        var (currentStatus, wasSet) = await store.GetAndSetStatusAsync(
-            commandId, 
-            CommandExecutionStatus.InProgress, 
-            cancellationToken);
-
-        switch (currentStatus)
-        {
-            case CommandExecutionStatus.Completed:
-                // Result exists but might have been evicted, get it again
-                existingResult = await store.GetCommandResultAsync<T>(commandId, cancellationToken);
-                return existingResult ?? throw new InvalidOperationException($"Command {commandId} marked as completed but result not found");
-                
-            case CommandExecutionStatus.InProgress:
-            case CommandExecutionStatus.Processing:
-                // Another thread is executing, wait for completion
-                return await WaitForCompletionAsync<T>(store, commandId, cancellationToken);
-                
-            case CommandExecutionStatus.Failed:
-                // Previous execution failed, we can retry (wasSet should be true)
-                if (!wasSet)
-                {
-                    // Race condition - another thread claimed it
-                    return await WaitForCompletionAsync<T>(store, commandId, cancellationToken);
-                }
-                break;
-                
-            case CommandExecutionStatus.NotFound:
-            case CommandExecutionStatus.NotStarted:
-            default:
-                // First execution (wasSet should be true)
-                if (!wasSet)
-                {
-                    // Race condition - another thread claimed it
-                    return await WaitForCompletionAsync<T>(store, commandId, cancellationToken);
-                }
-                break;
-        }
-
-        // We successfully claimed the command for execution
+        ExecuteOperation:
         try
         {
             var result = await operation();
-            
+
             // Store result and mark as completed atomically
             await store.SetCommandResultAsync(commandId, result, cancellationToken);
             await store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Completed, cancellationToken);
@@ -159,7 +152,7 @@ public static class CommandIdempotencyExtensions
         if (status == CommandExecutionStatus.Completed)
         {
             var result = await store.GetCommandResultAsync<T>(commandId, cancellationToken);
-            return (result != null, result);
+            return (true, result);
         }
 
         return (false, default);
@@ -192,7 +185,7 @@ public static class CommandIdempotencyExtensions
         var operationsList = operations.ToList();
         var commandIds = operationsList.Select(op => op.commandId).ToList();
         
-        // Check for existing results in batch
+        var existingStatuses = await store.GetMultipleStatusAsync(commandIds, cancellationToken);
         var existingResults = await store.GetMultipleResultsAsync<T>(commandIds, cancellationToken);
         var results = new Dictionary<string, T>();
         var pendingOperations = new List<(string commandId, Func<Task<T>> operation)>();
@@ -200,9 +193,10 @@ public static class CommandIdempotencyExtensions
         // Separate completed from pending
         foreach (var (commandId, operation) in operationsList)
         {
-            if (existingResults.TryGetValue(commandId, out var existingResult) && existingResult != null)
+            if (existingStatuses.TryGetValue(commandId, out var status) && status == CommandExecutionStatus.Completed)
             {
-                results[commandId] = existingResult;
+                existingResults.TryGetValue(commandId, out var existingResult);
+                results[commandId] = existingResult ?? default!;
             }
             else
             {
@@ -255,7 +249,7 @@ public static class CommandIdempotencyExtensions
             {
                 case CommandExecutionStatus.Completed:
                     var result = await store.GetCommandResultAsync<T>(commandId, cancellationToken);
-                    return result ?? throw new InvalidOperationException($"Command {commandId} completed but result not found");
+                    return result ?? default!;
                     
                 case CommandExecutionStatus.Failed:
                     throw new InvalidOperationException($"Command {commandId} failed during execution");
