@@ -574,8 +574,7 @@ root object, and serializers/Orleans surrogates round-trip them without custom p
 root object, and serializers/Orleans surrogates round-trip them without custom plumbing.
 
 #### Identifier lifecycle
-- Static command factories generate monotonic version 7 identifiers via `Guid.CreateVersion7()` and stamp a UTC timestamp so co
-mmands can be sorted chronologically even when sharded.
+- Static command factories generate monotonic version 7 identifiers via `Guid.CreateVersion7()` and stamp a UTC timestamp so commands can be sorted chronologically even when sharded.
 - Factory helpers never mutate the correlation or trace identifiers; callers opt in by supplying values through fluent `WithCor
 relationId`, `WithTraceId`, and similar extension methods that return the same command instance.
 - Metadata mirrors the trace/span identifiers for workload-specific diagnostics without coupling transport-level identifiers to
