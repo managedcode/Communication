@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <IsPackable>true</IsPackable>
+        <DebugType>embedded</DebugType>
+    </PropertyGroup>
+
+    <!--NuGet-->
+    <PropertyGroup>
+        <Title>ManagedCode.Communication.Extensions</Title>
+        <PackageId>ManagedCode.Communication.Extensions</PackageId>
+        <Description>Optional integrations for ManagedCode.Communication including Minimal API endpoint filters.</Description>
+        <PackageTags>managedcode;communication;result-pattern;minimal-api;endpoint-filter</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <ProjectReference Include="..\ManagedCode.Communication.AspNetCore\ManagedCode.Communication.AspNetCore.csproj" />
+        <PackageReference Include="Polly" Version="8.4.2" />
+    </ItemGroup>
+
+</Project>

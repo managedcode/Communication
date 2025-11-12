@@ -116,6 +116,9 @@ Install-Package ManagedCode.Communication
 # ASP.NET Core integration
 Install-Package ManagedCode.Communication.AspNetCore
 
+# Minimal API extensions
+Install-Package ManagedCode.Communication.Extensions
+
 # Orleans integration
 Install-Package ManagedCode.Communication.Orleans
 ```
@@ -129,6 +132,9 @@ dotnet add package ManagedCode.Communication
 # ASP.NET Core integration
 dotnet add package ManagedCode.Communication.AspNetCore
 
+# Minimal API extensions
+dotnet add package ManagedCode.Communication.Extensions
+
 # Orleans integration
 dotnet add package ManagedCode.Communication.Orleans
 ```
@@ -138,6 +144,7 @@ dotnet add package ManagedCode.Communication.Orleans
 ```xml
 <PackageReference Include="ManagedCode.Communication" Version="9.6.0" />
 <PackageReference Include="ManagedCode.Communication.AspNetCore" Version="9.6.0" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="9.6.0" />
 <PackageReference Include="ManagedCode.Communication.Orleans" Version="9.6.0" />
 ```
 
@@ -162,6 +169,71 @@ builder.Services.ConfigureCommunication();
 
 var app = builder.Build();
 ```
+
+### Minimal API Result Mapping
+
+Add the optional `ManagedCode.Communication.Extensions` package to bridge Minimal API endpoints with the Result pattern. The
+package provides the `ResultEndpointFilter` and a fluent helper `WithCommunicationResults` that wraps the endpoint builder and
+returns `IResult` instances automatically:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.ConfigureCommunication();
+
+var app = builder.Build();
+
+// Apply the filter to a single endpoint
+app.MapGet("/orders/{id}", async (Guid id, IOrderService orders) =>
+        await orders.GetAsync(id))
+   .WithCommunicationResults();
+
+// Or apply it to a group so every route inherits the conversion
+app.MapGroup("/orders")
+   .WithCommunicationResults()
+   .MapPost(string.Empty, async (CreateOrder command, IOrderService orders) =>
+        await orders.CreateAsync(command));
+
+app.Run();
+```
+
+Handlers can return any `Result` or `Result<T>` instance and the filter will reuse the existing ASP.NET Core converters so
+you do not need to write manual `IResult` translations.
+
+### Resilient HTTP Clients
+
+The extensions package also ships helpers that turn `HttpClient` calls directly into `Result` instances and optionally run
+them through Polly resilience pipelines:
+
+```csharp
+using ManagedCode.Communication.Extensions.Http;
+using Polly;
+using Polly.Retry;
+
+var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
+    .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+    {
+        MaxRetryAttempts = 3,
+        Delay = TimeSpan.FromMilliseconds(200),
+        ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+            .HandleResult(response => !response.IsSuccessStatusCode)
+    })
+    .Build();
+
+var result = await httpClient.SendForResultAsync<OrderDto>(
+    () => new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}"),
+    pipeline);
+
+if (result.IsSuccess)
+{
+    // access result.Value without manually reading the HTTP payload
+}
+```
+
+The helpers use the existing `HttpResponseMessage` converters, so non-success status codes automatically map to a
+`Problem` with the response body and status code.
+success responses map to `200 OK`/`204 No Content` while failures become RFC 7807 problem details. Native `Microsoft.AspNetCore.Http.IResult`
+responses pass through unchanged, so you can mix and match traditional Minimal API patterns with ManagedCode.Communication results.
 
 ### Console Application Setup
 

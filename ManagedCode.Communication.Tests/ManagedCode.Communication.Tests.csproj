@@ -48,6 +48,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication.AspNetCore\ManagedCode.Communication.AspNetCore.csproj"/>
+        <ProjectReference Include="..\ManagedCode.Communication.Extensions\ManagedCode.Communication.Extensions.csproj"/>
         <ProjectReference Include="..\ManagedCode.Communication.Orleans\ManagedCode.Communication.Orleans.csproj"/>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj"/>
     </ItemGroup>
