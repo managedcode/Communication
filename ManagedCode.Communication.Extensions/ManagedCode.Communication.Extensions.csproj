@@ -16,7 +16,7 @@
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <ProjectReference Include="..\ManagedCode.Communication.AspNetCore\ManagedCode.Communication.AspNetCore.csproj" />
-        <PackageReference Include="Polly" Version="8.4.2" />
+        <PackageReference Include="Polly" Version="8.6.4" />
     </ItemGroup>
 
 </Project>
