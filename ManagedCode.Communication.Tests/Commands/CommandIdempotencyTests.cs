@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Shouldly;
 using ManagedCode.Communication.Commands;
@@ -285,6 +287,145 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteIdempotentAsync_WhenOperationReturnsNull_CachesNullResult()
+    {
+        // Arrange
+        const string commandId = "test-command-null-result";
+        var executionCount = 0;
+
+        var operation = new Func<Task<string?>>(() =>
+        {
+            executionCount++;
+            return Task.FromResult<string?>(null);
+        });
+
+        // Act
+        var first = await _store.ExecuteIdempotentAsync(commandId, operation);
+        var second = await _store.ExecuteIdempotentAsync(commandId, operation);
+
+        // Assert
+        first.ShouldBeNull();
+        second.ShouldBeNull();
+        executionCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ExecuteIdempotentAsync_WhenOperationReturnsDefaultStructValue_CachesResult()
+    {
+        // Arrange
+        const string commandId = "test-command-default-struct";
+        var executionCount = 0;
+
+        var operation = new Func<Task<int>>(() =>
+        {
+            executionCount++;
+            return Task.FromResult(0);
+        });
+
+        // Act
+        var first = await _store.ExecuteIdempotentAsync(commandId, operation);
+        var second = await _store.ExecuteIdempotentAsync(commandId, operation);
+
+        // Assert
+        first.ShouldBe(0);
+        second.ShouldBe(0);
+        executionCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ExecuteIdempotentAsync_WhenConcurrentCallersShareCommand_WaitsForSingleExecution()
+    {
+        // Arrange
+        const string commandId = "concurrent-single-execution";
+        var operationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var operationCompletion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondaryOperationInvoked = false;
+        var executionCount = 0;
+
+        var firstCall = _store.ExecuteIdempotentAsync(commandId, async () =>
+        {
+            Interlocked.Increment(ref executionCount);
+            operationStarted.TrySetResult();
+            return await operationCompletion.Task;
+        });
+
+        await operationStarted.Task; // Ensure the first invocation has claimed execution
+
+        var secondCall = _store.ExecuteIdempotentAsync(commandId, () =>
+        {
+            secondaryOperationInvoked = true;
+            return Task.FromResult("should-not-run");
+        });
+
+        operationCompletion.TrySetResult("shared-result");
+
+        var results = await Task.WhenAll(firstCall, secondCall);
+
+        executionCount.ShouldBe(1);
+        secondaryOperationInvoked.ShouldBeFalse();
+        results.ShouldBe(new[] { "shared-result", "shared-result" });
+    }
+
+    [Fact]
+    public async Task ExecuteIdempotentAsync_WhenPrimaryExecutionFails_ConcurrentCallerReceivesFailure()
+    {
+        // Arrange
+        const string commandId = "concurrent-failure";
+        var startSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var failingCall = _store.ExecuteIdempotentAsync<string>(commandId, async () =>
+        {
+            startSignal.TrySetResult();
+            await Task.Delay(20);
+            throw new InvalidOperationException("boom");
+        });
+
+        await startSignal.Task;
+
+        var waitingCall = _store.ExecuteIdempotentAsync(commandId, () => Task.FromResult("should-not-run"));
+
+        var waitingException = await Should.ThrowAsync<InvalidOperationException>(() => waitingCall);
+        waitingException.Message.ShouldBe("Command concurrent-failure failed during execution");
+
+        var primaryException = await Should.ThrowAsync<InvalidOperationException>(() => failingCall);
+        primaryException.Message.ShouldBe("boom");
+
+        var status = await _store.GetCommandStatusAsync(commandId);
+        status.ShouldBe(CommandExecutionStatus.Failed);
+    }
+
+    [Fact]
+    public async Task ExecuteIdempotentAsync_WithDifferentCommandIds_DoesNotSerializeExecution()
+    {
+        // Arrange
+        const string commandId1 = "parallel-command-1";
+        const string commandId2 = "parallel-command-2";
+
+        // Act
+        var stopwatch = Stopwatch.StartNew();
+
+        var task1 = _store.ExecuteIdempotentAsync(commandId1, async () =>
+        {
+            await Task.Delay(150);
+            return "result-1";
+        });
+
+        var task2 = _store.ExecuteIdempotentAsync(commandId2, async () =>
+        {
+            await Task.Delay(150);
+            return "result-2";
+        });
+
+        await Task.WhenAll(task1, task2);
+        stopwatch.Stop();
+
+        // Assert
+        stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(260));
+        (await task1).ShouldBe("result-1");
+        (await task2).ShouldBe("result-2");
+    }
+
+    [Fact]
     public async Task ExecuteIdempotentAsync_WhenOperationFails_MarksCommandAsFailedAndRethrowsException()
     {
         // Arrange
@@ -327,6 +468,64 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteBatchIdempotentAsync_WhenCommandIsAlreadyCompleted_ReusesCachedResult()
+    {
+        // Arrange
+        const string cachedCommandId = "batch-cached-1";
+        const string pendingCommandId = "batch-cached-2";
+        await _store.SetCommandStatusAsync(cachedCommandId, CommandExecutionStatus.Completed);
+        await _store.SetCommandResultAsync(cachedCommandId, "cached-value");
+
+        var invoked = false;
+
+        var operations = new (string commandId, Func<Task<string>> operation)[]
+        {
+            (cachedCommandId, () =>
+            {
+                invoked = true;
+                return Task.FromResult("should-not-run");
+            }),
+            (pendingCommandId, () => Task.FromResult("fresh-value"))
+        };
+
+        // Act
+        var results = await _store.ExecuteBatchIdempotentAsync<string>(operations);
+
+        // Assert
+        invoked.ShouldBeFalse();
+        results[cachedCommandId].ShouldBe("cached-value");
+        results[pendingCommandId].ShouldBe("fresh-value");
+    }
+
+    [Fact]
+    public async Task ExecuteBatchIdempotentAsync_WhenCachedResultIsNull_PreservesNull()
+    {
+        // Arrange
+        const string cachedCommandId = "batch-cached-null";
+        await _store.SetCommandStatusAsync(cachedCommandId, CommandExecutionStatus.Completed);
+        await _store.SetCommandResultAsync<string?>(cachedCommandId, default!);
+
+        var executed = false;
+
+        var operations = new (string commandId, Func<Task<string?>> operation)[]
+        {
+            (cachedCommandId, () =>
+            {
+                executed = true;
+                return Task.FromResult<string?>("should-not-execute");
+            })
+        };
+
+        // Act
+        var results = await _store.ExecuteBatchIdempotentAsync<string?>(operations);
+
+        // Assert
+        executed.ShouldBeFalse();
+        results.ShouldHaveSingleItem();
+        results[cachedCommandId].ShouldBeNull();
+    }
+
+    [Fact]
     public async Task TryGetCachedResultAsync_WhenResultExists_ReturnsResult()
     {
         // Arrange
@@ -355,6 +554,22 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
 
         // Assert
         hasResult.ShouldBeFalse();
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task TryGetCachedResultAsync_WhenResultIsNull_ReturnsHasResultTrue()
+    {
+        // Arrange
+        const string commandId = "test-cached-null";
+        await _store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Completed);
+        await _store.SetCommandResultAsync<string?>(commandId, default!);
+
+        // Act
+        var (hasResult, result) = await _store.TryGetCachedResultAsync<string?>(commandId);
+
+        // Assert
+        hasResult.ShouldBeTrue();
         result.ShouldBeNull();
     }
 

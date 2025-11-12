@@ -54,4 +54,23 @@ public class ServiceCollectionExtensionsTests
         var logger = CommunicationLogger.GetLogger();
         logger.ShouldNotBeNull();
     }
+
+    [Fact]
+    public void GetLogger_WithDisposedServiceProvider_ShouldFallbackGracefully()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddLogging();
+        using (var serviceProvider = services.BuildServiceProvider())
+        {
+            CommunicationLogger.Configure(serviceProvider);
+        }
+
+        // Act & Assert
+        Should.NotThrow(() =>
+        {
+            var logger = CommunicationLogger.GetLogger();
+            logger.ShouldNotBeNull();
+        });
+    }
 }
