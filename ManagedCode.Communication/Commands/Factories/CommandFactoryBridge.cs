@@ -1,4 +1,5 @@
 using System;
+using ManagedCode.Communication.Helpers;
 
 namespace ManagedCode.Communication.Commands;
 
@@ -10,7 +11,7 @@ internal static class CommandFactoryBridge
     public static TSelf Create<TSelf>(string commandType)
         where TSelf : class, ICommandFactory<TSelf>
     {
-        return TSelf.Create(Guid.CreateVersion7(), commandType);
+        return TSelf.Create(GuidHelper.CreateVersion7(), commandType);
     }
 
     public static TSelf Create<TSelf>(Guid commandId, string commandType)
@@ -23,7 +24,7 @@ internal static class CommandFactoryBridge
         where TSelf : class, ICommandFactory<TSelf>
         where TEnum : Enum
     {
-        return TSelf.Create(Guid.CreateVersion7(), commandType.ToString());
+        return TSelf.Create(GuidHelper.CreateVersion7(), commandType.ToString());
     }
 
     public static TSelf Create<TSelf, TEnum>(Guid commandId, TEnum commandType)
@@ -68,7 +69,7 @@ internal static class CommandValueFactoryBridge
     public static TSelf Create<TSelf, TValue>(TValue value)
         where TSelf : class, ICommandValueFactory<TSelf, TValue>
     {
-        return TSelf.Create(Guid.CreateVersion7(), ResolveCommandType(value), value);
+        return TSelf.Create(GuidHelper.CreateVersion7(), ResolveCommandType(value), value);
     }
 
     public static TSelf Create<TSelf, TValue>(Guid commandId, TValue value)

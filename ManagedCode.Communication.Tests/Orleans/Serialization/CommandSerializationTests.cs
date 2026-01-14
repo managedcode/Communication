@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Shouldly;
 using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Helpers;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
@@ -154,7 +155,7 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
             }
         };
 
-        var command = Command<PaymentRequest>.From(Guid.CreateVersion7(), payload);
+        var command = Command<PaymentRequest>.From(GuidHelper.CreateVersion7(), payload);
         command.CommandType = "ProcessPayment";
         command.CorrelationId = "correlation-789";
         command.CausationId = "causation-012";
@@ -202,7 +203,7 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
         var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 50, minPageSize: 10);
 
-        var command = PaginationCommand.Create(Guid.CreateVersion7(), skip: 25, take: 5, options);
+        var command = PaginationCommand.Create(GuidHelper.CreateVersion7(), skip: 25, take: 5, options);
         command.CorrelationId = "pagination-correlation";
         command.Metadata = new CommandMetadata
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json.Serialization;
+using ManagedCode.Communication.Helpers;
 
 namespace ManagedCode.Communication.Commands;
 
@@ -73,7 +74,7 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
     {
         ArgumentNullException.ThrowIfNull(request);
         var normalized = request.Normalize(options);
-        return Create(Guid.CreateVersion7(), DefaultCommandType, normalized, options);
+        return Create(GuidHelper.CreateVersion7(), DefaultCommandType, normalized, options);
     }
 
     /// <summary>

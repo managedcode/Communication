@@ -1,4 +1,5 @@
 using System;
+using ManagedCode.Communication.Helpers;
 
 namespace ManagedCode.Communication.Commands;
 
@@ -12,13 +13,13 @@ public partial interface ICommandFactory<TSelf>
             throw new ArgumentException("Command type must be provided.", nameof(commandType));
         }
 
-        return TSelf.Create(Guid.CreateVersion7(), commandType);
+        return TSelf.Create(GuidHelper.CreateVersion7(), commandType);
     }
 
     static virtual TSelf Create<TEnum>(TEnum commandType)
         where TEnum : Enum
     {
-        return TSelf.Create(Guid.CreateVersion7(), commandType.ToString());
+        return TSelf.Create(GuidHelper.CreateVersion7(), commandType.ToString());
     }
 
     static virtual TSelf Create<TEnum>(Guid commandId, TEnum commandType)

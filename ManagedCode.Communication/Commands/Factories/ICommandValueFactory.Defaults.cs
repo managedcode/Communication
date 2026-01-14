@@ -1,4 +1,5 @@
 using System;
+using ManagedCode.Communication.Helpers;
 
 namespace ManagedCode.Communication.Commands;
 
@@ -8,7 +9,7 @@ public partial interface ICommandValueFactory<TSelf, TValue>
     static virtual TSelf Create(TValue value)
     {
         var commandType = ResolveCommandType(value);
-        return TSelf.Create(Guid.CreateVersion7(), commandType, value);
+        return TSelf.Create(GuidHelper.CreateVersion7(), commandType, value);
     }
 
     static virtual TSelf Create(Guid commandId, TValue value)

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Helpers;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
@@ -32,7 +33,7 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
         
         // Step 1: Send a command
-        var commandId = Guid.CreateVersion7();
+        var commandId = GuidHelper.CreateVersion7();
         var paymentRequest = new PaymentRequest
         {
             OrderId = "order-999",

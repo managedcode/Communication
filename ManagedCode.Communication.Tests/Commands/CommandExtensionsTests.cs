@@ -1,5 +1,6 @@
 using System;
 using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Helpers;
 using Shouldly;
 using Xunit;
 
@@ -49,7 +50,7 @@ public class CommandExtensionsTests
     [Fact]
     public void WithMetadata_AssignsExistingInstance()
     {
-        var command = Command.Create(Guid.CreateVersion7(), "TestCommand");
+        var command = Command.Create(GuidHelper.CreateVersion7(), "TestCommand");
         var metadata = new CommandMetadata { UserAgent = "cli" };
 
         command.WithMetadata(metadata);
