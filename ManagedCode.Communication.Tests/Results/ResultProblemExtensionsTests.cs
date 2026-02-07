@@ -1,4 +1,5 @@
 using ManagedCode.Communication;
+using System.Collections.Generic;
 using Shouldly;
 using Xunit;
 
@@ -70,5 +71,71 @@ public class ResultProblemExtensionsTests
 
         var exception = Should.Throw<ProblemException>(result.ThrowIfProblem);
         exception.Problem.ShouldBeSameAs(result.Problem);
+    }
+
+    [Fact]
+    public void Result_ToDisplayMessage_WithErrorCodeResolver_ReturnsResolvedMessage()
+    {
+        var problem = Problem.Create("Validation Failed", "Raw validation detail", 400);
+        problem.ErrorCode = "InvalidInput";
+        var result = Result.Fail(problem);
+
+        var message = result.ToDisplayMessage(
+            errorCodeResolver: code => code == "InvalidInput" ? "Friendly invalid input message" : null);
+
+        message.ShouldBe("Friendly invalid input message");
+    }
+
+    [Fact]
+    public void Result_ToDisplayMessage_WithSuccessResult_ReturnsDefaultMessage()
+    {
+        var result = Result.Succeed();
+
+        var message = result.ToDisplayMessage(defaultMessage: "Everything is fine");
+
+        message.ShouldBe("Everything is fine");
+    }
+
+    [Fact]
+    public void ResultT_ToDisplayMessage_WithoutDetail_UsesTitle()
+    {
+        var result = Result<string>.Fail("Not Found", "", System.Net.HttpStatusCode.NotFound);
+
+        var message = result.ToDisplayMessage();
+
+        message.ShouldBe("Not Found");
+    }
+
+    [Fact]
+    public void Result_ToDisplayMessage_WithDictionaryOverload_ReturnsResolvedMessage()
+    {
+        var problem = Problem.Create("Registration", "Unavailable", 503);
+        problem.ErrorCode = "RegistrationUnavailable";
+        var result = Result.Fail(problem);
+
+        var messages = new Dictionary<string, string>
+        {
+            ["RegistrationUnavailable"] = "Registration is currently unavailable.",
+            ["RegistrationBlocked"] = "Registration is temporarily blocked."
+        };
+
+        var message = result.ToDisplayMessage(messages, defaultMessage: "Please try again later");
+
+        message.ShouldBe("Registration is currently unavailable.");
+    }
+
+    [Fact]
+    public void ResultT_ToDisplayMessage_WithTupleOverload_ReturnsResolvedMessage()
+    {
+        var problem = Problem.Create("Registration", "Unavailable", 503);
+        problem.ErrorCode = "RegistrationBlocked";
+        var result = Result<string>.Fail(problem);
+
+        var message = result.ToDisplayMessage(
+            "Please try again later",
+            ("RegistrationUnavailable", "Registration is currently unavailable."),
+            ("RegistrationBlocked", "Registration is temporarily blocked."));
+
+        message.ShouldBe("Registration is temporarily blocked.");
     }
 }

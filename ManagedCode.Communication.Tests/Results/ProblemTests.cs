@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json;
 using Shouldly;
 using ManagedCode.Communication.Constants;
 using Xunit;
@@ -376,5 +377,185 @@ public class ProblemTests
         exception.StatusCode.ShouldBe(404);
         exception.Title.ShouldBe("Not Found");
         exception.Detail.ShouldBe("Resource not found");
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WithResolver_ShouldUseMappedErrorCodeMessage()
+    {
+        // Arrange
+        var problem = Problem.Create("Validation Failed", "Raw detail", 400);
+        problem.ErrorCode = TestError.InvalidInput.ToString();
+
+        // Act
+        var message = problem.ToDisplayMessage(
+            errorCode => errorCode == TestError.InvalidInput.ToString() ? "Friendly validation message" : null);
+
+        // Assert
+        message.ShouldBe("Friendly validation message");
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WithoutResolverMatch_ShouldUseDetailThenTitleThenDefaultMessage()
+    {
+        // Arrange
+        var problem = Problem.Create("Validation Failed", "Raw detail", 400);
+        problem.ErrorCode = TestError.InvalidInput.ToString();
+
+        // Act
+        var detailMessage = problem.ToDisplayMessage(errorCodeResolver: _ => null, defaultMessage: "Default");
+        problem.Detail = "";
+        var titleMessage = problem.ToDisplayMessage(errorCodeResolver: _ => null, defaultMessage: "Default");
+        problem.Title = "";
+        var defaultMessage = problem.ToDisplayMessage(errorCodeResolver: _ => null, defaultMessage: "Default");
+
+        // Assert
+        detailMessage.ShouldBe("Raw detail");
+        titleMessage.ShouldBe("Validation Failed");
+        defaultMessage.ShouldBe("Default");
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WhenProblemHasNoMessage_ShouldUseGenericError()
+    {
+        // Arrange
+        var problem = Problem.Create("", "", 500);
+
+        // Act
+        var message = problem.ToDisplayMessage();
+
+        // Assert
+        message.ShouldBe(ProblemConstants.Messages.GenericError);
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WithDictionaryOverload_ShouldResolveRegistrationMessages()
+    {
+        // Arrange
+        var problem = Problem.Create("Registration", "Unavailable", 503);
+        problem.ErrorCode = "RegistrationUnavailable";
+
+        var messages = new Dictionary<string, string>
+        {
+            ["RegistrationUnavailable"] = "Registration is currently unavailable.",
+            ["RegistrationBlocked"] = "Registration is temporarily blocked.",
+            ["RegistrationInviteRequired"] = "Registration requires an invitation code."
+        };
+
+        // Act
+        var displayMessage = problem.ToDisplayMessage(messages, defaultMessage: "Please try again later");
+
+        // Assert
+        displayMessage.ShouldBe("Registration is currently unavailable.");
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WithEnumerableOverload_ShouldResolveRegistrationMessages()
+    {
+        // Arrange
+        var problem = Problem.Create("Registration", "Unavailable", 503);
+        problem.ErrorCode = "RegistrationBlocked";
+
+        var messages = new List<KeyValuePair<string, string>>
+        {
+            new("RegistrationUnavailable", "Registration is currently unavailable."),
+            new("RegistrationBlocked", "Registration is temporarily blocked."),
+            new("RegistrationInviteRequired", "Registration requires an invitation code.")
+        };
+
+        // Act
+        var displayMessage = problem.ToDisplayMessage(messages, defaultMessage: "Please try again later");
+
+        // Assert
+        displayMessage.ShouldBe("Registration is temporarily blocked.");
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WithTupleOverload_ShouldResolveRegistrationMessages()
+    {
+        // Arrange
+        var problem = Problem.Create("Registration", "Unavailable", 503);
+        problem.ErrorCode = "RegistrationInviteRequired";
+
+        // Act
+        var displayMessage = problem.ToDisplayMessage(
+            "Please try again later",
+            ("RegistrationUnavailable", "Registration is currently unavailable."),
+            ("RegistrationBlocked", "Registration is temporarily blocked."),
+            ("RegistrationInviteRequired", "Registration requires an invitation code."));
+
+        // Assert
+        displayMessage.ShouldBe("Registration requires an invitation code.");
+    }
+
+    [Fact]
+    public void TryGetExtension_WithJsonElementValues_ShouldReturnTypedValues()
+    {
+        // Arrange
+        const string payload = """
+            {
+              "type": "https://httpstatuses.io/400",
+              "title": "Bad Request",
+              "status": 400,
+              "detail": "Validation failed",
+              "errorCode": "InvalidInput",
+              "retryAfter": 30
+            }
+            """;
+        var problem = JsonSerializer.Deserialize<Problem>(payload)!;
+
+        // Act
+        var hasErrorCode = problem.TryGetExtension(ProblemConstants.ExtensionKeys.ErrorCode, out string? errorCode);
+        var hasRetryAfter = problem.TryGetExtension("retryAfter", out int retryAfter);
+        var hasEnumCode = problem.TryGetExtension(ProblemConstants.ExtensionKeys.ErrorCode, out TestError enumCode);
+
+        // Assert
+        hasErrorCode.ShouldBeTrue();
+        errorCode.ShouldBe("InvalidInput");
+        hasRetryAfter.ShouldBeTrue();
+        retryAfter.ShouldBe(30);
+        hasEnumCode.ShouldBeTrue();
+        enumCode.ShouldBe(TestError.InvalidInput);
+    }
+
+    [Fact]
+    public void GetExtensionOrDefault_WhenKeyMissing_ShouldReturnProvidedDefault()
+    {
+        // Arrange
+        var problem = Problem.Create("Error", "Missing extension", 500);
+
+        // Act
+        var retryAfter = problem.GetExtensionOrDefault("retryAfter", 15);
+
+        // Assert
+        retryAfter.ShouldBe(15);
+    }
+
+    [Fact]
+    public void TryGetExtension_WhenTypeMismatch_ShouldReturnFalse()
+    {
+        // Arrange
+        var problem = Problem.Create("Error", "Type mismatch", 500);
+        problem.Extensions["retryAfter"] = "not-a-number";
+
+        // Act
+        var hasRetryAfter = problem.TryGetExtension("retryAfter", out int retryAfter);
+
+        // Assert
+        hasRetryAfter.ShouldBeFalse();
+        retryAfter.ShouldBe(0);
+    }
+
+    [Fact]
+    public void TryGetExtension_WhenKeyMissing_ShouldReturnFalse()
+    {
+        // Arrange
+        var problem = Problem.Create("Error", "Missing", 500);
+
+        // Act
+        var hasValue = problem.TryGetExtension("unknown", out string? value);
+
+        // Assert
+        hasValue.ShouldBeFalse();
+        value.ShouldBeNull();
     }
 }

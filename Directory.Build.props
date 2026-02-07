@@ -26,8 +26,8 @@
         <RepositoryUrl>https://github.com/managedcode/Communication</RepositoryUrl>
         <PackageProjectUrl>https://github.com/managedcode/Communication</PackageProjectUrl>
         <Product>Managed Code - Communication</Product>
-        <Version>10.0.0</Version>
-        <PackageVersion>10.0.0</PackageVersion>
+        <Version>10.0.1</Version>
+        <PackageVersion>10.0.1</PackageVersion>
 
     </PropertyGroup>
     <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">

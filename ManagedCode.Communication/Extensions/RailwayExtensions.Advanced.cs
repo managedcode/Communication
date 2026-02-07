@@ -13,6 +13,9 @@ namespace ManagedCode.Communication.Extensions;
 /// </summary>
 public static class AdvancedRailwayExtensions
 {
+    private const string MultipleErrorsTitle = "Multiple errors occurred";
+    private const string MultipleErrorsDetail = "The operation failed with multiple errors.";
+
     #region Then/ThenAsync (Alias for Bind)
 
     /// <summary>
@@ -134,33 +137,17 @@ public static class AdvancedRailwayExtensions
         
         if (failures.Length == 1)
             return failures[0];
-        
-        // Combine multiple failures into one with all error details
-        var validationErrors = new List<(string field, string message)>();
-        foreach (var failure in failures)
+
+        var problems = failures
+            .Select(static failure => failure.TryGetProblem(out var problem) ? problem : Problem.GenericError())
+            .ToArray();
+
+        if (problems.All(static problem => problem.GetValidationErrors() != null))
         {
-            if (failure.Problem != null)
-            {
-                var errors = failure.Problem.GetValidationErrors();
-                if (errors != null)
-                {
-                    foreach (var kvp in errors)
-                    {
-                        foreach (var error in kvp.Value)
-                        {
-                            validationErrors.Add((kvp.Key, error));
-                        }
-                    }
-                }
-                else
-                {
-                    // Non-validation error
-                    validationErrors.Add(("error", failure.Problem.Detail ?? failure.Problem.Title ?? ProblemConstants.Messages.GenericError));
-                }
-            }
+            return Result.FailValidation(CollectValidationErrors(problems).ToArray());
         }
-        
-        return Result.FailValidation(validationErrors.ToArray());
+
+        return Result.Fail(CreateAggregateProblem(problems));
     }
 
     /// <summary>
@@ -194,32 +181,49 @@ public static class AdvancedRailwayExtensions
             var values = results.Select(r => r.Value!).ToList();
             return CollectionResult<T>.Succeed(values);
         }
-        
-        // Collect all validation errors
-        var validationErrors = new List<(string field, string message)>();
-        foreach (var failure in failures)
+
+        var problems = failures
+            .Select(static failure => failure.TryGetProblem(out var problem) ? problem : Problem.GenericError())
+            .ToArray();
+
+        if (problems.All(static problem => problem.GetValidationErrors() != null))
         {
-            if (failure.Problem != null)
+            return CollectionResult<T>.FailValidation(CollectValidationErrors(problems).ToArray());
+        }
+
+        return CollectionResult<T>.Fail(CreateAggregateProblem(problems));
+    }
+
+    private static List<(string field, string message)> CollectValidationErrors(IEnumerable<Problem> problems)
+    {
+        var validationErrors = new List<(string field, string message)>();
+
+        foreach (var problem in problems)
+        {
+            var errors = problem.GetValidationErrors();
+            if (errors is null || errors.Count == 0)
             {
-                var errors = failure.Problem.GetValidationErrors();
-                if (errors != null)
+                validationErrors.Add((ProblemConstants.ValidationFields.General, problem.Detail ?? problem.Title ?? ProblemConstants.Messages.GenericError));
+                continue;
+            }
+
+            foreach (var kvp in errors)
+            {
+                foreach (var error in kvp.Value)
                 {
-                    foreach (var kvp in errors)
-                    {
-                        foreach (var error in kvp.Value)
-                        {
-                            validationErrors.Add((kvp.Key, error));
-                        }
-                    }
-                }
-                else
-                {
-                    validationErrors.Add(("error", failure.Problem.Detail ?? failure.Problem.Title ?? ProblemConstants.Messages.GenericError));
+                    validationErrors.Add((kvp.Key, error));
                 }
             }
         }
-        
-        return CollectionResult<T>.FailValidation(validationErrors.ToArray());
+
+        return validationErrors;
+    }
+
+    private static Problem CreateAggregateProblem(IReadOnlyCollection<Problem> problems)
+    {
+        var aggregateProblem = Problem.Create(MultipleErrorsTitle, MultipleErrorsDetail, 500);
+        aggregateProblem.Extensions[ProblemConstants.ExtensionKeys.Errors] = problems.ToArray();
+        return aggregateProblem;
     }
 
     #endregion

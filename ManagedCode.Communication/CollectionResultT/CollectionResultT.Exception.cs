@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using ManagedCode.Communication.Results.Extensions;
 
-namespace ManagedCode.Communication;
+namespace ManagedCode.Communication.CollectionResultT;
 
-public partial struct Result<T>
+public partial struct CollectionResult<T>
 {
     /// <summary>
     ///     Creates an exception from the result's problem.
@@ -19,7 +18,6 @@ public partial struct Result<T>
     /// <summary>
     ///     Throws a ProblemException if the result has a problem.
     /// </summary>
-    [MemberNotNullWhen(false, nameof(Value))]
     public void ThrowIfProblem()
     {
         ResultProblemExtensions.ThrowIfProblem(this);

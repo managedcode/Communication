@@ -259,6 +259,54 @@ public class CollectionResultTests
     }
 
     [Fact]
+    public void ToDisplayMessage_WithErrorCodeResolver_ShouldReturnResolvedMessage()
+    {
+        // Arrange
+        var problem = Problem.Create("Validation Failed", "Raw detail", 400);
+        problem.ErrorCode = "InvalidInput";
+        var result = CollectionResult<string>.Fail(problem);
+
+        // Act
+        var message = result.ToDisplayMessage(
+            errorCodeResolver: code => code == "InvalidInput" ? "Friendly invalid input message" : null);
+
+        // Assert
+        message.ShouldBe("Friendly invalid input message");
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WithSuccessResult_ShouldReturnDefaultMessage()
+    {
+        // Arrange
+        var result = CollectionResult<string>.Succeed(new[] { "item1" });
+
+        // Act
+        var message = result.ToDisplayMessage(defaultMessage: "No problem");
+
+        // Assert
+        message.ShouldBe("No problem");
+    }
+
+    [Fact]
+    public void ToDisplayMessage_WithTupleOverload_ShouldResolveRegistrationMessages()
+    {
+        // Arrange
+        var problem = Problem.Create("Registration", "Unavailable", 503);
+        problem.ErrorCode = "RegistrationUnavailable";
+        var result = CollectionResult<string>.Fail(problem);
+
+        // Act
+        var message = result.ToDisplayMessage(
+            "Please try again later",
+            ("RegistrationUnavailable", "Registration is currently unavailable."),
+            ("RegistrationBlocked", "Registration is temporarily blocked."),
+            ("RegistrationInviteRequired", "Registration requires an invitation code."));
+
+        // Assert
+        message.ShouldBe("Registration is currently unavailable.");
+    }
+
+    [Fact]
     public void ImplicitOperator_ToBool_ShouldReturnIsSuccess()
     {
         // Arrange

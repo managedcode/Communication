@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 
@@ -394,6 +396,90 @@ public partial class Problem
     }
 
     /// <summary>
+    ///     Creates a display message for this problem suitable for UI output.
+    /// </summary>
+    public string ToDisplayMessage(string? defaultMessage = null)
+    {
+        return ToDisplayMessage(static _ => null, defaultMessage);
+    }
+
+    /// <summary>
+    ///     Creates a display message for this problem using an optional error code resolver.
+    /// </summary>
+    public string ToDisplayMessage(Func<string, string?> errorCodeResolver, string? defaultMessage = null)
+    {
+        ArgumentNullException.ThrowIfNull(errorCodeResolver);
+
+        if (!string.IsNullOrWhiteSpace(ErrorCode))
+        {
+            var resolved = errorCodeResolver(ErrorCode);
+            if (!string.IsNullOrWhiteSpace(resolved))
+            {
+                return resolved;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(Detail))
+        {
+            return Detail!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Title))
+        {
+            return Title!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(defaultMessage))
+        {
+            return defaultMessage;
+        }
+
+        return ProblemConstants.Messages.GenericError;
+    }
+
+    /// <summary>
+    ///     Creates a display message for this problem using a dictionary of error code messages.
+    /// </summary>
+    public string ToDisplayMessage(IReadOnlyDictionary<string, string> messages, string? defaultMessage = null)
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+
+        return ToDisplayMessage(
+            errorCode => messages.TryGetValue(errorCode, out var message) ? message : null,
+            defaultMessage);
+    }
+
+    /// <summary>
+    ///     Creates a display message for this problem using an enumerable of error code messages.
+    /// </summary>
+    public string ToDisplayMessage(IEnumerable<KeyValuePair<string, string>> messages, string? defaultMessage = null)
+    {
+        ArgumentNullException.ThrowIfNull(messages);
+        return ToDisplayMessage(BuildMessageMap(messages), defaultMessage);
+    }
+
+    /// <summary>
+    ///     Creates a display message for this problem using tuple mappings.
+    /// </summary>
+    public string ToDisplayMessage((string code, string message) firstMapping, params (string code, string message)[] additionalMappings)
+    {
+        return ToDisplayMessage(defaultMessage: null, firstMapping, additionalMappings);
+    }
+
+    /// <summary>
+    ///     Creates a display message for this problem using tuple mappings with a default message.
+    /// </summary>
+    public string ToDisplayMessage(
+        string? defaultMessage,
+        (string code, string message) firstMapping,
+        params (string code, string message)[] additionalMappings)
+    {
+        var mappings = new List<(string code, string message)>(1 + additionalMappings.Length) { firstMapping };
+        mappings.AddRange(additionalMappings);
+        return ToDisplayMessage(BuildMessageMap(mappings), defaultMessage);
+    }
+
+    /// <summary>
     ///     Checks if this problem has a specific error code.
     /// </summary>
     public bool HasErrorCode<TEnum>(TEnum errorCode) where TEnum : Enum
@@ -448,6 +534,30 @@ public partial class Problem
         }
 
         return null;
+    }
+
+    /// <summary>
+    ///     Tries to get a typed extension value.
+    /// </summary>
+    public bool TryGetExtension<T>(string key, [MaybeNullWhen(false)] out T value)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+
+        if (Extensions.TryGetValue(key, out var extensionValue) && TryConvertExtensionValue(extensionValue, out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    /// <summary>
+    ///     Gets a typed extension value or default when key is missing or conversion fails.
+    /// </summary>
+    public T GetExtensionOrDefault<T>(string key, T defaultValue)
+    {
+        return TryGetExtension<T>(key, out var value) ? value! : defaultValue;
     }
     
     /// <summary>
@@ -539,8 +649,8 @@ public partial class Problem
     public Exception ToException()
     {
         // Check if we have the original exception type stored
-        if (Extensions.TryGetValue(ProblemConstants.ExtensionKeys.OriginalExceptionType, out var originalTypeObj) && 
-            originalTypeObj is string originalTypeName)
+        if (TryGetExtension<string>(ProblemConstants.ExtensionKeys.OriginalExceptionType, out var originalTypeName) && 
+            !string.IsNullOrWhiteSpace(originalTypeName))
         {
             try
             {
@@ -587,5 +697,162 @@ public partial class Problem
 
         // Default to ProblemException
         return new ProblemException(this);
+    }
+
+    private static bool TryConvertExtensionValue<T>(object? rawValue, [MaybeNullWhen(false)] out T value)
+    {
+        if (rawValue is null)
+        {
+            value = default;
+            return false;
+        }
+
+        if (rawValue is T typedValue)
+        {
+            value = typedValue;
+            return true;
+        }
+
+        if (rawValue is JsonElement jsonElement && TryReadFromJsonElement(jsonElement, out value))
+        {
+            return true;
+        }
+
+        if (TryConvertPrimitive(rawValue, out value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
+    }
+
+    private static bool TryReadFromJsonElement<T>(JsonElement jsonElement, [MaybeNullWhen(false)] out T value)
+    {
+        var targetType = typeof(T);
+        var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+        try
+        {
+            if (underlyingType == typeof(string))
+            {
+                if (jsonElement.ValueKind == JsonValueKind.String)
+                {
+                    value = (T)(object)(jsonElement.GetString() ?? string.Empty);
+                    return true;
+                }
+
+                value = (T)(object)jsonElement.GetRawText();
+                return true;
+            }
+
+            if (underlyingType.IsEnum)
+            {
+                if (jsonElement.ValueKind == JsonValueKind.String &&
+                    Enum.TryParse(underlyingType, jsonElement.GetString(), true, out var enumValue))
+                {
+                    value = (T)enumValue;
+                    return true;
+                }
+
+                if (jsonElement.ValueKind == JsonValueKind.Number && jsonElement.TryGetInt32(out var enumInt))
+                {
+                    value = (T)Enum.ToObject(underlyingType, enumInt);
+                    return true;
+                }
+            }
+
+            var deserialized = jsonElement.Deserialize<T>();
+            if (deserialized is null)
+            {
+                value = default;
+                return false;
+            }
+
+            value = deserialized;
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private static bool TryConvertPrimitive<T>(object rawValue, [MaybeNullWhen(false)] out T value)
+    {
+        var targetType = typeof(T);
+        var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+
+        try
+        {
+            if (underlyingType == typeof(Guid) && rawValue is string guidText && Guid.TryParse(guidText, out var guid))
+            {
+                value = (T)(object)guid;
+                return true;
+            }
+
+            if (underlyingType == typeof(DateTime) && rawValue is string dateText && DateTime.TryParse(dateText, out var dateTime))
+            {
+                value = (T)(object)dateTime;
+                return true;
+            }
+
+            if (underlyingType.IsEnum)
+            {
+                if (rawValue is string enumText && Enum.TryParse(underlyingType, enumText, true, out var enumByName))
+                {
+                    value = (T)enumByName;
+                    return true;
+                }
+
+                var enumNumber = Convert.ToInt32(rawValue);
+                value = (T)Enum.ToObject(underlyingType, enumNumber);
+                return true;
+            }
+
+            var converted = Convert.ChangeType(rawValue, underlyingType);
+            value = (T)converted!;
+            return true;
+        }
+        catch
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildMessageMap(IEnumerable<KeyValuePair<string, string>> messages)
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var mapping in messages)
+        {
+            if (string.IsNullOrWhiteSpace(mapping.Key) || string.IsNullOrWhiteSpace(mapping.Value))
+            {
+                continue;
+            }
+
+            map[mapping.Key] = mapping.Value;
+        }
+
+        return map;
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildMessageMap(IEnumerable<(string code, string message)> mappings)
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var (code, message) in mappings)
+        {
+            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(message))
+            {
+                continue;
+            }
+
+            map[code] = message;
+        }
+
+        return map;
     }
 }

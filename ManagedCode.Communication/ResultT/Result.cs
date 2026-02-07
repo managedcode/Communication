@@ -101,6 +101,7 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(false, nameof(Value))]
+    [MemberNotNullWhen(true, nameof(Problem))]
     public bool IsFailed => !IsSuccess;
 
     /// <summary>

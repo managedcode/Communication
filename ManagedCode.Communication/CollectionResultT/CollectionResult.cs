@@ -48,6 +48,7 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     public bool IsSuccess { get; set; }
 
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Problem))]
     public bool IsFailed => !IsSuccess;
 
     [JsonPropertyName("collection")]

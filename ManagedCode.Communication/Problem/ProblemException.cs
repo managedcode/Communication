@@ -65,7 +65,7 @@ public class ProblemException : Exception
         }
 
         // Handle error code if present
-        if (problem.ErrorCode != null)
+        if (!string.IsNullOrEmpty(problem.ErrorCode))
         {
             Data[$"{nameof(Problem)}.{nameof(problem.ErrorCode)}"] = problem.ErrorCode;
         }

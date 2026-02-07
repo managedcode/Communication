@@ -297,6 +297,62 @@ public class Problem
 }
 ```
 
+### Display Message Helpers
+
+Use built-in helpers to convert technical `Problem` payloads into UI-friendly messages:
+
+```csharp
+var problem = Problem.Create("RegistrationUnavailable", "Service is temporarily unavailable", 503);
+problem.ErrorCode = "RegistrationUnavailable";
+
+// Default message resolution chain:
+// ErrorCode mapper -> Detail -> Title -> defaultMessage -> "An error occurred"
+var message = problem.ToDisplayMessage(defaultMessage: "Please try again later");
+
+var registrationMessages = new Dictionary<string, string>
+{
+    ["RegistrationUnavailable"] = "Registration is currently unavailable.",
+    ["RegistrationBlocked"] = "Registration is temporarily blocked.",
+    ["RegistrationInviteRequired"] = "Registration requires an invitation code."
+};
+
+// 1) Dictionary overload
+var byDictionary = problem.ToDisplayMessage(
+    registrationMessages,
+    defaultMessage: "Please try again later");
+
+// 2) Tuple mappings overload
+var byTuples = problem.ToDisplayMessage(
+    "Please try again later",
+    ("RegistrationUnavailable", "Registration is currently unavailable."),
+    ("RegistrationBlocked", "Registration is temporarily blocked."),
+    ("RegistrationInviteRequired", "Registration requires an invitation code."));
+
+// 3) Delegate overload
+static string? ResolveRegistrationMessage(string code) => code switch
+{
+    "RegistrationUnavailable" => "Registration is currently unavailable.",
+    "RegistrationBlocked" => "Registration is temporarily blocked.",
+    "RegistrationInviteRequired" => "Registration requires an invitation code.",
+    _ => null
+};
+
+var byDelegate = problem.ToDisplayMessage(
+    ResolveRegistrationMessage,
+    defaultMessage: "Please try again later");
+
+// The same overloads are available for Result, Result<T> and CollectionResult<T>
+var resultMessage = Result.Fail(problem).ToDisplayMessage(
+    registrationMessages,
+    defaultMessage: "Please try again later");
+
+// Typed extension access
+if (problem.TryGetExtension("retryAfter", out int retryAfterSeconds))
+{
+    Console.WriteLine($"Retry after: {retryAfterSeconds}s");
+}
+```
+
 ## Quick Start
 
 ### Basic Usage
@@ -487,18 +543,37 @@ var result = await GetPrimaryService()
 
 ```csharp
 // Merge: Stop at first failure
-var result = Result.Merge(
+var firstFailureResult = Result.Merge(
     ValidateName(name),
     ValidateEmail(email),
     ValidateAge(age)
 );
 
-// MergeAll: Collect all failures
-var result = Result.MergeAll(
+// MergeAll: aggregate all failures
+var allFailuresResult = Result.MergeAll(
     ValidateName(name),
     ValidateEmail(email),
     ValidateAge(age)
-); // Returns all validation errors
+);
+
+if (allFailuresResult.TryGetProblem(out var problem))
+{
+    // All failures were validation failures:
+    // problem.GetValidationErrors() returns merged field errors.
+    //
+    // Mixed failures (401/403/500/...) return aggregate problem:
+    // problem.StatusCode == 500
+    // problem.Extensions["errors"] contains the original Problem[] list.
+}
+
+if (allFailuresResult.TryGetProblem(out var aggregateProblem) &&
+    aggregateProblem.TryGetExtension("errors", out Problem[]? originalErrors))
+{
+    foreach (var error in originalErrors)
+    {
+        Console.WriteLine($"{error.StatusCode}: {error.Title} - {error.Detail}");
+    }
+}
 
 // Combine: Aggregate values
 var combined = Result.Combine(
@@ -506,6 +581,13 @@ var combined = Result.Combine(
     GetUserSettings(),
     GetUserPermissions()
 ); // Returns CollectionResult<T>
+
+// CombineAll: aggregate failures while preserving original errors
+var combinedAll = Result.CombineAll(
+    GetUserProfile(),
+    GetUserSettings(),
+    GetUserPermissions()
+);
 ```
 
 ## Command Pattern and Idempotency

@@ -54,6 +54,7 @@ public partial struct Result : IResult, IResultFactory<Result>
     ///     Gets a value indicating whether the operation failed.
     /// </summary>
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Problem))]
     public bool IsFailed => !IsSuccess;
 
     [JsonInclude]

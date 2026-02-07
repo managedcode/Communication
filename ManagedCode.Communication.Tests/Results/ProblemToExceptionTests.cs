@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Shouldly;
 using ManagedCode.Communication.Constants;
 using Xunit;
@@ -170,6 +171,29 @@ public class ProblemToExceptionTests
         var problemException = (ProblemException)exception;
         problemException.IsValidationProblem.ShouldBeTrue();
         problemException.ValidationErrors.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void ToException_WithOriginalExceptionTypeAsJsonElement_ShouldReconstructOriginalException()
+    {
+        // Arrange
+        const string payload = """
+            {
+              "type": "https://httpstatuses.io/500",
+              "title": "InvalidOperationException",
+              "status": 500,
+              "detail": "From json payload",
+              "originalExceptionType": "System.InvalidOperationException"
+            }
+            """;
+        var problem = JsonSerializer.Deserialize<Problem>(payload)!;
+
+        // Act
+        var exception = problem.ToException();
+
+        // Assert
+        exception.ShouldBeOfType<InvalidOperationException>();
+        exception.Message.ShouldBe("From json payload");
     }
 }
 

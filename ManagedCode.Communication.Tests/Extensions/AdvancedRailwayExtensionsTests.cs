@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Shouldly;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
 using Xunit;
@@ -214,6 +216,50 @@ public class AdvancedRailwayExtensionsTests
     }
 
     [Fact]
+    public void MergeAll_WithMixedFailures_ReturnsAggregateProblemWithOriginalErrors()
+    {
+        // Arrange
+        var result1 = Result.Fail("Unauthorized", "Authentication required", HttpStatusCode.Unauthorized);
+        var result2 = Result.Fail("Forbidden", "Access denied", HttpStatusCode.Forbidden);
+        var result3 = Result.Fail("Server Error", "Unexpected failure", HttpStatusCode.InternalServerError);
+
+        // Act
+        var merged = AdvancedRailwayExtensions.MergeAll(result1, result2, result3);
+
+        // Assert
+        merged.IsFailed.ShouldBeTrue();
+        merged.Problem.ShouldNotBeNull();
+        merged.Problem!.Title.ShouldBe("Multiple errors occurred");
+        merged.Problem.Detail.ShouldBe("The operation failed with multiple errors.");
+        merged.Problem.StatusCode.ShouldBe(500);
+        merged.Problem.TryGetExtension(ProblemConstants.ExtensionKeys.Errors, out Problem[]? aggregatedErrors).ShouldBeTrue();
+        aggregatedErrors.ShouldNotBeNull();
+        aggregatedErrors.Length.ShouldBe(3);
+        aggregatedErrors.Select(problem => problem.StatusCode).ShouldBeEquivalentTo(new[] { 401, 403, 500 });
+    }
+
+    [Fact]
+    public void MergeAll_WithValidationAndHttpFailures_ReturnsAggregateProblem()
+    {
+        // Arrange
+        var result1 = Result.FailValidation(("email", "Email is invalid"));
+        var result2 = Result.Fail("Unauthorized", "Authentication required", HttpStatusCode.Unauthorized);
+
+        // Act
+        var merged = AdvancedRailwayExtensions.MergeAll(result1, result2);
+
+        // Assert
+        merged.IsFailed.ShouldBeTrue();
+        merged.Problem.ShouldNotBeNull();
+        merged.Problem!.StatusCode.ShouldBe(500);
+        merged.Problem.TryGetExtension(ProblemConstants.ExtensionKeys.Errors, out Problem[]? aggregatedErrors).ShouldBeTrue();
+        aggregatedErrors.ShouldNotBeNull();
+        aggregatedErrors.Length.ShouldBe(2);
+        aggregatedErrors.Select(problem => problem.StatusCode).ShouldContain(400);
+        aggregatedErrors.Select(problem => problem.StatusCode).ShouldContain(401);
+    }
+
+    [Fact]
     public void Combine_WithAllSuccessful_ReturnsAllValues()
     {
         // Arrange
@@ -230,7 +276,7 @@ public class AdvancedRailwayExtensionsTests
     }
 
     [Fact]
-    public void CombineAll_WithMixedResults_CollectsAllErrors()
+    public void CombineAll_WithValidationFailures_CollectsAllErrors()
     {
         // Arrange
         var result1 = Result<string>.Succeed("Success");
@@ -245,6 +291,29 @@ public class AdvancedRailwayExtensionsTests
         var errors = combined.Problem!.GetValidationErrors();
         errors!["error1"].ShouldContain("First error");
         errors["error2"].ShouldContain("Second error");
+    }
+
+    [Fact]
+    public void CombineAll_WithMixedFailures_ReturnsAggregateProblem()
+    {
+        // Arrange
+        var result1 = Result<string>.Succeed("Success");
+        var result2 = Result<string>.Fail("Unauthorized", "Authentication required", HttpStatusCode.Unauthorized);
+        var result3 = Result<string>.FailValidation(("email", "Email is invalid"));
+
+        // Act
+        var combined = AdvancedRailwayExtensions.CombineAll(result1, result2, result3);
+
+        // Assert
+        combined.IsFailed.ShouldBeTrue();
+        combined.Problem.ShouldNotBeNull();
+        combined.Problem!.Title.ShouldBe("Multiple errors occurred");
+        combined.Problem.StatusCode.ShouldBe(500);
+        combined.Problem.TryGetExtension(ProblemConstants.ExtensionKeys.Errors, out Problem[]? aggregatedErrors).ShouldBeTrue();
+        aggregatedErrors.ShouldNotBeNull();
+        aggregatedErrors.Length.ShouldBe(2);
+        aggregatedErrors.Select(problem => problem.StatusCode).ShouldContain(401);
+        aggregatedErrors.Select(problem => problem.StatusCode).ShouldContain(400);
     }
 
     #endregion

@@ -12,6 +12,12 @@ If I tell you to remember something, you do the same, update
 always check all test are passed.
 - Prefer static interface members for result/command factories to centralize shared overloads and avoid duplication across result-like types.
 - Use `DateTime.UtcNow` (never `DateTimeOffset`) for all timestamps; we assume every stored time is in UTC.
+- For `MergeAll`/`CombineAll` scenarios with mixed failures, keep aggregated behavior and preserve original errors in `Problem.Extensions` (do not flatten everything into validation-only output).
+- In display-message APIs, use the parameter name `defaultMessage` (avoid the word `fallback` in public API naming).
+- For user-facing helper APIs, prefer multiple ergonomic overloads (delegate + dictionary + tuple mappings) so callers can choose the most convenient style.
+- Do not add redundant `result.Problem is not null` checks after `result.IsFailed`; rely on result nullability contract/attributes and only use null-forgiving where needed.
+- Keep documentation aligned with the current major version (for this repository now: version 10); do not add cross-major migration sections unless explicitly requested.
+- When behavior changes in Result/Problem flows, include a clear README update with concrete usage examples.
 
 # Repository Guidelines
 

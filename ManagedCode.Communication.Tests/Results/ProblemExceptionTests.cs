@@ -231,4 +231,18 @@ public class ProblemExceptionTests
         exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Instance)}").ShouldBeTrue();
         exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.ErrorCode)}").ShouldBeTrue();
     }
+
+    [Fact]
+    public void Constructor_WithEmptyErrorCode_ShouldNotPopulateErrorCodeDataEntry()
+    {
+        // Arrange
+        var problem = Problem.Create("Server Error", "Failed", 500);
+        problem.ErrorCode = string.Empty;
+
+        // Act
+        var exception = new ProblemException(problem);
+
+        // Assert
+        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.ErrorCode)}").ShouldBeFalse();
+    }
 }
