@@ -16,7 +16,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" Version="9.2.1"/>
-        <PackageReference Include="Microsoft.Orleans.Runtime" Version="9.2.1"/>
+        <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.0.1"/>
         <PackageReference Include="Microsoft.Orleans.Serialization.Abstractions" Version="9.2.1"/>
     </ItemGroup>
 
