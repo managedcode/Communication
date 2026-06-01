@@ -1,10 +1,12 @@
+using System;
+using System.Net;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Tests.Common.TestApp;
 using ManagedCode.Communication.Tests.Common.TestApp.Grains;
+using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
-using ManagedCode.Communication.Tests.TestHelpers;
 
 namespace ManagedCode.Communication.Tests.OrleansTests;
 
@@ -18,6 +20,34 @@ public class GrainClientTests
     {
         _outputHelper = outputHelper;
         _application = application;
+    }
+
+    [Fact]
+    public async Task PlainTaskError()
+    {
+        var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
+        {
+            await _application.Cluster
+                .Client
+                .GetGrain<ITestGrain>(0)
+                .TestPlainTaskError();
+        });
+
+        exception.Message.ShouldContain("plain task error");
+    }
+
+    [Fact]
+    public async Task PlainTaskIntError()
+    {
+        var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
+        {
+            await _application.Cluster
+                .Client
+                .GetGrain<ITestGrain>(0)
+                .TestPlainTaskIntError();
+        });
+
+        exception.Message.ShouldContain("plain task int error");
     }
 
     [Fact]
@@ -51,8 +81,37 @@ public class GrainClientTests
             .Client
             .GetGrain<ITestGrain>(0)
             .TestResultIntError();
-        intResult.IsFailed
-            .ShouldBe(true);
+        intResult.ShouldHaveProblem()
+            .WithTitle(nameof(Exception))
+            .WithDetail("result int error")
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
+    }
+
+    [Fact]
+    public async Task IntResultInvalidOperationError()
+    {
+        var intResult = await _application.Cluster
+            .Client
+            .GetGrain<ITestGrain>(0)
+            .TestResultIntInvalidOperationError();
+        intResult.ShouldHaveProblem()
+            .WithTitle(nameof(InvalidOperationException))
+            .WithDetail("result int invalid operation error")
+            .WithStatusCode((int)HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CollectionResultIntError()
+    {
+        var result = await _application.Cluster
+            .Client
+            .GetGrain<ITestGrain>(0)
+            .TestCollectionResultIntError();
+
+        result.ShouldHaveProblem()
+            .WithTitle(nameof(Exception))
+            .WithDetail("collection result int error")
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -62,8 +121,24 @@ public class GrainClientTests
             .Client
             .GetGrain<ITestGrain>(0)
             .TestResultError();
-        intResult.IsFailed
-            .ShouldBe(true);
+        intResult.ShouldHaveProblem()
+            .WithTitle(nameof(Exception))
+            .WithDetail("result error")
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
+    }
+
+    [Fact]
+    public async Task PlainValueTaskIntError()
+    {
+        var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
+        {
+            await _application.Cluster
+                .Client
+                .GetGrain<ITestGrain>(0)
+                .TestPlainValueTaskIntError();
+        });
+
+        exception.Message.ShouldContain("plain valuetask int error");
     }
 
     [Fact]
@@ -97,8 +172,10 @@ public class GrainClientTests
             .Client
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultError();
-        result.IsFailed
-            .ShouldBe(true);
+        result.ShouldHaveProblem()
+            .WithTitle(nameof(Exception))
+            .WithDetail("valuetask result error")
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -108,8 +185,10 @@ public class GrainClientTests
             .Client
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultStringError();
-        result.IsFailed
-            .ShouldBe(true);
+        result.ShouldHaveProblem()
+            .WithTitle(nameof(Exception))
+            .WithDetail("valuetask result string error")
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -152,7 +231,37 @@ public class GrainClientTests
             .Client
             .GetGrain<ITestGrain>(0)
             .TestValueTaskResultComplexObjectError();
-        result.IsFailed
-            .ShouldBe(true);
+        result.ShouldHaveProblem()
+            .WithTitle(nameof(Exception))
+            .WithDetail("valuetask result complex object error")
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
+    }
+
+    [Fact]
+    public async Task ValueTaskCollectionResultStringError()
+    {
+        var result = await _application.Cluster
+            .Client
+            .GetGrain<ITestGrain>(0)
+            .TestValueTaskCollectionResultStringError();
+
+        result.ShouldHaveProblem()
+            .WithTitle(nameof(Exception))
+            .WithDetail("valuetask collection result string error")
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
+    }
+
+    [Fact]
+    public async Task ValueTaskCollectionResultStringUnauthorizedError()
+    {
+        var result = await _application.Cluster
+            .Client
+            .GetGrain<ITestGrain>(0)
+            .TestValueTaskCollectionResultStringUnauthorizedError();
+
+        result.ShouldHaveProblem()
+            .WithTitle(nameof(UnauthorizedAccessException))
+            .WithDetail("valuetask collection result string unauthorized error")
+            .WithStatusCode((int)HttpStatusCode.Unauthorized);
     }
 }

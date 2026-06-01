@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Tests.Common.TestApp.Models;
 using Orleans;
 
@@ -8,6 +9,16 @@ namespace ManagedCode.Communication.Tests.Common.TestApp.Grains;
 
 public class TestGrain : Grain, ITestGrain
 {
+    public Task TestPlainTaskError()
+    {
+        throw new InvalidOperationException("plain task error");
+    }
+
+    public Task<int> TestPlainTaskIntError()
+    {
+        throw new InvalidOperationException("plain task int error");
+    }
+
     public Task<Result> TestResult()
     {
         return Result.Succeed()
@@ -28,6 +39,21 @@ public class TestGrain : Grain, ITestGrain
     public Task<Result<int>> TestResultIntError()
     {
         throw new Exception("result int error");
+    }
+
+    public Task<Result<int>> TestResultIntInvalidOperationError()
+    {
+        throw new InvalidOperationException("result int invalid operation error");
+    }
+
+    public Task<CollectionResult<int>> TestCollectionResultIntError()
+    {
+        throw new Exception("collection result int error");
+    }
+
+    public ValueTask<int> TestPlainValueTaskIntError()
+    {
+        throw new InvalidOperationException("plain valuetask int error");
     }
 
     public ValueTask<Result> TestValueTaskResult()
@@ -77,5 +103,15 @@ public class TestGrain : Grain, ITestGrain
     public ValueTask<Result<ComplexTestModel>> TestValueTaskResultComplexObjectError()
     {
         throw new Exception("valuetask result complex object error");
+    }
+
+    public ValueTask<CollectionResult<string>> TestValueTaskCollectionResultStringError()
+    {
+        throw new Exception("valuetask collection result string error");
+    }
+
+    public ValueTask<CollectionResult<string>> TestValueTaskCollectionResultStringUnauthorizedError()
+    {
+        throw new UnauthorizedAccessException("valuetask collection result string unauthorized error");
     }
 }

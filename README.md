@@ -1143,6 +1143,7 @@ That's it! The `UseOrleansCommunication()` extension automatically configures:
 - Serialization for all Result types across grain boundaries
 - Proper handling of Problem Details in distributed calls
 - Support for CollectionResult with pagination
+- Exception-to-failed-result conversion for grain methods returning `Task<Result>`, `Task<Result<T>>`, `Task<CollectionResult<T>>`, and matching `ValueTask<>` forms
 
 #### Grain Implementation
 
