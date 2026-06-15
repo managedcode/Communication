@@ -18,4 +18,14 @@ public partial class Command
     {
         return Command<T>.From(id, commandType, value);
     }
+
+    static Command ICommandFactory<Command>.From<TEnum>(TEnum commandType)
+    {
+        return CommandFactoryBridge.From<Command, TEnum>(commandType);
+    }
+
+    static Command ICommandFactory<Command>.From<TEnum>(Guid commandId, TEnum commandType)
+    {
+        return CommandFactoryBridge.From<Command, TEnum>(commandId, commandType);
+    }
 }
