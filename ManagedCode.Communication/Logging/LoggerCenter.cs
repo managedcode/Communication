@@ -105,4 +105,17 @@ public static partial class LoggerCenter
         Message = "Command cleanup service stopped")]
     public static partial void LogCleanupServiceStopped(
         ILogger logger);
+
+    // Orleans Grain Call Filter Logging
+    [LoggerMessage(
+        EventId = 7001,
+        Level = LogLevel.Error,
+        Message = "Unhandled exception in Orleans grain call {InterfaceName}.{MethodName} for target {TargetId}; converted to failed Communication result with status {StatusCode}")]
+    public static partial void LogOrleansGrainCallExceptionConverted(
+        ILogger logger,
+        Exception exception,
+        string interfaceName,
+        string methodName,
+        string targetId,
+        int statusCode);
 }

@@ -18,6 +18,7 @@ always check all test are passed.
 - Do not add redundant `result.Problem is not null` checks after `result.IsFailed`; rely on result nullability contract/attributes and only use null-forgiving where needed.
 - Keep documentation aligned with the current major version (for this repository now: version 10); do not add cross-major migration sections unless explicitly requested.
 - When behavior changes in Result/Problem flows, include a clear README update with concrete usage examples.
+- When a framework adapter catches an exception and converts it into a failed `Result`, it must log the original exception object before returning the failure so distributed traces keep the real stack trace.
 
 # Repository Guidelines
 

@@ -18,13 +18,19 @@ internal static class CommunicationGrainCallResultFactory
 
     public static bool TrySetFailure(IGrainCallContext context, Exception exception)
     {
+        return TrySetFailure(context, exception, out _);
+    }
+
+    public static bool TrySetFailure(IGrainCallContext context, Exception exception, out HttpStatusCode statusCode)
+    {
         var resultType = GetCommunicationResultType(context.InterfaceMethod.ReturnType);
         if (resultType is null)
         {
+            statusCode = HttpStatusCode.InternalServerError;
             return false;
         }
 
-        var statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(exception);
+        statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(exception);
         context.Result = CreateFailure(resultType, exception, statusCode);
         return true;
     }

@@ -1144,6 +1144,7 @@ That's it! The `UseOrleansCommunication()` extension automatically configures:
 - Proper handling of Problem Details in distributed calls
 - Support for CollectionResult with pagination
 - Exception-to-failed-result conversion for grain methods returning `Task<Result>`, `Task<Result<T>>`, `Task<CollectionResult<T>>`, and matching `ValueTask<>` forms
+- Structured error logging with the original exception object before a grain exception is converted to a failed Result, so observability backends keep the real stack trace
 
 #### Grain Implementation
 

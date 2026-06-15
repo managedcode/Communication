@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ManagedCode.Communication.AspNetCore.Constants;
+using ManagedCode.Communication.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
@@ -18,6 +19,11 @@ public abstract class ExceptionFilterWithProblemDetails(ILogger logger) : IExcep
     public virtual void OnException(ExceptionContext context)
     {
         var exception = context.Exception;
+        var actionName = context.ActionDescriptor.DisplayName ?? "Unknown";
+        var controllerName = context.ActionDescriptor.RouteValues["controller"] ?? "Unknown";
+
+        LoggerCenter.LogControllerException(Logger, exception, controllerName, actionName);
+
         var statusCode = GetStatusCodeForException(exception);
 
         // Option 1: Create ProblemDetails and convert to Problem
