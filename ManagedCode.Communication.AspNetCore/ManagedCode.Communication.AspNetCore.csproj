@@ -17,6 +17,7 @@
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj"/>
         <ProjectReference Include="..\ManagedCode.Communication.CQRS\ManagedCode.Communication.CQRS.csproj"/>
+        <ProjectReference Include="..\ManagedCode.Communication.CQRS.AspNetCore\ManagedCode.Communication.CQRS.AspNetCore.csproj"/>
     </ItemGroup>
 
 </Project>

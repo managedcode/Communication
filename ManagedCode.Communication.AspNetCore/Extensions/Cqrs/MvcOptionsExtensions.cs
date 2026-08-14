@@ -1,18 +1,17 @@
-using CqrsMvcOptionsExtensions = ManagedCode.Communication.CQRS.AspNetCore.Extensions.MvcOptionsExtensions;
 using Microsoft.AspNetCore.Mvc;
+using CqrsMvcOptionsExtensions = ManagedCode.Communication.CQRS.AspNetCore.Extensions.MvcOptionsExtensions;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
 /// <summary>
-///     Backward/monolithic package facade for CQRS MVC filter registration.
+///     Facade over the CQRS MVC filter registration for applications that depend only on the monolithic
+///     <c>ManagedCode.Communication.AspNetCore</c> package.
 /// </summary>
 public static class CommunicationCqrsMvcOptionsExtensions
 {
-    /// <summary>
-    ///     Adds CQRS result mapping filters to MVC.
-    /// </summary>
-    public static void AddCommunicationCqrsFilters(this MvcOptions options)
+    /// <inheritdoc cref="CqrsMvcOptionsExtensions.AddCommunicationCqrsFilters" />
+    public static MvcOptions AddCommunicationCqrsFilters(this MvcOptions options)
     {
-        CqrsMvcOptionsExtensions.AddCommunicationCqrsFilters(options);
+        return CqrsMvcOptionsExtensions.AddCommunicationCqrsFilters(options);
     }
 }

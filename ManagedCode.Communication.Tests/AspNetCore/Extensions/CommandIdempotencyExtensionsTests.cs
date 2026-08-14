@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Commands.Extensions;
 using Shouldly;
 using Xunit;
 
@@ -20,7 +20,7 @@ public class CommandIdempotencyExtensionsTests
         store.SetResult("cmd-success", "cached");
 
         var calls = 0;
-        var result = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync(
+        var result = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync(
             store,
             "cmd-success",
             () =>
@@ -40,7 +40,7 @@ public class CommandIdempotencyExtensionsTests
         var store = new TestCommandIdempotencyStoreSimulator();
 
         var calls = 0;
-        var result = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync(
+        var result = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync(
             store,
             "cmd-run",
             async () =>
@@ -62,7 +62,7 @@ public class CommandIdempotencyExtensionsTests
         var store = new TestCommandIdempotencyStoreSimulator();
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync(
+            await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync(
                 store,
                 "cmd-fail",
                 () =>
@@ -80,7 +80,7 @@ public class CommandIdempotencyExtensionsTests
         store.SetStatusSequence("cmd-wait", CommandExecutionStatus.InProgress, CommandExecutionStatus.Completed);
         store.SetResult("cmd-wait", "finished");
 
-        var result = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync<string>(
+        var result = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync<string>(
             store,
             "cmd-wait",
             () =>
@@ -99,7 +99,7 @@ public class CommandIdempotencyExtensionsTests
         var store = new TestCommandIdempotencyStoreSimulator();
 
         var attempts = 0;
-        var result = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentWithRetryAsync(
+        var result = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentWithRetryAsync(
             store,
             "cmd-retry",
             () =>
@@ -134,7 +134,7 @@ public class CommandIdempotencyExtensionsTests
             ("cmd-exec", () => Task.FromResult("executed"))
         };
 
-        var results = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteBatchIdempotentAsync<string>(
+        var results = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteBatchIdempotentAsync<string>(
             store,
             operations);
 
@@ -152,7 +152,7 @@ public class CommandIdempotencyExtensionsTests
         store.SetStatus("cmd-cached-2", CommandExecutionStatus.Completed);
         store.SetResult("cmd-cached-2", "done");
 
-        var (hasResult, result) = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.TryGetCachedResultAsync<string>(
+        var (hasResult, result) = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.TryGetCachedResultAsync<string>(
             store,
             "cmd-cached-2");
 
@@ -165,7 +165,7 @@ public class CommandIdempotencyExtensionsTests
     {
         var store = new TestCommandIdempotencyStoreSimulator();
 
-        var (hasResult, result) = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.TryGetCachedResultAsync<string>(
+        var (hasResult, result) = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.TryGetCachedResultAsync<string>(
             store,
             "cmd-none");
 
@@ -178,7 +178,7 @@ public class CommandIdempotencyExtensionsTests
     {
         var store = new TestCommandIdempotencyStoreSimulator();
 
-        var result = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteWithTimeoutAsync(
+        var result = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteWithTimeoutAsync(
             store,
             "cmd-timeout",
             async () =>
@@ -215,7 +215,7 @@ public class CommandIdempotencyExtensionsTests
             })
         };
 
-        var results = await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteBatchIdempotentAsync<string>(
+        var results = await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteBatchIdempotentAsync<string>(
             store,
             operations);
 
@@ -233,7 +233,7 @@ public class CommandIdempotencyExtensionsTests
         store.SetStatusSequence("cmd-wait-failed", CommandExecutionStatus.InProgress, CommandExecutionStatus.Failed);
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync<string>(
+            await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync<string>(
                 store,
                 "cmd-wait-failed",
                 () => Task.FromResult("should-not-run")));
@@ -246,7 +246,7 @@ public class CommandIdempotencyExtensionsTests
         store.SetStatusSequence("cmd-wait-missing", CommandExecutionStatus.InProgress, CommandExecutionStatus.NotFound);
 
         await Should.ThrowAsync<InvalidOperationException>(async () =>
-            await ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync<string>(
+            await ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentAsync<string>(
                 store,
                 "cmd-wait-missing",
                 () => Task.FromResult("should-not-run")));
@@ -259,7 +259,7 @@ public class CommandIdempotencyExtensionsTests
         var attempts = 0;
 
         var exception = await Should.ThrowAsync<InvalidOperationException>(() =>
-            ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentWithRetryAsync(
+            ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentWithRetryAsync(
                 store,
                 "cmd-retry-exhausted",
                 () =>
@@ -283,7 +283,7 @@ public class CommandIdempotencyExtensionsTests
 
         var calls = 0;
         await Should.ThrowAsync<OperationCanceledException>(() =>
-            ManagedCode.Communication.AspNetCore.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentWithRetryAsync(
+            ManagedCode.Communication.Commands.Extensions.CommandIdempotencyExtensions.ExecuteIdempotentWithRetryAsync(
                 store,
                 "cmd-cancelled",
                 () =>

@@ -14,9 +14,10 @@ public partial class Problem
 {
     public Problem()
     {
-        Extensions = new Dictionary<string, object?>(StringComparer.Ordinal);
+        // Extensions is created by its property initializer; assigning here too would allocate a second
+        // dictionary and immediately throw it away, on every Problem ever constructed.
     }
-    
+
     /// <summary>
     ///     A URI reference [RFC3986] that identifies the problem type. This specification encourages that, when
     ///     dereferenced, it provides human-readable documentation for the problem type

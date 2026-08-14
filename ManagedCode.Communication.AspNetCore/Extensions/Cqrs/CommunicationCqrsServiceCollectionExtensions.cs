@@ -1,26 +1,30 @@
-using CqrsServiceCollectionExtensions = ManagedCode.Communication.CQRS.AspNetCore.Extensions.CommunicationServiceCollectionExtensions;
+using System;
+using ManagedCode.Communication.CQRS.AspNetCore;
 using Microsoft.Extensions.DependencyInjection;
+using CqrsServiceCollectionExtensions =
+    ManagedCode.Communication.CQRS.AspNetCore.Extensions.CommunicationServiceCollectionExtensions;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
 /// <summary>
-///     Backward/monolithic package facade for CQRS ASP.NET Core service registration.
+///     Facade over the CQRS ASP.NET Core service registration for applications that depend only on the monolithic
+///     <c>ManagedCode.Communication.AspNetCore</c> package.
 /// </summary>
 public static class CommunicationCqrsServiceCollectionExtensions
 {
-    /// <summary>
-    ///     Adds CQRS streaming result filters to MVC.
-    /// </summary>
-    public static IServiceCollection AddCommunicationCqrsFilters(this IServiceCollection services)
+    /// <inheritdoc cref="CqrsServiceCollectionExtensions.AddCommunicationCqrs" />
+    public static IServiceCollection AddCommunicationCqrs(
+        this IServiceCollection services,
+        Action<CqrsStreamServerOptions>? configure = null)
     {
-        return CqrsServiceCollectionExtensions.AddCommunicationCqrsFilters(services);
+        return CqrsServiceCollectionExtensions.AddCommunicationCqrs(services, configure);
     }
 
-    /// <summary>
-    ///     Configures CQRS streaming filters. Alias for <see cref="AddCommunicationCqrsFilters"/>.
-    /// </summary>
-    public static IServiceCollection AddCommunicationCqrs(this IServiceCollection services)
+    /// <inheritdoc cref="CqrsServiceCollectionExtensions.AddCommunicationCqrsFilters" />
+    public static IServiceCollection AddCommunicationCqrsFilters(
+        this IServiceCollection services,
+        Action<CqrsStreamServerOptions>? configure = null)
     {
-        return AddCommunicationCqrsFilters(services);
+        return CqrsServiceCollectionExtensions.AddCommunicationCqrsFilters(services, configure);
     }
 }

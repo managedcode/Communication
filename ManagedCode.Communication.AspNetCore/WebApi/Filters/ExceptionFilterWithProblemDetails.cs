@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using ManagedCode.Communication.AspNetCore.Constants;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using static ManagedCode.Communication.AspNetCore.Helpers.HttpStatusCodeHelper;
-using static ManagedCode.Communication.AspNetCore.Constants.ProblemConstants;
+using static ManagedCode.Communication.Constants.ProblemConstants;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 

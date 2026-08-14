@@ -40,17 +40,35 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     public Task SetCommandStatusAsync(string commandId, CommandExecutionStatus status, CancellationToken cancellationToken = default)
     {
         var statusKey = GetStatusKey(commandId);
-        var options = new MemoryCacheEntryOptions
+        var options = CreateEntryOptions();
+
+        // Without this callback _commandTimestamps would keep one entry per command id forever: the cache
+        // entries expire on their own, but nothing would ever prune the shadow index that tracks them, so the
+        // store would grow without bound in any process that does not run the optional cleanup service.
+        options.RegisterPostEvictionCallback(static (_, _, _, state) =>
+        {
+            if (state is TimestampIndexEviction eviction)
+            {
+                eviction.Index.TryRemove(eviction.CommandId, out _);
+            }
+        }, new TimestampIndexEviction(_commandTimestamps, commandId));
+
+        _memoryCache.Set(statusKey, status, options);
+        _commandTimestamps[commandId] = DateTime.UtcNow;
+
+        return Task.CompletedTask;
+    }
+
+    private static MemoryCacheEntryOptions CreateEntryOptions()
+    {
+        return new MemoryCacheEntryOptions
         {
             SlidingExpiration = TimeSpan.FromHours(24), // Keep for 24 hours
             AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7) // Hard limit 7 days
         };
-
-        _memoryCache.Set(statusKey, status, options);
-        _commandTimestamps[commandId] = DateTime.UtcNow;
-        
-        return Task.CompletedTask;
     }
+
+    private sealed record TimestampIndexEviction(ConcurrentDictionary<string, DateTime> Index, string CommandId);
 
     public Task<T?> GetCommandResultAsync<T>(string commandId, CancellationToken cancellationToken = default)
     {
@@ -62,13 +80,8 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     public Task SetCommandResultAsync<T>(string commandId, T result, CancellationToken cancellationToken = default)
     {
         var resultKey = GetResultKey(commandId);
-        var options = new MemoryCacheEntryOptions
-        {
-            SlidingExpiration = TimeSpan.FromHours(24),
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7)
-        };
 
-        _memoryCache.Set(resultKey, result, options);
+        _memoryCache.Set(resultKey, result, CreateEntryOptions());
         return Task.CompletedTask;
     }
 
@@ -250,10 +263,22 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
 
     public void Dispose()
     {
-        if (!_disposed)
+        if (_disposed)
         {
-            _commandTimestamps.Clear();
-            _disposed = true;
+            return;
+        }
+
+        _disposed = true;
+        _commandTimestamps.Clear();
+
+        // Semaphores are only removed once their last holder releases them; anything still registered at
+        // dispose time would otherwise leak its wait handle.
+        foreach (var entry in _commandLocks)
+        {
+            if (_commandLocks.TryRemove(entry))
+            {
+                entry.Value.Semaphore.Dispose();
+            }
         }
     }
 

@@ -1,4 +1,6 @@
+using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -8,27 +10,25 @@ public class ResultToActionResultFilter : IAsyncResultFilter
 {
     public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
     {
-        if (context.Result is ObjectResult objectResult && objectResult.Value != null)
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(next);
+
+        // A plain pattern match instead of Type.IsAssignableFrom: this filter runs on every response of
+        // every action, so the reflection call was pure overhead on a hot path.
+        if (context.Result is ObjectResult { Value: IResult result } objectResult)
         {
-            var valueType = objectResult.Value.GetType();
-
-            // Check if it's a Result or Result<T>
-            if (typeof(IResult).IsAssignableFrom(valueType))
+            if (result.IsFailed && result.Problem is { StatusCode: not 0 } problem)
             {
-                var result = (IResult)objectResult.Value;
-
-                // Set the HTTP status code based on the Result's Problem
-                if (result.IsFailed && result.Problem != null)
-                {
-                    objectResult.StatusCode = result.Problem.StatusCode;
-                }
-                else if (result.IsSuccess)
-                {
-                    objectResult.StatusCode = 200; // OK for successful results
-                }
+                objectResult.StatusCode = problem.StatusCode;
+            }
+            else if (result.IsSuccess)
+            {
+                // Only fill in a status the action did not choose. Overwriting would turn a deliberate
+                // 201/202/204 into a 200.
+                objectResult.StatusCode ??= StatusCodes.Status200OK;
             }
         }
 
-        await next();
+        await next().ConfigureAwait(false);
     }
 }

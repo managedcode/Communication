@@ -1,116 +1,163 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using ManagedCode.Communication.CQRS.AspNetCore;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
-using AspNetActionResult = Microsoft.AspNetCore.Mvc.IActionResult;
 using Shouldly;
 using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
+/// <summary>
+///     Detection rules for "is this return value a CQRS chunk stream?". Every response of every endpoint passes
+///     through here, so both the positive and the negative answer matter.
+/// </summary>
 public class CqrsStreamResultFactoryTests
 {
+    private static readonly CqrsStreamServerOptions Options = CqrsStreamServerOptions.Default;
+
     [Fact]
-    public void TryCreateServerSentEventsResult_WithNullResultReturnsFalse()
+    public void Convert_NullValue_IsNotAStream()
     {
-        InvokeTryCreateServerSentEventsResult(null, out var converted).ShouldBeFalse();
+        CqrsStreamResultFactory.TryCreateServerSentEventsResult(null, Options, out var converted).ShouldBeFalse();
         converted.ShouldBeNull();
     }
 
     [Fact]
-    public void TryCreateServerSentEventsResult_WithExistingAspNetResultReturnsFalse()
+    public void Convert_ChunkStream_ProducesAResult()
     {
-        AspNetResult? expected = TypedResults.Ok("already-converted");
+        CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.CompletedAsync(), Options, out var converted)
+            .ShouldBeTrue();
 
-        InvokeTryCreateServerSentEventsResult(expected, out var converted).ShouldBeFalse();
-        converted.ShouldBeSameAs(expected);
-    }
-
-    [Fact]
-    public void TryCreateServerSentEventsResult_WithNonChunkAsyncEnumerableReturnsFalse()
-    {
-        InvokeTryCreateServerSentEventsResult(RunNonChunkAsync(), out var converted).ShouldBeFalse();
-        converted.ShouldBeNull();
-    }
-
-    [Fact]
-    public void TryCreateServerSentEventsResult_WithChunkStreamReturnsConvertedResult()
-    {
-        InvokeTryCreateServerSentEventsResult(RunChunkStream(), out var converted).ShouldBeTrue();
         converted.ShouldNotBeNull();
     }
 
     [Fact]
-    public void TryCreateServerSentEventsActionResult_WithNullResultReturnsFalse()
+    public void Convert_NonChunkAsyncEnumerable_IsNotAStream()
     {
-        InvokeTryCreateServerSentEventsActionResult(null, out var converted).ShouldBeFalse();
+        CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.NonChunkAsync(), Options, out var converted)
+            .ShouldBeFalse();
+
         converted.ShouldBeNull();
     }
 
     [Fact]
-    public void TryCreateServerSentEventsActionResult_WithChunkStreamReturnsActionResult()
+    public void Convert_PlainObject_IsNotAStream()
     {
-        InvokeTryCreateServerSentEventsActionResult(RunChunkStream(), out var converted).ShouldBeTrue();
-        converted.ShouldNotBeNull();
-        converted!.GetType().Name.ShouldBe("CqrsServerSentEventsActionResult");
+        CqrsStreamResultFactory.TryCreateServerSentEventsResult(new FinalResult("plain"), Options, out var converted)
+            .ShouldBeFalse();
+
+        converted.ShouldBeNull();
     }
 
-    private static bool InvokeTryCreateServerSentEventsResult(object? value, out AspNetResult? result)
+    [Fact]
+    public void Convert_ExistingResult_IsLeftAloneAndDoesNotFillTheOutParameter()
     {
-        var factoryType = GetFactoryType();
-        var method = factoryType.GetMethod(
-            "TryCreateServerSentEventsResult",
-            BindingFlags.Public | BindingFlags.Static);
-        var args = new object?[2] { value, null };
+        var existing = TypedResults.Ok("already-converted");
 
-        var converted = (bool)method!.Invoke(null, args)!;
-        result = args[1] as AspNetResult;
-        return converted;
+        CqrsStreamResultFactory.TryCreateServerSentEventsResult(existing, Options, out var converted).ShouldBeFalse();
+
+        // A Try* method that reports failure must not hand back a value.
+        converted.ShouldBeNull();
     }
 
-    private static bool InvokeTryCreateServerSentEventsActionResult(object? value, out AspNetActionResult? result)
+    [Fact]
+    public void Convert_TypeThatIsBothResultAndChunkStream_PrefersTheExistingResult()
     {
-        var factoryType = GetFactoryType();
-        var method = factoryType.GetMethod(
-            "TryCreateServerSentEventsActionResult",
-            BindingFlags.Public | BindingFlags.Static);
-        var args = new object?[2] { value, null };
+        CqrsStreamResultFactory
+            .TryCreateServerSentEventsResult(new ResultThatIsAlsoAChunkStream(), Options, out var converted)
+            .ShouldBeFalse();
 
-        var converted = (bool)method!.Invoke(null, args)!;
-        result = args[1] as AspNetActionResult;
-        return converted;
+        converted.ShouldBeNull();
     }
 
-    private static Type GetFactoryType()
+    [Fact]
+    public void Convert_TypeWithTwoChunkContracts_FailsLoudlyInsteadOfPickingOne()
     {
-        var communicationCqrsAspNetCoreAssembly = typeof(ManagedCode.Communication.CQRS.AspNetCore.Filters.CqrsResultActionFilter).Assembly;
+        var exception = Should.Throw<InvalidOperationException>(() =>
+            CqrsStreamResultFactory.TryCreateServerSentEventsResult(new AmbiguousChunkStream(), Options, out _));
 
-        return communicationCqrsAspNetCoreAssembly.GetType(
-            "ManagedCode.Communication.CQRS.AspNetCore.CqrsStreamResultFactory")!;
+        exception.Message.ShouldContain("more than one CqrsStreamChunk contract");
     }
 
-    private static async IAsyncEnumerable<int> RunNonChunkAsync()
+    [Fact]
+    public void Convert_ActionResultFlavour_WrapsTheStream()
     {
-        yield return 1;
-        await Task.Delay(1);
-        yield return 2;
+        CqrsStreamResultFactory
+            .TryCreateServerSentEventsActionResult(CqrsTestStreams.CompletedAsync(), Options, out var converted)
+            .ShouldBeTrue();
+
+        converted.ShouldBeOfType<CqrsServerSentEventsActionResult>();
     }
 
-    private static async IAsyncEnumerable<CqrsStreamChunk<string, string>> RunChunkStream()
+    [Fact]
+    public void Convert_ActionResultFlavour_NonStreamIsNotConverted()
     {
-        yield return CqrsStreamChunk<string, string>.Started(
-            Result<string>.Succeed("started"),
-            sequence: 1);
+        CqrsStreamResultFactory
+            .TryCreateServerSentEventsActionResult(new FinalResult("plain"), Options, out var converted)
+            .ShouldBeFalse();
 
-        await Task.Delay(1);
+        converted.ShouldBeNull();
+    }
 
-        yield return CqrsStreamChunk<string, string>.Completed(
-            Result<string>.Succeed("done"),
-            sequence: 2);
+    [Fact]
+    public void Convert_RejectsNullOptions()
+    {
+        Should.Throw<ArgumentNullException>(() =>
+            CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.CompletedAsync(), null!, out _));
+    }
+
+    [Fact]
+    public void Convert_RepeatedCallsForTheSameTypeStayConsistent()
+    {
+        // The converter is cached per runtime type; a second call must behave exactly like the first.
+        for (var i = 0; i < 3; i++)
+        {
+            CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.CompletedAsync(), Options, out var stream)
+                .ShouldBeTrue();
+            stream.ShouldNotBeNull();
+
+            CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.NonChunkAsync(), Options, out var other)
+                .ShouldBeFalse();
+            other.ShouldBeNull();
+        }
+    }
+
+    private sealed class ResultThatIsAlsoAChunkStream : AspNetResult, IAsyncEnumerable<Chunk>
+    {
+        public IAsyncEnumerator<Chunk> GetAsyncEnumerator(System.Threading.CancellationToken cancellationToken = default)
+        {
+            return CqrsTestStreams.CompletedAsync().GetAsyncEnumerator(cancellationToken);
+        }
+
+        public Task ExecuteAsync(HttpContext httpContext)
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class AmbiguousChunkStream :
+        IAsyncEnumerable<Chunk>,
+        IAsyncEnumerable<CqrsStreamChunk<FinalResult, ProgressUpdate>>
+    {
+        public IAsyncEnumerator<Chunk> GetAsyncEnumerator(System.Threading.CancellationToken cancellationToken = default)
+        {
+            return CqrsTestStreams.CompletedAsync().GetAsyncEnumerator(cancellationToken);
+        }
+
+        IAsyncEnumerator<CqrsStreamChunk<FinalResult, ProgressUpdate>>
+            IAsyncEnumerable<CqrsStreamChunk<FinalResult, ProgressUpdate>>.GetAsyncEnumerator(
+                System.Threading.CancellationToken cancellationToken)
+        {
+            return Empty().GetAsyncEnumerator(cancellationToken);
+
+            static async IAsyncEnumerable<CqrsStreamChunk<FinalResult, ProgressUpdate>> Empty()
+            {
+                await Task.Yield();
+                yield break;
+            }
+        }
     }
 }

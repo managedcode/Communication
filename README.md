@@ -16,12 +16,14 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
 - [Railway-Oriented Programming](#railway-oriented-programming)
+- [CQRS Streaming with IAsyncEnumerable + Server-Sent Events](#cqrs-streaming-with-iasyncenumerable--server-sent-events)
 - [Command Pattern and Idempotency](#command-pattern-and-idempotency)
   - [Command Correlation and Tracing Identifiers](#command-correlation-and-tracing-identifiers)
   - [Idempotency Architecture Overview](#idempotency-architecture-overview)
 - [Error Handling Patterns](#error-handling-patterns)
 - [Integration Guides](#integration-guides)
 - [Performance](#performance)
+- [Behaviour Notes](#behaviour-notes)
 - [Comparison](#comparison)
 - [Best Practices](#best-practices)
 - [Examples](#examples)
@@ -119,8 +121,11 @@ Install-Package ManagedCode.Communication.AspNetCore
 # Minimal API extensions
 Install-Package ManagedCode.Communication.Extensions
 
-# CQRS streaming over IAsyncEnumerable + SSE
+# CQRS streaming contract + SSE client (no ASP.NET Core dependency)
 Install-Package ManagedCode.Communication.CQRS
+
+# CQRS streaming server transport for ASP.NET Core
+Install-Package ManagedCode.Communication.CQRS.AspNetCore
 
 # Orleans integration
 Install-Package ManagedCode.Communication.Orleans
@@ -138,8 +143,12 @@ dotnet add package ManagedCode.Communication.AspNetCore
 # Minimal API extensions
 dotnet add package ManagedCode.Communication.Extensions
 
-# CQRS streaming over IAsyncEnumerable + SSE
+# CQRS streaming contract + SSE client (no ASP.NET Core dependency)
 dotnet add package ManagedCode.Communication.CQRS
+
+# CQRS streaming server transport for ASP.NET Core
+dotnet add package ManagedCode.Communication.CQRS.AspNetCore
+
 # Orleans integration
 dotnet add package ManagedCode.Communication.Orleans
 ```
@@ -151,6 +160,7 @@ dotnet add package ManagedCode.Communication.Orleans
 <PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.0.5" />
 <PackageReference Include="ManagedCode.Communication.Extensions" Version="10.0.5" />
 <PackageReference Include="ManagedCode.Communication.CQRS" Version="10.0.5" />
+<PackageReference Include="ManagedCode.Communication.CQRS.AspNetCore" Version="10.0.5" />
 <PackageReference Include="ManagedCode.Communication.Orleans" Version="10.0.5" />
 ```
 
@@ -208,86 +218,157 @@ you do not need to write manual `IResult` translations.
 
 ### CQRS Streaming with IAsyncEnumerable + Server-Sent Events
 
-If your command needs to emit progress and then a terminal result, install `ManagedCode.Communication.CQRS` and return
-`IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>` from your CQRS command handler.
+A CQRS command that reports progress before producing its result is modelled as an
+`IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>`. The stream emits any number of progress chunks and ends with
+exactly one terminal chunk.
+
+Two packages, so a client never has to drag in ASP.NET Core:
+
+| Package | Contains | Use it in |
+| --- | --- | --- |
+| `ManagedCode.Communication.CQRS` | `CqrsStreamChunk<,>`, `CqrsStream`, the `HttpClient` reader | Any project — console, worker, Blazor WASM, MAUI |
+| `ManagedCode.Communication.CQRS.AspNetCore` | Minimal API + MVC transport that renders a stream as SSE | ASP.NET Core servers |
+
+#### Writing a handler
+
+`CqrsStream.Create` is the recommended way. It numbers chunks, guarantees the terminal chunk, and converts a thrown
+exception into a `Failed` chunk:
 
 ```csharp
-using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.AspNetCore.Extensions;
-using ManagedCode.Communication.AspNetCore.Extensions.Http;
 using ManagedCode.Communication;
+using ManagedCode.Communication.CQRS;
+using ManagedCode.Communication.CQRS.AspNetCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCommunicationCqrs();
+
 var app = builder.Build();
 
-app.MapGet("/cqrs/work", Work)
-   .WithCommunicationCqrsResults();
+app.MapGet("/import", (CancellationToken cancellationToken) =>
+        CqrsStream.Create<ImportProgress, ImportReport>(async writer =>
+        {
+            await writer.StartedAsync(new ImportProgress(0));
 
-static IAsyncEnumerable<CqrsStreamChunk<Progress, FinalResult>> Work()
-{
-    yield return CqrsStreamChunk<Progress, FinalResult>.Started(
-        Result<Progress>.Succeed(new Progress("started")));
+            for (var i = 1; i <= 10; i++)
+            {
+                await DoWorkAsync(writer.CancellationToken);
+                await writer.ProgressAsync(new ImportProgress(i * 10));
+            }
 
-    yield return CqrsStreamChunk<Progress, FinalResult>.Progress(
-        Result<Progress>.Succeed(new Progress("in-progress")));
-
-    yield return CqrsStreamChunk<Progress, FinalResult>.Completed(
-        Result<FinalResult>.Succeed(new FinalResult("ok")));
-}
-
-record Progress(string State);
-record FinalResult(string Status);
+            return Result<ImportReport>.Succeed(new ImportReport(10));
+        }, cancellationToken))
+    .WithCommunicationCqrsResults();
 
 app.Run();
+
+public sealed record ImportProgress(int Percent);
+public sealed record ImportReport(int Imported);
 ```
 
-And on a client:
+Returning a failed `Result<TResult>` reports a business failure; throwing reports an unexpected one. Both arrive as a
+terminal `Failed` chunk, so the consumer has one code path for "it did not work".
+
+You can also hand-write the iterator when you prefer full control — note that a C# method containing `yield return`
+and returning `IAsyncEnumerable<T>` must be declared `async`:
+
+```csharp
+static async IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync()
+{
+    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Started(new ImportProgress(0));
+    await Task.Delay(100);
+    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Progress(new ImportProgress(50));
+    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Completed(new ImportReport(10));
+}
+```
+
+For controller-based APIs, register the filter and return the same type from an action:
+
+```csharp
+builder.Services.AddCommunicationCqrs();
+builder.Services.AddControllers(options => options.AddCommunicationCqrsFilters());
+```
+
+#### Reading a stream
 
 ```csharp
 using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.AspNetCore.Extensions.Http;
+using ManagedCode.Communication.CQRS.Extensions.Http;
 
-var chunks = client.GetForCqrsStreamAsync<Progress, FinalResult>("/cqrs/work");
-await foreach (var chunk in chunks)
+await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import"))
 {
-    if (chunk.IsProgress)
+    if (chunk.TryGetProgress(out var progress))
     {
-        // handle progress updates
+        Console.WriteLine($"{progress.Percent}%");
     }
-    else if (chunk.IsTerminal)
+    else if (chunk.TryGetResult(out var report))
     {
-        // handle final result
+        Console.WriteLine($"imported {report.Imported}");
+    }
+    else if (chunk.TryGetProblem(out var problem))
+    {
+        Console.WriteLine($"failed: {problem.Title} — {problem.Detail}");
     }
 }
 ```
 
-Chunk contract semantics:
+The reader does not throw for transport problems. A non-success status code, a dropped connection and an undecodable
+frame all arrive as a terminal `Failed` chunk, so the loop above covers every outcome. Only cancellation propagates as
+an `OperationCanceledException`.
 
-- `CqrsStreamChunkKind.Started` — optional first message that announces execution.
-- `CqrsStreamChunkKind.Progress` — optional progress updates while work is running.
-- `CqrsStreamChunkKind.Completed` — terminal success payload (`Final`).
-- `CqrsStreamChunkKind.Failed` — terminal failure payload (`Final` with failed `Result`).
-- Unhandled exceptions inside the stream enumeration are converted into a terminal `Failed` chunk with a `Problem` created from the
-  thrown exception (status `500`) rather than terminating the connection as an unstructured runtime error.
+#### Chunk contract
 
-If you already depend on `ManagedCode.Communication.AspNetCore`, these CQRS extension methods are also available via
-its `ManagedCode.Communication.AspNetCore.Extensions` and `ManagedCode.Communication.AspNetCore.Extensions.Http` namespaces.
+- `Started` — optional first chunk announcing execution.
+- `Progress` — optional in-flight updates.
+- `Completed` — terminal success; payload in `Final`.
+- `Failed` — terminal failure; `Problem` describes what went wrong.
 
-For controller-based APIs, register CQRS filters with:
+Guarantees the transport adds on both ends:
+
+- **Every stream ends on a terminal chunk.** If a handler returns without one, a `Failed` chunk carrying
+  `CqrsStreamProblems.IncompleteStream` is appended rather than the stream just stopping.
+- **Every chunk is numbered.** `Sequence` is filled in when a handler omits it and is written to the SSE `id:` field,
+  so consumers can restore ordering and resume with `Last-Event-ID`.
+- **An unhandled exception becomes a terminal `Failed` chunk** carrying a `Problem` built from the exception
+  (status `500`), instead of tearing down the connection mid-response.
+- **`Kind` travels as a string** (`"Started"`, `"Progress"`, …), so adding members to the enum never renumbers
+  existing ones across independently deployed clients and servers.
+
+An exception thrown *before* the handler returns its stream is not the transport's to handle — it never produced a
+stream — so it flows into the host's normal exception handling.
+
+#### Tuning
 
 ```csharp
-builder.Services.AddCommunicationCqrsFilters();
+// Server
+builder.Services.AddCommunicationCqrs(options =>
+{
+    options.AssignSequenceNumbers = true;  // default
+    options.EnsureTerminalChunk  = true;   // default
+});
+
+// Or per endpoint
+app.MapGet("/import", Handler)
+   .WithCommunicationCqrsResults(new CqrsStreamServerOptions { EnsureTerminalChunk = false });
+
+// Client
+var options = new CqrsStreamClientOptions
+{
+    MalformedChunkBehavior = CqrsMalformedChunkBehavior.Skip, // default: EmitFailedChunk; also: Throw
+    EnsureTerminalChunk = true
+};
+
+await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import", options))
+{
+}
 ```
 
-The same `CqrsStreamChunk` contract is also usable from SignalR streaming hub methods (`IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>`) when you need a duplex progress/terminal stream.
+If you already depend on `ManagedCode.Communication.AspNetCore`, the same extension methods are re-exported from its
+`ManagedCode.Communication.AspNetCore.Extensions` and `...Extensions.Http` namespaces.
 
-SignalR clients can read the same protocol directly by using `StreamAsync`:
+The same `CqrsStreamChunk` contract also works over SignalR streaming hub methods:
 
 ```csharp
-using ManagedCode.Communication.CQRS;
-
-await foreach (var chunk in hubConnection.StreamAsync<CqrsStreamChunk<Progress, FinalResult>>("RunCommand", commandId))
+await foreach (var chunk in hubConnection.StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("RunCommand", commandId))
 {
     // process progress and terminal chunks here
 }
@@ -1300,11 +1381,60 @@ public class UserGrain : Grain, IUserGrain
 
 ### Best Practices
 
-1. **Use structs**: `Result` and `Result<T>` are value types (structs) to avoid heap allocation
+1. **Use structs**: `Result` and `Result<T>` are value types (structs), so a success carries no heap allocation
 2. **Avoid boxing**: Use generic methods to prevent boxing of value types
 3. **Chain operations**: Use railway-oriented programming to avoid intermediate variables
 4. **Async properly**: Use `ConfigureAwait(false)` in library code
-5. **Cache problems**: Reuse common Problem instances for frequent errors
+5. **Build problems per failure, do not share them**: `Problem` is mutable — it has settable properties and an
+   `Extensions` dictionary that `AddValidationError` writes into. A shared static instance can be mutated by any
+   caller that touches it, poisoning every later use. Create one per failure, or use a factory method.
+6. **Prefer the `CancellationToken` overloads** of the idempotency helpers. `Func<Task<T>>` cannot observe
+   cancellation, so a timeout or a cancelled caller has to wait for the operation to finish on its own.
+
+## Behaviour Notes
+
+Things that surprise people, gathered in one place.
+
+### `Problem` is mutable
+
+`Problem` has settable properties and a live `Extensions` dictionary. Treat every instance as owned by one
+failure. Do not cache a shared instance in a `static` field: `AddValidationError`, `ErrorCode` and the property
+setters all mutate in place, so one caller can change what every later caller sees.
+
+### Exception-to-status mapping is a heuristic
+
+`HttpStatusCodeHelper.GetStatusCodeForException` maps common exception types to status codes. Note in particular
+that `InvalidOperationException`, `NotSupportedException` and `InvalidCastException` map to **400 Bad Request**.
+Those are usually *server* defects ("Sequence contains no elements", an invalid EF Core state), so with the
+default mapping they are reported to the client as its mistake and will not show up as 5xx in your dashboards.
+If you would rather have them surface as 500, catch them before the filter and fail with an explicit `Problem`:
+
+```csharp
+catch (InvalidOperationException ex)
+{
+    return Result.Fail(Problem.Create(ex, HttpStatusCode.InternalServerError));
+}
+```
+
+### A successful `Result<T>` omits a default value on the wire
+
+`Value` is serialized with `JsonIgnoreCondition.WhenWritingDefault`, so `Result<int>.Succeed(0)` and
+`Result<bool>.Succeed(false)` serialize as `{"isSuccess":true}` with no `value` member. .NET clients
+round-trip correctly because the missing member deserializes back to the default. Clients in other languages
+cannot tell "no value" from "the default value" — if that distinction matters for your API, wrap the payload in
+an object rather than returning a bare `int`/`bool`.
+
+### `Result<T>.Value` has a public setter
+
+It exists so serializers can populate it. Mutating it after the fact lets you put a value on a failed result,
+which contradicts the nullable annotations (`IsFailed` declares that `Value` is null). Build results through
+`Succeed` / `Fail` and treat `Value` as read-only.
+
+### HTTP status vs. command outcome
+
+A failed command reported over CQRS streaming still arrives on a `200 OK` response — the HTTP exchange
+succeeded, the command did not. Inspect the terminal chunk, not the status code. A non-2xx status means the
+request never reached the handler.
 
 ## Testing
 

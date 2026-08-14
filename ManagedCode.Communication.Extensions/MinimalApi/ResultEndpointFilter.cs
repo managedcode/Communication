@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
 using ManagedCode.Communication.AspNetCore.Extensions;
@@ -119,24 +121,37 @@ public sealed class ResultEndpointFilter : IEndpointFilter
     {
         var valueProperty = type.GetProperty("Value");
 
-        return valueProperty is null
-            ? result =>
+        if (valueProperty is null || !valueProperty.CanRead)
+        {
+            return static result =>
             {
                 var communicationResult = (CommunicationResult)result;
                 return communicationResult.IsSuccess
                     ? HttpResults.NoContent()
                     : CreateProblem(communicationResult.Problem);
-            }
-            : result =>
-            {
-                var communicationResult = (CommunicationResult)result;
-                if (communicationResult.IsSuccess)
-                {
-                    var value = valueProperty.GetValue(result);
-                    return HttpResults.Ok(value);
-                }
-
-                return CreateProblem(communicationResult.Problem);
             };
+        }
+
+        // Compiled once per closed Result<T> and cached, instead of paying PropertyInfo.GetValue —
+        // a reflection invoke plus boxing — on every single response.
+        var getValue = CompileValueGetter(type, valueProperty);
+
+        return result =>
+        {
+            var communicationResult = (CommunicationResult)result;
+            return communicationResult.IsSuccess
+                ? HttpResults.Ok(getValue(result))
+                : CreateProblem(communicationResult.Problem);
+        };
+    }
+
+    private static Func<object, object?> CompileValueGetter(Type type, PropertyInfo valueProperty)
+    {
+        var parameter = Expression.Parameter(typeof(object), "result");
+        var typed = Expression.Convert(parameter, type);
+        var access = Expression.Property(typed, valueProperty);
+        var boxed = Expression.Convert(access, typeof(object));
+
+        return Expression.Lambda<Func<object, object?>>(boxed, parameter).Compile();
     }
 }

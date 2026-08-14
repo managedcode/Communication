@@ -1,20 +1,24 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <IsPackable>true</IsPackable>
         <DebugType>embedded</DebugType>
-        <OutputType>Library</OutputType>
     </PropertyGroup>
 
     <PropertyGroup>
         <Title>ManagedCode.Communication.CQRS</Title>
         <PackageId>ManagedCode.Communication.CQRS</PackageId>
-        <Description>Streaming CQRS primitives for ManagedCode.Communication with IAsyncEnumerable progress and Server-Sent Events transport.</Description>
+        <Description>Streaming CQRS primitives for ManagedCode.Communication: IAsyncEnumerable progress chunks and a Server-Sent Events HttpClient reader. Transport-agnostic, usable from any client (console, Blazor WASM, MAUI).</Description>
         <PackageTags>managedcode;communication;cqrs;sse;streaming;result-pattern</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="ManagedCode.Communication.CQRS.AspNetCore" />
+        <InternalsVisibleTo Include="ManagedCode.Communication.Tests" />
     </ItemGroup>
 
 </Project>

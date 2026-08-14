@@ -124,13 +124,12 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     [JsonIgnore]
     public Problem? Problem
     {
-        get
-        {
-            if (_problem is null && !IsSuccess)
-                _problem = Problem.GenericError();
-
-            return _problem;
-        }
+        // The fallback is deliberately not written back into _problem. Assigning a field from a getter is
+        // silently discarded whenever the struct is read through a defensive copy (a readonly field, an `in`
+        // parameter, a boxed value), so it only ever looked like a cache. Every Result the library produces
+        // for a failure carries its Problem already; the fallback exists solely for default(Result<T>) and for
+        // hand-written payloads that claim failure without one.
+        get => _problem ?? (IsSuccess ? null : Problem.GenericError());
         private init => _problem = value;
     }
 

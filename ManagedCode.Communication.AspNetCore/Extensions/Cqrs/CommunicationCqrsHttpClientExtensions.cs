@@ -1,94 +1,155 @@
+using System;
+using System.Collections.Generic;
 using System.Net.Http;
+using System.Threading;
+using ManagedCode.Communication.CQRS;
+using ManagedCode.Communication.CQRS.Extensions.Http;
+using CoreCqrsHttpClientExtensions = ManagedCode.Communication.CQRS.Extensions.Http.CqrsHttpClientExtensions;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions.Http;
 
 /// <summary>
-///     Backward/monolithic package facade for CQRS streaming HttpClient helpers.
+///     Facade over <see cref="CoreCqrsHttpClientExtensions" /> for applications that depend only on the monolithic
+///     <c>ManagedCode.Communication.AspNetCore</c> package. Client-only applications should reference
+///     <c>ManagedCode.Communication.CQRS</c> directly — it carries no ASP.NET Core dependency.
 /// </summary>
 public static class CqrsHttpClientExtensions
 {
-    /// <summary>
-    ///     Sends a request built by <paramref name="requestFactory"/> and exposes streamed CQRS chunks from
-    ///     <see cref="System.Net.ServerSentEvents.SseItem"/> payloads.
-    /// </summary>
-    public static System.Collections.Generic.IAsyncEnumerable<
-        ManagedCode.Communication.CQRS.CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult>(
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync{TProgress,TResult}(HttpClient,Func{HttpRequestMessage},CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult>(
         this HttpClient client,
-        System.Func<HttpRequestMessage> requestFactory,
-        System.Threading.CancellationToken cancellationToken = default)
+        Func<HttpRequestMessage> requestFactory,
+        CqrsStreamClientOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
-        return ManagedCode.Communication.CQRS.Extensions.Http.CqrsHttpClientExtensions.SendForCqrsStreamAsync<
-            TProgress, TResult>(client, requestFactory, cancellationToken);
+        return CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync<TProgress, TResult>(
+            client, requestFactory, options, cancellationToken);
     }
 
-    /// <summary>
-    ///     Sends a request with a specific method and parses CQRS stream chunks from SSE response.
-    /// </summary>
-    public static System.Collections.Generic.IAsyncEnumerable<
-        ManagedCode.Communication.CQRS.CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult>(
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync{TProgress,TResult}(HttpClient,Func{HttpRequestMessage},CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult>(
+        this HttpClient client,
+        Func<HttpRequestMessage> requestFactory,
+        CancellationToken cancellationToken)
+    {
+        return CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync<TProgress, TResult>(
+            client, requestFactory, null, cancellationToken);
+    }
+
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync{TProgress,TResult}(HttpClient,HttpMethod,string,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult>(
         this HttpClient client,
         HttpMethod method,
         string requestUri,
-        System.Threading.CancellationToken cancellationToken = default)
+        CqrsStreamClientOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
-        return ManagedCode.Communication.CQRS.Extensions.Http.CqrsHttpClientExtensions.SendForCqrsStreamAsync<
-            TProgress, TResult>(client, method, requestUri, cancellationToken);
+        return CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync<TProgress, TResult>(
+            client, method, requestUri, options, cancellationToken);
     }
 
-    /// <summary>
-    ///     Sends a JSON request and reads CQRS stream chunks from SSE response body.
-    /// </summary>
-    public static System.Collections.Generic.IAsyncEnumerable<
-        ManagedCode.Communication.CQRS.CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult, TRequest>(
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync{TProgress,TResult}(HttpClient,HttpMethod,string,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult>(
+        this HttpClient client,
+        HttpMethod method,
+        string requestUri,
+        CancellationToken cancellationToken)
+    {
+        return CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync<TProgress, TResult>(
+            client, method, requestUri, null, cancellationToken);
+    }
+
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync{TProgress,TResult,TRequest}(HttpClient,string,HttpMethod,TRequest,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult, TRequest>(
         this HttpClient client,
         string requestUri,
         HttpMethod method,
         TRequest requestBody,
-        System.Threading.CancellationToken cancellationToken = default)
+        CqrsStreamClientOptions? options = null,
+        CancellationToken cancellationToken = default)
         where TRequest : class
     {
-        return ManagedCode.Communication.CQRS.Extensions.Http.CqrsHttpClientExtensions.SendForCqrsStreamAsync<
-            TProgress, TResult, TRequest>(client, requestUri, method, requestBody, cancellationToken);
+        return CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync<TProgress, TResult, TRequest>(
+            client, requestUri, method, requestBody, options, cancellationToken);
     }
 
-    /// <summary>
-    ///     Sends GET and parses CQRS stream chunks from SSE response body.
-    /// </summary>
-    public static System.Collections.Generic.IAsyncEnumerable<
-        ManagedCode.Communication.CQRS.CqrsStreamChunk<TProgress, TResult>> GetForCqrsStreamAsync<TProgress, TResult>(
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync{TProgress,TResult,TRequest}(HttpClient,string,HttpMethod,TRequest,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> SendForCqrsStreamAsync<TProgress, TResult, TRequest>(
         this HttpClient client,
         string requestUri,
-        System.Threading.CancellationToken cancellationToken = default)
+        HttpMethod method,
+        TRequest requestBody,
+        CancellationToken cancellationToken)
+        where TRequest : class
     {
-        return ManagedCode.Communication.CQRS.Extensions.Http.CqrsHttpClientExtensions.GetForCqrsStreamAsync<
-            TProgress, TResult>(client, requestUri, cancellationToken);
+        return CoreCqrsHttpClientExtensions.SendForCqrsStreamAsync<TProgress, TResult, TRequest>(
+            client, requestUri, method, requestBody, null, cancellationToken);
     }
 
-    /// <summary>
-    ///     Sends POST without request body and parses CQRS stream chunks from SSE response body.
-    /// </summary>
-    public static System.Collections.Generic.IAsyncEnumerable<
-        ManagedCode.Communication.CQRS.CqrsStreamChunk<TProgress, TResult>> PostForCqrsStreamAsync<TProgress, TResult>(
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.GetForCqrsStreamAsync{TProgress,TResult}(HttpClient,string,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> GetForCqrsStreamAsync<TProgress, TResult>(
         this HttpClient client,
         string requestUri,
-        System.Threading.CancellationToken cancellationToken = default)
+        CqrsStreamClientOptions? options = null,
+        CancellationToken cancellationToken = default)
     {
-        return ManagedCode.Communication.CQRS.Extensions.Http.CqrsHttpClientExtensions.PostForCqrsStreamAsync<
-            TProgress, TResult>(client, requestUri, cancellationToken);
+        return CoreCqrsHttpClientExtensions.GetForCqrsStreamAsync<TProgress, TResult>(
+            client, requestUri, options, cancellationToken);
     }
 
-    /// <summary>
-    ///     Sends JSON POST and parses CQRS stream chunks from SSE response body.
-    /// </summary>
-    public static System.Collections.Generic.IAsyncEnumerable<
-        ManagedCode.Communication.CQRS.CqrsStreamChunk<TProgress, TResult>> PostForCqrsStreamAsync<TProgress, TResult, TRequest>(
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.GetForCqrsStreamAsync{TProgress,TResult}(HttpClient,string,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> GetForCqrsStreamAsync<TProgress, TResult>(
+        this HttpClient client,
+        string requestUri,
+        CancellationToken cancellationToken)
+    {
+        return CoreCqrsHttpClientExtensions.GetForCqrsStreamAsync<TProgress, TResult>(
+            client, requestUri, null, cancellationToken);
+    }
+
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync{TProgress,TResult}(HttpClient,string,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> PostForCqrsStreamAsync<TProgress, TResult>(
+        this HttpClient client,
+        string requestUri,
+        CqrsStreamClientOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        return CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync<TProgress, TResult>(
+            client, requestUri, options, cancellationToken);
+    }
+
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync{TProgress,TResult}(HttpClient,string,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> PostForCqrsStreamAsync<TProgress, TResult>(
+        this HttpClient client,
+        string requestUri,
+        CancellationToken cancellationToken)
+    {
+        return CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync<TProgress, TResult>(
+            client, requestUri, null, cancellationToken);
+    }
+
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync{TProgress,TResult,TRequest}(HttpClient,string,TRequest,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> PostForCqrsStreamAsync<TProgress, TResult, TRequest>(
         this HttpClient client,
         string requestUri,
         TRequest requestBody,
-        System.Threading.CancellationToken cancellationToken = default)
+        CqrsStreamClientOptions? options = null,
+        CancellationToken cancellationToken = default)
         where TRequest : class
     {
-        return ManagedCode.Communication.CQRS.Extensions.Http.CqrsHttpClientExtensions.PostForCqrsStreamAsync<
-            TProgress, TResult, TRequest>(client, requestUri, requestBody, cancellationToken);
+        return CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync<TProgress, TResult, TRequest>(
+            client, requestUri, requestBody, options, cancellationToken);
+    }
+
+    /// <inheritdoc cref="CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync{TProgress,TResult,TRequest}(HttpClient,string,TRequest,CqrsStreamClientOptions,CancellationToken)" />
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> PostForCqrsStreamAsync<TProgress, TResult, TRequest>(
+        this HttpClient client,
+        string requestUri,
+        TRequest requestBody,
+        CancellationToken cancellationToken)
+        where TRequest : class
+    {
+        return CoreCqrsHttpClientExtensions.PostForCqrsStreamAsync<TProgress, TResult, TRequest>(
+            client, requestUri, requestBody, null, cancellationToken);
     }
 }

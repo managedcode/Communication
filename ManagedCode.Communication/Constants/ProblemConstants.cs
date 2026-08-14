@@ -83,6 +83,36 @@ public static class ProblemConstants
         /// Key for original exception type in problem extensions
         /// </summary>
         public const string OriginalExceptionType = "originalExceptionType";
+
+        /// <summary>
+        /// Key for the enum member name behind an error code.
+        /// </summary>
+        public const string ErrorCodeName = "errorCodeName";
+
+        /// <summary>
+        /// Key for the numeric enum value behind an error code.
+        /// </summary>
+        public const string ErrorCodeValue = "errorCodeValue";
+
+        /// <summary>
+        /// Key for an inner exception description.
+        /// </summary>
+        public const string InnerException = "innerException";
+
+        /// <summary>
+        /// Key for a stack trace. Only attach this outside production.
+        /// </summary>
+        public const string StackTrace = "stackTrace";
+
+        /// <summary>
+        /// Key for the SignalR hub method name.
+        /// </summary>
+        public const string HubMethod = "hubMethod";
+
+        /// <summary>
+        /// Key for the SignalR hub type name.
+        /// </summary>
+        public const string HubType = "hubType";
     }
 
     /// <summary>

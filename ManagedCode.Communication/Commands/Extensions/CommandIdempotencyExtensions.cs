@@ -14,12 +14,37 @@ public static class CommandIdempotencyExtensions
     /// <summary>
     /// Execute an operation idempotently with automatic result caching
     /// </summary>
-    public static async Task<T> ExecuteIdempotentAsync<T>(
+    public static Task<T> ExecuteIdempotentAsync<T>(
         this ICommandIdempotencyStore store,
         string commandId,
         Func<Task<T>> operation,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return store.ExecuteIdempotentAsync(commandId, _ => operation(), cancellationToken);
+    }
+
+    /// <summary>
+    ///     Execute an operation idempotently with automatic result caching, handing the operation the
+    ///     cancellation token so it can stop when the caller does.
+    /// </summary>
+    /// <remarks>
+    ///     Prefer this overload: the parameterless <see cref="Func{TResult}" /> form cannot observe cancellation,
+    ///     so a timeout or a cancelled caller has to wait for the operation to finish on its own.
+    /// </remarks>
+    public static async Task<T> ExecuteIdempotentAsync<T>(
+        this ICommandIdempotencyStore store,
+        string commandId,
+        Func<CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentException.ThrowIfNullOrWhiteSpace(commandId);
+        ArgumentNullException.ThrowIfNull(operation);
+
+        var contendedAttempts = 0;
+
         while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -54,6 +79,10 @@ public static class CommandIdempotencyExtensions
                         goto ExecuteOperation;
                     }
 
+                    // Another caller won the claim. Back off before re-reading: without this the loop spins
+                    // on the store as fast as the CPU allows whenever two callers contend for the same id.
+                    contendedAttempts++;
+                    await Task.Delay(ContentionBackoff(contendedAttempts), cancellationToken);
                     break;
                 }
             }
@@ -62,7 +91,7 @@ public static class CommandIdempotencyExtensions
         ExecuteOperation:
         try
         {
-            var result = await operation();
+            var result = await operation(cancellationToken);
 
             // Store result and mark as completed atomically
             await store.SetCommandResultAsync(commandId, result, cancellationToken);
@@ -75,6 +104,96 @@ public static class CommandIdempotencyExtensions
             // Mark as failed
             await store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Failed, cancellationToken);
             throw;
+        }
+    }
+
+    /// <summary>
+    ///     Execute an operation idempotently, retrying the whole attempt on failure with exponential backoff and jitter.
+    /// </summary>
+    /// <remarks>
+    ///     A failed attempt leaves the command in <see cref="CommandExecutionStatus.Failed" />, which the next
+    ///     attempt is allowed to claim, so retries genuinely re-run the operation rather than replaying a cached failure.
+    /// </remarks>
+    public static async Task<T> ExecuteIdempotentWithRetryAsync<T>(
+        this ICommandIdempotencyStore store,
+        string commandId,
+        Func<Task<T>> operation,
+        int maxRetries = 3,
+        TimeSpan? baseDelay = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+        ArgumentOutOfRangeException.ThrowIfNegative(maxRetries);
+
+        var delay = baseDelay ?? TimeSpan.FromMilliseconds(100);
+        var attempt = 0;
+
+        while (true)
+        {
+            try
+            {
+                return await store.ExecuteIdempotentAsync(commandId, operation, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw; // Cancellation is not a failure to retry.
+            }
+            catch when (attempt < maxRetries)
+            {
+                attempt++;
+
+                // Exponential backoff with 80%-120% jitter so concurrent callers do not retry in lockstep.
+                var backoff = TimeSpan.FromMilliseconds(
+                    delay.TotalMilliseconds * Math.Pow(2, attempt - 1) * (0.8 + Random.Shared.NextDouble() * 0.4));
+
+                await Task.Delay(backoff, cancellationToken);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Execute an operation idempotently, giving up after <paramref name="timeout" />.
+    /// </summary>
+    /// <remarks>
+    ///     The timeout can only interrupt an operation that observes the token it is handed. The
+    ///     <see cref="Func{TResult}" /> overload cannot, so it waits for the operation to finish regardless.
+    /// </remarks>
+    public static Task<T> ExecuteWithTimeoutAsync<T>(
+        this ICommandIdempotencyStore store,
+        string commandId,
+        Func<Task<T>> operation,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        return store.ExecuteWithTimeoutAsync(commandId, _ => operation(), timeout, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Execute an operation idempotently, giving up after <paramref name="timeout" />. The operation receives
+    ///     a token that is cancelled when the timeout elapses or the caller cancels.
+    /// </summary>
+    public static async Task<T> ExecuteWithTimeoutAsync<T>(
+        this ICommandIdempotencyStore store,
+        string commandId,
+        Func<CancellationToken, Task<T>> operation,
+        TimeSpan timeout,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        using var combined = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+        try
+        {
+            return await store.ExecuteIdempotentAsync(commandId, operation, combined.Token);
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+        {
+            // Distinguish "the caller cancelled" from "we ran out of time"; the latter is a TimeoutException.
+            throw new TimeoutException($"Command {commandId} did not complete within {timeout}.");
         }
     }
 
@@ -144,6 +263,16 @@ public static class CommandIdempotencyExtensions
         }
 
         return (false, default);
+    }
+
+    /// <summary>
+    ///     Backoff before re-reading a command whose claim was lost to a concurrent caller.
+    /// </summary>
+    private static TimeSpan ContentionBackoff(int attempt)
+    {
+        // 1ms, 2ms, 4ms … capped at 50ms. Long enough to stop a hot spin, short enough to stay responsive.
+        var milliseconds = Math.Min(50d, Math.Pow(2, Math.Min(attempt, 6)) / 2d);
+        return TimeSpan.FromMilliseconds(milliseconds);
     }
 
     /// <summary>

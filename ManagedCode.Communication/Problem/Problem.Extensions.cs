@@ -505,35 +505,87 @@ public partial class Problem
     /// </summary>
     public Dictionary<string, List<string>>? GetValidationErrors()
     {
-        if (Extensions.TryGetValue(ProblemConstants.ExtensionKeys.Errors, out var errors))
+        if (!Extensions.TryGetValue(ProblemConstants.ExtensionKeys.Errors, out var errors))
         {
-            // Handle direct dictionary
-            if (errors is Dictionary<string, List<string>> dict)
-            {
-                return dict;
-            }
-            
-            // Handle JsonElement from deserialization
-            if (errors is System.Text.Json.JsonElement jsonElement)
-            {
-                var result = new Dictionary<string, List<string>>();
-                foreach (var property in jsonElement.EnumerateObject())
-                {
-                    var list = new List<string>();
-                    if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Array)
-                    {
-                        foreach (var item in property.Value.EnumerateArray())
-                        {
-                            list.Add(item.GetString() ?? string.Empty);
-                        }
-                    }
-                    result[property.Name] = list;
-                }
-                return result;
-            }
+            return null;
         }
 
-        return null;
+        if (errors is Dictionary<string, List<string>> dict)
+        {
+            return dict;
+        }
+
+        var materialized = MaterializeValidationErrors(errors);
+        if (materialized is null)
+        {
+            return null;
+        }
+
+        // Store the materialized form back, so repeated reads do not rebuild it and so a later
+        // AddValidationError sees a real dictionary instead of the raw deserialized payload.
+        Extensions[ProblemConstants.ExtensionKeys.Errors] = materialized;
+        return materialized;
+    }
+
+    /// <summary>
+    ///     Converts a deserialized <c>errors</c> payload into the dictionary shape the API works with.
+    ///     Returns <c>null</c> when the value is not a recognizable error map.
+    /// </summary>
+    private static Dictionary<string, List<string>>? MaterializeValidationErrors(object? errors)
+    {
+        switch (errors)
+        {
+            case JsonElement { ValueKind: JsonValueKind.Object } jsonElement:
+            {
+                var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+                foreach (var property in jsonElement.EnumerateObject())
+                {
+                    result[property.Name] = ReadMessages(property.Value);
+                }
+
+                return result;
+            }
+
+            // Some producers hand back a plain object map (e.g. an IDictionary from a different serializer).
+            case IDictionary<string, object?> objectMap:
+            {
+                var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+                foreach (var pair in objectMap)
+                {
+                    result[pair.Key] = pair.Value switch
+                    {
+                        List<string> list => list,
+                        IEnumerable<string> messages => [..messages],
+                        JsonElement element => ReadMessages(element),
+                        null => [],
+                        var other => [other.ToString() ?? string.Empty]
+                    };
+                }
+
+                return result;
+            }
+
+            default:
+                return null;
+        }
+
+        static List<string> ReadMessages(JsonElement value)
+        {
+            if (value.ValueKind != JsonValueKind.Array)
+            {
+                return value.ValueKind == JsonValueKind.Null
+                    ? []
+                    : [value.ToString()];
+            }
+
+            var list = new List<string>(value.GetArrayLength());
+            foreach (var item in value.EnumerateArray())
+            {
+                list.Add(item.ValueKind == JsonValueKind.String ? item.GetString() ?? string.Empty : item.ToString());
+            }
+
+            return list;
+        }
     }
 
     /// <summary>
@@ -565,16 +617,11 @@ public partial class Problem
     /// </summary>
     public void AddValidationError(string field, string message)
     {
-        if (!Extensions.TryGetValue(ProblemConstants.ExtensionKeys.Errors, out var errorsObj) || 
-            errorsObj is not Dictionary<string, List<string>> errors)
-        {
-            errors = new Dictionary<string, List<string>>();
-            Extensions[ProblemConstants.ExtensionKeys.Errors] = errors;
-        }
+        var errors = GetOrCreateValidationErrors();
 
         if (!errors.TryGetValue(field, out var fieldErrors))
         {
-            fieldErrors = new List<string>();
+            fieldErrors = [];
             errors[field] = fieldErrors;
         }
 
@@ -590,15 +637,20 @@ public partial class Problem
     /// <summary>
     ///     Gets or creates validation errors dictionary.
     /// </summary>
+    /// <remarks>
+    ///     Goes through <see cref="GetValidationErrors" /> so that errors carried by a deserialized Problem are
+    ///     preserved. Replacing the stored value outright would silently discard every error that arrived over the wire.
+    /// </remarks>
     private Dictionary<string, List<string>> GetOrCreateValidationErrors()
     {
-        if (!Extensions.TryGetValue(ProblemConstants.ExtensionKeys.Errors, out var errorsObj) || 
-            errorsObj is not Dictionary<string, List<string>> errors)
+        var existing = GetValidationErrors();
+        if (existing is not null)
         {
-            errors = new Dictionary<string, List<string>>();
-            Extensions[ProblemConstants.ExtensionKeys.Errors] = errors;
+            return existing;
         }
-        
+
+        var errors = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        Extensions[ProblemConstants.ExtensionKeys.Errors] = errors;
         return errors;
     }
 
