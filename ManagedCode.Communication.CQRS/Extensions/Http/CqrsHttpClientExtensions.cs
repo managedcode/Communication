@@ -8,6 +8,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Constants;
+using ManagedCode.Communication;
 using ManagedCode.Communication.CQRS;
 
 namespace ManagedCode.Communication.CQRS.Extensions.Http;
@@ -124,7 +126,23 @@ public static class CqrsHttpClientExtensions
             request,
             HttpCompletionOption.ResponseHeadersRead,
             cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var problem = ParseProblemFromResponse(response, responseBody)
+                          ?? Problem.Create(response.StatusCode,
+                              string.IsNullOrWhiteSpace(responseBody)
+                                  ? "Request returned " + response.StatusCode
+                                  : responseBody);
+
+            yield return CqrsStreamChunk<TProgress, TResult>.Failed(
+                problem,
+                message: "Request returned a non-success status code.",
+                sequence: 0);
+
+            yield break;
+        }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
         var parser = SseParser.Create(
@@ -136,5 +154,46 @@ public static class CqrsHttpClientExtensions
         {
             yield return item.Data;
         }
+    }
+
+    private static Problem? ParseProblemFromResponse(HttpResponseMessage response, string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+        {
+            return null;
+        }
+
+        Problem? parsedProblem;
+        try
+        {
+            parsedProblem = JsonSerializer.Deserialize<Problem>(responseBody, JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        if (parsedProblem is null)
+        {
+            return null;
+        }
+
+        if (parsedProblem.StatusCode == 0)
+        {
+            parsedProblem.StatusCode = (int)response.StatusCode;
+        }
+
+        if (string.IsNullOrWhiteSpace(parsedProblem.Title))
+        {
+            parsedProblem.Title = response.ReasonPhrase ?? response.StatusCode.ToString();
+        }
+
+        if (string.IsNullOrWhiteSpace(parsedProblem.Type) ||
+            string.Equals(parsedProblem.Type, ProblemConstants.Types.AboutBlank, StringComparison.Ordinal))
+        {
+            parsedProblem.Type = response.StatusCode.ToString();
+        }
+
+        return parsedProblem;
     }
 }

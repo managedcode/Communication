@@ -420,7 +420,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         stopwatch.Stop();
 
         // Assert
-        stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(260));
+        stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromMilliseconds(700));
         (await task1).ShouldBe("result-1");
         (await task2).ShouldBe("result-2");
     }

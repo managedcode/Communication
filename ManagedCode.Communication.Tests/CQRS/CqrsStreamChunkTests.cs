@@ -5,7 +5,7 @@ using Shouldly;
 using ManagedCode.Communication.CQRS;
 using Xunit;
 
-namespace ManagedCode.Communication.Tests.CQrs;
+namespace ManagedCode.Communication.Tests.CQRS;
 
 public class CqrsStreamChunkTests
 {
@@ -99,5 +99,49 @@ public class CqrsStreamChunkTests
         deserialized.ProgressResult.ShouldNotBeNull();
         deserialized.ProgressResult!.Value.IsSuccess.ShouldBeTrue();
         deserialized.ProgressResult!.Value.Value.ShouldBe("running");
+    }
+
+    [Fact]
+    public void CompletedFactory_ThrowsOnFailedResult()
+    {
+        var failed = Result<int>.Fail("cannot complete");
+
+        Should.Throw<ArgumentException>(() =>
+            CqrsStreamChunk<string, int>.Completed(failed, message: "done"));
+    }
+
+    [Fact]
+    public void FailedFactory_ThrowsOnSuccessfulResult()
+    {
+        var success = Result<int>.Succeed(42);
+
+        Should.Throw<ArgumentException>(() =>
+            CqrsStreamChunk<string, int>.Failed(success, message: "oops"));
+    }
+
+    [Fact]
+    public void StartedFactory_RespectsCustomEventType()
+    {
+        var chunk = CqrsStreamChunk<string, int>.Started(
+            message: "custom event",
+            eventType: "custom-event");
+
+        chunk.EventType.ShouldBe("custom-event");
+    }
+
+    [Fact]
+    public void ConstructorWithBlankEventTypeFallsBackToKindDefault()
+    {
+        var chunk = new CqrsStreamChunk<string, string>(
+            CqrsStreamChunkKind.Started,
+            Result<string>.Succeed("started"),
+            null,
+            "state",
+            "   ",
+            null,
+            null,
+            DateTime.UtcNow);
+
+        chunk.EventType.ShouldBe("cqrs-started");
     }
 }

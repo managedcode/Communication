@@ -30,6 +30,7 @@ public class OrleansClusterFixture : IDisposable
         {
             siloBuilder
                 .AddMemoryGrainStorageAsDefault()
+                .AddMemoryGrainStorage("commandStore")
                 .UseOrleansCommunication();
         }
     }

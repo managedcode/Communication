@@ -17,6 +17,101 @@ namespace ManagedCode.Communication.Tests.Extensions;
 public class ResultHttpClientExtensionsTests
 {
     [Fact]
+    public async Task SendForResultAsync_NullClient_ThrowsArgumentNullException()
+    {
+        HttpClient client = null!;
+        var act = async () => await client.SendForResultAsync<string>(static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"));
+
+        await Should.ThrowAsync<ArgumentNullException>(act);
+    }
+
+    [Fact]
+    public async Task SendForResultAsync_NullRequestFactory_ThrowsArgumentNullException()
+    {
+        using var client = new HttpClient();
+        Func<HttpRequestMessage> requestFactory = null!;
+        var act = async () => await client.SendForResultAsync<string>(requestFactory);
+
+        await Should.ThrowAsync<ArgumentNullException>(act);
+    }
+
+    [Fact]
+    public async Task GetAsResultAsync_WithPipeline_SucceedsAfterRetry()
+    {
+        var attempt = 0;
+        using var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            attempt++;
+
+            if (attempt == 1)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                {
+                    Content = new StringContent("cold", Encoding.UTF8, "text/plain")
+                });
+            }
+
+            var payload = JsonSerializer.Serialize(Result<int>.Succeed(21));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(payload, Encoding.UTF8, "application/json")
+            });
+        }));
+
+        var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
+            .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
+            {
+                MaxRetryAttempts = 2,
+                Delay = TimeSpan.Zero,
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .HandleResult(static response => !response.IsSuccessStatusCode)
+            })
+            .Build();
+
+        var result = await client.GetAsResultAsync<int>(
+            "https://example.com/api/retry",
+            pipeline);
+
+        attempt.ShouldBe(2);
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe(21);
+    }
+
+    [Fact]
+    public async Task GetAsResultAsync_NullClient_ThrowsArgumentNullException()
+    {
+        HttpClient client = null!;
+
+        var act = async () => await client.GetAsResultAsync<int>("https://example.com");
+
+        await Should.ThrowAsync<ArgumentNullException>(act);
+    }
+
+    [Fact]
+    public async Task GetAsResultAsync_NullOrEmptyUri_ThrowsArgumentException()
+    {
+        using var client = new HttpClient();
+
+        var act = async () => await client.GetAsResultAsync<int>(string.Empty);
+
+        await Should.ThrowAsync<ArgumentException>(act);
+    }
+
+    [Fact]
+    public async Task GetAsResultAsync_WithoutPayload_ReturnsSuccessResult()
+    {
+        using var client = new HttpClient(new StubHandler(static (_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)
+            {
+                Content = new StringContent(string.Empty, Encoding.UTF8, "text/plain")
+            })));
+
+        var result = await client.GetAsResultAsync("https://example.com/api/ping");
+
+        result.IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task SendForResultAsync_WithSuccessResponse_ReturnsSuccessResult()
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
