@@ -119,6 +119,9 @@ Install-Package ManagedCode.Communication.AspNetCore
 # Minimal API extensions
 Install-Package ManagedCode.Communication.Extensions
 
+# CQRS streaming over IAsyncEnumerable + SSE
+Install-Package ManagedCode.Communication.CQRS
+
 # Orleans integration
 Install-Package ManagedCode.Communication.Orleans
 ```
@@ -135,6 +138,8 @@ dotnet add package ManagedCode.Communication.AspNetCore
 # Minimal API extensions
 dotnet add package ManagedCode.Communication.Extensions
 
+# CQRS streaming over IAsyncEnumerable + SSE
+dotnet add package ManagedCode.Communication.CQRS
 # Orleans integration
 dotnet add package ManagedCode.Communication.Orleans
 ```
@@ -142,10 +147,11 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="9.6.0" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="9.6.0" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="9.6.0" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="9.6.0" />
+<PackageReference Include="ManagedCode.Communication" Version="10.0.5" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.0.5" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.0.5" />
+<PackageReference Include="ManagedCode.Communication.CQRS" Version="10.0.5" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.0.5" />
 ```
 
 ## Logging Configuration
@@ -199,6 +205,93 @@ app.Run();
 
 Handlers can return any `Result` or `Result<T>` instance and the filter will reuse the existing ASP.NET Core converters so
 you do not need to write manual `IResult` translations.
+
+### CQRS Streaming with IAsyncEnumerable + Server-Sent Events
+
+If your command needs to emit progress and then a terminal result, install `ManagedCode.Communication.CQRS` and return
+`IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>` from your CQRS command handler.
+
+```csharp
+using ManagedCode.Communication.CQRS;
+using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.AspNetCore.Extensions.Http;
+using ManagedCode.Communication;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddCommunicationCqrs();
+var app = builder.Build();
+
+app.MapGet("/cqrs/work", Work)
+   .WithCommunicationCqrsResults();
+
+static IAsyncEnumerable<CqrsStreamChunk<Progress, FinalResult>> Work()
+{
+    yield return CqrsStreamChunk<Progress, FinalResult>.Started(
+        Result<Progress>.Succeed(new Progress("started")));
+
+    yield return CqrsStreamChunk<Progress, FinalResult>.Progress(
+        Result<Progress>.Succeed(new Progress("in-progress")));
+
+    yield return CqrsStreamChunk<Progress, FinalResult>.Completed(
+        Result<FinalResult>.Succeed(new FinalResult("ok")));
+}
+
+record Progress(string State);
+record FinalResult(string Status);
+
+app.Run();
+```
+
+And on a client:
+
+```csharp
+using ManagedCode.Communication.CQRS;
+using ManagedCode.Communication.AspNetCore.Extensions.Http;
+
+var chunks = client.GetForCqrsStreamAsync<Progress, FinalResult>("/cqrs/work");
+await foreach (var chunk in chunks)
+{
+    if (chunk.IsProgress)
+    {
+        // handle progress updates
+    }
+    else if (chunk.IsTerminal)
+    {
+        // handle final result
+    }
+}
+```
+
+Chunk contract semantics:
+
+- `CqrsStreamChunkKind.Started` — optional first message that announces execution.
+- `CqrsStreamChunkKind.Progress` — optional progress updates while work is running.
+- `CqrsStreamChunkKind.Completed` — terminal success payload (`Final`).
+- `CqrsStreamChunkKind.Failed` — terminal failure payload (`Final` with failed `Result`).
+- Unhandled exceptions inside the stream enumeration are converted into a terminal `Failed` chunk with a `Problem` created from the
+  thrown exception (status `500`) rather than terminating the connection as an unstructured runtime error.
+
+If you already depend on `ManagedCode.Communication.AspNetCore`, these CQRS extension methods are also available via
+its `ManagedCode.Communication.AspNetCore.Extensions` and `ManagedCode.Communication.AspNetCore.Extensions.Http` namespaces.
+
+For controller-based APIs, register CQRS filters with:
+
+```csharp
+builder.Services.AddCommunicationCqrsFilters();
+```
+
+The same `CqrsStreamChunk` contract is also usable from SignalR streaming hub methods (`IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>`) when you need a duplex progress/terminal stream.
+
+SignalR clients can read the same protocol directly by using `StreamAsync`:
+
+```csharp
+using ManagedCode.Communication.CQRS;
+
+await foreach (var chunk in hubConnection.StreamAsync<CqrsStreamChunk<Progress, FinalResult>>("RunCommand", commandId))
+{
+    // process progress and terminal chunks here
+}
+```
 
 ### Resilient HTTP Clients
 
