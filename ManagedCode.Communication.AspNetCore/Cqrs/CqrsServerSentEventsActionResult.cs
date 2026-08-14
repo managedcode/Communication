@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
 
-namespace ManagedCode.Communication.CQRS.AspNetCore;
+namespace ManagedCode.Communication.AspNetCore;
 
 /// <summary>
 ///     Adapts a Minimal API <see cref="AspNetResult" /> so it can be returned from the MVC result pipeline.

@@ -11,7 +11,7 @@ namespace ManagedCode.Communication.Extensions;
 /// <summary>
 ///     Advanced railway-oriented programming extensions for Result types.
 /// </summary>
-public static class AdvancedRailwayExtensions
+public static partial class ResultRailwayExtensions
 {
     private const string MultipleErrorsTitle = "Multiple errors occurred";
     private const string MultipleErrorsDetail = "The operation failed with multiple errors.";
@@ -106,124 +106,6 @@ public static class AdvancedRailwayExtensions
             return Result<T>.Fail(problem);
         }
         return result;
-    }
-
-    #endregion
-
-    #region Merge/Combine Multiple Results
-
-    /// <summary>
-    ///     Merges multiple results, failing if any failed.
-    /// </summary>
-    public static Result Merge(params Result[] results)
-    {
-        foreach (var result in results)
-        {
-            if (result.IsFailed)
-                return result;
-        }
-        return Result.Succeed();
-    }
-
-    /// <summary>
-    ///     Merges multiple results, collecting all failures.
-    /// </summary>
-    public static Result MergeAll(params Result[] results)
-    {
-        var failures = results.Where(r => r.IsFailed).ToArray();
-        
-        if (failures.Length == 0)
-            return Result.Succeed();
-        
-        if (failures.Length == 1)
-            return failures[0];
-
-        var problems = failures
-            .Select(static failure => failure.TryGetProblem(out var problem) ? problem : Problem.GenericError())
-            .ToArray();
-
-        if (problems.All(static problem => problem.GetValidationErrors() != null))
-        {
-            return Result.FailValidation(CollectValidationErrors(problems).ToArray());
-        }
-
-        return Result.Fail(CreateAggregateProblem(problems));
-    }
-
-    /// <summary>
-    ///     Combines multiple results into a collection result.
-    /// </summary>
-    public static CollectionResult<T> Combine<T>(params Result<T>[] results)
-    {
-        foreach (var result in results)
-        {
-            if (result.IsFailed)
-            {
-                return result.TryGetProblem(out var problem)
-                    ? CollectionResult<T>.Fail(problem)
-                    : CollectionResult<T>.Fail(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
-            }
-        }
-
-        var values = results.Select(r => r.Value!).ToList();
-        return CollectionResult<T>.Succeed(values);
-    }
-
-    /// <summary>
-    ///     Combines multiple results, collecting all values or failing with all errors.
-    /// </summary>
-    public static CollectionResult<T> CombineAll<T>(params Result<T>[] results)
-    {
-        var failures = results.Where(r => r.IsFailed).ToArray();
-        
-        if (failures.Length == 0)
-        {
-            var values = results.Select(r => r.Value!).ToList();
-            return CollectionResult<T>.Succeed(values);
-        }
-
-        var problems = failures
-            .Select(static failure => failure.TryGetProblem(out var problem) ? problem : Problem.GenericError())
-            .ToArray();
-
-        if (problems.All(static problem => problem.GetValidationErrors() != null))
-        {
-            return CollectionResult<T>.FailValidation(CollectValidationErrors(problems).ToArray());
-        }
-
-        return CollectionResult<T>.Fail(CreateAggregateProblem(problems));
-    }
-
-    private static List<(string field, string message)> CollectValidationErrors(IEnumerable<Problem> problems)
-    {
-        var validationErrors = new List<(string field, string message)>();
-
-        foreach (var problem in problems)
-        {
-            var errors = problem.GetValidationErrors();
-            if (errors is null || errors.Count == 0)
-            {
-                validationErrors.Add((ProblemConstants.ValidationFields.General, problem.Detail ?? problem.Title ?? ProblemConstants.Messages.GenericError));
-                continue;
-            }
-
-            foreach (var kvp in errors)
-            {
-                foreach (var error in kvp.Value)
-                {
-                    validationErrors.Add((kvp.Key, error));
-                }
-            }
-        }
-
-        return validationErrors;
-    }
-
-    private static Problem CreateAggregateProblem(IReadOnlyCollection<Problem> problems)
-    {
-        var aggregateProblem = Problem.Create(MultipleErrorsTitle, MultipleErrorsDetail, 500);
-        aggregateProblem.Extensions[ProblemConstants.ExtensionKeys.Errors] = problems.ToArray();
-        return aggregateProblem;
     }
 
     #endregion

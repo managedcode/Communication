@@ -1,6 +1,6 @@
 using System;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication;
 
 public static class ResultConversionExtensions
 {

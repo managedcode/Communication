@@ -35,8 +35,7 @@ public static class CommunicationServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds Communication filters to MVC controllers.
-    /// This is a legacy method for backward compatibility.
+    /// Adds the Communication MVC filters (exception handling, model validation, Result-to-status mapping).
     /// </summary>
     public static IServiceCollection AddCommunicationFilters(this IServiceCollection services)
     {
@@ -48,8 +47,7 @@ public static class CommunicationServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Configures Communication library for ASP.NET Core with options.
-    /// This is a legacy method for backward compatibility.
+    /// Configures the Communication library for ASP.NET Core: logging plus the MVC filters.
     /// </summary>
     public static IServiceCollection AddCommunication(this IServiceCollection services, Action<CommunicationOptions>? configure = null)
     {

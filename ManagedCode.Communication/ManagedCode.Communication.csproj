@@ -19,6 +19,7 @@
     </ItemGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="ManagedCode.Communication.AspNetCore"/>
+        <InternalsVisibleTo Include="ManagedCode.Communication.Tests"/>
         <InternalsVisibleTo Include="ManagedCode.Communication.Orleans"/>
     </ItemGroup>
 

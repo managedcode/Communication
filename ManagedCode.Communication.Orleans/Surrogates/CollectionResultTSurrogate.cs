@@ -1,7 +1,7 @@
 using System;
 using Orleans;
 
-namespace ManagedCode.Communication.Surrogates;
+namespace ManagedCode.Communication.Orleans.Surrogates;
 
 [Immutable]
 [GenerateSerializer]

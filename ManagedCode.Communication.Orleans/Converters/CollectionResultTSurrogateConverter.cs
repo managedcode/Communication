@@ -1,8 +1,8 @@
 using ManagedCode.Communication.CollectionResultT;
-using ManagedCode.Communication.Surrogates;
+using ManagedCode.Communication.Orleans.Surrogates;
 using Orleans;
 
-namespace ManagedCode.Communication.Converters;
+namespace ManagedCode.Communication.Orleans.Converters;
 
 [RegisterConverter]
 public sealed class CollectionResultTSurrogateConverter<T> : IConverter<CollectionResult<T>, CollectionResultTSurrogate<T>>

@@ -150,52 +150,10 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
 
     public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(CancellationToken cancellationToken = default)
     {
-        // Orleans doesn't provide built-in way to enumerate all grains
-        // This would require a separate management grain to track command counts
-        // For now, return empty dictionary - implementers can override if needed
+        // Orleans has no way to enumerate grains, so this store cannot count commands by status.
+        // The empty result is a deliberate no-op, not "there are no commands": tracking counts needs a
+        // dedicated management grain, which an application can add and expose through its own store.
         return Task.FromResult(new Dictionary<CommandExecutionStatus, int>());
     }
 
-    // Legacy methods for backward compatibility
-    public async Task<CommandExecutionStatus> GetStatusAsync(Guid commandId, CancellationToken cancellationToken = default)
-    {
-        return await GetCommandStatusAsync(commandId.ToString(), cancellationToken);
-    }
-
-    public async Task<bool> TryStartProcessingAsync(Guid commandId, CancellationToken cancellationToken = default)
-    {
-        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId.ToString());
-        return await grain.TryStartProcessingAsync();
-    }
-
-    public async Task MarkCompletedAsync<TResult>(Guid commandId, TResult result, CancellationToken cancellationToken = default)
-    {
-        await SetCommandResultAsync(commandId.ToString(), result, cancellationToken);
-    }
-
-    public async Task MarkFailedAsync(Guid commandId, string errorMessage, CancellationToken cancellationToken = default)
-    {
-        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId.ToString());
-        await grain.MarkFailedAsync(errorMessage);
-    }
-
-    public async Task<(bool success, TResult? result)> TryGetResultAsync<TResult>(Guid commandId, CancellationToken cancellationToken = default)
-    {
-        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId.ToString());
-        var status = await grain.GetStatusAsync();
-
-        if (status != CommandExecutionStatus.Completed)
-        {
-            return (false, default);
-        }
-
-        var (_, result) = await grain.TryGetResultAsync();
-
-        if (result is TResult typedResult)
-        {
-            return (true, typedResult);
-        }
-
-        return (true, default);
-    }
 }

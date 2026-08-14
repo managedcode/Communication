@@ -1,8 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using ManagedCode.Communication.CQRS;
 
-namespace ManagedCode.Communication.CQRS.AspNetCore.Filters;
+namespace ManagedCode.Communication.AspNetCore.Filters;
 
 /// <summary>
 ///     Minimal API endpoint filter that turns an <c>IAsyncEnumerable&lt;CqrsStreamChunk&lt;,&gt;&gt;</c> returned by a

@@ -1,8 +1,8 @@
 using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Surrogates;
+using ManagedCode.Communication.Orleans.Surrogates;
 using Orleans;
 
-namespace ManagedCode.Communication.Converters;
+namespace ManagedCode.Communication.Orleans.Converters;
 
 [RegisterConverter]
 public sealed class ProblemSurrogateConverter : IConverter<Problem, ProblemSurrogate>

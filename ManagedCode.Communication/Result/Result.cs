@@ -132,7 +132,7 @@ public partial struct Result : IResult, IResultFactory<Result>
     #region IResultInvalid Implementation
 
     [JsonIgnore]
-    public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
+    public bool IsInvalid => Problem?.Type == ProblemConstants.Types.ValidationFailed;
 
     [JsonIgnore]
     public bool IsNotInvalid => !IsInvalid;
@@ -147,20 +147,6 @@ public partial struct Result : IResult, IResultFactory<Result>
         return IsSuccess
             ? string.Empty
             : Problem.InvalidFieldError(fieldName);
-    }
-
-    [Obsolete("Use Problem.AddValidationError instead")]
-    public void AddInvalidMessage(string message)
-    {
-        if (!IsSuccess)
-            Problem.AddValidationError(message);
-    }
-
-    [Obsolete("Use Problem.AddValidationError instead")]
-    public void AddInvalidMessage(string key, string value)
-    {
-        if (!IsSuccess)
-            Problem.AddValidationError(key, value);
     }
 
 

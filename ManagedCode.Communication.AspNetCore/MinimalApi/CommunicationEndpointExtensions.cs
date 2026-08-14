@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
-namespace ManagedCode.Communication.Extensions.MinimalApi;
+namespace ManagedCode.Communication.AspNetCore.MinimalApi;
 
 /// <summary>
 ///     Extension helpers for wiring ManagedCode.Communication support into Minimal API route handlers.

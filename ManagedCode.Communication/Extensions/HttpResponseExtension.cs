@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication;
 
 public static class HttpResponseExtension
 {

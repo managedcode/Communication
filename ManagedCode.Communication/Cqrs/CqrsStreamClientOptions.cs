@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ManagedCode.Communication.CQRS.Extensions.Http;
+namespace ManagedCode.Communication.CQRS;
 
 /// <summary>
 ///     What the client should do with an SSE frame it cannot decode into a chunk.

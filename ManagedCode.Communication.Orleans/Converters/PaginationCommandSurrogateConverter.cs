@@ -1,8 +1,8 @@
 using ManagedCode.Communication.Commands;
-using ManagedCode.Communication.Surrogates;
+using ManagedCode.Communication.Orleans.Surrogates;
 using Orleans;
 
-namespace ManagedCode.Communication.Converters;
+namespace ManagedCode.Communication.Orleans.Converters;
 
 [RegisterConverter]
 public sealed class PaginationCommandSurrogateConverter : IConverter<PaginationCommand, CommandTSurrogate<PaginationRequest>>

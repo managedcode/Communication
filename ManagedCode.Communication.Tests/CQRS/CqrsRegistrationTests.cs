@@ -1,16 +1,14 @@
 using System.Linq;
-using ManagedCode.Communication.CQRS.AspNetCore;
-using ManagedCode.Communication.CQRS.AspNetCore.Filters;
+using ManagedCode.Communication.AspNetCore;
+using ManagedCode.Communication.AspNetCore.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Shouldly;
 using Xunit;
-using CoreExtensions = ManagedCode.Communication.CQRS.AspNetCore.Extensions.CommunicationServiceCollectionExtensions;
-using CoreMvcExtensions = ManagedCode.Communication.CQRS.AspNetCore.Extensions.MvcOptionsExtensions;
-using FacadeEndpointExtensions = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsEndpointExtensions;
-using FacadeExtensions = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsServiceCollectionExtensions;
-using FacadeMvcExtensions = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsMvcOptionsExtensions;
+using CqrsEndpointExtensions = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsEndpointExtensions;
+using CqrsMvcExtensions = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsMvcOptionsExtensions;
+using CqrsServices = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsServiceCollectionExtensions;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -25,7 +23,7 @@ public class CqrsRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddControllers();
-        CoreExtensions.AddCommunicationCqrs(services);
+        CqrsServices.AddCommunicationCqrs(services);
 
         FilterCount(services).ShouldBe(1);
     }
@@ -38,9 +36,9 @@ public class CqrsRegistrationTests
 
         // Calling the registration twice — or mixing it with its alias — must not double-register the filter,
         // which would run the conversion twice per response.
-        CoreExtensions.AddCommunicationCqrs(services);
-        CoreExtensions.AddCommunicationCqrsFilters(services);
-        FacadeExtensions.AddCommunicationCqrs(services);
+        CqrsServices.AddCommunicationCqrs(services);
+        CqrsServices.AddCommunicationCqrsFilters(services);
+        CqrsServices.AddCommunicationCqrs(services);
 
         FilterCount(services).ShouldBe(1);
     }
@@ -50,9 +48,9 @@ public class CqrsRegistrationTests
     {
         var options = new MvcOptions();
 
-        CoreMvcExtensions.AddCommunicationCqrsFilters(options);
-        CoreMvcExtensions.AddCommunicationCqrsFilters(options);
-        FacadeMvcExtensions.AddCommunicationCqrsFilters(options);
+        CqrsMvcExtensions.AddCommunicationCqrsFilters(options);
+        CqrsMvcExtensions.AddCommunicationCqrsFilters(options);
+        CqrsMvcExtensions.AddCommunicationCqrsFilters(options);
 
         options.Filters.OfType<TypeFilterAttribute>()
             .Count(filter => filter.ImplementationType == typeof(CqrsResultActionFilter))
@@ -64,7 +62,7 @@ public class CqrsRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddControllers();
-        CoreExtensions.AddCommunicationCqrs(services);
+        CqrsServices.AddCommunicationCqrs(services);
 
         using var provider = services.BuildServiceProvider();
         var options = provider.GetRequiredService<IOptions<CqrsStreamServerOptions>>().Value;
@@ -78,7 +76,7 @@ public class CqrsRegistrationTests
     {
         var services = new ServiceCollection();
         services.AddControllers();
-        CoreExtensions.AddCommunicationCqrs(services, options =>
+        CqrsServices.AddCommunicationCqrs(services, options =>
         {
             options.AssignSequenceNumbers = false;
             options.EnsureTerminalChunk = false;
@@ -92,11 +90,11 @@ public class CqrsRegistrationTests
     }
 
     [Fact]
-    public void FacadeRegistration_ForwardsToTheCqrsPackage()
+    public void RegistrationAppliesConfigurationAndRegistersTheFilterOnce()
     {
         var services = new ServiceCollection();
         services.AddControllers();
-        FacadeExtensions.AddCommunicationCqrsFilters(services, options => options.EnsureTerminalChunk = false);
+        CqrsServices.AddCommunicationCqrsFilters(services, options => options.EnsureTerminalChunk = false);
 
         using var provider = services.BuildServiceProvider();
 
@@ -122,15 +120,15 @@ public class CqrsRegistrationTests
     public void EndpointExtensionsRejectNullBuilders()
     {
         Should.Throw<System.ArgumentNullException>(() =>
-            FacadeEndpointExtensions.WithCommunicationCqrsResults((Microsoft.AspNetCore.Builder.RouteHandlerBuilder)null!));
+            CqrsEndpointExtensions.WithCommunicationCqrsResults((Microsoft.AspNetCore.Builder.RouteHandlerBuilder)null!));
         Should.Throw<System.ArgumentNullException>(() =>
-            FacadeEndpointExtensions.WithCommunicationCqrsResults((Microsoft.AspNetCore.Routing.RouteGroupBuilder)null!));
+            CqrsEndpointExtensions.WithCommunicationCqrsResults((Microsoft.AspNetCore.Routing.RouteGroupBuilder)null!));
     }
 
     [Fact]
     public void MvcOptionsExtensionRejectsNull()
     {
-        Should.Throw<System.ArgumentNullException>(() => CoreMvcExtensions.AddCommunicationCqrsFilters(null!));
+        Should.Throw<System.ArgumentNullException>(() => CqrsMvcExtensions.AddCommunicationCqrsFilters(null!));
     }
 
     private static int FilterCount(IServiceCollection services)

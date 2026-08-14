@@ -113,7 +113,7 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
     }
 
     /// <summary>
-    /// Creates a command from the provided pagination payload, preserving compatibility with legacy factory syntax.
+    /// Creates a command from the provided pagination payload.
     /// </summary>
     /// <param name="request">Pagination payload.</param>
     /// <param name="options">Optional normalization options.</param>
@@ -125,7 +125,7 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
     }
 
     /// <summary>
-    /// Creates a command from skip/take parameters using legacy naming.
+    /// Creates a command from skip/take parameters.
     /// </summary>
     /// <param name="skip">Items to skip.</param>
     /// <param name="take">Items to take.</param>
@@ -136,7 +136,7 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
     }
 
     /// <summary>
-    /// Creates a command from skip/take parameters with an explicit identifier using legacy naming.
+    /// Creates a command from skip/take parameters with an explicit identifier.
     /// </summary>
     /// <param name="commandId">Unique command identifier.</param>
     /// <param name="skip">Items to skip.</param>

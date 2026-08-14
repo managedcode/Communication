@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using System.Net;
 using ManagedCode.Communication.Helpers;
+using ManagedCode.Communication.Orleans.Helpers;
 using Orleans.Runtime;
 using Shouldly;
 using Xunit;

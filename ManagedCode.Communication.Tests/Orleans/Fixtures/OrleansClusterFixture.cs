@@ -1,5 +1,6 @@
 using System;
 using ManagedCode.Communication.Extensions;
+using ManagedCode.Communication.Orleans.Extensions;
 using ManagedCode.Communication.Results.Extensions;
 using Orleans;
 using Orleans.Hosting;

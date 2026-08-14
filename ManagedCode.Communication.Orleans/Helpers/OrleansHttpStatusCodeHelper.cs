@@ -1,8 +1,9 @@
 using System;
 using System.Net;
+using ManagedCode.Communication.Helpers;
 using Orleans.Runtime;
 
-namespace ManagedCode.Communication.Helpers;
+namespace ManagedCode.Communication.Orleans.Helpers;
 
 public static class OrleansHttpStatusCodeHelper
 {

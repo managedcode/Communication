@@ -13,7 +13,7 @@ using CommunicationResult = ManagedCode.Communication.IResult;
 using CommunicationResultOfObject = ManagedCode.Communication.IResult<object?>;
 using AspNetResultFactory = System.Func<object, Microsoft.AspNetCore.Http.IResult>;
 
-namespace ManagedCode.Communication.Extensions.MinimalApi;
+namespace ManagedCode.Communication.AspNetCore.MinimalApi;
 
 /// <summary>
 ///     Endpoint filter that converts <see cref="ManagedCode.Communication.Result"/> responses into Minimal API results.

@@ -174,7 +174,7 @@ public class AdvancedRailwayExtensionsTests
         var result3 = Result.Succeed();
 
         // Act
-        var merged = AdvancedRailwayExtensions.Merge(result1, result2, result3);
+        var merged = Result.Merge(result1, result2, result3);
 
         // Assert
         merged.IsSuccess.ShouldBeTrue();
@@ -189,7 +189,7 @@ public class AdvancedRailwayExtensionsTests
         var result3 = Result.Succeed();
 
         // Act
-        var merged = AdvancedRailwayExtensions.Merge(result1, result2, result3);
+        var merged = Result.Merge(result1, result2, result3);
 
         // Assert
         merged.IsFailed.ShouldBeTrue();
@@ -205,7 +205,7 @@ public class AdvancedRailwayExtensionsTests
         var result3 = Result.FailValidation(("field3", "Error 3"));
 
         // Act
-        var merged = AdvancedRailwayExtensions.MergeAll(result1, result2, result3);
+        var merged = Result.MergeAll(result1, result2, result3);
 
         // Assert
         merged.IsFailed.ShouldBeTrue();
@@ -224,7 +224,7 @@ public class AdvancedRailwayExtensionsTests
         var result3 = Result.Fail("Server Error", "Unexpected failure", HttpStatusCode.InternalServerError);
 
         // Act
-        var merged = AdvancedRailwayExtensions.MergeAll(result1, result2, result3);
+        var merged = Result.MergeAll(result1, result2, result3);
 
         // Assert
         merged.IsFailed.ShouldBeTrue();
@@ -246,7 +246,7 @@ public class AdvancedRailwayExtensionsTests
         var result2 = Result.Fail("Unauthorized", "Authentication required", HttpStatusCode.Unauthorized);
 
         // Act
-        var merged = AdvancedRailwayExtensions.MergeAll(result1, result2);
+        var merged = Result.MergeAll(result1, result2);
 
         // Assert
         merged.IsFailed.ShouldBeTrue();
@@ -268,7 +268,7 @@ public class AdvancedRailwayExtensionsTests
         var result3 = Result<int>.Succeed(3);
 
         // Act
-        var combined = AdvancedRailwayExtensions.Combine(result1, result2, result3);
+        var combined = Result.Combine(result1, result2, result3);
 
         // Assert
         combined.IsSuccess.ShouldBeTrue();
@@ -284,7 +284,7 @@ public class AdvancedRailwayExtensionsTests
         var result3 = Result<string>.FailValidation(("error2", "Second error"));
 
         // Act
-        var combined = AdvancedRailwayExtensions.CombineAll(result1, result2, result3);
+        var combined = Result.CombineAll(result1, result2, result3);
 
         // Assert
         combined.IsFailed.ShouldBeTrue();
@@ -302,7 +302,7 @@ public class AdvancedRailwayExtensionsTests
         var result3 = Result<string>.FailValidation(("email", "Email is invalid"));
 
         // Act
-        var combined = AdvancedRailwayExtensions.CombineAll(result1, result2, result3);
+        var combined = Result.CombineAll(result1, result2, result3);
 
         // Assert
         combined.IsFailed.ShouldBeTrue();
@@ -660,7 +660,7 @@ public class AdvancedRailwayExtensionsTests
             : Result.Succeed();
 
         // Act
-        var result = AdvancedRailwayExtensions.MergeAll(nameValidation, emailValidation, ageValidation);
+        var result = Result.MergeAll(nameValidation, emailValidation, ageValidation);
 
         // Assert
         result.IsFailed.ShouldBeTrue();

@@ -68,10 +68,14 @@ public sealed class CqrsTestController : ControllerBase
         return CqrsTestStreams.EmptyAsync();
     }
 
+    /// <remarks>
+    ///     Deliberately far longer than any test consumes. A short stream would let a cancellation test pass by
+    ///     simply running to completion, which is the failure mode it exists to catch.
+    /// </remarks>
     [HttpGet("long-running")]
     public IAsyncEnumerable<Chunk> LongRunning(CancellationToken cancellationToken)
     {
-        return CqrsTestStreams.LongRunningAsync(cancellationToken);
+        return CqrsTestStreams.LongRunningAsync(cancellationToken, tickCount: 10_000);
     }
 
     [HttpGet("non-chunk-stream")]

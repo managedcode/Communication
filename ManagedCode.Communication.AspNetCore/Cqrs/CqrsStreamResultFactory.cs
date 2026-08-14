@@ -12,8 +12,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using AspNetActionResult = Microsoft.AspNetCore.Mvc.IActionResult;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
+using ManagedCode.Communication.CQRS;
 
-namespace ManagedCode.Communication.CQRS.AspNetCore;
+namespace ManagedCode.Communication.AspNetCore;
 
 /// <summary>
 ///     Detects <c>IAsyncEnumerable&lt;CqrsStreamChunk&lt;,&gt;&gt;</c> values and adapts them to a Server-Sent Events

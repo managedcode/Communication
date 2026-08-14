@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ManagedCode.Communication.CQRS;
 
-namespace ManagedCode.Communication.CQRS.AspNetCore.Filters;
+namespace ManagedCode.Communication.AspNetCore.Filters;
 
 /// <summary>
 ///     MVC result filter that turns an <c>IAsyncEnumerable&lt;CqrsStreamChunk&lt;,&gt;&gt;</c> returned by an action

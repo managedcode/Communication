@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.CQRS.Extensions.Http;
 using Shouldly;
 using Xunit;
 

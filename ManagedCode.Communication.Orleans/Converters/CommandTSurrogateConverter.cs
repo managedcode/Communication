@@ -1,9 +1,9 @@
 using System;
 using ManagedCode.Communication.Commands;
-using ManagedCode.Communication.Surrogates;
+using ManagedCode.Communication.Orleans.Surrogates;
 using Orleans;
 
-namespace ManagedCode.Communication.Converters;
+namespace ManagedCode.Communication.Orleans.Converters;
 
 [RegisterConverter]
 public sealed class CommandTSurrogateConverter<T> : IConverter<Command<T>, CommandTSurrogate<T>>

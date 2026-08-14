@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.CQRS.AspNetCore;
+using ManagedCode.Communication.AspNetCore;
 using Microsoft.AspNetCore.Http;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
 using Shouldly;

@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ManagedCode.Communication.Logging;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication;
 
 /// <summary>
 /// Extension methods for configuring Communication library services

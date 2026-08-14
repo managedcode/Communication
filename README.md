@@ -4,10 +4,11 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 
 [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![.NET](https://img.shields.io/badge/.NET-9.0)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 
 ## Table of Contents
 
+- [What's New in 10.1.0](#whats-new-in-1010)
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Installation](#installation)
@@ -28,6 +29,61 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 - [Best Practices](#best-practices)
 - [Examples](#examples)
 - [Migration Guide](#migration-guide)
+
+## What's New in 10.1.0
+
+**Packages consolidated from six to four.** The CQRS streaming packages are gone; their contents moved into the
+packages you already reference.
+
+| Removed | Where it lives now |
+| --- | --- |
+| `ManagedCode.Communication.CQRS` | `ManagedCode.Communication` — namespace `ManagedCode.Communication.CQRS` |
+| `ManagedCode.Communication.CQRS.AspNetCore` | `ManagedCode.Communication.AspNetCore` — namespaces `…AspNetCore`, `…AspNetCore.Extensions`, `…AspNetCore.Filters` |
+
+**Every namespace now belongs to exactly one package.** Previously the namespace
+`ManagedCode.Communication.Extensions` was declared by the core assembly while a *different* package carried the
+same name, and the Orleans package shipped types under core-looking namespaces. Both are fixed.
+
+### Migration
+
+```diff
+- <PackageReference Include="ManagedCode.Communication.CQRS" Version="10.0.5" />
+- <PackageReference Include="ManagedCode.Communication.CQRS.AspNetCore" Version="10.0.5" />
+```
+
+| Before | After |
+| --- | --- |
+| `using ManagedCode.Communication.CQRS.Extensions.Http;` | `using ManagedCode.Communication.CQRS;` |
+| `using ManagedCode.Communication.CQRS.AspNetCore.Extensions;` | `using ManagedCode.Communication.AspNetCore.Extensions;` |
+| `using ManagedCode.Communication.CQRS.AspNetCore.Filters;` | `using ManagedCode.Communication.AspNetCore.Filters;` |
+| `using ManagedCode.Communication.Extensions.MinimalApi;` | `using ManagedCode.Communication.AspNetCore.MinimalApi;` |
+| `using ManagedCode.Communication.Results.Extensions;` (railway) | `using ManagedCode.Communication.Extensions;` |
+| `using ManagedCode.Communication.Filters/.Converters/.Surrogates;` (Orleans) | `using ManagedCode.Communication.Orleans.<same>;` |
+
+**Railway moved to `ManagedCode.Communication.Extensions`.** It was split across two namespaces in the core
+assembly with two names for the same operation. It is now one class behind one `using`. Applications on
+`ManagedCode.Communication.AspNetCore` get it transitively; a console or Blazor project that uses only the core
+package must add the `.Extensions` reference. `Result.Merge`, `MergeAll`, `Combine` and `CombineAll` stayed in
+the core package as static methods on `Result`.
+
+**Removed APIs**
+
+| Removed | Replacement |
+| --- | --- |
+| `AddInvalidMessage(...)` on `Result`, `Result<T>`, `CollectionResult<T>`, `IResultInvalid` | `Problem.AddValidationError(...)` |
+| `AdvancedRailwayExtensions` | `ResultRailwayExtensions` (extension syntax is unchanged); aggregation via `Result.Merge` and friends |
+| `ExceptionFilterWithProblemDetails` | `CommunicationExceptionFilter` |
+| `Guid`-keyed methods on `OrleansCommandIdempotencyStore` (`GetStatusAsync`, `MarkCompletedAsync`, `MarkFailedAsync`, `TryStartProcessingAsync`, `TryGetResultAsync`) | the `ICommandIdempotencyStore` members, which take a `string` command id |
+
+**Fixes worth knowing about**
+
+- `Problem.AddValidationError` no longer discards the validation errors of a deserialized `Problem`.
+- `Problem` JSON parsing accepts PascalCase members, a `null` or stringified `status`, and no longer emits
+  duplicate keys when an extension shadows an RFC 7807 member.
+- A CQRS chunk always carries a sequence number, written to the SSE `id:` field.
+- The MVC result filter no longer overwrites a status code the action chose (a `201`/`202`/`204` survives).
+- The in-memory idempotency store prunes its command index on cache eviction instead of growing forever.
+- Idempotency helpers gained `CancellationToken`-aware overloads so a timeout can actually interrupt work.
 
 ## Overview
 
@@ -109,6 +165,24 @@ Pre-defined error categories with appropriate HTTP status codes:
 
 ## Installation
 
+### Which package do I need?
+
+| Package | Contains | Depends on ASP.NET Core? |
+| --- | --- | --- |
+| `ManagedCode.Communication` | `Result`, `Result<T>`, `CollectionResult<T>`, `Problem`, commands and idempotency, and the CQRS streaming contract (`CqrsStreamChunk<,>`, `CqrsStream`, the SSE reader) | no |
+| `ManagedCode.Communication.Extensions` | Railway composition (`Bind`, `Map`, `Tap`, `Then`, `Ensure`, `Match`, `Compensate`…) and `HttpClient` → `Result` helpers with optional Polly | no |
+| `ManagedCode.Communication.AspNetCore` | MVC filters, Minimal API filter, SignalR, DI wiring, and the CQRS Server-Sent Events transport | yes |
+| `ManagedCode.Communication.Orleans` | Orleans grain filters and serialization | no (Orleans) |
+
+The two "no" packages work anywhere .NET runs — console, worker, Blazor WebAssembly, MAUI. The CQRS streaming
+contract and its client live in the base package on purpose: both ends of a stream need the same chunk type, and
+it costs nothing to carry (`System.Net.ServerSentEvents`, `System.Net.Http.Json` and `System.Threading.Channels`
+all ship in the .NET runtime, so the base package still has no extra NuGet dependency).
+
+`ManagedCode.Communication.AspNetCore` pulls in `.Extensions` transitively, so a web application only needs that
+one reference.
+
+
 ### Package Manager Console
 
 ```powershell
@@ -120,12 +194,6 @@ Install-Package ManagedCode.Communication.AspNetCore
 
 # Minimal API extensions
 Install-Package ManagedCode.Communication.Extensions
-
-# CQRS streaming contract + SSE client (no ASP.NET Core dependency)
-Install-Package ManagedCode.Communication.CQRS
-
-# CQRS streaming server transport for ASP.NET Core
-Install-Package ManagedCode.Communication.CQRS.AspNetCore
 
 # Orleans integration
 Install-Package ManagedCode.Communication.Orleans
@@ -143,12 +211,6 @@ dotnet add package ManagedCode.Communication.AspNetCore
 # Minimal API extensions
 dotnet add package ManagedCode.Communication.Extensions
 
-# CQRS streaming contract + SSE client (no ASP.NET Core dependency)
-dotnet add package ManagedCode.Communication.CQRS
-
-# CQRS streaming server transport for ASP.NET Core
-dotnet add package ManagedCode.Communication.CQRS.AspNetCore
-
 # Orleans integration
 dotnet add package ManagedCode.Communication.Orleans
 ```
@@ -156,12 +218,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.0.5" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.0.5" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.0.5" />
-<PackageReference Include="ManagedCode.Communication.CQRS" Version="10.0.5" />
-<PackageReference Include="ManagedCode.Communication.CQRS.AspNetCore" Version="10.0.5" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.0.5" />
+<PackageReference Include="ManagedCode.Communication" Version="10.1.0" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.1.0" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.1.0" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.1.0" />
 ```
 
 ## Logging Configuration
@@ -222,12 +282,10 @@ A CQRS command that reports progress before producing its result is modelled as 
 `IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>`. The stream emits any number of progress chunks and ends with
 exactly one terminal chunk.
 
-Two packages, so a client never has to drag in ASP.NET Core:
-
-| Package | Contains | Use it in |
-| --- | --- | --- |
-| `ManagedCode.Communication.CQRS` | `CqrsStreamChunk<,>`, `CqrsStream`, the `HttpClient` reader | Any project — console, worker, Blazor WASM, MAUI |
-| `ManagedCode.Communication.CQRS.AspNetCore` | Minimal API + MVC transport that renders a stream as SSE | ASP.NET Core servers |
+The contract, the authoring helper and the client reader live in the base `ManagedCode.Communication` package,
+so a console app, a worker or a Blazor WebAssembly client can consume a stream without referencing ASP.NET Core.
+The server-side transport that renders a stream as Server-Sent Events lives in
+`ManagedCode.Communication.AspNetCore`.
 
 #### Writing a handler
 
@@ -237,7 +295,7 @@ exception into a `Failed` chunk:
 ```csharp
 using ManagedCode.Communication;
 using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.CQRS.AspNetCore.Extensions;
+using ManagedCode.Communication.AspNetCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCommunicationCqrs();
@@ -292,7 +350,6 @@ builder.Services.AddControllers(options => options.AddCommunicationCqrsFilters()
 
 ```csharp
 using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.CQRS.Extensions.Http;
 
 await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import"))
 {
@@ -362,8 +419,9 @@ await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportR
 }
 ```
 
-If you already depend on `ManagedCode.Communication.AspNetCore`, the same extension methods are re-exported from its
-`ManagedCode.Communication.AspNetCore.Extensions` and `...Extensions.Http` namespaces.
+Two namespaces cover the whole feature: `ManagedCode.Communication.CQRS` for the contract, the `CqrsStream`
+authoring helper and the client reader, and `ManagedCode.Communication.AspNetCore.Extensions` for the server
+transport.
 
 The same `CqrsStreamChunk` contract also works over SignalR streaming hub methods:
 
@@ -669,6 +727,17 @@ Result<Payment> payment = paymentResult
 ```
 
 ## Railway-Oriented Programming
+
+> **Package:** `ManagedCode.Communication.Extensions`, namespace `ManagedCode.Communication.Extensions`.
+> One `using` gives you the whole railway surface. ASP.NET Core applications get it transitively through
+> `ManagedCode.Communication.AspNetCore`. The aggregation helpers (`Result.Merge`, `Result.MergeAll`,
+> `Result.Combine`, `Result.CombineAll`) are static methods on `Result` in the core package, so combining
+> results needs no extra reference.
+
+```csharp
+using ManagedCode.Communication;            // Result, Problem
+using ManagedCode.Communication.Extensions; // Bind / Map / Tap / Then / Ensure / Match / Compensate / ...
+```
 
 Railway-oriented programming treats operations as a series of tracks where success continues on the main track and failures switch to an error track:
 

@@ -37,7 +37,7 @@ public partial class Command<T>
         return CommandValueFactoryBridge.Create<Command<T>, T>(valueFactory);
     }
 
-    // Legacy From methods for backward compatibility
+    // From(...) mirrors the naming used by Result.From and Command.From.
     public static Command<T> From(Guid id, T value)
     {
         return CommandValueFactoryBridge.From<Command<T>, T>(id, value);

@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
-using ManagedCode.Communication.Extensions.MinimalApi;
+using ManagedCode.Communication.AspNetCore.MinimalApi;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;

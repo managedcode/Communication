@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using ManagedCode.Communication.CQRS.AspNetCore;
-using ManagedCode.Communication.CQRS.AspNetCore.Extensions;
+using ManagedCode.Communication.AspNetCore;
+using ManagedCode.Communication.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;

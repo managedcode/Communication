@@ -123,13 +123,10 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
         await _store.SetCommandResultAsync(inProgressCommand, "value-1");
         (await _store.GetCommandResultAsync<string>(inProgressCommand)).ShouldBe("value-1");
 
-        var legacyCommandId = Guid.NewGuid();
-        await _store.MarkCompletedAsync(legacyCommandId, 99);
-        (await _store.GetStatusAsync(legacyCommandId)).ShouldBe(CommandExecutionStatus.Completed);
-
-        var completedWithResult = await _store.TryGetResultAsync<int>(legacyCommandId);
-        completedWithResult.Item1.ShouldBeTrue();
-        completedWithResult.Item2.ShouldBe(99);
+        var completedCommand = Guid.NewGuid().ToString();
+        await _store.SetCommandResultAsync(completedCommand, 99);
+        (await _store.GetCommandStatusAsync(completedCommand)).ShouldBe(CommandExecutionStatus.Completed);
+        (await _store.GetCommandResultAsync<int>(completedCommand)).ShouldBe(99);
 
         var commandWithoutResult = Guid.NewGuid().ToString();
         await _store.SetCommandStatusAsync(commandWithoutResult, CommandExecutionStatus.Completed);
@@ -164,27 +161,22 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
     }
 
     [Fact]
-    public async Task Store_MigrationStyleMethods_CoverTypeMismatchAndFailureFallback()
+    public async Task Store_ResultReads_CoverTypeMismatchAndFailureFallback()
     {
-        var commandId = Guid.NewGuid();
+        var commandId = Guid.NewGuid().ToString();
 
-        await _store.MarkCompletedAsync(commandId, "legacy-result");
-        var typedMatch = await _store.TryGetResultAsync<string>(commandId);
-        typedMatch.Item1.ShouldBeTrue();
-        typedMatch.Item2.ShouldBe("legacy-result");
+        await _store.SetCommandResultAsync(commandId, "stored-result");
+        (await _store.GetCommandResultAsync<string>(commandId)).ShouldBe("stored-result");
 
-        var mismatch = await _store.TryGetResultAsync<Uri>(commandId);
-        mismatch.Item1.ShouldBeTrue();
-        mismatch.Item2.ShouldBeNull();
+        // Asking for the wrong type yields the default rather than throwing.
+        (await _store.GetCommandResultAsync<Uri>(commandId)).ShouldBeNull();
 
-        await _store.MarkFailedAsync(commandId, "oops");
-        (await _store.GetStatusAsync(commandId)).ShouldBe(CommandExecutionStatus.Failed);
+        await _store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Failed);
+        (await _store.GetCommandStatusAsync(commandId)).ShouldBe(CommandExecutionStatus.Failed);
+        (await _store.GetCommandResultAsync<string>(commandId)).ShouldBeNull();
 
-        var failedResult = await _store.TryGetResultAsync<string>(commandId);
-        failedResult.Item1.ShouldBeFalse();
-
-        await _store.RemoveCommandAsync(commandId.ToString());
-        (await _store.GetStatusAsync(commandId)).ShouldBe(CommandExecutionStatus.NotFound);
+        await _store.RemoveCommandAsync(commandId);
+        (await _store.GetCommandStatusAsync(commandId)).ShouldBe(CommandExecutionStatus.NotFound);
     }
 
     [Fact]

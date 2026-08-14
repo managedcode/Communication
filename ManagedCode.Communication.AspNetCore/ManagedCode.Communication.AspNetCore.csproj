@@ -16,8 +16,12 @@
 
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj"/>
-        <ProjectReference Include="..\ManagedCode.Communication.CQRS\ManagedCode.Communication.CQRS.csproj"/>
-        <ProjectReference Include="..\ManagedCode.Communication.CQRS.AspNetCore\ManagedCode.Communication.CQRS.AspNetCore.csproj"/>
+        <ProjectReference Include="..\ManagedCode.Communication.Extensions\ManagedCode.Communication.Extensions.csproj"/>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="ManagedCode.Communication.Tests" />
     </ItemGroup>
 
 </Project>

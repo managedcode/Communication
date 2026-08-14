@@ -2,12 +2,12 @@ using System;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ManagedCode.Communication.CQRS.AspNetCore.Extensions;
+namespace ManagedCode.Communication.AspNetCore.Extensions;
 
 /// <summary>
 ///     Service registration for CQRS streaming support.
 /// </summary>
-public static class CommunicationServiceCollectionExtensions
+public static class CommunicationCqrsServiceCollectionExtensions
 {
     /// <summary>
     ///     Registers CQRS streaming support: the MVC result filter, and <see cref="CqrsStreamServerOptions" /> for both

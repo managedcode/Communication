@@ -1,7 +1,7 @@
-using ManagedCode.Communication.Filters;
+using ManagedCode.Communication.Orleans.Filters;
 using Orleans.Hosting;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication.Orleans.Extensions;
 
 public static class OrleansExtensions
 {

@@ -6,7 +6,6 @@ using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.CQRS.Extensions.Http;
 using Microsoft.AspNetCore.TestHost;
 using Shouldly;
 using Xunit;
@@ -232,6 +231,10 @@ public class CqrsMvcIntegrationTests
             }
         });
 
-        chunks.Count.ShouldBe(1);
+        // The endpoint streams 10 000 chunks, so stopping anywhere near the start proves cancellation took
+        // effect. Pinning an exact count would only be asserting how many frames happened to be buffered.
+        chunks.Count.ShouldBeGreaterThanOrEqualTo(1);
+        chunks.Count.ShouldBeLessThan(50);
+        chunks.ShouldAllBe(chunk => chunk.Kind != CqrsStreamChunkKind.Completed);
     }
 }

@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Constants;
 
-namespace ManagedCode.Communication.CQRS.Extensions.Http;
+namespace ManagedCode.Communication.CQRS;
 
 /// <summary>
 ///     <see cref="HttpClient" /> helpers that read a CQRS command stream from a Server-Sent Events response.

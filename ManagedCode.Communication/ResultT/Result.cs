@@ -157,31 +157,13 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(false, nameof(Value))]
-    public bool IsInvalid => Problem?.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
+    public bool IsInvalid => Problem?.Type == ProblemConstants.Types.ValidationFailed;
 
     [JsonIgnore]
     public bool IsNotInvalid => !IsInvalid;
 
 
-    /// <summary>
-    ///     Adds an invalid message to the result.
-    /// </summary>
-    [Obsolete("Use Problem.AddValidationError instead")]
-    public void AddInvalidMessage(string message)
-    {
-        if (!IsSuccess)
-            Problem.AddValidationError(message);
-    }
 
-    /// <summary>
-    ///     Adds an invalid message with a specific key to the result.
-    /// </summary>
-    [Obsolete("Use Problem.AddValidationError instead")]
-    public void AddInvalidMessage(string key, string value)
-    {
-        if (!IsSuccess)
-            Problem.AddValidationError(key, value);
-    }
 
     public bool InvalidField(string fieldName)
     {

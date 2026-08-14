@@ -4,12 +4,12 @@ using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Results;
 
-namespace ManagedCode.Communication.Results.Extensions;
+namespace ManagedCode.Communication.Extensions;
 
 /// <summary>
 ///     Railway-oriented helpers for <see cref="Result"/> and <see cref="Result{T}"/>.
 /// </summary>
-public static class ResultRailwayExtensions
+public static partial class ResultRailwayExtensions
 {
     private static Result<TOut> PropagateFailure<TOut>(this IResult result)
     {

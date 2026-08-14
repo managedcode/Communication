@@ -1,4 +1,4 @@
-namespace ManagedCode.Communication.CQRS.AspNetCore;
+namespace ManagedCode.Communication.AspNetCore;
 
 /// <summary>
 ///     Server-side behaviour applied when an <c>IAsyncEnumerable&lt;CqrsStreamChunk&lt;,&gt;&gt;</c> is converted into a

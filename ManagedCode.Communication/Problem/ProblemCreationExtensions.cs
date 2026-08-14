@@ -1,7 +1,7 @@
 using System;
 using System.Net;
 
-namespace ManagedCode.Communication.Extensions;
+namespace ManagedCode.Communication;
 
 /// <summary>
 ///     Extension methods for creating Problems from various sources

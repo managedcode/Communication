@@ -1,12 +1,13 @@
 using System;
-using ManagedCode.Communication.CQRS.AspNetCore.Filters;
+using ManagedCode.Communication.AspNetCore.Filters;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using ManagedCode.Communication.CQRS;
 
-namespace ManagedCode.Communication.CQRS.AspNetCore.Extensions;
+namespace ManagedCode.Communication.AspNetCore.Extensions;
 
 /// <summary>
 ///     Wires CQRS stream support into Minimal API route handlers.

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication;
 
@@ -119,12 +120,12 @@ public class ProblemException : Exception
     /// <summary>
     ///     Checks if this is a validation problem.
     /// </summary>
-    public bool IsValidationProblem => Problem.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1";
+    public bool IsValidationProblem => Problem.Type == ProblemConstants.Types.ValidationFailed;
 
     private static string GetMessage(Problem problem)
     {
         // Create a detailed message based on problem type
-        if (problem.Type == "https://tools.ietf.org/html/rfc7231#section-6.5.1")
+        if (problem.Type == ProblemConstants.Types.ValidationFailed)
         {
             // Validation error
             var validationErrors = problem.GetValidationErrors();

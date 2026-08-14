@@ -5,7 +5,7 @@ using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
-namespace ManagedCode.Communication.Filters;
+namespace ManagedCode.Communication.Orleans.Filters;
 
 public class CommunicationIncomingGrainCallFilter(ILogger<CommunicationIncomingGrainCallFilter> logger) : IIncomingGrainCallFilter
 {

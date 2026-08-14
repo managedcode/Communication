@@ -3,10 +3,11 @@ using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Helpers;
+using ManagedCode.Communication.Orleans.Helpers;
 using ManagedCode.Communication.Results;
 using Orleans;
 
-namespace ManagedCode.Communication.Filters;
+namespace ManagedCode.Communication.Orleans.Filters;
 
 internal static class CommunicationGrainCallResultFactory
 {

@@ -2,7 +2,7 @@ using System;
 using ManagedCode.Communication.Commands;
 using Orleans;
 
-namespace ManagedCode.Communication.Surrogates;
+namespace ManagedCode.Communication.Orleans.Surrogates;
 
 [Immutable]
 [GenerateSerializer]
