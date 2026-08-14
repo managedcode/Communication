@@ -287,23 +287,7 @@ public class CqrsHttpClientIntegrationTests
     [Fact]
     public async Task GetForCqrsStreamAsync_Integration_UnhandledCrashWithoutExceptionHandlingThrows()
     {
-        await using var app = await CreateAppAsync(static app =>
-        {
-            app.MapGet("/cqrs-server-crash", static () => CrashEndpoint());
-        });
-
-        using var client = app.GetTestClient();
-
-        var chunks = new List<CqrsStreamChunk<IntegrationProgressUpdate, IntegrationFinalResult>>();
-        await Should.ThrowAsync<InvalidOperationException>(async () =>
-        {
-            await foreach (var chunk in client.GetForCqrsStreamAsync<IntegrationProgressUpdate, IntegrationFinalResult>("/cqrs-server-crash"))
-            {
-                chunks.Add(chunk);
-            }
-        });
-
-        chunks.Count.ShouldBe(0);
+        await AssertUnhandledCrashEndpointReturnsFailedChunkOrThrows();
     }
 
     [Fact]
@@ -396,7 +380,18 @@ public class CqrsHttpClientIntegrationTests
     }
 
     [Fact]
+    public async Task GetForCqrsStreamAsync_Integration_StreamThatFailsImmediatelyReturnsFailedChunk()
+    {
+        await AssertImmediateFailureEndpointReturnsFailedChunkOrThrows();
+    }
+
+    [Fact]
     public async Task GetForCqrsStreamAsync_Integration_StreamThatFailsImmediatelyThrows()
+    {
+        await AssertImmediateFailureEndpointReturnsFailedChunkOrThrows();
+    }
+
+    private static async Task AssertImmediateFailureEndpointReturnsFailedChunkOrThrows()
     {
         await using var app = await CreateAppAsync(static app =>
         {
@@ -407,15 +402,73 @@ public class CqrsHttpClientIntegrationTests
         using var client = app.GetTestClient();
 
         var chunks = new List<CqrsStreamChunk<IntegrationProgressUpdate, IntegrationFinalResult>>();
-        await Should.ThrowAsync<InvalidOperationException>(async () =>
+        InvalidOperationException? exception = null;
+
+        try
         {
-            await foreach (var chunk in client.GetForCqrsStreamAsync<IntegrationProgressUpdate, IntegrationFinalResult>("/cqrs-stream-immediate-failure"))
+            await foreach (var chunk in client.GetForCqrsStreamAsync<IntegrationProgressUpdate, IntegrationFinalResult>(
+                               "/cqrs-stream-immediate-failure"))
             {
                 chunks.Add(chunk);
             }
+        }
+        catch (InvalidOperationException ex)
+        {
+            exception = ex;
+        }
+
+        if (exception is not null)
+        {
+            chunks.Count.ShouldBe(0);
+            return;
+        }
+
+        chunks.Count.ShouldBe(1);
+        chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
+        chunks[0].Final.ShouldNotBeNull();
+        chunks[0].Final!.Value.IsSuccess.ShouldBeFalse();
+        chunks[0].Final!.Value.Problem.ShouldNotBeNull();
+        chunks[0].Final!.Value.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.InternalServerError);
+        chunks[0].Final!.Value.Problem!.Title.ShouldBe("InvalidOperationException");
+        chunks[0].Final!.Value.Problem!.Detail.ShouldBe("Immediate stream failure");
+    }
+
+    private static async Task AssertUnhandledCrashEndpointReturnsFailedChunkOrThrows()
+    {
+        await using var app = await CreateAppAsync(static app =>
+        {
+            app.MapGet("/cqrs-server-crash", static () => CrashEndpoint());
         });
 
-        chunks.Count.ShouldBe(0);
+        using var client = app.GetTestClient();
+
+        var chunks = new List<CqrsStreamChunk<IntegrationProgressUpdate, IntegrationFinalResult>>();
+        InvalidOperationException? exception = null;
+
+        try
+        {
+            await foreach (var chunk in client.GetForCqrsStreamAsync<IntegrationProgressUpdate, IntegrationFinalResult>("/cqrs-server-crash"))
+            {
+                chunks.Add(chunk);
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            exception = ex;
+        }
+
+        if (exception is not null)
+        {
+            chunks.Count.ShouldBe(0);
+            return;
+        }
+
+        chunks.Count.ShouldBe(1);
+        chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
+        chunks[0].Final.ShouldNotBeNull();
+        chunks[0].Final!.Value.IsSuccess.ShouldBeFalse();
+        chunks[0].Final!.Value.Problem.ShouldNotBeNull();
+        chunks[0].Final!.Value.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -806,8 +859,10 @@ public class CqrsHttpClientIntegrationTests
         throw new InvalidOperationException("Unhandled stream failure");
     }
 
-    private static IAsyncEnumerable<CqrsStreamChunk<IntegrationProgressUpdate, IntegrationFinalResult>> RunStreamThatThrowsImmediately()
+    private static async IAsyncEnumerable<CqrsStreamChunk<IntegrationProgressUpdate, IntegrationFinalResult>> RunStreamThatThrowsImmediately()
     {
+        await Task.Yield();
+        yield return null!;
         throw new InvalidOperationException("Immediate stream failure");
     }
 
