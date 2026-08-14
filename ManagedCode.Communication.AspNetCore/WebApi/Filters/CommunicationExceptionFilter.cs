@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
 using ManagedCode.Communication.Logging;
+using ManagedCode.Communication.Telemetry;
 using static ManagedCode.Communication.AspNetCore.Helpers.HttpStatusCodeHelper;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
@@ -21,6 +22,10 @@ public class CommunicationExceptionFilter(ILogger<CommunicationExceptionFilter> 
 
             var statusCode = GetStatusCodeForException(exception);
             var result = Result.Fail(exception, statusCode);
+
+            // The Problem keeps only the exception's type name and message. Hand the exception itself to
+            // telemetry so the span carries the real stack trace and inner exceptions.
+            CommunicationTelemetry.RecordFailure(result.Problem, exception);
 
             context.Result = new ObjectResult(result)
             {

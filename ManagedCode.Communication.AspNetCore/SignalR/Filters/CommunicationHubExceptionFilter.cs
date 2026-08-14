@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using ManagedCode.Communication.Logging;
+using ManagedCode.Communication.Telemetry;
 using static ManagedCode.Communication.AspNetCore.Helpers.HttpStatusCodeHelper;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
@@ -20,6 +21,7 @@ public class CommunicationHubExceptionFilter(ILogger<CommunicationHubExceptionFi
             LoggerCenter.LogHubException(logger, ex, invocationContext.Hub.GetType().Name, invocationContext.HubMethodName);
 
             var statusCode = GetStatusCodeForException(ex);
+            CommunicationTelemetry.RecordFailure(Problem.Create(ex, (int)statusCode), ex);
             return Result.Fail(ex, statusCode);
         }
     }

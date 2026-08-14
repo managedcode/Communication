@@ -105,12 +105,24 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     public bool IsFailed => !IsSuccess;
 
     /// <summary>
-    ///     Gets or sets the value of the result.
+    ///     The value carried by the result.
     /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         <c>init</c> rather than <c>set</c>: a settable value let callers put a payload on a failed result,
+    ///         which contradicts the nullable annotations declaring that a failure carries none. Serializers can
+    ///         still populate it.
+    ///     </para>
+    ///     <para>
+    ///         Always written to JSON. It used to be omitted when it equalled <c>default</c>, which meant
+    ///         <c>Result&lt;int&gt;.Succeed(0)</c> and <c>Result&lt;bool&gt;.Succeed(false)</c> serialized with no
+    ///         <c>value</c> member at all — indistinguishable, to a non-.NET client, from a result that carried
+    ///         nothing.
+    ///     </para>
+    /// </remarks>
     [JsonPropertyName("value")]
     [JsonPropertyOrder(2)]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T? Value { get; set; }
+    public T? Value { get; init; }
 
     [JsonInclude]
     [JsonPropertyName("problem")]

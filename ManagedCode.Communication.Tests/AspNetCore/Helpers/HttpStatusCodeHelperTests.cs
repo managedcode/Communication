@@ -63,17 +63,11 @@ public class HttpStatusCodeHelperTests
     }
 
     [Fact]
-    public void GetStatusCodeForException_NullException_FallsBackToBaseHelper()
+    public void GetStatusCodeForException_NullException_Throws()
     {
-        // Arrange
         Exception? exception = null;
 
-        // Act
-        var act = () => HttpStatusCodeHelper.GetStatusCodeForException(exception!);
-
-        // Assert
-        // Base helper should handle null (likely throw or return default)
-        Should.NotThrow(act); // Assuming base helper handles null gracefully
+        Should.Throw<ArgumentNullException>(() => HttpStatusCodeHelper.GetStatusCodeForException(exception!));
     }
 
     private static Exception CreateException(Type exceptionType)

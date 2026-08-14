@@ -45,7 +45,7 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Collection))]
     [MemberNotNullWhen(false, nameof(Problem))]
-    public bool IsSuccess { get; set; }
+    public bool IsSuccess { get; init; }
 
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
@@ -54,7 +54,7 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [JsonPropertyName("collection")]
     [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T[] Collection { get; set; } = [];
+    public T[] Collection { get; init; } = [];
 
     /// <summary>
     ///     Gets the collection as Value property for IResult<T[]> compatibility.
@@ -64,19 +64,19 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
 
     [JsonPropertyName("pageNumber")]
     [JsonPropertyOrder(3)]
-    public int PageNumber { get; set; }
+    public int PageNumber { get; init; }
 
     [JsonPropertyName("pageSize")]
     [JsonPropertyOrder(4)]
-    public int PageSize { get; set; }
+    public int PageSize { get; init; }
 
     [JsonPropertyName("totalItems")]
     [JsonPropertyOrder(5)]
-    public int TotalItems { get; set; }
+    public int TotalItems { get; init; }
 
     [JsonPropertyName("totalPages")]
     [JsonPropertyOrder(6)]
-    public int TotalPages { get; set; }
+    public int TotalPages { get; init; }
 
     [JsonInclude]
     [JsonPropertyName("problem")]

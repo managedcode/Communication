@@ -24,6 +24,8 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 - [Error Handling Patterns](#error-handling-patterns)
 - [Integration Guides](#integration-guides)
 - [Performance](#performance)
+- [Registration Reference](#registration-reference)
+- [Observability](#observability)
 - [Behaviour Notes](#behaviour-notes)
 - [Comparison](#comparison)
 - [Best Practices](#best-practices)
@@ -74,6 +76,26 @@ the core package as static methods on `Result`.
 | `AdvancedRailwayExtensions` | `ResultRailwayExtensions` (extension syntax is unchanged); aggregation via `Result.Merge` and friends |
 | `ExceptionFilterWithProblemDetails` | `CommunicationExceptionFilter` |
 | `Guid`-keyed methods on `OrleansCommandIdempotencyStore` (`GetStatusAsync`, `MarkCompletedAsync`, `MarkFailedAsync`, `TryStartProcessingAsync`, `TryGetResultAsync`) | the `ICommandIdempotencyStore` members, which take a `string` command id |
+
+**Behaviour changes**
+
+| Change | Why |
+| --- | --- |
+| `InvalidOperationException`, `NotSupportedException`, `InvalidCastException`, `NullReferenceException`, `IndexOutOfRangeException` now map to **500**, not 400 | They mean the server reached a state its own code did not allow for. As 400 they blamed the caller and stayed out of every 5xx alert. Override per type with `ExceptionStatusCodeMap`. |
+| `Result<T>.Value` and the `CollectionResult<T>` members are `init`-only | A settable value let callers put a payload on a failed result, contradicting the nullable annotations. |
+| A successful `Result<T>` always writes `value` | `Result<int>.Succeed(0)` used to serialize as `{"isSuccess":true}`, indistinguishable to a non-.NET client from carrying nothing. Failed results now include `"value":null`. |
+| `HttpStatusCodeHelper.GetStatusCodeForException(null)` throws | It silently returned a status for a missing exception. |
+
+**New**
+
+- **OpenTelemetry** traces and metrics for failures, with no dependency on the OpenTelemetry SDK — see
+  [Observability](#observability). The ASP.NET Core, SignalR and Orleans filters now attach the *originating
+  exception*, so stack traces reach your traces instead of being flattened into a `Problem`.
+- **`ExceptionStatusCodeMap`** for per-type status overrides.
+- **Complete async railway**: every operator now has a `Task<Result<T>>` receiver, so an async chain no longer
+  has to be broken by an `await` partway through.
+- **`CqrsStream.Normalize`** applies the CQRS stream guarantees to any transport — SignalR, Orleans, gRPC.
+- **Orleans serialization for `CqrsStreamChunk<,>`**, which previously stopped a silo from starting.
 
 **Fixes worth knowing about**
 
@@ -809,6 +831,19 @@ is carried to the end. The exceptions are the ones that exist to handle failure 
 | `Finally` | Run an action on both branches, like a `finally` block. |
 | `ToResult` | Lift a nullable value into a `Result`, failing when it is null. |
 
+Every operator has an `…Async` form that accepts a `Task<Result>` / `Task<Result<T>>` receiver, so an
+asynchronous pipeline never has to be interrupted by an `await` and a temporary variable:
+
+```csharp
+var result = await LoadUserAsync(id)
+    .EnsureAsync(user => user.IsActive, Problem.Create("inactive", "User is disabled.", 403))
+    .TapAsync(user => _audit.RecordAsync(user.Id))
+    .BindAsync(user => LoadCartAsync(user.Id))
+    .MapAsync(cart => cart.Total)
+    .CompensateAsync(problem => RecoverAsync(problem))
+    .MatchAsync(total => Results.Ok(total), problem => Results.Problem(problem.Detail));
+```
+
 Aggregation lives on `Result` itself in the core package, so it needs no extra reference:
 
 | Method | Purpose |
@@ -1050,7 +1085,30 @@ root object, and serializers/Orleans surrogates round-trip them without custom p
 
 #### Identifier lifecycle
 - Static command factories generate monotonic version 7 identifiers via `Guid.CreateVersion7()` and stamp a UTC timestamp so commands can be sorted chronologically even when sharded.
-- Factory helpers never mutate the correlation or trace identifiers; callers opt in by supplying values through fluent `WithCorrelationId`, `WithTraceId`, and similar extension methods that return the same command instance.
+- Factory helpers never mutate the correlation or trace identifiers; callers opt in through fluent extension
+  methods that return the same command instance, so they chain freely:
+
+| Method | Sets |
+| --- | --- |
+| `WithCorrelationId(id)` | Correlation identifier shared by everything in one logical operation. |
+| `WithCausationId(id)` | Identifier of the command that caused this one. |
+| `WithTraceId(id)` / `WithSpanId(id)` | Distributed-tracing identifiers. |
+| `WithUserId(id)` | Acting user. |
+| `WithSessionId(id)` | Session the command belongs to. |
+| `WithMetadata(metadata)` / `WithMetadata(m => …)` | Replaces or edits the whole `CommandMetadata`. |
+
+Correlation, causation, trace, span, user and session identifiers live on the command itself
+(`command.CorrelationId`, `command.UserId`, …); `CommandMetadata` carries the rest — priority, retries, timeout,
+tags and free-form properties.
+
+```csharp
+var command = Command<PlaceOrder>.From(payload)
+    .WithCorrelationId(correlationId)
+    .WithCausationId(parentCommandId)
+    .WithUserId(user.Id)
+    .WithSessionId(session.Id)
+    .WithMetadata(metadata => metadata.Priority = CommandPriority.High);
+```
 - Metadata mirrors the trace/span identifiers for workload-specific diagnostics without coupling transport-level identifiers to
 payload annotations.
 
@@ -1550,38 +1608,173 @@ setters all mutate in place, so one caller can change what every later caller se
 
 ### Exception-to-status mapping is a heuristic
 
-`HttpStatusCodeHelper.GetStatusCodeForException` maps common exception types to status codes. Note in particular
-that `InvalidOperationException`, `NotSupportedException` and `InvalidCastException` map to **400 Bad Request**.
-Those are usually *server* defects ("Sequence contains no elements", an invalid EF Core state), so with the
-default mapping they are reported to the client as its mistake and will not show up as 5xx in your dashboards.
-If you would rather have them surface as 500, catch them before the filter and fail with an explicit `Problem`:
+`HttpStatusCodeHelper.GetStatusCodeForException` classifies common exception types. It cannot know your domain,
+so register overrides at startup with `ExceptionStatusCodeMap` — see
+[Mapping exceptions to status codes](#mapping-exceptions-to-status-codes).
 
-```csharp
-catch (InvalidOperationException ex)
-{
-    return Result.Fail(Problem.Create(ex, HttpStatusCode.InternalServerError));
-}
-```
+### Results are immutable once built
 
-### A successful `Result<T>` omits a default value on the wire
-
-`Value` is serialized with `JsonIgnoreCondition.WhenWritingDefault`, so `Result<int>.Succeed(0)` and
-`Result<bool>.Succeed(false)` serialize as `{"isSuccess":true}` with no `value` member. .NET clients
-round-trip correctly because the missing member deserializes back to the default. Clients in other languages
-cannot tell "no value" from "the default value" — if that distinction matters for your API, wrap the payload in
-an object rather than returning a bare `int`/`bool`.
-
-### `Result<T>.Value` has a public setter
-
-It exists so serializers can populate it. Mutating it after the fact lets you put a value on a failed result,
-which contradicts the nullable annotations (`IsFailed` declares that `Value` is null). Build results through
-`Succeed` / `Fail` and treat `Value` as read-only.
+`Result<T>.Value` and the `CollectionResult<T>` members are `init`-only. Build results through `Succeed` / `Fail`;
+serializers can still populate them.
 
 ### HTTP status vs. command outcome
 
 A failed command reported over CQRS streaming still arrives on a `200 OK` response — the HTTP exchange
 succeeded, the command did not. Inspect the terminal chunk, not the status code. A non-2xx status means the
 request never reached the handler.
+
+## Registration Reference
+
+### Nothing is required
+
+Every part of the library works with **no registration at all** — no container, no logger, no OpenTelemetry.
+`Result`, `Problem`, railway operators, the CQRS contract and its HTTP client are plain types you can `new` up in
+a console app or a unit test.
+
+If you never call `CommunicationLogger.Configure`, logging falls back to an internal factory that writes nowhere
+and throws nothing. If you never subscribe to `CommunicationTelemetry.SourceName`, recording a failure is a
+couple of null checks. Registration turns signals *on*; it is never a precondition for correctness.
+
+### What each entry point does
+
+**Core** (`ManagedCode.Communication`)
+
+| Call | Effect |
+| --- | --- |
+| `services.ConfigureCommunication(loggerFactory)` | Points the library's internal logger at your factory. Optional. |
+| `CommunicationLogger.Configure(serviceProvider \| loggerFactory)` | Same, without a service collection. Optional. |
+| `ExceptionStatusCodeMap.Map<TException>(status)` | Overrides the exception-to-status mapping. Call once at startup. |
+
+**Commands and idempotency** (`ManagedCode.Communication`)
+
+| Call | Effect |
+| --- | --- |
+| `services.AddCommandIdempotency()` | In-memory store plus the background cleanup service. |
+| `services.AddCommandIdempotency<TStore>()` | Your own `ICommandIdempotencyStore`, with cleanup. |
+| `services.AddCommandIdempotencyStore<TStore>()` | Store only, no background service. |
+| `services.AddCommandIdempotencyWithManualCleanup<TStore>()` | Store plus cleanup you trigger yourself. |
+
+**ASP.NET Core** (`ManagedCode.Communication.AspNetCore`)
+
+| Call | Effect |
+| --- | --- |
+| `services.AddCommunication(options)` | Logging plus the MVC filters. The usual one-liner. |
+| `services.AddCommunicationAspNetCore([loggerFactory])` | Logging only. |
+| `services.AddCommunicationFilters()` | MVC filters only: exception handling, model validation, `Result` → status code. |
+| `services.AddControllers(o => o.AddCommunicationFilters())` | Same, applied directly to `MvcOptions`. |
+| `app.UseCommunication()` | Middleware for request-scoped handling. |
+| `services.AddCommunicationCqrs([options])` | CQRS Server-Sent Events transport plus `CqrsStreamServerOptions`. |
+| `services.AddControllers(o => o.AddCommunicationCqrsFilters())` | CQRS MVC filter only. |
+| `endpoint.WithCommunicationResults()` | Minimal API: map a returned `Result` to an HTTP response. |
+| `endpoint.WithCommunicationCqrsResults([options])` | Minimal API: render a chunk stream as SSE. |
+| `services.AddSignalR(o => o.AddCommunicationHubFilter())` | Hub filter turning hub exceptions into failed results. |
+
+**Orleans** (`ManagedCode.Communication.Orleans`)
+
+| Call | Effect |
+| --- | --- |
+| `siloBuilder.UseOrleansCommunication()` | Grain call filters and the serialization surrogates. |
+| `clientBuilder.UseOrleansCommunication()` | The client-side half of the same. |
+
+**Observability** — see [Observability](#observability):
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(t => t.AddSource(CommunicationTelemetry.SourceName))
+    .WithMetrics(m => m.AddMeter(CommunicationTelemetry.SourceName));
+```
+
+### A typical web application
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCommunication();        // logging + MVC filters
+builder.Services.AddCommunicationCqrs();    // only if you stream commands
+builder.Services.AddCommandIdempotency();   // only if you need idempotent commands
+
+builder.Services.AddOpenTelemetry()         // only if you collect telemetry
+    .WithTracing(t => t.AddSource(CommunicationTelemetry.SourceName))
+    .WithMetrics(m => m.AddMeter(CommunicationTelemetry.SourceName));
+
+var app = builder.Build();
+app.UseCommunication();
+app.MapControllers();
+app.Run();
+```
+
+Drop any line you do not need — none of them are load-bearing for the rest.
+
+## Observability
+
+### OpenTelemetry
+
+Failures are reported through `System.Diagnostics.ActivitySource` and `System.Diagnostics.Metrics.Meter`, both of
+which ship with .NET — the library takes **no dependency on the OpenTelemetry SDK**. Subscribe to the source and
+the signals appear; subscribe to nothing and recording costs a couple of null checks.
+
+```csharp
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing.AddSource(CommunicationTelemetry.SourceName))
+    .WithMetrics(metrics => metrics.AddMeter(CommunicationTelemetry.SourceName));
+```
+
+| Signal | Name | Notes |
+| --- | --- | --- |
+| Traces | `ManagedCode.Communication` | Failed operations set the span status to `Error` and tag it with `error.type`, `problem.type`, `problem.title`, `problem.status`, `problem.error_code`. |
+| Metric | `communication.result.failures` | Counter of failed results, tagged by `error.type` and `problem.status`. |
+| Metric | `communication.exceptions` | Counter of exceptions converted into a `Problem`. |
+
+### Recording the real error
+
+A `Problem` built from an exception keeps only the exception's type name and message — **the stack trace and any
+inner exceptions are gone**. Pass the exception itself so it reaches the trace as a proper exception event:
+
+```csharp
+catch (Exception exception)
+{
+    var problem = Problem.Create(exception);
+    CommunicationDiagnostics.ReportFailure(logger, problem, exception); // logs + traces, stack trace included
+    return Result<Order>.Fail(problem);
+}
+```
+
+The ASP.NET Core exception filter, the SignalR hub filter and the Orleans grain call filter already do this for
+you — anything they convert arrives in your traces with its original stack.
+
+### Helpers
+
+```csharp
+// Report a failure without breaking a chain; a successful result passes through untouched.
+var result = LoadOrder(id).Report(logger);
+
+// Wrap an operation in a span, reporting whatever it returns or throws.
+var order = await CommunicationDiagnostics.TrackAsync("orders.place",
+    () => _service.PlaceAsync(cart), logger);
+```
+
+`Track`/`TrackAsync` convert a thrown exception into a failed `Result<T>`, so callers stay on the Result path
+while the exception still reaches the log and the trace.
+
+Static, source-generated logging lives in `LoggerCenter` (general) and `ProblemLoggerCenter` (failures), so
+logging a failure allocates nothing when the level is disabled.
+
+### Mapping exceptions to status codes
+
+The rule is **4xx means the caller was wrong, 5xx means the server was**. `InvalidOperationException`,
+`NotSupportedException`, `InvalidCastException`, `NullReferenceException` and `IndexOutOfRangeException` are
+server defects and map to **500** — reporting them as 400 blames the client and hides the defect from every
+alert watching the 5xx rate.
+
+The mapping cannot know your domain, so override it once at startup:
+
+```csharp
+ExceptionStatusCodeMap.Map<OrderNotFoundException>(HttpStatusCode.NotFound);
+ExceptionStatusCodeMap.Map<DomainRuleViolationException>(HttpStatusCode.UnprocessableEntity);
+```
+
+Lookup walks the exception's type hierarchy, so mapping a base type covers everything derived from it and the
+most derived registration wins.
 
 ## Testing
 

@@ -34,13 +34,13 @@ public sealed class OrleansCommunicationFilterLoggingTests
             result.ShouldHaveProblem()
                 .WithTitle(nameof(InvalidOperationException))
                 .WithDetail("result int invalid operation error")
-                .WithStatusCode((int)HttpStatusCode.BadRequest);
+                .WithStatusCode((int)HttpStatusCode.InternalServerError);
 
             var entry = SingleConvertedExceptionLog<CommunicationIncomingGrainCallFilter>();
 
             entry.Exception.ShouldBeOfType<InvalidOperationException>()
                 .Message.ShouldBe("result int invalid operation error");
-            entry.Message.ShouldContain(((int)HttpStatusCode.BadRequest).ToString());
+            entry.Message.ShouldContain(((int)HttpStatusCode.InternalServerError).ToString());
         }
         finally
         {

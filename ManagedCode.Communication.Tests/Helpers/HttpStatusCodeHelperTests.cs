@@ -28,12 +28,12 @@ public class HttpStatusCodeHelperTests
         yield return [new ArgumentNullException("value"), HttpStatusCode.BadRequest];
         yield return [new ArgumentOutOfRangeException("value"), HttpStatusCode.BadRequest];
         yield return [new ArgumentException("value"), HttpStatusCode.BadRequest];
-        yield return [new InvalidOperationException("value"), HttpStatusCode.BadRequest];
-        yield return [new NotSupportedException("value"), HttpStatusCode.BadRequest];
+        yield return [new InvalidOperationException("value"), HttpStatusCode.InternalServerError];
+        yield return [new NotSupportedException("value"), HttpStatusCode.InternalServerError];
         yield return [new FormatException("value"), HttpStatusCode.BadRequest];
         yield return [new JsonException("value"), HttpStatusCode.BadRequest];
         yield return [new XmlException("value"), HttpStatusCode.BadRequest];
-        yield return [new InvalidCastException("value"), HttpStatusCode.BadRequest];
+        yield return [new InvalidCastException("value"), HttpStatusCode.InternalServerError];
         yield return [new UnauthorizedAccessException("value"), HttpStatusCode.Unauthorized];
         yield return [new SecurityException("value"), HttpStatusCode.Forbidden];
         yield return [new FileNotFoundException("value"), HttpStatusCode.NotFound];

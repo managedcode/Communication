@@ -97,7 +97,7 @@ public class GrainClientTests
         intResult.ShouldHaveProblem()
             .WithTitle(nameof(InvalidOperationException))
             .WithDetail("result int invalid operation error")
-            .WithStatusCode((int)HttpStatusCode.BadRequest);
+            .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
     [Fact]

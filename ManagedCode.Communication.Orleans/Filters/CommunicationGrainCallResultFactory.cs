@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ManagedCode.Communication.Helpers;
 using ManagedCode.Communication.Orleans.Helpers;
 using ManagedCode.Communication.Results;
+using ManagedCode.Communication.Telemetry;
 using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Filters;
@@ -32,6 +33,11 @@ internal static class CommunicationGrainCallResultFactory
         }
 
         statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(exception);
+
+        // Record the originating exception, not just the Problem derived from it: crossing a grain boundary is
+        // exactly where the stack trace would otherwise be lost.
+        CommunicationTelemetry.RecordFailure(Problem.Create(exception, (int)statusCode), exception);
+
         context.Result = CreateFailure(resultType, exception, statusCode);
         return true;
     }

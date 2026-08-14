@@ -64,6 +64,7 @@ public class OrleansHttpStatusCodeHelperTests
     {
         var statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(new InvalidOperationException("bad"));
 
-        statusCode.ShouldBe(HttpStatusCode.BadRequest);
+        // A server-side invariant break is a 500, not the caller's fault.
+        statusCode.ShouldBe(HttpStatusCode.InternalServerError);
     }
 }
