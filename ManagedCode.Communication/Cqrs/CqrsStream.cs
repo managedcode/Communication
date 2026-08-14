@@ -67,6 +67,37 @@ public static class CqrsStream
             cancellationToken);
     }
 
+    /// <summary>
+    ///     Applies the CQRS stream guarantees to an existing chunk stream: null chunks are dropped, missing
+    ///     sequence numbers are filled in, an enumeration fault becomes a terminal
+    ///     <see cref="CqrsStreamChunkKind.Failed" /> chunk, and the stream is guaranteed to end on a terminal chunk.
+    /// </summary>
+    /// <remarks>
+    ///     The ASP.NET Core Server-Sent Events transport applies this automatically. Use it directly for any other
+    ///     transport — a SignalR streaming hub method, an Orleans grain returning <c>IAsyncEnumerable</c>, gRPC, or
+    ///     an in-process consumer — so those get the same contract instead of raw handler output.
+    /// </remarks>
+    /// <example>
+    ///     <code>
+    ///     public IAsyncEnumerable&lt;CqrsStreamChunk&lt;Progress, Report&gt;&gt; Run(CancellationToken ct)
+    ///         =&gt; CqrsStream.Normalize(ImportAsync(ct), cancellationToken: ct);
+    ///     </code>
+    /// </example>
+    /// <param name="source">The chunk stream to normalize.</param>
+    /// <param name="assignSequenceNumbers">Fill in <c>Sequence</c> for chunks that arrive without one.</param>
+    /// <param name="ensureTerminalChunk">Append a terminal failure when the source ends without one.</param>
+    /// <param name="cancellationToken">Cancelled when the consumer goes away.</param>
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> Normalize<TProgress, TResult>(
+        IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> source,
+        bool assignSequenceNumbers = true,
+        bool ensureTerminalChunk = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        return CqrsStreamNormalizer.NormalizeAsync(source, assignSequenceNumbers, ensureTerminalChunk, cancellationToken);
+    }
+
     private static async IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> CreateCore<TProgress, TResult>(
         Func<ICqrsStreamWriter<TProgress, TResult>, ValueTask<Result<TResult>>> handler,
         [EnumeratorCancellation] CancellationToken cancellationToken)

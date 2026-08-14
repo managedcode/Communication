@@ -87,24 +87,34 @@ the core package as static methods on `Result`.
 
 ## Overview
 
-ManagedCode.Communication brings functional error handling to .NET through the Result pattern. Instead of throwing exceptions, methods return Result types that explicitly indicate success or failure. This approach eliminates hidden control flow, improves performance, and makes error handling a first-class concern in your codebase.
+ManagedCode.Communication models the outcome of an operation as a value. Instead of throwing, a method returns
+`Result` or `Result<T>`: either it succeeded, or it carries a `Problem` describing why it did not. The failure
+becomes part of the signature rather than something a caller discovers at runtime.
 
-### Why Result Pattern?
+### Why a Result type?
 
-Traditional exception handling has several drawbacks:
+An exception is an invisible second return path. Nothing in `Task<Order> PlaceOrderAsync(Cart cart)` tells you it
+can fail with `PaymentDeclinedException`, so callers guard against what they happen to remember. `Task<Result<Order>>`
+says it up front, and the compiler carries that fact everywhere the value goes.
 
-- **Performance overhead**: Throwing exceptions is expensive
-- **Hidden control flow**: Exceptions create invisible exit points in your code
-- **Unclear contracts**: Methods don't explicitly declare what errors they might produce
-- **Testing complexity**: Exception paths require separate test scenarios
+What you get:
 
-The Result pattern solves these issues by:
+- **Failures are in the signature.** A reviewer sees which calls can fail without reading their implementations.
+- **One error shape end to end.** Every failure is a `Problem` (RFC 7807), so a domain rule, a validation error and
+  a crashed dependency all serialize the same way and map to the same HTTP response.
+- **Composition instead of nesting.** Railway operators chain the happy path and short-circuit on the first
+  failure, replacing pyramids of `try`/`catch`.
+- **Cheap success.** `Result` and `Result<T>` are structs; a successful call allocates nothing. Exceptions are only
+  costly when thrown — the point here is the clarity, and not paying stack-capture cost for *expected* failures
+  like "not found" or "invalid input".
+- **Straightforward tests.** Assert on a returned value rather than on which exception escaped.
 
-- **Explicit error handling**: Errors are part of the method signature
-- **Performance**: No exception throwing overhead
-- **Composability**: Chain operations using railway-oriented programming
-- **Type safety**: Compiler ensures error handling
-- **Testability**: All paths are explicit and easy to test
+What it does **not** give you: the compiler will not force you to inspect a `Result`. C# has no enforcement for
+that, and this library ships no analyzer. Ignoring a returned `Result` compiles cleanly — treat that the way you
+treat any ignored return value.
+
+Exceptions are still the right tool for genuinely exceptional, unrecoverable conditions. Results are for the
+failures your callers are expected to handle.
 
 ## Key Features
 
@@ -423,14 +433,51 @@ Two namespaces cover the whole feature: `ManagedCode.Communication.CQRS` for the
 authoring helper and the client reader, and `ManagedCode.Communication.AspNetCore.Extensions` for the server
 transport.
 
-The same `CqrsStreamChunk` contract also works over SignalR streaming hub methods:
+#### Other transports: SignalR, Orleans, anything else
+
+The guarantees above are not tied to Server-Sent Events — they come from `CqrsStream.Normalize`, which the SSE
+transport calls for you. Any other transport gets the same contract by calling it directly.
+
+**SignalR streaming hub method:**
 
 ```csharp
-await foreach (var chunk in hubConnection.StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("RunCommand", commandId))
+using ManagedCode.Communication.CQRS;
+
+public class ImportHub : Hub
 {
-    // process progress and terminal chunks here
+    public IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> Import(CancellationToken cancellationToken)
+        => CqrsStream.Normalize(ImportAsync(cancellationToken), cancellationToken: cancellationToken);
 }
 ```
+
+`CqrsStream.Create` can be returned from a hub method as-is — it already provides the guarantees, so it needs no
+`Normalize`. The client side is plain SignalR:
+
+```csharp
+await foreach (var chunk in hubConnection
+    .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import"))
+{
+    // the same TryGetProgress / TryGetResult / TryGetProblem loop as over HTTP
+}
+```
+
+Skipping `Normalize` is what makes the difference: a hub method that throws mid-stream faults the connection and
+the client sees a `HubException` instead of a terminal chunk it can inspect.
+
+**Orleans grains.** `ManagedCode.Communication.Orleans` registers a serialization surrogate for
+`CqrsStreamChunk<,>`, so chunks can be returned from grain methods and streamed as `IAsyncEnumerable`:
+
+```csharp
+public interface IImportGrain : IGrainWithStringKey
+{
+    IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync();
+}
+```
+
+Your progress and result payloads still need Orleans serializers of their own — mark them `[GenerateSerializer]`
+with `[Id(n)]` members, as with any type crossing a grain boundary. Note that a missing serializer is a *startup*
+failure in Orleans, not a runtime one: a silo whose grain interfaces mention an unserializable type refuses to
+boot.
 
 ### Resilient HTTP Clients
 
@@ -739,7 +786,38 @@ using ManagedCode.Communication;            // Result, Problem
 using ManagedCode.Communication.Extensions; // Bind / Map / Tap / Then / Ensure / Match / Compensate / ...
 ```
 
-Railway-oriented programming treats operations as a series of tracks where success continues on the main track and failures switch to an error track:
+Railway-oriented programming treats operations as a series of tracks where success continues on the main track and failures switch to an error track.
+
+### The full surface
+
+Most operators short-circuit on failure: once a result is failed, the step is skipped and the original `Problem`
+is carried to the end. The exceptions are the ones that exist to handle failure — `Else`, `Compensate*`, `Match`,
+`Switch` — and `Finally`, which runs on both branches.
+
+| Operator | Purpose |
+| --- | --- |
+| `Bind` / `Then` | Run the next step, which itself returns a `Result`. **Two names for one operation** — `Bind` is the conventional ROP name, `Then` reads better in long chains. Pick one per codebase. |
+| `BindAsync` / `ThenAsync` | Async form of the above. |
+| `Map` / `MapAsync` | Transform the value with a plain function that cannot fail. |
+| `Tap` / `TapAsync`, `Do` / `DoAsync` | Run a side effect (logging, metrics) and pass the value through unchanged. |
+| `Ensure`, `Where`, `Verify`, `Check` | Fail the chain when a predicate does not hold. |
+| `FailIf`, `OkIf` | Flip a result based on a predicate. |
+| `Match` | Collapse to a single value by handling both branches. The usual way to leave the railway. |
+| `Else` | Substitute an alternative result when the current one failed. |
+| `Compensate`, `CompensateAsync`, `CompensateWith` | Recover from a failure, optionally by calling a fallback. |
+| `Switch`, `SwitchFirst` | Branch on success/failure without leaving the chain. |
+| `Finally` | Run an action on both branches, like a `finally` block. |
+| `ToResult` | Lift a nullable value into a `Result`, failing when it is null. |
+
+Aggregation lives on `Result` itself in the core package, so it needs no extra reference:
+
+| Method | Purpose |
+| --- | --- |
+| `Result.Merge(...)` | Succeeds when all succeed; returns the **first** failure otherwise. |
+| `Result.MergeAll(...)` | Succeeds when all succeed; aggregates **every** failure otherwise. |
+| `Result.Combine(...)` | Collects values into a `CollectionResult<T>`, stopping at the first failure. |
+| `Result.CombineAll(...)` | Collects values, aggregating every failure. |
+
 
 ### Basic Chaining
 
@@ -1512,7 +1590,7 @@ The repository uses xUnit with [Shouldly](https://github.com/shouldly/shouldly) 
 - Run the full suite: `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj`
 - Generate lcov coverage: `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj /p:CollectCoverage=true /p:CoverletOutputFormat=lcov`
 
-Execution helpers (`Result.From`, `Result<T>.From`, task/value-task shims) and the command metadata extensions now have direct tests, pushing the core assembly above 80% line coverage. Mirror those patterns when adding APIs—exercise both success and failure paths and prefer invoking the public fluent surface instead of internal helpers.
+The suite is 1 089 tests and runs in a few seconds. Line coverage: core ~80%, ASP.NET Core ~98%, Extensions ~79%, Orleans ~97%. Mirror the existing patterns when adding APIs — exercise both the success and the failure path, and drive the public surface rather than internal helpers.
 
 ## Comparison
 
@@ -2004,7 +2082,7 @@ dotnet build
 dotnet test
 
 # Run benchmarks
-dotnet run -c Release --project benchmarks/ManagedCode.Communication.Benchmarks
+dotnet run -c Release --project ManagedCode.Communication.Benchmark
 ```
 
 ## License
