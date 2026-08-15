@@ -15,26 +15,30 @@ Built for .NET 10, with ASP.NET Core, SignalR and Orleans integration in the box
 
 ## At a glance
 
-**Failure is a value, not a second return path.** Every method says up front that it can fail, and every failure
-is the same shape.
+### Failure is part of the signature
+
+A method that can fail says so in its return type, and every failure is the same shape — an RFC 7807 `Problem`.
+A guard clause stays one line: a plain `Result` widens to `Result<T>`, so there is no type parameter to repeat.
 
 ```csharp
 public async Task<Result<Order>> PlaceOrderAsync(Cart cart)
 {
     if (cart.IsEmpty)
-        return Result<Order>.FailValidation(("cart", "is empty"));
+        return Result.FailValidation(("cart", "is empty"));
 
     var payment = await ChargeAsync(cart.Total);
     if (payment.IsFailed)
-        return Result<Order>.Fail(payment.Problem!);      // pass the failure along untouched
+        return payment.Problem!;          // pass the failure along untouched
 
-    return Result<Order>.Succeed(await CreateOrderAsync(cart));
+    return await CreateOrderAsync(cart);  // a bare value widens to a success
 }
 ```
 
-**Railway: chain the happy path, short-circuit on the first failure.** Every operator runs only on success and
-passes a failure straight through — no `try`/`catch`, no null checks between the steps. Async or not, the chain
-never has to break for an `await`.
+### Compose instead of nesting
+
+Every operator runs only on success and passes a failure straight through, so the happy path reads top to
+bottom with no `try`/`catch` and no null checks in between. Sync or async, the chain never has to be broken by
+an `await`.
 
 ```csharp
 var receipt = await LoadCartAsync(cartId)
@@ -45,8 +49,10 @@ var receipt = await LoadCartAsync(cartId)
     .CompensateAsync(problem => RetryOnce(problem));
 ```
 
-**A slow command becomes a typed stream.** Progress and result are both typed, and the stream is guaranteed to
-tell you how it ended — see [CQRS Streaming](#cqrs-streaming).
+### Long-running commands are streams, not polling
+
+A command too slow to answer in one call reports typed progress and a typed answer, and is guaranteed to tell
+you how it ended. Server-Sent Events on the wire; the same contract over SignalR, Orleans or gRPC.
 
 ```csharp
 // server
@@ -59,16 +65,19 @@ app.MapGet("/import", (CancellationToken ct) =>
             return Result<ImportReport>.Succeed(new ImportReport(10));
         }, ct))
     .WithCommunicationCqrsResults();
+```
 
-// client — Server-Sent Events on the wire; progress arrives via the callback,
-// the answer comes back from the method, and nothing blocks
+The client never writes the loop. Progress arrives through a callback, the answer comes back from the method,
+and nothing blocks:
+
+```csharp
 Result<ImportReport> report = await http
     .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
     .ToResultAsync(progress => Console.WriteLine($"{progress.Percent}%"));
 ```
 
 A stream that breaks, or ends without saying how it went, comes back as an ordinary failed `Result` — so it
-joins the railway like anything else:
+joins the same railway as everything else:
 
 ```csharp
 var imported = await http
@@ -78,13 +87,27 @@ var imported = await http
     .CompensateAsync(problem => Result<int>.Succeed(0));
 ```
 
-**And it maps itself to HTTP.** Return a `Result<T>` from an action and the filter turns it into a `200` or an
-RFC 7807 problem response — no plumbing in the controller.
+### It maps itself to HTTP
+
+Return a `Result<T>` from an action and the filter turns it into a `200` or an RFC 7807 problem response. No
+plumbing in the controller, and the status code comes from the `Problem` rather than from a guess.
 
 ```csharp
 [HttpGet("{id}")]
 public Task<Result<Order>> Get(string id) => _orders.FindAsync(id);
 ```
+
+### Why this rather than the alternatives
+
+| | What you would otherwise write |
+| --- | --- |
+| Throwing for expected failures | A `try`/`catch` at every layer, and a reviewer who cannot tell from a signature what might come out of it. |
+| A hand-rolled `Result` type | The type is the easy part. The railway operators, RFC 7807 mapping, ASP.NET Core and Orleans integration, and the JSON contract are not. |
+| Polling a status endpoint | A jobs table, a status enum, an expiry policy, and a client loop that is always either too slow or too chatty. |
+| Raw WebSocket or SignalR messages | Your own envelope, your own "it's finished" signal, your own error frame — and both ends agreeing on all three. |
+
+It is also small where it matters: `Result` and `Result<T>` are structs, so a success allocates nothing, and the
+serialization path is hand-written rather than reflective — see [Performance](#performance).
 
 
 ## Table of Contents
@@ -158,7 +181,7 @@ failures your callers are expected to handle.
   answer, one terminal chunk guaranteed.
 - Travels over Server-Sent Events out of the box, so any client can read it without a client library.
 - A handler that throws, or ends early, still produces a terminal `Failed` chunk instead of a dead connection.
-- The same contract over SignalR, Orleans or gRPC via `CqrsStream.Normalize`.
+- The same contract over SignalR, Orleans or gRPC — `CqrsStream.Normalize` on the server, `AsCqrsStream()` on the client.
 - `ToResultAsync(onProgress)` drains a stream to its answer, so callers never write the loop — and the result
   feeds straight into the railway.
 - See [CQRS Streaming](#cqrs-streaming).
@@ -728,6 +751,9 @@ An outcome converts to its `Result<TResult>` implicitly, so it can be returned w
 | `ToChunkListAsync()` | every chunk | you will interpret them yourself |
 | `chunks.ToStreamResult()` | — | you already have the chunks in hand |
 
+`AsCqrsStream()` sits in front of any of these when the chunks arrive over a transport that does not already
+guarantee the contract — SignalR, Orleans, gRPC. See [Other transports](#other-transports).
+
 ### Streams and the railway
 
 `ToResultAsync` returns `Task<Result<TResult>>`, which is exactly what the async railway operators take. A
@@ -791,14 +817,24 @@ public class ImportHub : Hub
 
 Skipping `Normalize` is what makes the difference: a hub method that throws mid-stream faults the connection and
 the client sees a `HubException` instead of a terminal chunk it can inspect. A `CqrsStream.Create` stream already
-carries the guarantees and needs no `Normalize`. The client side is plain SignalR, with the same loop as over
-HTTP:
+carries the guarantees and needs no `Normalize`.
+
+**On the client, `AsCqrsStream()` gives a SignalR stream the same contract and the same ergonomics as the HTTP
+reader** — progress through a callback, the answer from the method:
 
 ```csharp
-await foreach (var chunk in hub.StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import"))
-{
-}
+var report = await hub
+    .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import", cancellationToken)
+    .AsCqrsStream()
+    .ToResultAsync(progress => Console.WriteLine($"{progress.Percent}%"), cancellationToken);
 ```
+
+It is worth applying even when the server already normalizes: `AsCqrsStream` is what converts a *transport*
+failure — the connection dropping, or a server you do not control faulting the stream — into a terminal `Failed`
+chunk instead of an exception thrown out of your `await foreach`.
+
+It takes an `IAsyncEnumerable<>` rather than a `HubConnection` on purpose. SignalR, Orleans and gRPC all surface
+a stream as one, so a single method covers them all and this package takes a dependency on none of them.
 
 **Orleans.** `ManagedCode.Communication.Orleans` registers a serialization surrogate for `CqrsStreamChunk<,>`,
 so chunks can cross a grain boundary:
@@ -1241,7 +1277,7 @@ public Result<User> CreateUser(CreateUserDto dto)
         errors.Add(("age", "Must be 18 or older"));
     
     if (errors.Any())
-        return Result<User>.FailValidation(errors.ToArray());
+        return Result.FailValidation(errors.ToArray());
     
     var user = new User { /* ... */ };
     return Result<User>.Succeed(user);
@@ -1509,7 +1545,7 @@ public class ChatHub : Hub
     public async Task<Result<MessageDto>> SendMessage(string user, string message)
     {
         if (string.IsNullOrEmpty(message))
-            return Result<MessageDto>.FailValidation(("message", "Message cannot be empty"));
+            return Result.FailValidation(("message", "Message cannot be empty"));
         
         var messageDto = new MessageDto
         {
@@ -1983,7 +2019,7 @@ public Result<User> GetUser(int id)
     
     // Instead:
     if (id <= 0)
-        return Result<User>.FailValidation(("id", "ID must be positive")); // ✅
+        return Result.FailValidation(("id", "ID must be positive")); // ✅
 }
 
 // DON'T: Ignore Result values

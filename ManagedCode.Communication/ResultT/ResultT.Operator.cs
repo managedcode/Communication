@@ -97,8 +97,19 @@ public partial struct Result<T>
     }
 
     /// <summary>
-    ///     Adopts the success or failure of a non-generic result.
+    ///     Widens a failed <see cref="Result" /> so it can be returned from a method that produces
+    ///     <see cref="Result{T}" />.
     /// </summary>
+    /// <remarks>
+    ///     This is what lets a guard clause read <c>return Result.FailValidation(("cart", "is empty"));</c> inside
+    ///     a <c>Result&lt;Order&gt;</c> method, and lets a failed <see cref="Result" /> be passed straight along.
+    ///     <para>
+    ///         <b>A success does not survive the conversion.</b> A <see cref="Result" /> carries no value, so
+    ///         there is nothing to put in <see cref="Result{T}.Value" />; converting one yields a failure rather
+    ///         than a success whose value is <c>null</c> in defiance of the nullable annotations. Convert only
+    ///         failures — on the success path, build the <see cref="Result{T}" /> from its value.
+    ///     </para>
+    /// </remarks>
     public static implicit operator Result<T>(Result result)
     {
         return result.Problem != null ? Fail(result.Problem) : Fail();

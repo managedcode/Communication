@@ -108,6 +108,64 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         report.Status.ShouldBe("done");
     }
 
+    [Fact]
+    public async Task AnUnnormalizedHubStreamFaultsTheEnumerator()
+    {
+        // The baseline the client-side helper exists to fix: without normalization anywhere, a hub method that
+        // throws gives the consumer a transport exception rather than a chunk carrying a Problem.
+        await Should.ThrowAsync<Exception>(async () =>
+        {
+            await foreach (var _ in _connection
+                               .StreamAsync<CqrsStreamChunk<HubProgress, HubReport>>("StreamRawThatThrows"))
+            {
+            }
+        });
+    }
+
+    [Fact]
+    public async Task TheClientCanRestoreTheContractWhenTheServerDoesNot()
+    {
+        var chunks = new List<CqrsStreamChunk<HubProgress, HubReport>>();
+
+        await foreach (var chunk in _connection
+                           .StreamAsync<CqrsStreamChunk<HubProgress, HubReport>>("StreamRawThatThrows")
+                           .AsCqrsStream())
+        {
+            chunks.Add(chunk);
+        }
+
+        chunks[^1].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
+        chunks[^1].TryGetProblem(out var problem).ShouldBeTrue();
+        problem.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task AClientSideStreamDrainsToAResultLikeTheHttpOne()
+    {
+        var seen = new List<string>();
+
+        var result = await _connection
+            .StreamAsync<CqrsStreamChunk<HubProgress, HubReport>>("StreamCommand")
+            .AsCqrsStream()
+            .ToResultAsync(progress => seen.Add(progress.State));
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Status.ShouldBe("done");
+        seen.ShouldBe(["started", "half"]);
+    }
+
+    [Fact]
+    public async Task AClientSideStreamThatNeverTerminatesFailsRatherThanStopsQuietly()
+    {
+        var result = await _connection
+            .StreamAsync<CqrsStreamChunk<HubProgress, HubReport>>("StreamRawWithoutTerminal")
+            .AsCqrsStream()
+            .ToResultAsync();
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
+    }
+
     private async Task<IReadOnlyList<CqrsStreamChunk<HubProgress, HubReport>>> StreamAsync(string method)
     {
         var chunks = new List<CqrsStreamChunk<HubProgress, HubReport>>();

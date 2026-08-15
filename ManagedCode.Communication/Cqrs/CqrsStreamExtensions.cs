@@ -24,6 +24,51 @@ namespace ManagedCode.Communication.CQRS;
 public static class CqrsStreamExtensions
 {
     /// <summary>
+    ///     Applies the CQRS stream guarantees to chunks arriving over a transport that does not provide them.
+    /// </summary>
+    /// <typeparam name="TProgress">Progress payload type.</typeparam>
+    /// <typeparam name="TResult">Terminal payload type.</typeparam>
+    /// <param name="source">The raw chunk stream, as the transport hands it over.</param>
+    /// <param name="options">Reader behaviour; <see cref="CqrsStreamClientOptions.Default" /> when omitted.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The same chunks, numbered, and always ending on a terminal one.</returns>
+    /// <remarks>
+    ///     The HTTP reader in <see cref="CqrsHttpClientExtensions" /> already does this. Every other client needs
+    ///     it, and the difference is not cosmetic: a hub method or grain that throws part-way through faults the
+    ///     enumerator, so the consumer sees a transport exception instead of a terminal chunk carrying a
+    ///     <see cref="Problem" /> it can inspect. This converts that back into the contract.
+    ///     <para>
+    ///         It takes an <see cref="IAsyncEnumerable{T}" /> rather than a hub connection or a grain on purpose:
+    ///         SignalR, Orleans and gRPC all surface a stream as one, so a single method covers them without this
+    ///         package taking a dependency on any of them.
+    ///     </para>
+    /// </remarks>
+    /// <example>
+    ///     A SignalR client, with the same guarantees and the same ergonomics as the HTTP one:
+    ///     <code>
+    ///     var report = await hub
+    ///         .StreamAsync&lt;CqrsStreamChunk&lt;ImportProgress, ImportReport&gt;&gt;("Import", cancellationToken)
+    ///         .AsCqrsStream()
+    ///         .ToResultAsync(progress =&gt; Console.WriteLine($"{progress.Percent}%"), cancellationToken);
+    ///     </code>
+    /// </example>
+    public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> AsCqrsStream<TProgress, TResult>(
+        this IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> source,
+        CqrsStreamClientOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var effective = options ?? CqrsStreamClientOptions.Default;
+
+        return CqrsStream.Normalize(
+            source,
+            effective.AssignSequenceNumbers,
+            effective.EnsureTerminalChunk,
+            cancellationToken);
+    }
+
+    /// <summary>
     ///     Drains the stream and returns its terminal result, discarding progress.
     /// </summary>
     /// <typeparam name="TProgress">Progress payload type.</typeparam>

@@ -39,6 +39,22 @@ public class TestHub : Hub
         return CqrsStream.Normalize(ThrowingAsync(), cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    ///     A hub method with no normalization at all, which throws part-way through. SignalR faults the stream,
+    ///     so the client sees a <c>HubException</c> — the situation the client-side <c>AsCqrsStream</c> exists to
+    ///     rescue when the server is not under your control.
+    /// </summary>
+    public IAsyncEnumerable<CqrsStreamChunk<HubProgress, HubReport>> StreamRawThatThrows()
+    {
+        return ThrowingAsync();
+    }
+
+    /// <summary>A hub method with no normalization that simply stops, never sending a terminal chunk.</summary>
+    public IAsyncEnumerable<CqrsStreamChunk<HubProgress, HubReport>> StreamRawWithoutTerminal()
+    {
+        return NoTerminalAsync();
+    }
+
     /// <summary>The push-style authoring helper, used straight from a hub method.</summary>
     public IAsyncEnumerable<CqrsStreamChunk<HubProgress, HubReport>> StreamViaWriter(CancellationToken cancellationToken)
     {
