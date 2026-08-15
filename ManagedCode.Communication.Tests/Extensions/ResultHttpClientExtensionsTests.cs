@@ -51,7 +51,7 @@ public class ResultHttpClientExtensionsTests
                 });
             }
 
-            var payload = JsonSerializer.Serialize(Result<int>.Succeed(21));
+            var payload = JsonSerializer.Serialize(21);
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
@@ -116,7 +116,7 @@ public class ResultHttpClientExtensionsTests
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
         {
-            var payload = JsonSerializer.Serialize(Result<string>.Succeed("pong"));
+            var payload = JsonSerializer.Serialize("pong");
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
@@ -152,6 +152,93 @@ public class ResultHttpClientExtensionsTests
     }
 
     [Fact]
+    public async Task SendForResultAsync_WithSuccessProjection_ReturnsProjectedValue()
+    {
+        using var client = new HttpClient(new StubHandler(static (_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("payload", Encoding.UTF8, "text/plain")
+            })));
+
+        var result = await client.SendForResultAsync(
+            static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"),
+            static async (response, cancellationToken) =>
+                await response.Content.ReadAsStringAsync(cancellationToken));
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("payload");
+    }
+
+    [Fact]
+    public async Task SendForResultAsync_WithSuccessProjectionAndProblem_DoesNotInvokeProjection()
+    {
+        var projectionInvoked = false;
+        using var client = new HttpClient(new StubHandler(static (_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict)
+            {
+                Content = new StringContent(
+                    "{\"title\":\"Conflict\",\"status\":409,\"detail\":\"stale\",\"errorCode\":\"stale_revision\"}",
+                    Encoding.UTF8,
+                    "application/problem+json")
+            })));
+
+        var result = await client.SendForResultAsync<string>(
+            static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"),
+            (_, _) =>
+            {
+                projectionInvoked = true;
+                return Task.FromResult<string?>("unexpected");
+            });
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.ErrorCode.ShouldBe("stale_revision");
+        projectionInvoked.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task SendForResultAsync_WithNullSuccessProjection_ReturnsInvalidResponseProblem()
+    {
+        using var client = new HttpClient(new StubHandler(static (_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK))));
+
+        var result = await client.SendForResultAsync<string>(
+            static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"),
+            static (_, _) => Task.FromResult<string?>(null));
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.Title.ShouldBe("Invalid response body");
+    }
+
+    [Fact]
+    public async Task SendForResultAsync_WithTransportFailure_ReturnsServiceUnavailableResult()
+    {
+        using var client = new HttpClient(new StubHandler(static (_, _) =>
+            throw new HttpRequestException("network unavailable")));
+
+        var result = await client.SendForResultAsync<string>(
+            static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"));
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.ServiceUnavailable);
+        result.Problem.Detail.ShouldBe("network unavailable");
+    }
+
+    [Fact]
+    public async Task SendForResultAsync_WithCallerCancellation_PropagatesCancellation()
+    {
+        using var cancellationSource = new CancellationTokenSource();
+        cancellationSource.Cancel();
+        using var client = new HttpClient(new StubHandler(static (_, cancellationToken) =>
+            Task.FromCanceled<HttpResponseMessage>(cancellationToken)));
+
+        var act = async () => await client.SendForResultAsync<string>(
+            static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"),
+            cancellationToken: cancellationSource.Token);
+
+        await Should.ThrowAsync<OperationCanceledException>(act);
+    }
+
+    [Fact]
     public async Task SendForResultAsync_WithRetryPipeline_RetriesUntilSuccess()
     {
         var attempt = 0;
@@ -168,7 +255,7 @@ public class ResultHttpClientExtensionsTests
                 return Task.FromResult(failure);
             }
 
-            var payload = JsonSerializer.Serialize(Result<int>.Succeed(42));
+            var payload = JsonSerializer.Serialize(42);
             var success = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")

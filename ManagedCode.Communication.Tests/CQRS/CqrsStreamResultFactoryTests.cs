@@ -35,6 +35,14 @@ public class CqrsStreamResultFactoryTests
     }
 
     [Fact]
+    public void ExplicitHttpResult_NullStream_ThrowsArgumentNullException()
+    {
+        IAsyncEnumerable<Chunk> updates = null!;
+
+        Should.Throw<ArgumentNullException>(() => CqrsStreamHttpResults.ServerSentEvents(updates));
+    }
+
+    [Fact]
     public void Convert_NonChunkAsyncEnumerable_IsNotAStream()
     {
         CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.NonChunkAsync(), Options, out var converted)

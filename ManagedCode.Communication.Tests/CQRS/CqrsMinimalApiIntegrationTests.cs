@@ -49,6 +49,25 @@ public class CqrsMinimalApiIntegrationTests
     }
 
     [Fact]
+    public async Task ExplicitHttpResult_UsesTheSameCqrsWireContractWithoutAFilter()
+    {
+        await using var app = await StartAsync(app => app
+            .MapGet("/cqrs", () =>
+                CqrsStreamHttpResults.ServerSentEvents(CqrsTestStreams.CompletedAsync())));
+
+        using var response = await app.GetTestClient().GetAsync("/cqrs");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.ShouldBe("text/event-stream");
+        var chunks = await SseTestReader.ReadChunksAsync(response);
+        chunks.Select(chunk => chunk.Kind).ShouldBe([
+            CqrsStreamChunkKind.Started,
+            CqrsStreamChunkKind.Progress,
+            CqrsStreamChunkKind.Completed
+        ]);
+    }
+
+    [Fact]
     public async Task RouteGroup_AppliesToEveryEndpointInTheGroup()
     {
         await using var app = await StartAsync(app =>

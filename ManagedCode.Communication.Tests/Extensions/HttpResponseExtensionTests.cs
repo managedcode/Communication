@@ -14,7 +14,7 @@ public class HttpResponseExtensionTests
     #region FromJsonToResult<T> Tests
 
     [Fact]
-    public async Task FromJsonToResult_SuccessStatusCode_WithValidJson_ReturnsSuccessResult()
+    public async Task FromJsonToResult_SuccessStatusCode_WithLegacyResultEnvelope_ReturnsFailedResult()
     {
         // Arrange
         var testData = new TestData { Id = 42, Name = "Test" };
@@ -29,14 +29,34 @@ public class HttpResponseExtensionTests
         var result = await response.FromJsonToResult<TestData>();
 
         // Assert
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.Title.ShouldBe("Invalid response body");
+        result.Problem.Detail.ShouldNotBeNull();
+        result.Problem.Detail.ShouldContain("envelopes are not accepted");
+    }
+
+    [Fact]
+    public async Task FromJsonToResult_SuccessStatusCode_WithRawPayload_ReturnsSuccessResult()
+    {
+        // Arrange
+        var json = """{"id":42,"name":"Test"}""";
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        var result = await response.FromJsonToResult<TestData>();
+
+        // Assert
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldNotBeNull();
-        result.Value!.Id.ShouldBe(42);
+        result.Value.Id.ShouldBe(42);
         result.Value.Name.ShouldBe("Test");
     }
 
     [Fact]
-    public async Task FromJsonToResult_SuccessStatusCode_WithFailedResultJson_ReturnsFailedResult()
+    public async Task FromJsonToResult_SuccessStatusCode_WithLegacyFailedResultEnvelope_ReturnsInvalidBodyFailure()
     {
         // Arrange
         var problem = Problem.Create("Error", "Something went wrong", 400);
@@ -53,8 +73,9 @@ public class HttpResponseExtensionTests
         // Assert
         result.IsSuccess.ShouldBeFalse();
         result.Problem.ShouldNotBeNull();
-        result.Problem!.Title.ShouldBe("Error");
-        result.Problem.Detail.ShouldBe("Something went wrong");
+        result.Problem!.Title.ShouldBe("Invalid response body");
+        result.Problem.Detail.ShouldNotBeNull();
+        result.Problem.Detail.ShouldContain("envelopes are not accepted");
     }
 
     [Fact]
@@ -96,6 +117,57 @@ public class HttpResponseExtensionTests
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.Title.ShouldBe("Bad Request - Invalid input");
         result.Problem.Detail.ShouldBe("Bad Request - Invalid input");
+    }
+
+    [Fact]
+    public async Task FromJsonToResult_ProblemDetailsResponse_PreservesStructuredProblem()
+    {
+        // Arrange
+        var json = """
+                   {
+                     "type": "https://managedcode.dev/problems/validation",
+                     "title": "Validation failed",
+                     "status": 422,
+                     "detail": "The request has invalid fields.",
+                     "instance": "/orders/42",
+                     "operationId": "order-42"
+                   }
+                   """;
+        var response = new HttpResponseMessage(HttpStatusCode.UnprocessableEntity)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/problem+json")
+        };
+
+        // Act
+        var result = await response.FromJsonToResult<TestData>();
+
+        // Assert
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.Title.ShouldBe("Validation failed");
+        result.Problem.Detail.ShouldBe("The request has invalid fields.");
+        result.Problem.StatusCode.ShouldBe(422);
+        result.Problem.Type.ShouldBe("https://managedcode.dev/problems/validation");
+        result.Problem.Instance.ShouldBe("/orders/42");
+        result.Problem.Extensions.ShouldContainKey("operationId");
+    }
+
+    [Fact]
+    public async Task FromJsonToResult_ProblemDetailsResponse_UsesActualHttpStatus()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.BadGateway)
+        {
+            Content = new StringContent(
+                """{"title":"Upstream failed","status":400,"detail":"gateway rejected the response"}""",
+                Encoding.UTF8,
+                "application/problem+json")
+        };
+
+        var result = await response.FromJsonToResult<TestData>();
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.StatusCode.ShouldBe((int)HttpStatusCode.BadGateway);
+        result.Problem.Title.ShouldBe("Upstream failed");
+        result.Problem.Detail.ShouldBe("gateway rejected the response");
     }
 
     [Fact]

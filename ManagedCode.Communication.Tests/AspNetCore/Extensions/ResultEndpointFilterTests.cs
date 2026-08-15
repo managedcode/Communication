@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
 using ManagedCode.Communication.AspNetCore.MinimalApi;
+using ManagedCode.Communication.Extensions.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -34,6 +35,20 @@ public class ResultEndpointFilterTests
     }
 
     [Fact]
+    public async Task WithCommunicationResults_SuccessResult_IsReadableByResultHttpClient()
+    {
+        await using var app = await CreateAppAsync(static app =>
+        {
+            app.MapGet("/success", () => Result<string>.Succeed("pong")).WithCommunicationResults();
+        });
+
+        var result = await app.GetTestClient().GetAsResultAsync<string>("/success");
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value.ShouldBe("pong");
+    }
+
+    [Fact]
     public async Task WithCommunicationResults_FailedResult_ReturnsProblem()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -48,6 +63,30 @@ public class ResultEndpointFilterTests
         problem.ShouldNotBeNull();
         problem!.StatusCode.ShouldBe(500);
         problem.Title.ShouldBe("Operation failed");
+    }
+
+    [Fact]
+    public async Task WithCommunicationResults_FailedResult_IsReadableByResultHttpClient()
+    {
+        await using var app = await CreateAppAsync(static app =>
+        {
+            var problem = Problem.Create("Invalid import", "The archive is malformed.", 422);
+            problem.Type = "https://managedcode.dev/problems/invalid-import";
+            problem.Instance = "/imports/42";
+            problem.Extensions["operationId"] = "import-42";
+
+            app.MapGet("/failed", () => Result<string>.Fail(problem)).WithCommunicationResults();
+        });
+
+        var result = await app.GetTestClient().GetAsResultAsync<string>("/failed");
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.Title.ShouldBe("Invalid import");
+        result.Problem.Detail.ShouldBe("The archive is malformed.");
+        result.Problem.StatusCode.ShouldBe(422);
+        result.Problem.Type.ShouldBe("https://managedcode.dev/problems/invalid-import");
+        result.Problem.Instance.ShouldBe("/imports/42");
+        result.Problem.Extensions.ShouldContainKey("operationId");
     }
 
     [Fact]

@@ -297,10 +297,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.1.0" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.1.0" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.1.0" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.1.0" />
+<PackageReference Include="ManagedCode.Communication" Version="10.1.1" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.1.1" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.1.1" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.1.1" />
 ```
 
 ## Logging Configuration
@@ -383,11 +383,21 @@ if (result.IsSuccess)
 {
     // access result.Value without manually reading the HTTP payload
 }
+
+// Keep the same transport and RFC 7807 handling for a non-JSON success body.
+var download = await httpClient.SendForResultAsync(
+    () => new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}/invoice"),
+    static async (response, cancellationToken) =>
+        await response.Content.ReadAsByteArrayAsync(cancellationToken));
 ```
 
-The helpers use the existing `HttpResponseMessage` converters, so non-success status codes automatically map to a
-`Problem` with the response body and status code.
-success responses map to `200 OK`/`204 No Content` while failures become RFC 7807 problem details. Native `Microsoft.AspNetCore.Http.IResult`
+The helpers use the existing `HttpResponseMessage` converters. A successful response carries the raw JSON payload
+emitted by `WithCommunicationResults()`; serialized `Result<T>` envelopes are rejected. Non-success RFC 7807 responses
+are deserialized back into `Problem`, preserving `type`, `title`, `detail`, `instance`, and extension members. Plain-text
+error bodies remain supported when the remote endpoint does not implement RFC 7807.
+Connection failures and client-side timeouts become failed results with `503` and `504`; explicit caller cancellation
+still propagates `OperationCanceledException`.
+Endpoint-filter success responses map to `200 OK`/`204 No Content` while failures become RFC 7807 problem details. Native `Microsoft.AspNetCore.Http.IResult`
 responses pass through unchanged, so you can mix and match traditional Minimal API patterns with ManagedCode.Communication results.
 
 ### Console Application Setup
@@ -759,6 +769,16 @@ An outcome converts to its `Result<TResult>` implicitly, so it can be returned w
 | `ToOutcomeAsync()` | result, progress, chunks | tests, audit logs, replaying what happened |
 | `ToChunkListAsync()` | every chunk | you will interpret them yourself |
 | `chunks.ToStreamResult()` | — | you already have the chunks in hand |
+
+When one Minimal API handler must choose at runtime between a CQRS stream and another HTTP response, keep the
+handler typed as `IResult` and use the same library-owned SSE transport explicitly:
+
+```csharp
+return CqrsStreamHttpResults.ServerSentEvents(updates);
+```
+
+This uses the same normalization, event names, sequence ids, and terminal-chunk guarantees as
+`WithCommunicationCqrsResults()`; do not add a second SSE writer in application code.
 
 The name says what comes back: the `To…Async` methods return the answer, `AsCqrsStream` returns a stream.
 

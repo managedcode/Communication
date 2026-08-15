@@ -137,7 +137,7 @@ internal static class CqrsStreamResultFactory
         return match;
     }
 
-    private static AspNetResult ToServerSentEventsResult<TProgress, TResult>(
+    internal static AspNetResult ToServerSentEventsResult<TProgress, TResult>(
         IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> updates,
         CqrsStreamServerOptions options)
     {
@@ -162,5 +162,27 @@ internal static class CqrsStreamResultFactory
                 EventId = chunk.EventId ?? chunk.Sequence?.ToString(CultureInfo.InvariantCulture)
             };
         }
+    }
+}
+
+/// <summary>
+///     Creates typed Minimal API results for CQRS chunk streams when a handler needs to select between an SSE stream
+///     and another HTTP result at runtime.
+/// </summary>
+public static class CqrsStreamHttpResults
+{
+    /// <summary>
+    ///     Writes <paramref name="updates" /> as the same normalized Server-Sent Events contract used by
+    ///     <c>WithCommunicationCqrsResults()</c>.
+    /// </summary>
+    public static AspNetResult ServerSentEvents<TProgress, TResult>(
+        IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> updates,
+        CqrsStreamServerOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(updates);
+
+        return CqrsStreamResultFactory.ToServerSentEventsResult(
+            updates,
+            options ?? CqrsStreamServerOptions.Default);
     }
 }

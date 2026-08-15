@@ -19,6 +19,9 @@ always check all test are passed.
 - Keep documentation aligned with the current major version (for this repository now: version 10); do not add cross-major migration sections unless explicitly requested.
 - When behavior changes in Result/Problem flows, include a clear README update with concrete usage examples.
 - When a framework adapter catches an exception and converts it into a failed `Result`, it must log the original exception object before returning the failure so distributed traces keep the real stack trace.
+- Keep one forward-only HTTP wire contract: `WithCommunicationResults()` emits a raw success payload or RFC 7807 failure, and `HttpClient.SendForResultAsync<T>()` consumes exactly that shape. Do not retain serialized `Result<T>` envelope compatibility.
+- For file, optional, or other non-JSON success bodies, use the `SendForResultAsync` success-projection overload so the library still owns transport and RFC 7807 failures; do not add application-specific failure parsers.
+- When one Minimal API route dynamically selects between a CQRS stream and another HTTP result, use `CqrsStreamHttpResults.ServerSentEvents(stream)`; do not return `object` or implement a second SSE writer in the application.
 
 # Repository Guidelines
 
