@@ -83,6 +83,8 @@ the core package as static methods on `Result`.
 | --- | --- |
 | `InvalidOperationException`, `NotSupportedException`, `InvalidCastException`, `NullReferenceException`, `IndexOutOfRangeException` now map to **500**, not 400 | They mean the server reached a state its own code did not allow for. As 400 they blamed the caller and stayed out of every 5xx alert. Override per type with `ExceptionStatusCodeMap`. |
 | `Result<T>.Value` and the `CollectionResult<T>` members are `init`-only | A settable value let callers put a payload on a failed result, contradicting the nullable annotations. |
+| `Result`, `Result<T>` and the CQRS chunk have dedicated JSON converters | The default path fell back to reflection because these structs mix `init` members with a private `[JsonInclude]` field, costing ~512 bytes per deserialized `Result<T>` on top of the payload. The wire shape is unchanged. |
+| Empty members are omitted from a CQRS chunk | `final`, `message`, `eventId` and the default `eventType` are no longer written. An absent member reads back exactly like an explicit null, and the default event name is implied by `kind` — the SSE transport also carries it in the frame's own `event:` field. Compatible in both directions with 10.0.x. |
 | A successful `Result<T>` always writes `value` | `Result<int>.Succeed(0)` used to serialize as `{"isSuccess":true}`, indistinguishable to a non-.NET client from carrying nothing. Failed results now include `"value":null`. |
 | `HttpStatusCodeHelper.GetStatusCodeForException(null)` throws | It silently returned a status for a missing exception. |
 | Command factories take `commandId` as an optional **trailing** parameter | It used to be the first parameter of a parallel set of overloads, so it read as required and invited callers to pass a fresh `Guid.NewGuid()` — noise at best, and on a retry path it silently defeats idempotency. `Command.Create(id, type)` becomes `Command.Create(type, id)`. |
@@ -1608,6 +1610,53 @@ public class UserGrain : Grain, IUserGrain
    caller that touches it, poisoning every later use. Create one per failure, or use a factory method.
 6. **Prefer the `CancellationToken` overloads** of the idempotency helpers. `Func<Task<T>>` cannot observe
    cancellation, so a timeout or a cancelled caller has to wait for the operation to finish on its own.
+
+### Serialization cost
+
+`Result`, `Result<T>` and `CqrsStreamChunk<,>` carry hand-written `System.Text.Json` converters, attached to the
+types themselves — you get them with any `JsonSerializerOptions`, without registering anything.
+
+They exist because the default path is expensive for these particular shapes: a struct that mixes `init`-only
+members with a private `[JsonInclude]` field pushes `System.Text.Json` onto a reflection-driven path.
+Measured, per operation:
+
+| | before | after |
+| --- | --- | --- |
+| Deserialize `Result<T>` | 688 B | 208 B |
+| Deserialize a stream chunk | 872 B | 344 B |
+| Serialize a stream chunk | 600 B | 176 B |
+| Chunk size on the wire | 219 B | 148 B |
+
+`CollectionResult<T>` needs no converter — it has no private serialized field, so the default path costs it only
+~56 bytes over the items themselves.
+
+What is left is close to the floor. Deserializing a progress chunk allocates 216 bytes, but 136 of those are the
+chunk object and 48 are the payload string inside it — both of which any code path would have to allocate. The
+serializer's own share is about 32 bytes.
+
+On the client, chunks are deserialized straight from each frame's UTF-8 bytes rather than from a string per
+frame, and the JSON contract is resolved once per stream instead of once per frame. Reading a 20 000-frame
+stream end to end costs about 292 bytes per frame against 171 bytes of payload on the wire.
+
+#### Give a streamed payload an `init` property, not a constructor parameter
+
+This one is worth more than everything above put together, and it is in your code rather than in this library.
+`System.Text.Json` deserializes a type with a parameterized constructor through a different path than one it can
+populate property by property, and that path allocates. Per object, on the same JSON:
+
+| Payload shape | Allocated |
+| --- | --- |
+| `record Progress(string State)` | 176 B |
+| `record Progress { public string? State { get; init; } }` | 72 B |
+| `class Progress { public string? State { get; init; } }` | 72 B |
+| `class Progress { public string? State { get; set; } }` | 72 B |
+
+The positional record costs 104 bytes more per object for no benefit — the `init` record is just as immutable.
+On a stream running at a thousand chunks a second that is 100 KB/s of pure garbage, so prefer the second form
+for progress and result payloads. Everywhere else the difference is too small to think about.
+
+`ManagedCode.Communication.Tests/Results/SerializationAllocationTests.cs` holds allocation budgets for all of
+this, so a regression fails the build rather than going unnoticed.
 
 ## Behaviour Notes
 

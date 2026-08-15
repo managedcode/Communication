@@ -237,7 +237,6 @@ public class CqrsStreamChunkTests
         var root = document.RootElement;
 
         root.GetProperty("kind").GetString().ShouldBe(nameof(CqrsStreamChunkKind.Started));
-        root.GetProperty("eventType").GetString().ShouldBe(Chunk.StartedEventType);
         root.GetProperty("sequence").GetInt64().ShouldBe(1);
 
         // Derived helpers are for consumers, not for the wire.
@@ -246,6 +245,35 @@ public class CqrsStreamChunkTests
         root.TryGetProperty("isCompleted", out _).ShouldBeFalse();
         root.TryGetProperty("isFailed", out _).ShouldBeFalse();
         root.TryGetProperty("problem", out _).ShouldBeFalse();
+
+        // Members that carry nothing stay off the wire: an absent member reads back exactly like a null one.
+        root.TryGetProperty("final", out _).ShouldBeFalse();
+        root.TryGetProperty("message", out _).ShouldBeFalse();
+        root.TryGetProperty("eventId", out _).ShouldBeFalse();
+
+        // The default event name is implied by Kind — and the SSE transport writes it into the frame's own
+        // event: field — so repeating it in the body is pure payload.
+        root.TryGetProperty("eventType", out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Serialization_KeepsACustomEventTypeOnTheWire()
+    {
+        var chunk = Chunk.Started(eventType: "order-placed", sequence: 1);
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(chunk, Json));
+
+        document.RootElement.GetProperty("eventType").GetString().ShouldBe("order-placed");
+    }
+
+    [Fact]
+    public void Deserialization_RebuildsTheDefaultEventTypeWhenItWasOmitted()
+    {
+        var original = Chunk.Progress(new ProgressUpdate("running"), sequence: 2);
+        var json = JsonSerializer.Serialize(original, Json);
+
+        json.ShouldNotContain("eventType");
+        JsonSerializer.Deserialize<Chunk>(json, Json)!.EventType.ShouldBe(Chunk.ProgressEventType);
     }
 
     [Fact]

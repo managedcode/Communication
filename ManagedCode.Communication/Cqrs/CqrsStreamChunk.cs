@@ -72,22 +72,26 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     ///     Progress payload. Set for <see cref="CqrsStreamChunkKind.Started" /> and
     ///     <see cref="CqrsStreamChunkKind.Progress" /> chunks.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Result<TProgress>? ProgressResult { get; init; }
 
     /// <summary>
     ///     Terminal payload. Set for <see cref="CqrsStreamChunkKind.Completed" /> and
     ///     <see cref="CqrsStreamChunkKind.Failed" /> chunks.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Result<TResult>? Final { get; init; }
 
     /// <summary>
     ///     Human-readable chunk message.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Message { get; init; }
 
     /// <summary>
     ///     SSE <c>event:</c> name for this chunk. Falls back to the <see cref="Kind" /> default when unset or blank.
     /// </summary>
+    [JsonIgnore]
     public string EventType
     {
         get => string.IsNullOrWhiteSpace(_eventType) ? ResolveEventType(Kind) : _eventType;
@@ -95,8 +99,27 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     }
 
     /// <summary>
+    ///     The event name as stored: <c>null</c> whenever it is simply the default for <see cref="Kind" />.
+    /// </summary>
+    /// <remarks>
+    ///     Serializing the raw field rather than the resolved value keeps the default off the wire entirely — it
+    ///     is already implied by <see cref="Kind" />, and the SSE transport writes it into the frame's
+    ///     <c>event:</c> field as well. Readers rebuild it through <see cref="EventType" />, so nothing is lost.
+    /// </remarks>
+    [JsonInclude]
+    [JsonPropertyName("eventType")]
+    [JsonPropertyOrder(5)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    internal string? StoredEventType
+    {
+        get => _eventType;
+        init => _eventType = value;
+    }
+
+    /// <summary>
     ///     SSE <c>id:</c> value. When unset, the transport derives one from <see cref="Sequence" />.
     /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? EventId { get; init; }
 
     /// <summary>

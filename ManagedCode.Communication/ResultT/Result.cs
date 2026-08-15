@@ -14,6 +14,7 @@ namespace ManagedCode.Communication;
 /// </summary>
 /// <typeparam name="T">The type of the result value.</typeparam>
 [Serializable]
+[JsonConverter(typeof(ResultTJsonConverterFactory))]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Problem: {Problem?.Title}")]
 public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResultValueFactory<Result<T>, T>
 {

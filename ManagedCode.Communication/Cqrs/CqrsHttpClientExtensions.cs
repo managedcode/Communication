@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Net.ServerSentEvents;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Constants;
@@ -236,31 +237,27 @@ public static class CqrsHttpClientExtensions
 
         var jsonOptions = options.ResolveJsonOptions();
 
+        // Resolved once per stream rather than once per frame: passing the options instead makes the serializer
+        // look the contract up on every single chunk, which is pure overhead in a loop that may run for hours.
+        var chunkTypeInfo = (JsonTypeInfo<CqrsStreamChunk<TProgress, TResult>>)jsonOptions
+            .GetTypeInfo(typeof(CqrsStreamChunk<TProgress, TResult>));
+
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        var parser = SseParser.Create(stream);
+
+        // Deserialize straight from each frame's UTF-8 bytes. Reading frames as strings first would allocate one
+        // string per frame purely to hand it to the serializer — a third of this path's total allocation. The
+        // parser delegate cannot yield or throw usefully, so it reports the decode outcome as a value and the
+        // policy below acts on it.
+        var parser = SseParser.Create(stream, (eventType, data) => DecodeFrame(eventType, data, chunkTypeInfo));
 
         await foreach (var item in parser.EnumerateAsync(cancellationToken).ConfigureAwait(false))
         {
+            var (chunk, decodeError, isKeepAlive) = item.Data;
+
             // Keep-alive and heartbeat frames carry no payload; they are not protocol errors.
-            if (string.IsNullOrWhiteSpace(item.Data))
+            if (isKeepAlive)
             {
                 continue;
-            }
-
-            CqrsStreamChunk<TProgress, TResult>? chunk;
-            string? decodeError;
-
-            try
-            {
-                chunk = JsonSerializer.Deserialize<CqrsStreamChunk<TProgress, TResult>>(item.Data, jsonOptions);
-                decodeError = chunk is null
-                    ? $"Frame '{item.EventType}' decoded to a null CQRS stream chunk."
-                    : null;
-            }
-            catch (JsonException exception)
-            {
-                chunk = null;
-                decodeError = $"Frame '{item.EventType}' is not a valid CQRS stream chunk: {exception.Message}";
             }
 
             if (decodeError is null)
@@ -286,6 +283,53 @@ public static class CqrsHttpClientExtensions
                     yield break;
             }
         }
+    }
+
+    /// <summary>
+    ///     The outcome of decoding one Server-Sent Events frame.
+    /// </summary>
+    /// <remarks>
+    ///     A value rather than an exception: the parser delegate runs inside the BCL's frame reader, where a throw
+    ///     would tear down the whole enumeration and leave <see cref="CqrsStreamClientOptions.MalformedChunkBehavior" />
+    ///     no say in the matter.
+    /// </remarks>
+    private readonly record struct FrameDecode<TProgress, TResult>(
+        CqrsStreamChunk<TProgress, TResult>? Chunk,
+        string? Error,
+        bool IsKeepAlive);
+
+    private static FrameDecode<TProgress, TResult> DecodeFrame<TProgress, TResult>(
+        string eventType,
+        ReadOnlySpan<byte> data,
+        JsonTypeInfo<CqrsStreamChunk<TProgress, TResult>> chunkTypeInfo)
+    {
+        if (IsBlank(data))
+        {
+            return new FrameDecode<TProgress, TResult>(null, null, IsKeepAlive: true);
+        }
+
+        try
+        {
+            var chunk = JsonSerializer.Deserialize(data, chunkTypeInfo);
+
+            return chunk is null
+                ? new FrameDecode<TProgress, TResult>(null, $"Frame '{eventType}' decoded to a null CQRS stream chunk.", false)
+                : new FrameDecode<TProgress, TResult>(chunk, null, false);
+        }
+        catch (JsonException exception)
+        {
+            return new FrameDecode<TProgress, TResult>(
+                null,
+                $"Frame '{eventType}' is not a valid CQRS stream chunk: {exception.Message}",
+                false);
+        }
+    }
+
+    // Vectorised rather than a byte loop: every frame pays this check, including the keep-alives a long-lived
+    // stream is mostly made of.
+    private static bool IsBlank(ReadOnlySpan<byte> data)
+    {
+        return data.IndexOfAnyExcept(" \t\r\n"u8) < 0;
     }
 
     private static async Task<CqrsStreamChunk<TProgress, TResult>> CreateFailureChunkAsync<TProgress, TResult>(

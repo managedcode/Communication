@@ -13,6 +13,7 @@ namespace ManagedCode.Communication;
 ///     Represents a result of an operation.
 /// </summary>
 [Serializable]
+[JsonConverter(typeof(ResultJsonConverter))]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Problem: {Problem?.Title}")]
 public partial struct Result : IResult, IResultFactory<Result>
 {
