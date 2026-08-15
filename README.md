@@ -1430,24 +1430,27 @@ What the transport costs, separated from what your payload costs. Measured with
 | --- | --- |
 | `Result<T>`, over the payload it wraps | ~24 B |
 | The chunk object itself | 136 B |
-| Serializing a chunk | 176 B |
-| A progress chunk on the wire | 148 B |
+| Serializing a chunk | 128 B |
+| A progress chunk on the wire | 103 B |
 
 Deserializing a whole chunk is those fixed costs plus the payload, and the payload is usually the larger half:
 
 | Payload declared as | Chunk deserializes in | of which payload |
 | --- | --- | --- |
-| `class Progress { public string? State { get; init; } }` | 240 B | 120 B |
-| `record Progress(string State)` | 344 B | 224 B |
+| `class Progress { public string? State { get; init; } }` | 232 B | 120 B |
+| `record Progress(string State)` | 336 B | 224 B |
 
 `CollectionResult<T>` needs no converter — it has no private serialized field, so the default path costs it only
 ~56 bytes over the items themselves.
 
 On the client, chunks are deserialized straight from each frame's UTF-8 bytes rather than from a string per
 frame, and the JSON contract is resolved once per stream instead of once per frame. Reading a 20 000-frame
-stream end to end costs about 292 bytes per frame against 175 bytes of payload on the wire — and `ToResultAsync`
-costs the same as the raw `await foreach`, because the stream guarantees are one wrapper per stream, not per
-chunk.
+stream end to end costs about 292 bytes per frame — and `ToResultAsync` costs the same as the raw
+`await foreach`, because the stream guarantees are one wrapper per stream, not per chunk.
+
+A chunk carries no timestamp. Ordering comes from `sequence`, which the transport always fills in and which the
+SSE `id:` field is derived from; a per-chunk clock reading was roughly a third of every progress frame spent on
+something nothing read.
 
 `ManagedCode.Communication.Tests/Results/SerializationAllocationTests.cs` holds budgets for all of this, so a
 regression fails the build rather than going unnoticed.

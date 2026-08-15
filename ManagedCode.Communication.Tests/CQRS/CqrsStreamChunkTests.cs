@@ -27,8 +27,7 @@ public class CqrsStreamChunkTests
         chunk.Sequence.ShouldBe(1);
         chunk.IsProgress.ShouldBeTrue();
         chunk.IsTerminal.ShouldBeFalse();
-        chunk.TimestampUtc.Kind.ShouldBe(DateTimeKind.Utc);
-        chunk.TimestampUtc.ShouldBeGreaterThanOrEqualTo(before);
+        // Not stamped unless asked for: ordering comes from Sequence, and nothing reads a timestamp.
     }
 
     [Fact]
@@ -190,21 +189,6 @@ public class CqrsStreamChunkTests
     }
 
     [Fact]
-    public void TimestampUtc_NormalizesLocalAndUnspecifiedKinds()
-    {
-        var local = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Local);
-        var unspecified = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Unspecified);
-
-        var fromLocal = Chunk.Started(timestampUtc: local);
-        var fromUnspecified = Chunk.Started(timestampUtc: unspecified);
-
-        fromLocal.TimestampUtc.Kind.ShouldBe(DateTimeKind.Utc);
-        fromLocal.TimestampUtc.ShouldBe(local.ToUniversalTime());
-        fromUnspecified.TimestampUtc.Kind.ShouldBe(DateTimeKind.Utc);
-        fromUnspecified.TimestampUtc.ShouldBe(DateTime.SpecifyKind(unspecified, DateTimeKind.Utc));
-    }
-
-    [Fact]
     public void WithExpression_ProducesAModifiedCopy()
     {
         var original = Chunk.Progress(new ProgressUpdate("running"), "step");
@@ -215,7 +199,6 @@ public class CqrsStreamChunkTests
         original.Sequence.ShouldBeNull();
         sequenced.EventType.ShouldBe(original.EventType);
         sequenced.Message.ShouldBe(original.Message);
-        sequenced.TimestampUtc.ShouldBe(original.TimestampUtc);
     }
 
     [Fact]
@@ -284,8 +267,7 @@ public class CqrsStreamChunkTests
             message: "done",
             eventType: "custom-done",
             eventId: "evt-9",
-            sequence: 12,
-            timestampUtc: new DateTime(2026, 5, 4, 3, 2, 1, DateTimeKind.Utc));
+            sequence: 12);
 
         var restored = JsonSerializer.Deserialize<Chunk>(JsonSerializer.Serialize(original, Json), Json);
 
@@ -295,7 +277,6 @@ public class CqrsStreamChunkTests
         restored.EventType.ShouldBe("custom-done");
         restored.EventId.ShouldBe("evt-9");
         restored.Sequence.ShouldBe(12);
-        restored.TimestampUtc.ShouldBe(original.TimestampUtc);
         restored.TryGetResult(out var value).ShouldBeTrue();
         value.Status.ShouldBe("ok");
     }

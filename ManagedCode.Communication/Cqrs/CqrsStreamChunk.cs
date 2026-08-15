@@ -26,7 +26,6 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     public const string FailedEventType = "cqrs-failed";
 
     private readonly string? _eventType;
-    private readonly DateTime _timestampUtc = DateTime.UtcNow;
 
     /// <summary>
     ///     Creates an empty chunk. Present for serializers; prefer the named factory methods.
@@ -36,8 +35,8 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     }
 
     /// <summary>
-    ///     Creates a fully specified chunk. Prefer <see cref="Started" />, <see cref="Progress(Result{TProgress},string,string,string,long?,DateTime?)" />,
-    ///     <see cref="Completed(Result{TResult},string,string,string,long?,DateTime?)" /> or <see cref="Failed(Result{TResult},string?,string?,string?,long?,DateTime?)" />.
+    ///     Creates a fully specified chunk. Prefer <see cref="Started" />, <see cref="Progress(Result{TProgress},string,string,string,long?)" />,
+    ///     <see cref="Completed(Result{TResult},string,string,string,long?)" /> or <see cref="Failed(Result{TResult},string?,string?,string?,long?)" />.
     /// </summary>
     public CqrsStreamChunk(
         CqrsStreamChunkKind kind,
@@ -46,8 +45,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         string? message = null,
         string? eventType = null,
         string? eventId = null,
-        long? sequence = null,
-        DateTime? timestampUtc = null)
+        long? sequence = null)
     {
         Kind = kind;
         ProgressResult = progressResult;
@@ -56,11 +54,6 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         EventType = eventType!;
         EventId = eventId;
         Sequence = sequence;
-
-        if (timestampUtc.HasValue)
-        {
-            TimestampUtc = timestampUtc.Value;
-        }
     }
 
     /// <summary>
@@ -133,16 +126,6 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     /// </summary>
     [JsonPropertyName(CommunicationJsonNames.Sequence)]
     public long? Sequence { get; init; }
-
-    /// <summary>
-    ///     UTC timestamp for diagnostics and ordering. Always normalized to <see cref="DateTimeKind.Utc" />.
-    /// </summary>
-    [JsonPropertyName(CommunicationJsonNames.TimestampUtc)]
-    public DateTime TimestampUtc
-    {
-        get => _timestampUtc;
-        init => _timestampUtc = NormalizeToUtc(value);
-    }
 
     /// <summary>
     ///     True when this chunk carries an in-flight progress payload.
@@ -225,8 +208,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         string? message = null,
         string? eventType = null,
         string? eventId = null,
-        long? sequence = null,
-        DateTime? timestampUtc = null)
+        long? sequence = null)
     {
         return new CqrsStreamChunk<TProgress, TResult>(
             CqrsStreamChunkKind.Started,
@@ -235,8 +217,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
             message,
             eventType,
             eventId,
-            sequence,
-            timestampUtc);
+            sequence);
     }
 
     /// <summary>
@@ -247,8 +228,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         string? message = null,
         string? eventType = null,
         string? eventId = null,
-        long? sequence = null,
-        DateTime? timestampUtc = null)
+        long? sequence = null)
     {
         return new CqrsStreamChunk<TProgress, TResult>(
             CqrsStreamChunkKind.Progress,
@@ -257,8 +237,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
             message,
             eventType,
             eventId,
-            sequence,
-            timestampUtc);
+            sequence);
     }
 
     /// <summary>
@@ -281,8 +260,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         string? message = null,
         string? eventType = null,
         string? eventId = null,
-        long? sequence = null,
-        DateTime? timestampUtc = null)
+        long? sequence = null)
     {
         if (!final.IsSuccess)
         {
@@ -296,8 +274,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
             message,
             eventType,
             eventId,
-            sequence,
-            timestampUtc);
+            sequence);
     }
 
     /// <summary>
@@ -320,8 +297,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         string? message = null,
         string? eventType = null,
         string? eventId = null,
-        long? sequence = null,
-        DateTime? timestampUtc = null)
+        long? sequence = null)
     {
         if (final.IsSuccess)
         {
@@ -335,8 +311,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
             message,
             eventType,
             eventId,
-            sequence,
-            timestampUtc);
+            sequence);
     }
 
     /// <summary>
@@ -347,12 +322,11 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         string? message = null,
         string? eventType = null,
         string? eventId = null,
-        long? sequence = null,
-        DateTime? timestampUtc = null)
+        long? sequence = null)
     {
         ArgumentNullException.ThrowIfNull(problem);
 
-        return Failed(Result<TResult>.Fail(problem), message, eventType, eventId, sequence, timestampUtc);
+        return Failed(Result<TResult>.Fail(problem), message, eventType, eventId, sequence);
     }
 
     /// <summary>
@@ -361,7 +335,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     /// <remarks>
     ///     Named rather than another <c>Failed</c> overload on purpose: <see cref="Result{TResult}" /> defines implicit
     ///     conversions from both <see cref="Exception" /> and <see cref="Problem" />, so an <c>Failed(Exception)</c>
-    ///     overload would be ambiguous with <see cref="Failed(Result{TResult},string?,string?,string?,long?,DateTime?)" />
+    ///     overload would be ambiguous with <see cref="Failed(Result{TResult},string?,string?,string?,long?)" />
     ///     at every call site.
     /// </remarks>
     public static CqrsStreamChunk<TProgress, TResult> FromException(
@@ -389,13 +363,4 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         };
     }
 
-    private static DateTime NormalizeToUtc(DateTime value)
-    {
-        return value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
-    }
 }

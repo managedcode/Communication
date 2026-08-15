@@ -69,9 +69,6 @@ public static class CommunicationJsonNames
     /// <summary>Monotonic position of a chunk within its stream.</summary>
     public const string Sequence = "sequence";
 
-    /// <summary>UTC timestamp of a chunk.</summary>
-    public const string TimestampUtc = "timestampUtc";
-
     // ------------------------------------------------------------------------------------------------
     // Problem (RFC 7807). These five names are fixed by the specification, not by this library.
     // ------------------------------------------------------------------------------------------------

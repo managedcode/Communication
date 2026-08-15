@@ -35,8 +35,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
             Result<OrleansReport>.Succeed(new OrleansReport("done")),
             message: "all good",
             eventId: "evt-1",
-            sequence: 7,
-            timestampUtc: new DateTime(2026, 3, 2, 1, 0, 0, DateTimeKind.Utc));
+            sequence: 7);
 
         var echoed = await grain.EchoChunkAsync(original);
 
@@ -45,7 +44,6 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         echoed.EventId.ShouldBe("evt-1");
         echoed.EventType.ShouldBe(CqrsStreamChunk<OrleansProgress, OrleansReport>.CompletedEventType);
         echoed.Sequence.ShouldBe(7);
-        echoed.TimestampUtc.ShouldBe(original.TimestampUtc);
         echoed.TryGetResult(out var report).ShouldBeTrue();
         report.Status.ShouldBe("done");
     }

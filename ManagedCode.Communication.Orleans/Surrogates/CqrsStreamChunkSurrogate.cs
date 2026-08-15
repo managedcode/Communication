@@ -25,8 +25,7 @@ public struct CqrsStreamChunkSurrogate<TProgress, TResult>
         string? message,
         string eventType,
         string? eventId,
-        long? sequence,
-        DateTime timestampUtc)
+        long? sequence)
     {
         Kind = kind;
         ProgressResult = progressResult;
@@ -35,7 +34,6 @@ public struct CqrsStreamChunkSurrogate<TProgress, TResult>
         EventType = eventType;
         EventId = eventId;
         Sequence = sequence;
-        TimestampUtc = timestampUtc;
     }
 
     /// <summary>
@@ -72,9 +70,4 @@ public struct CqrsStreamChunkSurrogate<TProgress, TResult>
     ///     Position of the chunk in the stream.
     /// </summary>
     [Id(6)] public long? Sequence;
-
-    /// <summary>
-    ///     Chunk timestamp (UTC).
-    /// </summary>
-    [Id(7)] public DateTime TimestampUtc;
 }

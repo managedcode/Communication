@@ -24,8 +24,7 @@ public sealed class CqrsStreamChunkSurrogateConverter<TProgress, TResult>
             surrogate.Message,
             surrogate.EventType,
             surrogate.EventId,
-            surrogate.Sequence,
-            surrogate.TimestampUtc);
+            surrogate.Sequence);
     }
 
     /// <summary>
@@ -41,7 +40,6 @@ public sealed class CqrsStreamChunkSurrogateConverter<TProgress, TResult>
             value.Message,
             value.EventType,
             value.EventId,
-            value.Sequence,
-            value.TimestampUtc);
+            value.Sequence);
     }
 }
