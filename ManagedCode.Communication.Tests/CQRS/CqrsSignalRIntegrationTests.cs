@@ -144,9 +144,10 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
     {
         var seen = new List<string>();
 
+        // One call, and no AsCqrsStream: draining applies the guarantees itself, so a SignalR stream reads
+        // exactly like the HTTP one.
         var result = await _connection
             .StreamAsync<CqrsStreamChunk<HubProgress, HubReport>>("StreamCommand")
-            .AsCqrsStream()
             .ToResultAsync(progress => seen.Add(progress.State));
 
         result.IsSuccess.ShouldBeTrue();
@@ -155,11 +156,23 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
     }
 
     [Fact]
+    public async Task AFaultingHubStreamBecomesAFailedResultRatherThanAThrow()
+    {
+        // The hub method does not normalize and throws part-way through; without this the caller would catch a
+        // HubException instead of reading a Problem.
+        var result = await _connection
+            .StreamAsync<CqrsStreamChunk<HubProgress, HubReport>>("StreamRawThatThrows")
+            .ToResultAsync();
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldNotBeNull();
+    }
+
+    [Fact]
     public async Task AClientSideStreamThatNeverTerminatesFailsRatherThanStopsQuietly()
     {
         var result = await _connection
             .StreamAsync<CqrsStreamChunk<HubProgress, HubReport>>("StreamRawWithoutTerminal")
-            .AsCqrsStream()
             .ToResultAsync();
 
         result.IsFailed.ShouldBeTrue();

@@ -13,6 +13,12 @@ namespace ManagedCode.Communication.CQRS;
 ///     about what a stream that simply stops means. These do it once: progress is handed to a callback as it
 ///     arrives and the terminal chunk becomes a <see cref="Result{TResult}" />.
 ///     <para>
+///         <c>ToResultAsync</c> and <c>ToOutcomeAsync</c> apply the stream guarantees themselves, so they work on
+///         a raw SignalR, Orleans or gRPC stream in a single call — a transport that faults part-way through
+///         comes back as a failed <see cref="Result{TResult}" /> rather than throwing out of your loop. Reach for
+///         <see cref="AsCqrsStream{TProgress,TResult}" /> only when you want to keep iterating chunk by chunk.
+///     </para>
+///     <para>
 ///         Every method returns <see cref="Task{TResult}" /> rather than <c>ValueTask</c> so the async railway
 ///         operators chain straight onto the call — see the examples on <c>ToResultAsync</c>.
 ///     </para>
@@ -77,7 +83,9 @@ public static class CqrsStreamExtensions
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>
     ///     The terminal result. A stream that ends without a terminal chunk fails with
-    ///     <see cref="CqrsStreamProblems.IncompleteStream" /> rather than returning a success that never happened.
+    ///     <see cref="CqrsStreamProblems.IncompleteStream" /> rather than returning a success that never happened,
+    ///     and one that faults mid-flight fails with a <see cref="Problem" /> built from the exception. Only
+    ///     cancellation propagates.
     /// </returns>
     /// <example>
     ///     <code>
@@ -106,10 +114,17 @@ public static class CqrsStreamExtensions
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The terminal result.</returns>
     /// <example>
+    ///     Over HTTP:
     ///     <code>
     ///     var report = await client
     ///         .GetForCqrsStreamAsync&lt;ImportProgress, ImportReport&gt;("/import")
     ///         .ToResultAsync(progress =&gt; Console.WriteLine($"{progress.Percent}%"));
+    ///     </code>
+    ///     Over SignalR, unchanged — the guarantees are applied here, not by the transport:
+    ///     <code>
+    ///     var report = await hub
+    ///         .StreamAsync&lt;CqrsStreamChunk&lt;ImportProgress, ImportReport&gt;&gt;("Import", token)
+    ///         .ToResultAsync(progress =&gt; Console.WriteLine($"{progress.Percent}%"), token);
     ///     </code>
     /// </example>
     public static Task<Result<TResult>> ToResultAsync<TProgress, TResult>(
@@ -177,7 +192,9 @@ public static class CqrsStreamExtensions
         var progress = new List<TProgress>();
         Result<TResult>? terminal = null;
 
-        await foreach (var chunk in stream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        var guarded = Guarded(stream, cancellationToken);
+
+        await foreach (var chunk in guarded.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             chunks.Add(chunk);
 
@@ -209,6 +226,11 @@ public static class CqrsStreamExtensions
     /// <param name="stream">The stream to drain.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Every chunk, in order.</returns>
+    /// <remarks>
+    ///     Unlike <c>ToResultAsync</c> and <c>ToOutcomeAsync</c>, this one does <b>not</b> apply the guarantees:
+    ///     it hands back exactly what arrived, so a faulting transport still throws. Put
+    ///     <see cref="AsCqrsStream{TProgress,TResult}" /> in front of it when that matters.
+    /// </remarks>
     public static async Task<List<CqrsStreamChunk<TProgress, TResult>>> ToChunkListAsync<TProgress, TResult>(
         this IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> stream,
         CancellationToken cancellationToken = default)
@@ -264,7 +286,9 @@ public static class CqrsStreamExtensions
     {
         ArgumentNullException.ThrowIfNull(stream);
 
-        await foreach (var chunk in stream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        var guarded = Guarded(stream, cancellationToken);
+
+        await foreach (var chunk in guarded.WithCancellation(cancellationToken).ConfigureAwait(false))
         {
             if ((onProgress is not null || onProgressAsync is not null) && chunk.TryGetProgress(out var payload))
             {
@@ -283,6 +307,21 @@ public static class CqrsStreamExtensions
         }
 
         return Result<TResult>.Fail(CqrsStreamProblems.Incomplete());
+    }
+
+    /// <summary>
+    ///     Applies the stream guarantees before draining, so these methods work directly on a raw transport
+    ///     stream without the caller having to remember <see cref="AsCqrsStream{TProgress,TResult}" /> first.
+    /// </summary>
+    /// <remarks>
+    ///     Applying it twice is harmless — numbering and the terminal chunk are both already-satisfied no-ops on
+    ///     a stream that has been normalized once.
+    /// </remarks>
+    private static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> Guarded<TProgress, TResult>(
+        IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> stream,
+        CancellationToken cancellationToken)
+    {
+        return CqrsStream.Normalize(stream, cancellationToken: cancellationToken);
     }
 
     /// <summary>

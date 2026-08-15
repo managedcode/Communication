@@ -168,6 +168,84 @@ public class CqrsStreamExtensionsTests
     }
 
     [Fact]
+    public async Task AStreamThatThrowsBecomesAFailedResultInOneCall()
+    {
+        // No AsCqrsStream in front: draining applies the guarantees itself, so a raw transport that faults does
+        // not throw out of the caller's await.
+        var result = await Exploding().ToResultAsync();
+
+        result.IsFailed.ShouldBeTrue();
+        result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
+        result.Problem!.Detail.ShouldBe("transport died");
+
+        static async IAsyncEnumerable<Chunk> Exploding()
+        {
+            yield return CqrsTestStreams.Started();
+            await Task.Yield();
+            throw new InvalidOperationException("transport died");
+        }
+    }
+
+    [Fact]
+    public async Task ProgressReportedBeforeAFaultStillReachesTheCallback()
+    {
+        var seen = new List<string>();
+
+        var result = await Exploding().ToResultAsync(progress => seen.Add(progress.State));
+
+        seen.ShouldBe(["started"]);
+        result.IsFailed.ShouldBeTrue();
+
+        static async IAsyncEnumerable<Chunk> Exploding()
+        {
+            yield return CqrsTestStreams.Started();
+            await Task.Yield();
+            throw new InvalidOperationException("transport died");
+        }
+    }
+
+    [Fact]
+    public async Task ChunksAreNumberedEvenWhenTheSourceDidNotNumberThem()
+    {
+        var outcome = await Unnumbered().ToOutcomeAsync();
+
+        outcome.Chunks.Select(chunk => chunk.Sequence).ShouldBe([1L, 2L]);
+
+        static async IAsyncEnumerable<Chunk> Unnumbered()
+        {
+            await Task.CompletedTask;
+            yield return CqrsTestStreams.Started();
+            yield return CqrsTestStreams.Completed("done");
+        }
+    }
+
+    [Fact]
+    public async Task ApplyingTheGuaranteesTwiceChangesNothing()
+    {
+        // AsCqrsStream is no longer needed in front of a drain, but putting it there must stay harmless.
+        var once = await ThreeChunkStream().ToOutcomeAsync();
+        var twice = await ThreeChunkStream().AsCqrsStream().ToOutcomeAsync();
+
+        twice.Chunks.Count.ShouldBe(once.Chunks.Count);
+        twice.Chunks.Select(c => c.Sequence).ShouldBe(once.Chunks.Select(c => c.Sequence));
+        twice.Value!.Status.ShouldBe(once.Value!.Status);
+    }
+
+    [Fact]
+    public async Task ToChunkListDoesNotSwallowAFault()
+    {
+        // The one method that hands back exactly what arrived, documented as such.
+        await Should.ThrowAsync<InvalidOperationException>(() => Exploding().ToChunkListAsync());
+
+        static async IAsyncEnumerable<Chunk> Exploding()
+        {
+            yield return CqrsTestStreams.Started();
+            await Task.Yield();
+            throw new InvalidOperationException("transport died");
+        }
+    }
+
+    [Fact]
     public async Task ToOutcomeAsyncKeepsTheResultTheProgressAndTheChunks()
     {
         var outcome = await ThreeChunkStream().ToOutcomeAsync();

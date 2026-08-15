@@ -13,26 +13,41 @@ Built for .NET 10, with ASP.NET Core, SignalR and Orleans integration in the box
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 
-## At a glance
+## Overview
 
 ### Failure is part of the signature
 
 A method that can fail says so in its return type, and every failure is the same shape — an RFC 7807 `Problem`.
-A guard clause stays one line: a plain `Result` widens to `Result<T>`, so there is no type parameter to repeat.
 
 ```csharp
 public async Task<Result<Order>> PlaceOrderAsync(Cart cart)
 {
+    // A plain Result widens to Result<Order>, so a guard clause never repeats the type parameter.
     if (cart.IsEmpty)
         return Result.FailValidation(("cart", "is empty"));
 
-    var payment = await ChargeAsync(cart.Total);
-    if (payment.IsFailed)
-        return payment.Problem!;          // pass the failure along untouched
+    Result<Payment> payment = await ChargeAsync(cart.Total);
 
-    return await CreateOrderAsync(cart);  // a bare value widens to a success
+    // A Problem widens too, so an upstream failure is passed along without being rewrapped.
+    if (payment.IsFailed)
+        return payment.Problem!;
+
+    Order order = await CreateOrderAsync(cart);
+    return Result.Succeed(order);
 }
 ```
+
+The success has three equivalent spellings — take whichever reads best:
+
+```csharp
+return Result.Succeed(order);          // T is inferred
+return Result<Order>.Succeed(order);   // spelled out
+return order;                          // a bare value widens to a success
+```
+
+Only *failures* widen from the non-generic side. A `Result` carries no value, so converting a **successful**
+`Result` to `Result<Order>` would have to invent one — it yields a failure instead. Build a success from its
+value, never from a valueless `Result`.
 
 ### Compose instead of nesting
 
@@ -112,8 +127,8 @@ serialization path is hand-written rather than reflective — see [Performance](
 
 ## Table of Contents
 
-- [At a glance](#at-a-glance)
 - [Overview](#overview)
+- [Why a Result type?](#why-a-result-type)
 - [Key Features](#key-features)
 - [Installation](#installation)
 - [Logging Configuration](#logging-configuration)
@@ -132,16 +147,8 @@ serialization path is hand-written rather than reflective — see [Performance](
 - [Behaviour Notes](#behaviour-notes)
 - [Comparison](#comparison)
 - [Best Practices](#best-practices)
-- [Examples](#examples)
-- [API Reference](#api-reference)
 
-## Overview
-
-ManagedCode.Communication models the outcome of an operation as a value. Instead of throwing, a method returns
-`Result` or `Result<T>`: either it succeeded, or it carries a `Problem` describing why it did not. The failure
-becomes part of the signature rather than something a caller discovers at runtime.
-
-### Why a Result type?
+## Why a Result type?
 
 An exception is an invisible second return path. Nothing in `Task<Order> PlaceOrderAsync(Cart cart)` tells you it
 can fail with `PaymentDeclinedException`, so callers guard against what they happen to remember. `Task<Result<Order>>`
@@ -181,7 +188,8 @@ failures your callers are expected to handle.
   answer, one terminal chunk guaranteed.
 - Travels over Server-Sent Events out of the box, so any client can read it without a client library.
 - A handler that throws, or ends early, still produces a terminal `Failed` chunk instead of a dead connection.
-- The same contract over SignalR, Orleans or gRPC — `CqrsStream.Normalize` on the server, `AsCqrsStream()` on the client.
+- The same contract over SignalR, Orleans or gRPC — `CqrsStream.Normalize` on the server, and nothing at all on
+  the client: `ToResultAsync` applies the guarantees itself.
 - `ToResultAsync(onProgress)` drains a stream to its answer, so callers never write the loop — and the result
   feeds straight into the railway.
 - See [CQRS Streaming](#cqrs-streaming).
@@ -521,16 +529,16 @@ var invalid = Result.FailValidation(
     ("age", "Age must be positive")
 );
 
-// From exceptions
-try
-{
-    // risky operation
-}
-catch (Exception ex)
-{
-    var error = Result.Fail(ex);
-}
+// From something that throws — no try/catch of your own
+Result<int> parsed = Result.Try(() => int.Parse(input));
+Result written = await Result.TryAsync(() => File.WriteAllTextAsync(path, text));
+
+// The exception becomes the Problem, with 500 by default; pass a status to override it.
+Result<int> asBadRequest = Result.Try(() => int.Parse(input), HttpStatusCode.BadRequest);
 ```
+
+`Result.Try` and `Result.TryAsync` run the delegate, return its value on success, and turn a thrown exception
+into a failure — `Result.Fail(ex)` is there for when you are already inside a `catch`.
 
 ### Checking Result State
 
@@ -709,7 +717,8 @@ Result<ImportReport> report = await grain.StreamAsync().ToResultAsync();
 ```
 
 The terminal chunk becomes the result. A stream that ends **without** one fails with
-`CqrsStreamProblems.IncompleteStream` rather than reporting a success the command never claimed.
+`CqrsStreamProblems.IncompleteStream` rather than reporting a success the command never claimed, and one that
+faults mid-flight fails with a `Problem` built from the exception. Only cancellation propagates.
 
 **With progress.** Pass a callback and it fires as each update arrives — the answer still comes back from the
 method:
@@ -751,8 +760,13 @@ An outcome converts to its `Result<TResult>` implicitly, so it can be returned w
 | `ToChunkListAsync()` | every chunk | you will interpret them yourself |
 | `chunks.ToStreamResult()` | — | you already have the chunks in hand |
 
-`AsCqrsStream()` sits in front of any of these when the chunks arrive over a transport that does not already
-guarantee the contract — SignalR, Orleans, gRPC. See [Other transports](#other-transports).
+The name says what comes back: the `To…Async` methods return the answer, `AsCqrsStream` returns a stream.
+
+`ToResultAsync` and `ToOutcomeAsync` apply the stream guarantees themselves, so they work on a raw SignalR,
+Orleans or gRPC stream with nothing in front of them — a transport that faults comes back as a failed `Result`,
+not an exception. `AsCqrsStream()` is for when you want to keep iterating chunk by chunk with those same
+guarantees; `ToChunkListAsync()` is the deliberate exception that hands back exactly what arrived, faults
+included. See [Other transports](#other-transports).
 
 ### Streams and the railway
 
@@ -819,21 +833,31 @@ Skipping `Normalize` is what makes the difference: a hub method that throws mid-
 the client sees a `HubException` instead of a terminal chunk it can inspect. A `CqrsStream.Create` stream already
 carries the guarantees and needs no `Normalize`.
 
-**On the client, `AsCqrsStream()` gives a SignalR stream the same contract and the same ergonomics as the HTTP
-reader** — progress through a callback, the answer from the method:
+**On the client there is nothing extra to remember** — a SignalR stream reads exactly like the HTTP one, in a
+single call:
 
 ```csharp
 var report = await hub
     .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import", cancellationToken)
-    .AsCqrsStream()
     .ToResultAsync(progress => Console.WriteLine($"{progress.Percent}%"), cancellationToken);
 ```
 
-It is worth applying even when the server already normalizes: `AsCqrsStream` is what converts a *transport*
-failure — the connection dropping, or a server you do not control faulting the stream — into a terminal `Failed`
-chunk instead of an exception thrown out of your `await foreach`.
+`ToResultAsync` applies the guarantees itself, so this holds even when the server does **not** normalize: a hub
+method that throws part-way through, or a connection that simply drops, comes back as a failed `Result` carrying
+a `Problem` rather than a `HubException` thrown out of your `await`.
 
-It takes an `IAsyncEnumerable<>` rather than a `HubConnection` on purpose. SignalR, Orleans and gRPC all surface
+When you want to keep iterating chunk by chunk instead of draining to a result, `AsCqrsStream()` applies the same
+guarantees and hands the chunks back:
+
+```csharp
+await foreach (var chunk in hub
+    .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import", cancellationToken)
+    .AsCqrsStream())
+{
+}
+```
+
+Both take an `IAsyncEnumerable<>` rather than a `HubConnection` on purpose. SignalR, Orleans and gRPC all surface
 a stream as one, so a single method covers them all and this package takes a dependency on none of them.
 
 **Orleans.** `ManagedCode.Communication.Orleans` registers a serialization surrogate for `CqrsStreamChunk<,>`,
@@ -1284,258 +1308,37 @@ public Result<User> CreateUser(CreateUserDto dto)
 }
 ```
 
-### Repository Pattern with Entity Framework
-
-```csharp
-public class UserRepository
-{
-    private readonly AppDbContext _context;
-    private readonly ILogger<UserRepository> _logger;
-    
-    public async Task<Result<User>> GetByIdAsync(int id)
-    {
-        try
-        {
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == id);
-            
-            if (user == null)
-                return Result<User>.FailNotFound($"User {id} not found");
-            
-            return Result<User>.Succeed(user);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Database error getting user {UserId}", id);
-            return Result<User>.Fail(ex);
-        }
-    }
-    
-    public async Task<CollectionResult<User>> GetPagedAsync(
-        int page, 
-        int pageSize,
-        Expression<Func<User, bool>>? filter = null,
-        Expression<Func<User, object>>? orderBy = null)
-    {
-        try
-        {
-            // Build query with IQueryable for efficient SQL generation
-            IQueryable<User> query = _context.Users.AsNoTracking();
-            
-            // Apply filter if provided
-            if (filter != null)
-                query = query.Where(filter);
-            
-            // Apply ordering
-            query = orderBy != null 
-                ? query.OrderBy(orderBy) 
-                : query.OrderBy(u => u.Id);
-            
-            // Get total count - generates COUNT(*) SQL query
-            var totalItems = await query.CountAsync();
-            
-            if (totalItems == 0)
-                return CollectionResult<User>.Succeed(Array.Empty<User>(), page, pageSize, 0);
-            
-            // Get page of data - generates SQL with OFFSET and FETCH
-            var users = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToArrayAsync();
-            
-            return CollectionResult<User>.Succeed(users, page, pageSize, totalItems);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Database error in GetPagedAsync");
-            return CollectionResult<User>.Fail(ex);
-        }
-    }
-    
-    // Example with complex query
-    public async Task<CollectionResult<UserDto>> SearchUsersAsync(
-        string searchTerm,
-        int page,
-        int pageSize)
-    {
-        try
-        {
-            var query = _context.Users
-                .AsNoTracking()
-                .Where(u => u.IsActive)
-                .Where(u => EF.Functions.Like(u.Name, $"%{searchTerm}%") ||
-                           EF.Functions.Like(u.Email, $"%{searchTerm}%"));
-            
-            // Count before projection for efficiency
-            var totalItems = await query.CountAsync();
-            
-            // Project to DTO and paginate - single SQL query
-            var users = await query
-                .OrderBy(u => u.Name)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(u => new UserDto
-                {
-                    Id = u.Id,
-                    Name = u.Name,
-                    Email = u.Email,
-                    LastLoginDate = u.LastLoginDate
-                })
-                .ToArrayAsync();
-            
-            return CollectionResult<UserDto>.Succeed(users, page, pageSize, totalItems);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Search failed for term: {SearchTerm}", searchTerm);
-            return CollectionResult<UserDto>.Fail(ex);
-        }
-    }
-}
-```
-
-### Service Layer Pattern
-
-```csharp
-public class OrderService
-{
-    public async Task<Result<Order>> CreateOrderAsync(CreateOrderDto dto)
-    {
-        // Validate input
-        var validationResult = ValidateOrderDto(dto);
-        if (validationResult.IsFailed)
-            return validationResult;
-        
-        // Get user
-        var userResult = await _userRepo.GetByIdAsync(dto.UserId);
-        if (userResult.IsFailed)
-            return Result<Order>.Fail(userResult.Problem);
-        
-        // Check permissions
-        var user = userResult.Value;
-        if (!user.CanCreateOrders)
-            return Result<Order>.FailForbidden("User cannot create orders");
-        
-        // Create order
-        return await Result.Try(async () =>
-        {
-            var order = new Order
-            {
-                UserId = user.Id,
-                Items = dto.Items,
-                Total = CalculateTotal(dto.Items)
-            };
-            
-            await _orderRepo.SaveAsync(order);
-            return order;
-        });
-    }
-}
-```
-
 ## Integration Guides
 
 ### ASP.NET Core Integration
 
-#### Installation and Setup
-
 ```csharp
-// 1. Install NuGet package
-// dotnet add package ManagedCode.Communication.AspNetCore
-
-// 2. Program.cs configuration
 var builder = WebApplication.CreateBuilder(args);
 
-// Method 1: Simple configuration with auto-detection of environment
-builder.AddCommunication(); // ShowErrorDetails = IsDevelopment
-
-// Method 2: Custom configuration
-builder.Services.AddCommunication(options =>
-{
-    options.ShowErrorDetails = true; // Show detailed error messages in responses
-});
-
-// 3. Add filters to MVC controllers (ORDER MATTERS!)
-builder.Services.AddControllers(options =>
-{
-    options.AddCommunicationFilters();
-    // Filters are applied in this order:
-    // 1. CommunicationModelValidationFilter - Catches validation errors first
-    // 2. ResultToActionResultFilter - Converts Result to HTTP response
-    // 3. CommunicationExceptionFilter - Catches any unhandled exceptions last
-});
-
-// 4. Optional: Add filters to SignalR hubs
-builder.Services.AddSignalR(options =>
-{
-    options.AddCommunicationFilters();
-});
-
-var app = builder.Build();
+builder.AddCommunication();                       // ShowErrorDetails = IsDevelopment
+builder.Services.AddControllers(o => o.AddCommunicationFilters());
+builder.Services.AddSignalR(o => o.AddCommunicationFilters());
 ```
 
-#### Filter Execution Order
-
-The order of filters is important for proper error handling:
-
-| Order | Filter | Purpose | When It Runs |
-|-------|--------|---------|--------------|
-| 1 | `CommunicationModelValidationFilter` | Converts ModelState errors to `Result.FailValidation` | Before action execution if model is invalid |
-| 2 | `ResultToActionResultFilter` | Maps `Result<T>` return values to HTTP responses | After action execution |
-| 3 | `CommunicationExceptionFilter` | Catches unhandled exceptions, returns Problem Details | On any exception |
-
-⚠️ **Important**: The filters must be registered using `AddCommunicationFilters()` to ensure correct ordering. Manual registration may cause unexpected behavior.
-
-#### Controller Implementation
+An action returns a `Result<T>` directly; the filter turns it into the HTTP response:
 
 ```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class UsersController : ControllerBase
-{
-    private readonly IUserService _userService;
-    
-    [HttpGet("{id}")]
-    [ProducesResponseType(typeof(User), 200)]
-    [ProducesResponseType(typeof(Problem), 404)]
-    public async Task<Result<User>> GetUser(int id)
-    {
-        return await _userService.GetUserAsync(id);
-    }
-    
-    [HttpPost]
-    [ProducesResponseType(typeof(User), 201)]
-    [ProducesResponseType(typeof(Problem), 400)]
-    public async Task<Result<User>> CreateUser([FromBody] CreateUserDto dto)
-    {
-        return await _userService.CreateUserAsync(dto);
-    }
-    
-    [HttpGet]
-    [ProducesResponseType(typeof(CollectionResult<User>), 200)]
-    public async Task<CollectionResult<User>> GetUsers(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
-    {
-        return await _userService.GetUsersAsync(page, pageSize);
-    }
-}
+[HttpGet("{id}")]
+public Task<Result<User>> Get(int id) => _users.FindAsync(id);
 ```
 
-#### Automatic HTTP Response Mapping
+`AddCommunicationFilters()` registers three filters, and the order matters — use the helper rather than adding
+them by hand:
 
-The library automatically converts Result types to appropriate HTTP responses:
+| Order | Filter | What it does |
+| --- | --- | --- |
+| 1 | `CommunicationModelValidationFilter` | Turns ModelState errors into `Result.FailValidation` before the action runs |
+| 2 | `ResultToActionResultFilter` | Maps the returned `Result<T>` to an HTTP response |
+| 3 | `CommunicationExceptionFilter` | Catches anything unhandled and returns Problem Details |
 
-| Result State | HTTP Status | Response Body |
-|-------------|-------------|---------------|
-| `Result.Succeed()` | 204 No Content | Empty |
-| `Result<T>.Succeed(value)` | 200 OK | `value` |
-| `Result.FailValidation(...)` | 400 Bad Request | Problem Details |
-| `Result.FailUnauthorized()` | 401 Unauthorized | Problem Details |
-| `Result.FailForbidden()` | 403 Forbidden | Problem Details |
-| `Result.FailNotFound()` | 404 Not Found | Problem Details |
-| `Result.Fail(...)` | 500 Internal Server Error | Problem Details |
+Status codes come from the `Problem`: `FailNotFound` is a 404, `FailValidation` a 400, an unhandled exception a
+500. See [Mapping exceptions to status codes](#mapping-exceptions-to-status-codes) to override that per type.
+
 
 ### SignalR Integration
 
@@ -1571,88 +1374,33 @@ public class ChatHub : Hub
 
 ### Microsoft Orleans Integration
 
-#### Setup
-
 ```csharp
-// Silo configuration
-var builder = Host.CreateDefaultBuilder(args)
-    .UseOrleans(silo =>
-    {
-        silo.UseLocalhostClustering()
-            .UseOrleansCommunication(); // Required for Result serialization
-    });
+// silo
+silo.UseLocalhostClustering().UseOrleansCommunication();
 
-// Client configuration  
-var clientBuilder = Host.CreateDefaultBuilder(args)
-    .UseOrleansClient(client =>
-    {
-        client.UseOrleansCommunication(); // Required for Result serialization
-    });
+// client
+client.UseOrleansCommunication();
 ```
 
-That's it! The `UseOrleansCommunication()` extension automatically configures:
-- Serialization for all Result types across grain boundaries
-- Proper handling of Problem Details in distributed calls
-- Support for CollectionResult with pagination
-- Exception-to-failed-result conversion for grain methods returning `Task<Result>`, `Task<Result<T>>`, `Task<CollectionResult<T>>`, and matching `ValueTask<>` forms
-- Structured error logging with the original exception object before a grain exception is converted to a failed Result, so observability backends keep the real stack trace
+`UseOrleansCommunication()` is required — without it a silo whose grain interfaces mention a `Result` refuses to
+start, because Orleans validates serializers at boot. It registers surrogates for `Result`, `Result<T>`,
+`CollectionResult<T>`, `Problem` and `CqrsStreamChunk<,>`, and adds a call filter that converts an exception
+thrown by a grain into a failed result — logging the original exception first, so the stack trace still reaches
+your traces.
 
-#### Grain Implementation
+A grain then returns results like anything else:
 
 ```csharp
 public interface IUserGrain : IGrainWithStringKey
 {
     Task<Result<UserState>> GetStateAsync();
-    Task<Result> UpdateProfileAsync(UpdateProfileDto dto);
     Task<CollectionResult<Activity>> GetActivitiesAsync(int page, int pageSize);
 }
-
-public class UserGrain : Grain, IUserGrain
-{
-    private readonly IPersistentState<UserState> _state;
-    
-    public UserGrain([PersistentState("user")] IPersistentState<UserState> state)
-    {
-        _state = state;
-    }
-    
-    public Task<Result<UserState>> GetStateAsync()
-    {
-        if (!_state.RecordExists)
-            return Task.FromResult(Result<UserState>.FailNotFound("User not found"));
-        
-        return Task.FromResult(Result<UserState>.Succeed(_state.State));
-    }
-    
-    public async Task<Result> UpdateProfileAsync(UpdateProfileDto dto)
-    {
-        if (!_state.RecordExists)
-            return Result.FailNotFound("User not found");
-        
-        // Validate
-        if (string.IsNullOrEmpty(dto.DisplayName))
-            return Result.FailValidation(("displayName", "Display name is required"));
-        
-        // Update state
-        _state.State.DisplayName = dto.DisplayName;
-        _state.State.Bio = dto.Bio;
-        _state.State.UpdatedAt = DateTime.UtcNow;
-        
-        await _state.WriteStateAsync();
-        return Result.Succeed();
-    }
-    
-    public async Task<CollectionResult<Activity>> GetActivitiesAsync(int page, int pageSize)
-    {
-        if (!_state.RecordExists)
-            return CollectionResult<Activity>.FailNotFound("User not found");
-        
-        // For real data, use a repository with Entity Framework
-        var repository = GrainFactory.GetGrain<IActivityRepositoryGrain>(0);
-        return await repository.GetUserActivitiesAsync(this.GetPrimaryKeyString(), page, pageSize);
-    }
-}
 ```
+
+Your own payload types still need `[GenerateSerializer]` with `[Id(n)]` members, as with any type crossing a
+grain boundary.
+
 
 ## Performance
 
@@ -1671,81 +1419,69 @@ public class UserGrain : Grain, IUserGrain
 ### Serialization cost
 
 `Result`, `Result<T>` and `CqrsStreamChunk<,>` carry hand-written `System.Text.Json` converters, attached to the
-types themselves — you get them with any `JsonSerializerOptions`, without registering anything.
+types themselves — you get them with any `JsonSerializerOptions`, without registering anything. They exist
+because the default path is expensive for these shapes: a struct mixing `init`-only members with a private
+`[JsonInclude]` field pushes `System.Text.Json` onto a reflection-driven path.
 
-They exist because the default path is expensive for these particular shapes: a struct that mixes `init`-only
-members with a private `[JsonInclude]` field pushes `System.Text.Json` onto a reflection-driven path. Measured,
-per operation:
+What the transport costs, separated from what your payload costs. Measured with
+`GC.GetAllocatedBytesForCurrentThread`, on a progress chunk carrying a ten-character string:
 
 | | Allocated |
 | --- | --- |
-| Deserialize `Result<T>` | 208 B |
-| Deserialize a stream chunk | 344 B |
-| Serialize a stream chunk | 176 B |
-| Chunk size on the wire | 148 B |
+| `Result<T>`, over the payload it wraps | ~24 B |
+| The chunk object itself | 136 B |
+| Serializing a chunk | 176 B |
+| A progress chunk on the wire | 148 B |
+
+Deserializing a whole chunk is those fixed costs plus the payload, and the payload is usually the larger half:
+
+| Payload declared as | Chunk deserializes in | of which payload |
+| --- | --- | --- |
+| `class Progress { public string? State { get; init; } }` | 240 B | 120 B |
+| `record Progress(string State)` | 344 B | 224 B |
 
 `CollectionResult<T>` needs no converter — it has no private serialized field, so the default path costs it only
 ~56 bytes over the items themselves.
 
-That is close to the floor. Deserializing a progress chunk allocates 216 bytes, of which 136 are the chunk
-object and 48 the payload string inside it — both of which any code path has to allocate. The serializer's own
-share is about 32 bytes.
-
 On the client, chunks are deserialized straight from each frame's UTF-8 bytes rather than from a string per
 frame, and the JSON contract is resolved once per stream instead of once per frame. Reading a 20 000-frame
-stream end to end costs about 292 bytes per frame against 171 bytes of payload on the wire.
+stream end to end costs about 292 bytes per frame against 175 bytes of payload on the wire — and `ToResultAsync`
+costs the same as the raw `await foreach`, because the stream guarantees are one wrapper per stream, not per
+chunk.
 
-#### The payload type matters more than anything else here
+`ManagedCode.Communication.Tests/Results/SerializationAllocationTests.cs` holds budgets for all of this, so a
+regression fails the build rather than going unnoticed.
 
-This is worth more than everything above put together, and it lives in your code rather than in this library.
-`System.Text.Json` deserializes a type with a parameterized constructor through a different path than one it can
-populate property by property, and that path allocates. Per object, on the same JSON:
+#### The payload shape is worth more than everything above
 
-| Payload shape | Allocated |
+`System.Text.Json` populates a type with a parameterized constructor through a different, allocating path than
+one it can fill property by property. The two declarations below are equally immutable, and the positional one
+costs 104 bytes more per object:
+
+| Payload declared as | Allocated |
 | --- | --- |
-| `record Progress(string State)` | 176 B |
-| `record Progress { public string? State { get; init; } }` | 72 B |
-| `class Progress { public string? State { get; init; } }` | 72 B |
-| `class Progress { public string? State { get; set; } }` | 72 B |
+| `record Progress(string State)` | 224 B |
+| `record Progress { public string? State { get; init; } }` | 120 B |
+| `class Progress { public string? State { get; init; } }` | 120 B |
 
-The positional record costs 104 bytes more per object for no benefit — the `init` record is just as immutable.
-On a stream running at a thousand chunks a second that is 100 KB/s of pure garbage, so prefer the second form
-for progress and result payloads. Everywhere else the difference is too small to think about.
-
-If the payload type is not yours to reshape, hand its source-generated contract to the transport instead — that
-recovers most of the same ground without touching the type:
+At a thousand chunks a second that is 100 KB/s of pure garbage. If the type is not yours to reshape, hand its
+source-generated contract to the transport instead:
 
 ```csharp
 [JsonSerializable(typeof(Progress))]
 internal partial class StreamPayloads : JsonSerializerContext;
 
-private static readonly CqrsStreamClientOptions StreamOptions = new()
+var options = new CqrsStreamClientOptions
 {
     JsonSerializerOptions = CqrsStreamSerialization.WithPayloadContext(StreamPayloads.Default)
 };
-
-await foreach (var chunk in http.GetForCqrsStreamAsync<Progress, Report>("/reports/1", StreamOptions))
-{
-    // ...
-}
 ```
 
-`WithPayloadContext` consults your context first and falls back to reflection for everything it does not cover,
-including the transport's own chunk, result and problem types. Pointing `TypeInfoResolver` straight at your
-context instead would leave `CqrsStreamChunk<,>` without a contract and fail on the first chunk — combining is
-the whole point of the method. The wire format is unchanged either way, so one end may use a context and the
-other not.
+`WithPayloadContext` consults your context first and falls back to reflection for everything else, the
+transport's own types included — pointing `TypeInfoResolver` straight at your context would leave
+`CqrsStreamChunk<,>` without a contract and fail on the first chunk. The wire format is unchanged, so one end
+may use a context and the other not. On the server, add the same context to `ConfigureHttpJsonOptions`.
 
-That is the client half. On the server the SSE response is written with ASP.NET Core's own JSON options, so add
-the context there in the usual way:
-
-```csharp
-builder.Services.ConfigureHttpJsonOptions(o =>
-    o.SerializerOptions.TypeInfoResolverChain.Insert(0, StreamPayloads.Default));
-```
-
-`ManagedCode.Communication.Tests/Results/SerializationAllocationTests.cs` holds allocation budgets for all of
-this, so a regression fails the build rather than going unnoticed.
 
 ## Behaviour Notes
 
@@ -2046,337 +1782,6 @@ return Result.Fail("Error"); // ❌ Too vague
 
 // Instead:
 return Result.Fail("User creation failed", "Email already exists"); // ✅
-```
-
-## Examples
-
-### Complete Web API Example
-
-```csharp
-// Domain Model
-public class Product
-{
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public decimal Price { get; set; }
-    public int Stock { get; set; }
-}
-
-// Service Interface
-public interface IProductService
-{
-    Task<Result<Product>> GetByIdAsync(int id);
-    Task<Result<Product>> CreateAsync(CreateProductDto dto);
-    Task<Result> UpdateStockAsync(int id, int quantity);
-    Task<CollectionResult<Product>> SearchAsync(string query, int page, int pageSize);
-}
-
-// Service Implementation
-public class ProductService : IProductService
-{
-    private readonly IProductRepository _repository;
-    private readonly ILogger<ProductService> _logger;
-    
-    public async Task<Result<Product>> GetByIdAsync(int id)
-    {
-        return await Result.Try(async () =>
-        {
-            var product = await _repository.FindByIdAsync(id);
-            return product ?? throw new KeyNotFoundException($"Product {id} not found");
-        })
-        .CompensateAsync(async error =>
-        {
-            _logger.LogWarning("Product {Id} not found, checking archive", id);
-            var archived = await _repository.FindInArchiveAsync(id);
-            return archived != null
-                ? Result<Product>.Succeed(archived)
-                : Result<Product>.FailNotFound($"Product {id} not found");
-        });
-    }
-    
-    public async Task<Result<Product>> CreateAsync(CreateProductDto dto)
-    {
-        // Validation
-        var validationResult = await ValidateProductDto(dto);
-        if (validationResult.IsFailed)
-            return Result<Product>.Fail(validationResult.Problem);
-        
-        // Check for duplicates
-        var existing = await _repository.FindByNameAsync(dto.Name);
-        if (existing != null)
-            return Result<Product>.Fail("Duplicate product", 
-                $"Product with name '{dto.Name}' already exists");
-        
-        // Create product
-        var product = new Product
-        {
-            Name = dto.Name,
-            Price = dto.Price,
-            Stock = dto.InitialStock
-        };
-        
-        await _repository.AddAsync(product);
-        await _repository.SaveChangesAsync();
-        
-        return Result<Product>.Succeed(product);
-    }
-    
-    public async Task<Result> UpdateStockAsync(int id, int quantity)
-    {
-        return await GetByIdAsync(id)
-            .Then(product =>
-            {
-                if (product.Stock + quantity < 0)
-                    return Result.Fail("Insufficient stock", 
-                        $"Cannot reduce stock by {Math.Abs(quantity)}. Current stock: {product.Stock}");
-                
-                product.Stock += quantity;
-                return Result.Succeed();
-            })
-            .ThenAsync(async () =>
-            {
-                await _repository.SaveChangesAsync();
-                return Result.Succeed();
-            });
-    }
-    
-    public async Task<CollectionResult<Product>> SearchAsync(string query, int page, int pageSize)
-    {
-        try
-        {
-            var (products, total) = await _repository.SearchAsync(query, page, pageSize);
-            return CollectionResult<Product>.Succeed(products, page, pageSize, total);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Search failed for query: {Query}", query);
-            return CollectionResult<Product>.Fail(ex);
-        }
-    }
-    
-    private async Task<Result> ValidateProductDto(CreateProductDto dto)
-    {
-        var errors = new List<(string field, string message)>();
-        
-        if (string.IsNullOrWhiteSpace(dto.Name))
-            errors.Add(("name", "Product name is required"));
-        else if (dto.Name.Length > 100)
-            errors.Add(("name", "Product name must be 100 characters or less"));
-        
-        if (dto.Price <= 0)
-            errors.Add(("price", "Price must be greater than zero"));
-        
-        if (dto.InitialStock < 0)
-            errors.Add(("initialStock", "Initial stock cannot be negative"));
-        
-        // Async validation
-        if (!string.IsNullOrWhiteSpace(dto.Name))
-        {
-            var categoryExists = await _repository.CategoryExistsAsync(dto.CategoryId);
-            if (!categoryExists)
-                errors.Add(("categoryId", "Invalid category"));
-        }
-        
-        return errors.Any() 
-            ? Result.FailValidation(errors.ToArray())
-            : Result.Succeed();
-    }
-}
-
-// Controller
-[ApiController]
-[Route("api/[controller]")]
-public class ProductsController : ControllerBase
-{
-    private readonly IProductService _productService;
-    
-    [HttpGet("{id}")]
-    public async Task<Result<Product>> Get(int id)
-    {
-        return await _productService.GetByIdAsync(id);
-    }
-    
-    [HttpPost]
-    public async Task<Result<Product>> Create([FromBody] CreateProductDto dto)
-    {
-        return await _productService.CreateAsync(dto);
-    }
-    
-    [HttpPatch("{id}/stock")]
-    public async Task<Result> UpdateStock(int id, [FromBody] UpdateStockDto dto)
-    {
-        return await _productService.UpdateStockAsync(id, dto.Quantity);
-    }
-    
-    [HttpGet("search")]
-    public async Task<CollectionResult<Product>> Search(
-        [FromQuery] string q,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
-    {
-        return await _productService.SearchAsync(q, page, pageSize);
-    }
-}
-```
-
-### Complex Business Logic Example
-
-```csharp
-public class OrderProcessingService
-{
-    public async Task<Result<Order>> ProcessOrderAsync(ProcessOrderCommand command)
-    {
-        // Complete order processing pipeline
-        return await Result
-            // Validate command
-            .From(() => ValidateCommand(command))
-            
-            // Load user
-            .ThenAsync(async () => await _userRepository.GetByIdAsync(command.UserId))
-            
-            // Check user permissions
-            .Then(user => user.CanPlaceOrders 
-                ? Result<User>.Succeed(user)
-                : Result<User>.FailForbidden("User cannot place orders"))
-            
-            // Verify user credit
-            .ThenAsync(async user => await _creditService.CheckCreditAsync(user.Id))
-            .Then(creditResult => creditResult.AvailableCredit >= command.TotalAmount
-                ? Result.Succeed()
-                : Result.Fail("Insufficient credit"))
-            
-            // Check inventory
-            .ThenAsync(async () => await CheckInventoryAsync(command.Items))
-            
-            // Reserve inventory
-            .ThenAsync(async () => await ReserveInventoryAsync(command.Items))
-            
-            // Create order
-            .ThenAsync(async () => await CreateOrderAsync(command))
-            
-            // Process payment
-            .ThenAsync(async order => await ProcessPaymentAsync(order, command.PaymentMethod))
-            
-            // Send confirmation
-            .ThenAsync(async order => await SendOrderConfirmationAsync(order))
-            
-            // Handle any failures
-            .CompensateAsync(async problem =>
-            {
-                _logger.LogError("Order processing failed: {Problem}", problem.Detail);
-                
-                // Rollback inventory reservation
-                await ReleaseInventoryAsync(command.Items);
-                
-                // Notify user
-                await _notificationService.NotifyOrderFailedAsync(command.UserId, problem.Detail);
-                
-                return Result<Order>.Fail(problem);
-            });
-    }
-    
-    private async Task<Result> CheckInventoryAsync(List<OrderItem> items)
-    {
-        var unavailable = new List<string>();
-        
-        foreach (var item in items)
-        {
-            var stock = await _inventoryService.GetStockAsync(item.ProductId);
-            if (stock < item.Quantity)
-            {
-                unavailable.Add($"{item.ProductName}: requested {item.Quantity}, available {stock}");
-            }
-        }
-        
-        return unavailable.Any()
-            ? Result.Fail("Insufficient inventory", string.Join("; ", unavailable))
-            : Result.Succeed();
-    }
-}
-```
-
-## API Reference
-
-### Result Creation Methods
-
-#### Success Methods
-
-```csharp
-// Basic success
-Result.Succeed()
-Result<T>.Succeed(T value)
-CollectionResult<T>.Succeed(T[] items, int pageNumber, int pageSize, int totalItems)
-
-// From operations
-Result.From(Action action)
-Result<T>.From(Func<T> func)
-Result<T>.From(Task<T> task)
-
-// Try pattern with exception catching
-Result.Try(Action action)
-Result<T>.Try(Func<T> func)
-```
-
-#### Failure Methods
-
-```csharp
-// Basic failures
-Result.Fail()
-Result.Fail(string title)
-Result.Fail(string title, string detail)
-Result.Fail(Problem problem)
-Result.Fail(Exception exception)
-
-// HTTP status failures
-Result.FailNotFound(string detail)
-Result.FailUnauthorized(string detail)
-Result.FailForbidden(string detail)
-
-// Validation failures
-Result.FailValidation(params (string field, string message)[] errors)
-Result.Invalid(string message)
-Result.Invalid(string field, string message)
-
-// Enum-based failures
-Result.Fail<TEnum>(TEnum errorCode) where TEnum : Enum
-```
-
-### Transformation Methods
-
-```csharp
-// Map: Transform the value
-Result<int> ageResult = userResult.Map(user => user.Age);
-
-// Bind: Chain operations that return Results
-Result<Order> orderResult = userResult
-    .Bind(user => GetUserCart(user.Id))
-    .Bind(cart => CreateOrder(cart));
-
-// Tap: Execute side effects
-Result<User> result = userResult
-    .Tap(user => _logger.LogInfo($"Processing user {user.Id}"))
-    .Tap(user => _cache.Set(user.Id, user));
-```
-
-### Validation Methods
-
-```csharp
-// Ensure: Add validation
-Result<User> validUser = userResult
-    .Ensure(user => user.Age >= 18, Problem.Create("User must be 18+"))
-    .Ensure(user => user.Email.Contains("@"), Problem.Create("Invalid email"));
-
-// Where: Filter with predicate
-Result<User> filtered = userResult
-    .Where(user => user.IsActive, "User is not active");
-
-// FailIf: Conditional failure
-Result<Order> order = orderResult
-    .FailIf(o => o.Total <= 0, "Order total must be positive");
-
-// OkIf: Must satisfy condition
-Result<Payment> payment = paymentResult
-    .OkIf(p => p.IsAuthorized, "Payment not authorized");
 ```
 
 ## Contributing
