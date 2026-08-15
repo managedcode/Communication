@@ -1,6 +1,22 @@
 # ManagedCode.Communication
 
-Result pattern for .NET that replaces exceptions with type-safe return values. Features railway-oriented programming, ASP.NET Core integration, RFC 7807 Problem Details, and built-in pagination. Designed for production systems requiring explicit error handling without the overhead of throwing exceptions.
+**Make failure part of the signature.** A method returns `Result<T>` — either it worked, or it carries a
+`Problem` (RFC 7807) explaining why not. No invisible second return path, one error shape from the domain layer
+to the HTTP response, and railway operators to chain it all without a pyramid of `try`/`catch`.
+
+And when a command is too slow to answer in one call, [**CQRS Streaming**](#cqrs-streaming) reports its progress
+as a typed stream that is guaranteed to tell you how it ended.
+
+```csharp
+Result<Order> result = await PlaceOrderAsync(cart);
+
+if (result.IsFailed)
+    return result.Problem;          // already an RFC 7807 response
+
+var order = result.Value;
+```
+
+Built for .NET 10, with ASP.NET Core, SignalR and Orleans integration in the box.
 
 [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,7 +24,6 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 
 ## Table of Contents
 
-- [What's New in 10.1.0](#whats-new-in-1010)
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Installation](#installation)
@@ -16,8 +31,8 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 - [Core Concepts](#core-concepts)
 - [Quick Start](#quick-start)
 - [API Reference](#api-reference)
+- [CQRS Streaming](#cqrs-streaming)
 - [Railway-Oriented Programming](#railway-oriented-programming)
-- [CQRS Streaming with IAsyncEnumerable + Server-Sent Events](#cqrs-streaming-with-iasyncenumerable--server-sent-events)
 - [Command Pattern and Idempotency](#command-pattern-and-idempotency)
   - [Command Correlation and Tracing Identifiers](#command-correlation-and-tracing-identifiers)
   - [Idempotency Architecture Overview](#idempotency-architecture-overview)
@@ -30,85 +45,6 @@ Result pattern for .NET that replaces exceptions with type-safe return values. F
 - [Comparison](#comparison)
 - [Best Practices](#best-practices)
 - [Examples](#examples)
-- [Migration Guide](#migration-guide)
-
-## What's New in 10.1.0
-
-**Packages consolidated from six to four.** The CQRS streaming packages are gone; their contents moved into the
-packages you already reference.
-
-| Removed | Where it lives now |
-| --- | --- |
-| `ManagedCode.Communication.CQRS` | `ManagedCode.Communication` — namespace `ManagedCode.Communication.CQRS` |
-| `ManagedCode.Communication.CQRS.AspNetCore` | `ManagedCode.Communication.AspNetCore` — namespaces `…AspNetCore`, `…AspNetCore.Extensions`, `…AspNetCore.Filters` |
-
-**Every namespace now belongs to exactly one package.** Previously the namespace
-`ManagedCode.Communication.Extensions` was declared by the core assembly while a *different* package carried the
-same name, and the Orleans package shipped types under core-looking namespaces. Both are fixed.
-
-### Migration
-
-```diff
-- <PackageReference Include="ManagedCode.Communication.CQRS" Version="10.0.5" />
-- <PackageReference Include="ManagedCode.Communication.CQRS.AspNetCore" Version="10.0.5" />
-```
-
-| Before | After |
-| --- | --- |
-| `using ManagedCode.Communication.CQRS.Extensions.Http;` | `using ManagedCode.Communication.CQRS;` |
-| `using ManagedCode.Communication.CQRS.AspNetCore.Extensions;` | `using ManagedCode.Communication.AspNetCore.Extensions;` |
-| `using ManagedCode.Communication.CQRS.AspNetCore.Filters;` | `using ManagedCode.Communication.AspNetCore.Filters;` |
-| `using ManagedCode.Communication.Extensions.MinimalApi;` | `using ManagedCode.Communication.AspNetCore.MinimalApi;` |
-| `using ManagedCode.Communication.Results.Extensions;` (railway) | `using ManagedCode.Communication.Extensions;` |
-| `using ManagedCode.Communication.Filters/.Converters/.Surrogates;` (Orleans) | `using ManagedCode.Communication.Orleans.<same>;` |
-
-**Railway moved to `ManagedCode.Communication.Extensions`.** It was split across two namespaces in the core
-assembly with two names for the same operation. It is now one class behind one `using`. Applications on
-`ManagedCode.Communication.AspNetCore` get it transitively; a console or Blazor project that uses only the core
-package must add the `.Extensions` reference. `Result.Merge`, `MergeAll`, `Combine` and `CombineAll` stayed in
-the core package as static methods on `Result`.
-
-**Removed APIs**
-
-| Removed | Replacement |
-| --- | --- |
-| `AddInvalidMessage(...)` on `Result`, `Result<T>`, `CollectionResult<T>`, `IResultInvalid` | `Problem.AddValidationError(...)` |
-| `AdvancedRailwayExtensions` | `ResultRailwayExtensions` (extension syntax is unchanged); aggregation via `Result.Merge` and friends |
-| `ExceptionFilterWithProblemDetails` | `CommunicationExceptionFilter` |
-| `Guid`-keyed methods on `OrleansCommandIdempotencyStore` (`GetStatusAsync`, `MarkCompletedAsync`, `MarkFailedAsync`, `TryStartProcessingAsync`, `TryGetResultAsync`) | the `ICommandIdempotencyStore` members, which take a `string` command id |
-
-**Behaviour changes**
-
-| Change | Why |
-| --- | --- |
-| `InvalidOperationException`, `NotSupportedException`, `InvalidCastException`, `NullReferenceException`, `IndexOutOfRangeException` now map to **500**, not 400 | They mean the server reached a state its own code did not allow for. As 400 they blamed the caller and stayed out of every 5xx alert. Override per type with `ExceptionStatusCodeMap`. |
-| `Result<T>.Value` and the `CollectionResult<T>` members are `init`-only | A settable value let callers put a payload on a failed result, contradicting the nullable annotations. |
-| `Result`, `Result<T>` and the CQRS chunk have dedicated JSON converters | The default path fell back to reflection because these structs mix `init` members with a private `[JsonInclude]` field, costing ~512 bytes per deserialized `Result<T>` on top of the payload. The wire shape is unchanged. |
-| Empty members are omitted from a CQRS chunk | `final`, `message`, `eventId` and the default `eventType` are no longer written. An absent member reads back exactly like an explicit null, and the default event name is implied by `kind` — the SSE transport also carries it in the frame's own `event:` field. Compatible in both directions with 10.0.x. |
-| A successful `Result<T>` always writes `value` | `Result<int>.Succeed(0)` used to serialize as `{"isSuccess":true}`, indistinguishable to a non-.NET client from carrying nothing. Failed results now include `"value":null`. |
-| `HttpStatusCodeHelper.GetStatusCodeForException(null)` throws | It silently returned a status for a missing exception. |
-| Command factories take `commandId` as an optional **trailing** parameter | It used to be the first parameter of a parallel set of overloads, so it read as required and invited callers to pass a fresh `Guid.NewGuid()` — noise at best, and on a retry path it silently defeats idempotency. `Command.Create(id, type)` becomes `Command.Create(type, id)`. |
-
-**New**
-
-- **OpenTelemetry** traces and metrics for failures, with no dependency on the OpenTelemetry SDK — see
-  [Observability](#observability). The ASP.NET Core, SignalR and Orleans filters now attach the *originating
-  exception*, so stack traces reach your traces instead of being flattened into a `Problem`.
-- **`ExceptionStatusCodeMap`** for per-type status overrides.
-- **Complete async railway**: every operator now has a `Task<Result<T>>` receiver, so an async chain no longer
-  has to be broken by an `await` partway through.
-- **`CqrsStream.Normalize`** applies the CQRS stream guarantees to any transport — SignalR, Orleans, gRPC.
-- **Orleans serialization for `CqrsStreamChunk<,>`**, which previously stopped a silo from starting.
-
-**Fixes worth knowing about**
-
-- `Problem.AddValidationError` no longer discards the validation errors of a deserialized `Problem`.
-- `Problem` JSON parsing accepts PascalCase members, a `null` or stringified `status`, and no longer emits
-  duplicate keys when an extension shadows an RFC 7807 member.
-- A CQRS chunk always carries a sequence number, written to the SSE `id:` field.
-- The MVC result filter no longer overwrites a status code the action chose (a `201`/`202`/`204` survives).
-- The in-memory idempotency store prunes its command index on cache eviction instead of growing forever.
-- Idempotency helpers gained `CancellationToken`-aware overloads so a timeout can actually interrupt work.
 
 ## Overview
 
@@ -149,6 +85,15 @@ failures your callers are expected to handle.
 - **`Result<T>`**: Represents success with value `T` or failure
 - **`CollectionResult<T>`**: Represents collections with built-in pagination
 - **`Problem`**: RFC 7807 compliant error details
+
+### 📡 CQRS Streaming
+
+- A long-running command is an `IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>` — typed progress, typed
+  answer, one terminal chunk guaranteed.
+- Travels over Server-Sent Events out of the box, so any client can read it without a client library.
+- A handler that throws, or ends early, still produces a terminal `Failed` chunk instead of a dead connection.
+- The same contract over SignalR, Orleans or gRPC via `CqrsStream.Normalize`.
+- See [CQRS Streaming](#cqrs-streaming).
 
 ### ⚙️ Static Factory Abstractions
 
@@ -310,199 +255,6 @@ app.Run();
 
 Handlers can return any `Result` or `Result<T>` instance and the filter will reuse the existing ASP.NET Core converters so
 you do not need to write manual `IResult` translations.
-
-### CQRS Streaming with IAsyncEnumerable + Server-Sent Events
-
-A CQRS command that reports progress before producing its result is modelled as an
-`IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>`. The stream emits any number of progress chunks and ends with
-exactly one terminal chunk.
-
-The contract, the authoring helper and the client reader live in the base `ManagedCode.Communication` package,
-so a console app, a worker or a Blazor WebAssembly client can consume a stream without referencing ASP.NET Core.
-The server-side transport that renders a stream as Server-Sent Events lives in
-`ManagedCode.Communication.AspNetCore`.
-
-#### Writing a handler
-
-`CqrsStream.Create` is the recommended way. It numbers chunks, guarantees the terminal chunk, and converts a thrown
-exception into a `Failed` chunk:
-
-```csharp
-using ManagedCode.Communication;
-using ManagedCode.Communication.CQRS;
-using ManagedCode.Communication.AspNetCore.Extensions;
-
-var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddCommunicationCqrs();
-
-var app = builder.Build();
-
-app.MapGet("/import", (CancellationToken cancellationToken) =>
-        CqrsStream.Create<ImportProgress, ImportReport>(async writer =>
-        {
-            await writer.StartedAsync(new ImportProgress(0));
-
-            for (var i = 1; i <= 10; i++)
-            {
-                await DoWorkAsync(writer.CancellationToken);
-                await writer.ProgressAsync(new ImportProgress(i * 10));
-            }
-
-            return Result<ImportReport>.Succeed(new ImportReport(10));
-        }, cancellationToken))
-    .WithCommunicationCqrsResults();
-
-app.Run();
-
-public sealed record ImportProgress(int Percent);
-public sealed record ImportReport(int Imported);
-```
-
-Returning a failed `Result<TResult>` reports a business failure; throwing reports an unexpected one. Both arrive as a
-terminal `Failed` chunk, so the consumer has one code path for "it did not work".
-
-You can also hand-write the iterator when you prefer full control — note that a C# method containing `yield return`
-and returning `IAsyncEnumerable<T>` must be declared `async`:
-
-```csharp
-static async IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync()
-{
-    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Started(new ImportProgress(0));
-    await Task.Delay(100);
-    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Progress(new ImportProgress(50));
-    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Completed(new ImportReport(10));
-}
-```
-
-For controller-based APIs, register the filter and return the same type from an action:
-
-```csharp
-builder.Services.AddCommunicationCqrs();
-builder.Services.AddControllers(options => options.AddCommunicationCqrsFilters());
-```
-
-#### Reading a stream
-
-```csharp
-using ManagedCode.Communication.CQRS;
-
-await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import"))
-{
-    if (chunk.TryGetProgress(out var progress))
-    {
-        Console.WriteLine($"{progress.Percent}%");
-    }
-    else if (chunk.TryGetResult(out var report))
-    {
-        Console.WriteLine($"imported {report.Imported}");
-    }
-    else if (chunk.TryGetProblem(out var problem))
-    {
-        Console.WriteLine($"failed: {problem.Title} — {problem.Detail}");
-    }
-}
-```
-
-The reader does not throw for transport problems. A non-success status code, a dropped connection and an undecodable
-frame all arrive as a terminal `Failed` chunk, so the loop above covers every outcome. Only cancellation propagates as
-an `OperationCanceledException`.
-
-#### Chunk contract
-
-- `Started` — optional first chunk announcing execution.
-- `Progress` — optional in-flight updates.
-- `Completed` — terminal success; payload in `Final`.
-- `Failed` — terminal failure; `Problem` describes what went wrong.
-
-Guarantees the transport adds on both ends:
-
-- **Every stream ends on a terminal chunk.** If a handler returns without one, a `Failed` chunk carrying
-  `CqrsStreamProblems.IncompleteStream` is appended rather than the stream just stopping.
-- **Every chunk is numbered.** `Sequence` is filled in when a handler omits it and is written to the SSE `id:` field,
-  so consumers can restore ordering and resume with `Last-Event-ID`.
-- **An unhandled exception becomes a terminal `Failed` chunk** carrying a `Problem` built from the exception
-  (status `500`), instead of tearing down the connection mid-response.
-- **`Kind` travels as a string** (`"Started"`, `"Progress"`, …), so adding members to the enum never renumbers
-  existing ones across independently deployed clients and servers.
-
-An exception thrown *before* the handler returns its stream is not the transport's to handle — it never produced a
-stream — so it flows into the host's normal exception handling.
-
-#### Tuning
-
-```csharp
-// Server
-builder.Services.AddCommunicationCqrs(options =>
-{
-    options.AssignSequenceNumbers = true;  // default
-    options.EnsureTerminalChunk  = true;   // default
-});
-
-// Or per endpoint
-app.MapGet("/import", Handler)
-   .WithCommunicationCqrsResults(new CqrsStreamServerOptions { EnsureTerminalChunk = false });
-
-// Client
-var options = new CqrsStreamClientOptions
-{
-    MalformedChunkBehavior = CqrsMalformedChunkBehavior.Skip, // default: EmitFailedChunk; also: Throw
-    EnsureTerminalChunk = true
-};
-
-await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import", options))
-{
-}
-```
-
-Two namespaces cover the whole feature: `ManagedCode.Communication.CQRS` for the contract, the `CqrsStream`
-authoring helper and the client reader, and `ManagedCode.Communication.AspNetCore.Extensions` for the server
-transport.
-
-#### Other transports: SignalR, Orleans, anything else
-
-The guarantees above are not tied to Server-Sent Events — they come from `CqrsStream.Normalize`, which the SSE
-transport calls for you. Any other transport gets the same contract by calling it directly.
-
-**SignalR streaming hub method:**
-
-```csharp
-using ManagedCode.Communication.CQRS;
-
-public class ImportHub : Hub
-{
-    public IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> Import(CancellationToken cancellationToken)
-        => CqrsStream.Normalize(ImportAsync(cancellationToken), cancellationToken: cancellationToken);
-}
-```
-
-`CqrsStream.Create` can be returned from a hub method as-is — it already provides the guarantees, so it needs no
-`Normalize`. The client side is plain SignalR:
-
-```csharp
-await foreach (var chunk in hubConnection
-    .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import"))
-{
-    // the same TryGetProgress / TryGetResult / TryGetProblem loop as over HTTP
-}
-```
-
-Skipping `Normalize` is what makes the difference: a hub method that throws mid-stream faults the connection and
-the client sees a `HubException` instead of a terminal chunk it can inspect.
-
-**Orleans grains.** `ManagedCode.Communication.Orleans` registers a serialization surrogate for
-`CqrsStreamChunk<,>`, so chunks can be returned from grain methods and streamed as `IAsyncEnumerable`:
-
-```csharp
-public interface IImportGrain : IGrainWithStringKey
-{
-    IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync();
-}
-```
-
-Your progress and result payloads still need Orleans serializers of their own — mark them `[GenerateSerializer]`
-with `[Id(n)]` members, as with any type crossing a grain boundary. Note that a missing serializer is a *startup*
-failure in Orleans, not a runtime one: a silo whose grain interfaces mention an unserializable type refuses to
-boot.
 
 ### Resilient HTTP Clients
 
@@ -713,6 +465,211 @@ result.Match(
     onFailure: problem => Console.WriteLine($"Failed: {problem.Detail}")
 );
 ```
+
+## CQRS Streaming
+
+Some commands do not finish quickly. An import, a report, a bulk migration — the caller needs to know that it
+started, roughly where it got to, and how it ended. The usual answers are all unsatisfying: poll a status
+endpoint, invent a jobs table, or push raw WebSocket frames and hand-roll the protocol at both ends.
+
+This models the whole thing as one typed stream:
+
+```csharp
+IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>>
+```
+
+Two type parameters: what progress looks like, and what the answer looks like. The stream emits any number of
+progress chunks and ends with **exactly one** terminal chunk — completed or failed, never silence.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Transport as SSE transport
+    participant Handler
+
+    Client->>Transport: GET /import
+    Handler->>Transport: Started
+    Transport-->>Client: event: started
+    Handler->>Transport: Progress 30%
+    Transport-->>Client: event: progress
+    Handler->>Transport: Progress 70%
+    Transport-->>Client: event: progress
+    Handler->>Transport: Completed (ImportReport)
+    Transport-->>Client: event: completed
+
+    Note over Transport,Client: If the handler throws, or ends without a terminal chunk,<br/>the transport sends a terminal Failed chunk anyway.
+```
+
+Over HTTP it travels as Server-Sent Events, so a browser, `curl` or any non-.NET client can read it with no
+client library at all. The same stream works over SignalR, Orleans or gRPC without changing the handler.
+
+### Why not just poll, or use raw WebSockets?
+
+| | What you end up writing |
+| --- | --- |
+| Polling a status endpoint | A jobs table, a status enum, an expiry policy, and a client loop that is always either too slow or too chatty. |
+| Raw WebSockets / SignalR messages | Your own message envelope, your own "it's finished" signal, your own error frame — and both ends have to agree on all three. |
+| **This** | A typed stream. The envelope, the terminal guarantee and the error frame are the contract. |
+
+### The chunk contract
+
+A chunk is one of four kinds, and the transport guarantees the shape of the sequence:
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Started
+    [*] --> Progress
+    Started --> Progress
+    Progress --> Progress
+    Started --> Completed
+    Progress --> Completed
+    Started --> Failed
+    Progress --> Failed
+    Completed --> [*]
+    Failed --> [*]
+```
+
+- `Started` — optional, announces that execution began.
+- `Progress` — optional, any number of in-flight updates.
+- `Completed` — terminal success; the payload is in `Final`.
+- `Failed` — terminal failure; a `Problem` says what went wrong.
+
+What the transport guarantees on **both** ends:
+
+- **Every stream ends on a terminal chunk.** A handler that returns without one gets a `Failed` chunk carrying
+  `CqrsStreamProblems.IncompleteStream` appended, rather than the stream just stopping.
+- **An unhandled exception becomes a terminal `Failed` chunk** with a `Problem` built from it, instead of
+  tearing down the connection mid-response.
+- **Every chunk is numbered.** `Sequence` is filled in when a handler omits it and is written to the SSE `id:`
+  field, so consumers can restore ordering and resume with `Last-Event-ID`.
+- **`Kind` travels as a string**, so adding enum members never renumbers existing ones across independently
+  deployed clients and servers.
+
+An exception thrown *before* the handler returns its stream never produced a stream, so it is not the
+transport's to handle — it flows into the host's normal exception handling.
+
+### Writing a handler
+
+`CqrsStream.Create` numbers the chunks, guarantees the terminal chunk, and turns a thrown exception into a
+`Failed` chunk:
+
+```csharp
+app.MapGet("/import", (CancellationToken cancellationToken) =>
+        CqrsStream.Create<ImportProgress, ImportReport>(async writer =>
+        {
+            await writer.StartedAsync(new ImportProgress(0));
+
+            for (var i = 1; i <= 10; i++)
+            {
+                await DoWorkAsync(writer.CancellationToken);
+                await writer.ProgressAsync(new ImportProgress(i * 10));
+            }
+
+            return Result<ImportReport>.Succeed(new ImportReport(10));
+        }, cancellationToken))
+    .WithCommunicationCqrsResults();
+```
+
+Returning a failed `Result<TResult>` reports a business failure; throwing reports an unexpected one. Both arrive
+as a terminal `Failed` chunk, so the consumer has a single code path for "it did not work".
+
+You can hand-write the iterator instead when you want full control:
+
+```csharp
+static async IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync()
+{
+    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Started(new ImportProgress(0));
+    await Task.Delay(100);
+    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Progress(new ImportProgress(50));
+    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Completed(new ImportReport(10));
+}
+```
+
+### Reading a stream
+
+```csharp
+await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import"))
+{
+    if (chunk.TryGetProgress(out var progress))
+        Console.WriteLine($"{progress.Percent}%");
+    else if (chunk.TryGetResult(out var report))
+        Console.WriteLine($"imported {report.Imported}");
+    else if (chunk.TryGetProblem(out var problem))
+        Console.WriteLine($"failed: {problem.Title} — {problem.Detail}");
+}
+```
+
+The reader does not throw for transport problems. A non-success status code, a dropped connection and an
+undecodable frame all arrive as a terminal `Failed` chunk, so that loop covers every outcome. Only cancellation
+propagates, as an `OperationCanceledException`.
+
+### Registration
+
+```csharp
+builder.Services.AddCommunicationCqrs();                                    // minimal API
+builder.Services.AddControllers(o => o.AddCommunicationCqrsFilters());      // MVC controllers
+```
+
+Both default to numbering chunks and guaranteeing a terminal chunk. To change that:
+
+```csharp
+// server, globally or per endpoint
+builder.Services.AddCommunicationCqrs(o => o.EnsureTerminalChunk = false);
+app.MapGet("/import", Handler)
+   .WithCommunicationCqrsResults(new CqrsStreamServerOptions { EnsureTerminalChunk = false });
+
+// client
+var options = new CqrsStreamClientOptions
+{
+    MalformedChunkBehavior = CqrsMalformedChunkBehavior.Skip  // default: EmitFailedChunk; also: Throw
+};
+```
+
+Two namespaces cover the feature: `ManagedCode.Communication.CQRS` for the contract, the authoring helper and
+the client reader, and `ManagedCode.Communication.AspNetCore.Extensions` for the server transport. The first
+lives in the base package, so a console app, a worker or a Blazor WebAssembly client can consume a stream
+without referencing ASP.NET Core.
+
+### Other transports
+
+The guarantees come from `CqrsStream.Normalize`, which the SSE transport calls for you. Any other transport gets
+the same contract by calling it directly.
+
+```csharp
+public class ImportHub : Hub
+{
+    public IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> Import(CancellationToken token)
+        => CqrsStream.Normalize(ImportAsync(token), cancellationToken: token);
+}
+```
+
+Skipping `Normalize` is what makes the difference: a hub method that throws mid-stream faults the connection and
+the client sees a `HubException` instead of a terminal chunk it can inspect. A `CqrsStream.Create` stream already
+carries the guarantees and needs no `Normalize`. The client side is plain SignalR, with the same loop as over
+HTTP:
+
+```csharp
+await foreach (var chunk in hub.StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import"))
+{
+}
+```
+
+**Orleans.** `ManagedCode.Communication.Orleans` registers a serialization surrogate for `CqrsStreamChunk<,>`,
+so chunks can cross a grain boundary:
+
+```csharp
+public interface IImportGrain : IGrainWithStringKey
+{
+    IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync();
+}
+```
+
+Your own progress and result payloads still need `[GenerateSerializer]` with `[Id(n)]` members, as with any type
+crossing a grain boundary. A missing serializer is a *startup* failure in Orleans, not a runtime one: a silo
+whose grain interfaces mention an unserializable type refuses to boot.
+
 
 ## API Reference
 
@@ -1599,7 +1556,7 @@ public class UserGrain : Grain, IUserGrain
 
 ## Performance
 
-### Best Practices
+### Keeping results cheap
 
 1. **Use structs**: `Result` and `Result<T>` are value types (structs), so a success carries no heap allocation
 2. **Avoid boxing**: Use generic methods to prevent boxing of value types
@@ -1617,30 +1574,30 @@ public class UserGrain : Grain, IUserGrain
 types themselves — you get them with any `JsonSerializerOptions`, without registering anything.
 
 They exist because the default path is expensive for these particular shapes: a struct that mixes `init`-only
-members with a private `[JsonInclude]` field pushes `System.Text.Json` onto a reflection-driven path.
-Measured, per operation:
+members with a private `[JsonInclude]` field pushes `System.Text.Json` onto a reflection-driven path. Measured,
+per operation:
 
-| | before | after |
-| --- | --- | --- |
-| Deserialize `Result<T>` | 688 B | 208 B |
-| Deserialize a stream chunk | 872 B | 344 B |
-| Serialize a stream chunk | 600 B | 176 B |
-| Chunk size on the wire | 219 B | 148 B |
+| | Allocated |
+| --- | --- |
+| Deserialize `Result<T>` | 208 B |
+| Deserialize a stream chunk | 344 B |
+| Serialize a stream chunk | 176 B |
+| Chunk size on the wire | 148 B |
 
 `CollectionResult<T>` needs no converter — it has no private serialized field, so the default path costs it only
 ~56 bytes over the items themselves.
 
-What is left is close to the floor. Deserializing a progress chunk allocates 216 bytes, but 136 of those are the
-chunk object and 48 are the payload string inside it — both of which any code path would have to allocate. The
-serializer's own share is about 32 bytes.
+That is close to the floor. Deserializing a progress chunk allocates 216 bytes, of which 136 are the chunk
+object and 48 the payload string inside it — both of which any code path has to allocate. The serializer's own
+share is about 32 bytes.
 
 On the client, chunks are deserialized straight from each frame's UTF-8 bytes rather than from a string per
 frame, and the JSON contract is resolved once per stream instead of once per frame. Reading a 20 000-frame
 stream end to end costs about 292 bytes per frame against 171 bytes of payload on the wire.
 
-#### Give a streamed payload an `init` property, not a constructor parameter
+#### The payload type matters more than anything else here
 
-This one is worth more than everything above put together, and it is in your code rather than in this library.
+This is worth more than everything above put together, and it lives in your code rather than in this library.
 `System.Text.Json` deserializes a type with a parameterized constructor through a different path than one it can
 populate property by property, and that path allocates. Per object, on the same JSON:
 
@@ -1654,6 +1611,38 @@ populate property by property, and that path allocates. Per object, on the same 
 The positional record costs 104 bytes more per object for no benefit — the `init` record is just as immutable.
 On a stream running at a thousand chunks a second that is 100 KB/s of pure garbage, so prefer the second form
 for progress and result payloads. Everywhere else the difference is too small to think about.
+
+If the payload type is not yours to reshape, hand its source-generated contract to the transport instead — that
+recovers most of the same ground without touching the type:
+
+```csharp
+[JsonSerializable(typeof(Progress))]
+internal partial class StreamPayloads : JsonSerializerContext;
+
+private static readonly CqrsStreamClientOptions StreamOptions = new()
+{
+    JsonSerializerOptions = CqrsStreamSerialization.WithPayloadContext(StreamPayloads.Default)
+};
+
+await foreach (var chunk in http.GetForCqrsStreamAsync<Progress, Report>("/reports/1", StreamOptions))
+{
+    // ...
+}
+```
+
+`WithPayloadContext` consults your context first and falls back to reflection for everything it does not cover,
+including the transport's own chunk, result and problem types. Pointing `TypeInfoResolver` straight at your
+context instead would leave `CqrsStreamChunk<,>` without a contract and fail on the first chunk — combining is
+the whole point of the method. The wire format is unchanged either way, so one end may use a context and the
+other not.
+
+That is the client half. On the server the SSE response is written with ASP.NET Core's own JSON options, so add
+the context there in the usual way:
+
+```csharp
+builder.Services.ConfigureHttpJsonOptions(o =>
+    o.SerializerOptions.TypeInfoResolverChain.Insert(0, StreamPayloads.Default));
+```
 
 `ManagedCode.Communication.Tests/Results/SerializationAllocationTests.cs` holds allocation budgets for all of
 this, so a regression fails the build rather than going unnoticed.
@@ -2203,120 +2192,6 @@ public class OrderProcessingService
             ? Result.Fail("Insufficient inventory", string.Join("; ", unavailable))
             : Result.Succeed();
     }
-}
-```
-
-## Migration Guide
-
-### Migrating from Exceptions
-
-#### Before (Exception-based)
-
-```csharp
-public User GetUser(int id)
-{
-    if (id <= 0)
-        throw new ArgumentException("Invalid ID");
-    
-    var user = _repository.FindById(id);
-    if (user == null)
-        throw new NotFoundException($"User {id} not found");
-    
-    if (!user.IsActive)
-        throw new InvalidOperationException("User is not active");
-    
-    return user;
-}
-
-// Usage
-try
-{
-    var user = GetUser(id);
-    // Process user
-}
-catch (ArgumentException ex)
-{
-    // Handle validation error
-}
-catch (NotFoundException ex)
-{
-    // Handle not found
-}
-catch (Exception ex)
-{
-    // Handle other errors
-}
-```
-
-#### After (Result-based)
-
-```csharp
-public Result<User> GetUser(int id)
-{
-    if (id <= 0)
-        return Result<User>.FailValidation(("id", "ID must be positive"));
-    
-    var user = _repository.FindById(id);
-    if (user == null)
-        return Result<User>.FailNotFound($"User {id} not found");
-    
-    if (!user.IsActive)
-        return Result<User>.Fail("User inactive", "User account is not active");
-    
-    return Result<User>.Succeed(user);
-}
-
-// Usage
-var result = GetUser(id);
-result.Match(
-    onSuccess: user => { /* Process user */ },
-    onFailure: problem =>
-    {
-        if (result.IsInvalid)
-        {
-            // Handle validation error
-        }
-        else if (problem.StatusCode == 404)
-        {
-            // Handle not found
-        }
-        else
-        {
-            // Handle other errors
-        }
-    }
-);
-```
-
-### Gradual Migration Strategy
-
-1. **Start with new code**: Implement Result pattern in new features
-2. **Wrap existing methods**: Use `Result.Try()` to wrap exception-throwing code
-3. **Update interfaces**: Change return types from `T` to `Result<T>`
-4. **Convert controllers**: Update API endpoints to return Result types
-5. **Remove try-catch blocks**: Replace with Result pattern handling
-
-```csharp
-// Step 1: Wrap existing code
-public Result<User> GetUserSafe(int id)
-{
-    return Result.Try(() => GetUserUnsafe(id));
-}
-
-// Step 2: Gradually refactor internals
-public Result<User> GetUserRefactored(int id)
-{
-    // Refactored implementation without exceptions
-}
-
-// Step 3: Update consumers
-public async Task<IActionResult> GetUser(int id)
-{
-    var result = await _service.GetUserRefactored(id);
-    return result.Match(
-        onSuccess: user => Ok(user),
-        onFailure: problem => Problem(problem)
-    );
 }
 ```
 

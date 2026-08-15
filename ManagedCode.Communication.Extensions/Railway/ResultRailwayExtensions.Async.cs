@@ -18,6 +18,30 @@ public static partial class ResultRailwayExtensions
     // Task<Result> receivers
     // ---------------------------------------------------------------------------------------------------
 
+    /// <summary>
+    ///     Awaits the result, then transforms its value with a synchronous mapper.
+    /// </summary>
+    /// <typeparam name="TIn">The incoming value type.</typeparam>
+    /// <typeparam name="TOut">The transformed value type.</typeparam>
+    /// <param name="resultTask">The result being awaited.</param>
+    /// <param name="mapper">Runs only on success.</param>
+    /// <returns>The mapped value, or the incoming failure unchanged.</returns>
+    /// <remarks>
+    ///     Named <c>Map</c> rather than <c>MapAsync</c> because the suffix here describes the mapper, not the
+    ///     receiver: <see cref="MapAsync{TIn,TOut}(Task{Result{TIn}},Func{TIn,Task{TOut}})" /> takes an
+    ///     asynchronous one. Giving both the same name would make every call with an async mapper ambiguous,
+    ///     since the two would infer to the identical delegate type.
+    /// </remarks>
+    public static async Task<Result<TOut>> Map<TIn, TOut>(this Task<Result<TIn>> resultTask, Func<TIn, TOut> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(mapper);
+
+        var result = await resultTask.ConfigureAwait(false);
+        return result.IsSuccess
+            ? Result<TOut>.Succeed(mapper(result.Value))
+            : result.PropagateFailure<TOut>();
+    }
+
     /// <inheritdoc cref="Bind(Result,Func{Result})" />
     public static async Task<Result> ThenAsync(this Task<Result> resultTask, Func<Task<Result>> next)
     {
