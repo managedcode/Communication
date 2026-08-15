@@ -42,6 +42,9 @@ public sealed class ProblemSurrogateConverter : IConverter<Problem, ProblemSurro
         return problem;
     }
 
+    /// <summary>
+    ///     Converts the value into its surrogate for serialization.
+    /// </summary>
     public ProblemSurrogate ConvertToSurrogate(in Problem value)
     {
         return new ProblemSurrogate(value.Type, value.Title, value.StatusCode, value.Detail, value.Instance, value.Extensions);

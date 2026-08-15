@@ -21,6 +21,9 @@ public sealed class PaginationRequestSurrogateConverter : IConverter<PaginationR
             Math.Max(0, surrogate.Take));
     }
 
+    /// <summary>
+    ///     Converts the value into its surrogate for serialization.
+    /// </summary>
     public PaginationRequestSurrogate ConvertToSurrogate(in PaginationRequest value)
     {
         return new PaginationRequestSurrogate(value.Skip, value.Take);

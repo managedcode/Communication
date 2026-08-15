@@ -20,6 +20,9 @@ public sealed class ResultSurrogateConverter : IConverter<Result, ResultSurrogat
         return Result.CreateFailed(surrogate.Problem ?? Problem.GenericError());
     }
 
+    /// <summary>
+    ///     Converts the value into its surrogate for serialization.
+    /// </summary>
     public ResultSurrogate ConvertToSurrogate(in Result value)
     {
         return new ResultSurrogate(value.IsSuccess, value.Problem);

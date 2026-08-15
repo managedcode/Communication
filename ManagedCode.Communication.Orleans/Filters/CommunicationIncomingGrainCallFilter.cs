@@ -7,8 +7,14 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Filters;
 
+/// <summary>
+///     Converts an exception thrown inside a grain into a failed result, so callers stay on the Result path.
+/// </summary>
 public class CommunicationIncomingGrainCallFilter(ILogger<CommunicationIncomingGrainCallFilter> logger) : IIncomingGrainCallFilter
 {
+    /// <summary>
+    ///     Invokes the grain method, converting any exception into a failed result.
+    /// </summary>
     public async Task Invoke(IIncomingGrainCallContext context)
     {
         try

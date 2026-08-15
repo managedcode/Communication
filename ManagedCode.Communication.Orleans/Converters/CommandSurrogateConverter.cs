@@ -28,6 +28,9 @@ public sealed class CommandSurrogateConverter : IConverter<Command, CommandSurro
         return command;
     }
 
+    /// <summary>
+    ///     Converts the value into its surrogate for serialization.
+    /// </summary>
     public CommandSurrogate ConvertToSurrogate(in Command value)
     {
         return new CommandSurrogate(

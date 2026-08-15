@@ -21,6 +21,9 @@ public sealed class CollectionResultTSurrogateConverter<T> : IConverter<Collecti
         return CollectionResult<T>.CreateFailed(surrogate.Problem ?? Problem.GenericError(), surrogate.Collection);
     }
 
+    /// <summary>
+    ///     Converts the value into its surrogate for serialization.
+    /// </summary>
     public CollectionResultTSurrogate<T> ConvertToSurrogate(in CollectionResult<T> value)
     {
         return new CollectionResultTSurrogate<T>(value.IsSuccess, value.Collection, value.PageNumber, value.PageSize, value.TotalItems,

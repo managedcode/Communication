@@ -7,12 +7,6 @@
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <!--
-            Ship the XML documentation that exists so consumers get IntelliSense. CS1591 (missing comment on a
-            public member) stays off: the core assembly still has a large undocumented surface, and failing the
-            build over it would mean shipping no documentation at all rather than most of it. CS1570 (malformed
-            XML) is deliberately left ON — a broken doc comment is a defect, not an omission.
-        -->
     </PropertyGroup>
 
     <!--NuGet-->

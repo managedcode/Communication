@@ -17,17 +17,26 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
 {
     private readonly IGrainFactory _grainFactory;
 
+    /// <summary>
+    ///     Creates the store over an Orleans grain factory.
+    /// </summary>
     public OrleansCommandIdempotencyStore(IGrainFactory grainFactory)
     {
         _grainFactory = grainFactory ?? throw new ArgumentNullException(nameof(grainFactory));
     }
 
+    /// <summary>
+    ///     Reads the current status of a command.
+    /// </summary>
     public async Task<CommandExecutionStatus> GetCommandStatusAsync(string commandId, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
         return await grain.GetStatusAsync();
     }
 
+    /// <summary>
+    ///     Writes the status of a command.
+    /// </summary>
     public async Task SetCommandStatusAsync(string commandId, CommandExecutionStatus status, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
@@ -59,6 +68,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
         }
     }
 
+    /// <summary>
+    ///     Reads the cached result of a completed command.
+    /// </summary>
     public async Task<T?> GetCommandResultAsync<T>(string commandId, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
@@ -72,12 +84,18 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
         return default;
     }
 
+    /// <summary>
+    ///     Caches the result of a completed command.
+    /// </summary>
     public async Task SetCommandResultAsync<T>(string commandId, T result, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
         await grain.MarkCompletedAsync(result);
     }
 
+    /// <summary>
+    ///     Forgets a command entirely.
+    /// </summary>
     public async Task RemoveCommandAsync(string commandId, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
@@ -85,6 +103,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
     }
 
     // New atomic operations
+    /// <summary>
+    ///     Moves a command between statuses only if it is currently in the expected one.
+    /// </summary>
     public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
@@ -97,6 +118,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
         return false;
     }
 
+    /// <summary>
+    ///     Reads the current status and writes a new one.
+    /// </summary>
     public async Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
@@ -109,6 +133,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
     }
 
     // Batch operations
+    /// <summary>
+    ///     Reads the status of several commands.
+    /// </summary>
     public async Task<Dictionary<string, CommandExecutionStatus>> GetMultipleStatusAsync(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
     {
         var tasks = commandIds.Select(async commandId =>
@@ -121,6 +148,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
         return results.ToDictionary(r => r.commandId, r => r.status);
     }
 
+    /// <summary>
+    ///     Reads the cached results of several commands.
+    /// </summary>
     public async Task<Dictionary<string, T?>> GetMultipleResultsAsync<T>(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
     {
         var tasks = commandIds.Select(async commandId =>
@@ -134,6 +164,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
     }
 
     // Cleanup operations - NOTE: Orleans grains have automatic lifecycle management
+    /// <summary>
+    ///     Not supported: Orleans cannot enumerate grains, so nothing is removed.
+    /// </summary>
     public Task<int> CleanupExpiredCommandsAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
     {
         // Orleans grains are automatically deactivated when not used
@@ -141,6 +174,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
         return Task.FromResult(0);
     }
 
+    /// <summary>
+    ///     Not supported: Orleans cannot enumerate grains, so nothing is removed.
+    /// </summary>
     public Task<int> CleanupCommandsByStatusAsync(CommandExecutionStatus status, TimeSpan maxAge, CancellationToken cancellationToken = default)
     {
         // Orleans grains are automatically deactivated when not used
@@ -148,6 +184,9 @@ public class OrleansCommandIdempotencyStore : ICommandIdempotencyStore
         return Task.FromResult(0);
     }
 
+    /// <summary>
+    ///     Not supported: Orleans cannot enumerate grains, so the map is always empty.
+    /// </summary>
     public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(CancellationToken cancellationToken = default)
     {
         // Orleans has no way to enumerate grains, so this store cannot count commands by status.

@@ -4,6 +4,8 @@
         <IsPackable>false</IsPackable>
         <OutputType>Library</OutputType>
         <GenerateProgramFile>false</GenerateProgramFile>
+        <!-- The test project ships nothing; test names and their remarks are the documentation here. -->
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
     </PropertyGroup>
     <PropertyGroup>
         <VSTestLogger>trx%3bLogFileName=$(MSBuildProjectName).trx</VSTestLogger>

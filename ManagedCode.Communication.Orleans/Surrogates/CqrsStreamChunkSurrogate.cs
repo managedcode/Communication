@@ -15,6 +15,9 @@ namespace ManagedCode.Communication.Orleans.Surrogates;
 [GenerateSerializer]
 public struct CqrsStreamChunkSurrogate<TProgress, TResult>
 {
+    /// <summary>
+    ///     Creates the surrogate from its parts.
+    /// </summary>
     public CqrsStreamChunkSurrogate(
         CqrsStreamChunkKind kind,
         Result<TProgress>? progressResult,
@@ -35,19 +38,43 @@ public struct CqrsStreamChunkSurrogate<TProgress, TResult>
         TimestampUtc = timestampUtc;
     }
 
+    /// <summary>
+    ///     Chunk lifecycle state.
+    /// </summary>
     [Id(0)] public CqrsStreamChunkKind Kind;
 
+    /// <summary>
+    ///     Progress payload.
+    /// </summary>
     [Id(1)] public Result<TProgress>? ProgressResult;
 
+    /// <summary>
+    ///     Terminal payload.
+    /// </summary>
     [Id(2)] public Result<TResult>? Final;
 
+    /// <summary>
+    ///     Human-readable chunk message.
+    /// </summary>
     [Id(3)] public string? Message;
 
+    /// <summary>
+    ///     SSE event name.
+    /// </summary>
     [Id(4)] public string EventType;
 
+    /// <summary>
+    ///     SSE event id.
+    /// </summary>
     [Id(5)] public string? EventId;
 
+    /// <summary>
+    ///     Position of the chunk in the stream.
+    /// </summary>
     [Id(6)] public long? Sequence;
 
+    /// <summary>
+    ///     Chunk timestamp (UTC).
+    /// </summary>
     [Id(7)] public DateTime TimestampUtc;
 }

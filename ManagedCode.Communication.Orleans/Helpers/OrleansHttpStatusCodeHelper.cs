@@ -5,8 +5,14 @@ using Orleans.Runtime;
 
 namespace ManagedCode.Communication.Orleans.Helpers;
 
+/// <summary>
+///     Maps Orleans exceptions to status codes, falling back to the core mapping.
+/// </summary>
 public static class OrleansHttpStatusCodeHelper
 {
+    /// <summary>
+    ///     Maps an exception to a status code, checking Orleans-specific types first.
+    /// </summary>
     public static HttpStatusCode GetStatusCodeForException(Exception exception)
     {
         // First check Orleans-specific exceptions

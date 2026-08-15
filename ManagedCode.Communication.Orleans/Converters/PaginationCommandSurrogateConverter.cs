@@ -28,6 +28,9 @@ public sealed class PaginationCommandSurrogateConverter : IConverter<PaginationC
         return command;
     }
 
+    /// <summary>
+    ///     Converts the value into its surrogate for serialization.
+    /// </summary>
     public CommandTSurrogate<PaginationRequest> ConvertToSurrogate(in PaginationCommand value)
     {
         return new CommandTSurrogate<PaginationRequest>(

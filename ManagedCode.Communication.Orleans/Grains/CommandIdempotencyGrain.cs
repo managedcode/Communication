@@ -13,6 +13,9 @@ namespace ManagedCode.Communication.Orleans.Grains;
 public class CommandIdempotencyGrain([PersistentState("commandState", "commandStore")] IPersistentState<CommandState> state)
     : Grain, ICommandIdempotencyGrain
 {
+    /// <summary>
+    ///     Reads the command's current status.
+    /// </summary>
     public Task<CommandExecutionStatus> GetStatusAsync()
     {
         // Check if expired
@@ -24,6 +27,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
         return Task.FromResult(state.State.Status);
     }
 
+    /// <summary>
+    ///     Claims the command for processing; returns <c>false</c> when someone else already has.
+    /// </summary>
     public async Task<bool> TryStartProcessingAsync()
     {
         // Reject concurrent executions
@@ -57,6 +63,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
         return true;
     }
 
+    /// <summary>
+    ///     Moves the command between statuses only if it is currently in the expected one.
+    /// </summary>
     public async Task<bool> TrySetStatusAsync(CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus)
     {
         if (state.State.Status != expectedStatus)
@@ -98,6 +107,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
         }
     }
 
+    /// <summary>
+    ///     Records the command as completed and caches its result.
+    /// </summary>
     public async Task MarkCompletedAsync<TResult>(TResult result)
     {
         state.State.Status = CommandExecutionStatus.Completed;
@@ -108,6 +120,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
         await state.WriteStateAsync();
     }
 
+    /// <summary>
+    ///     Records the command as failed.
+    /// </summary>
     public async Task MarkFailedAsync(string errorMessage)
     {
         state.State.Status = CommandExecutionStatus.Failed;
@@ -118,6 +133,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
         await state.WriteStateAsync();
     }
 
+    /// <summary>
+    ///     Reads the cached result, if the command completed.
+    /// </summary>
     public Task<(bool success, object? result)> TryGetResultAsync()
     {
         if (state.State.Status == CommandExecutionStatus.Completed)
@@ -128,6 +146,9 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
         return Task.FromResult((false, (object?)null));
     }
 
+    /// <summary>
+    ///     Forgets the command entirely.
+    /// </summary>
     public async Task ClearAsync()
     {
         state.State.Status = CommandExecutionStatus.NotFound;
@@ -148,24 +169,45 @@ public class CommandIdempotencyGrain([PersistentState("commandState", "commandSt
 [GenerateSerializer]
 public class CommandState
 {
+    /// <summary>
+    ///     Serialized member carried across the grain boundary.
+    /// </summary>
     [Id(0)]
     public CommandExecutionStatus Status { get; set; } = CommandExecutionStatus.NotFound;
 
+    /// <summary>
+    ///     Serialized member carried across the grain boundary.
+    /// </summary>
     [Id(1)]
     public object? Result { get; set; }
 
+    /// <summary>
+    ///     Serialized member carried across the grain boundary.
+    /// </summary>
     [Id(2)]
     public string? ErrorMessage { get; set; }
 
+    /// <summary>
+    ///     Serialized member carried across the grain boundary.
+    /// </summary>
     [Id(3)]
     public DateTime? StartedAt { get; set; }
 
+    /// <summary>
+    ///     Serialized member carried across the grain boundary.
+    /// </summary>
     [Id(4)]
     public DateTime? CompletedAt { get; set; }
 
+    /// <summary>
+    ///     Serialized member carried across the grain boundary.
+    /// </summary>
     [Id(5)]
     public DateTime? FailedAt { get; set; }
 
+    /// <summary>
+    ///     Serialized member carried across the grain boundary.
+    /// </summary>
     [Id(6)]
     public DateTime? ExpiresAt { get; set; }
 }
