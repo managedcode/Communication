@@ -23,108 +23,108 @@ public class CommandMetadata
     /// <summary>
     ///     Schema version of this metadata, so consumers can evolve the shape.
     /// </summary>
-    [JsonPropertyName("version")]
+    [JsonPropertyName(CommunicationJsonNames.Version)]
     public uint Version { get; set; } = 1;
 
     /// <summary>
     ///     Arbitrary properties attached by the application.
     /// </summary>
-    [JsonPropertyName("properties")]
+    [JsonPropertyName(CommunicationJsonNames.Properties)]
     public Dictionary<string, object?> Properties { get; set; }
 
     /// <summary>
     ///     Who or what issued the command.
     /// </summary>
-    [JsonPropertyName("initiatedBy")]
+    [JsonPropertyName(CommunicationJsonNames.InitiatedBy)]
     public string? InitiatedBy { get; set; }
 
     /// <summary>
     ///     System or component the command came from.
     /// </summary>
-    [JsonPropertyName("source")]
+    [JsonPropertyName(CommunicationJsonNames.Source)]
     public string? Source { get; set; }
 
     /// <summary>
     ///     System or component the command is aimed at.
     /// </summary>
-    [JsonPropertyName("target")]
+    [JsonPropertyName(CommunicationJsonNames.Target)]
     public string? Target { get; set; }
 
     /// <summary>
     ///     Caller's IP address, when known.
     /// </summary>
-    [JsonPropertyName("ipAddress")]
+    [JsonPropertyName(CommunicationJsonNames.IpAddress)]
     public string? IpAddress { get; set; }
 
     /// <summary>
     ///     Caller's user agent, when known.
     /// </summary>
-    [JsonPropertyName("userAgent")]
+    [JsonPropertyName(CommunicationJsonNames.UserAgent)]
     public string? UserAgent { get; set; }
 
     /// <summary>
     ///     Session the command belongs to.
     /// </summary>
-    [JsonPropertyName("sessionId")]
+    [JsonPropertyName(CommunicationJsonNames.SessionId)]
     public string? SessionId { get; set; }
 
     /// <summary>
     ///     Distributed-tracing trace identifier.
     /// </summary>
-    [JsonPropertyName("traceId")]
+    [JsonPropertyName(CommunicationJsonNames.TraceId)]
     public string? TraceId { get; set; }
 
     /// <summary>
     ///     Distributed-tracing span identifier.
     /// </summary>
-    [JsonPropertyName("spanId")]
+    [JsonPropertyName(CommunicationJsonNames.SpanId)]
     public string? SpanId { get; set; }
 
     /// <summary>
     ///     Relative execution priority. Defaults to <c>Normal</c>.
     /// </summary>
-    [JsonPropertyName("priority")]
+    [JsonPropertyName(CommunicationJsonNames.Priority)]
     public CommandPriority Priority { get; set; } = CommandPriority.Normal;
 
     /// <summary>
     ///     How many times execution has already been retried.
     /// </summary>
-    [JsonPropertyName("retryCount")]
+    [JsonPropertyName(CommunicationJsonNames.RetryCount)]
     public int RetryCount { get; set; }
 
     /// <summary>
     ///     Retry budget before the command is abandoned. Defaults to 3.
     /// </summary>
-    [JsonPropertyName("maxRetries")]
+    [JsonPropertyName(CommunicationJsonNames.MaxRetries)]
     public int MaxRetries { get; set; } = 3;
 
     /// <summary>
     ///     Execution timeout in seconds. Defaults to 30.
     /// </summary>
-    [JsonPropertyName("timeoutSeconds")]
+    [JsonPropertyName(CommunicationJsonNames.TimeoutSeconds)]
     public int TimeoutSeconds { get; set; } = 30;
 
     /// <summary>
     ///     How long execution took, filled in once the command completes.
     /// </summary>
-    [JsonPropertyName("executionTime")]
+    [JsonPropertyName(CommunicationJsonNames.ExecutionTime)]
     public TimeSpan ExecutionTime { get; set; }
 
     /// <summary>
     ///     How long the command stays valid; <c>null</c> means it does not expire.
     /// </summary>
-    [JsonPropertyName("timeToLiveSeconds")]
+    [JsonPropertyName(CommunicationJsonNames.TimeToLiveSeconds)]
     public int? TimeToLiveSeconds { get; set; }
 
     /// <summary>
     ///     String tags for routing, filtering or reporting.
     /// </summary>
-    [JsonPropertyName("tags")]
+    [JsonPropertyName(CommunicationJsonNames.Tags)]
     public Dictionary<string, string> Tags { get; set; }
 
     /// <summary>
     ///     Extension slot for data that does not fit the fields above.
     /// </summary>
-    [JsonPropertyName("extensions")]
+    [JsonPropertyName(CommunicationJsonNames.Extensions)]
     public Dictionary<string, object?> Extensions { get; set; }
 }

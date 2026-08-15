@@ -53,17 +53,17 @@ public sealed class ResultTJsonConverter<T> : JsonConverter<Result<T>>
                 continue;
             }
 
-            if (ResultJsonMembers.IsSuccess(ref reader))
+            if (ResultMemberEncoding.MatchesIsSuccess(ref reader))
             {
                 reader.Read();
                 isSuccess = reader.TokenType == JsonTokenType.True;
             }
-            else if (ResultJsonMembers.IsValue(ref reader))
+            else if (ResultMemberEncoding.MatchesValue(ref reader))
             {
                 reader.Read();
                 value = JsonSerializer.Deserialize<T>(ref reader, options);
             }
-            else if (ResultJsonMembers.IsProblem(ref reader))
+            else if (ResultMemberEncoding.MatchesProblem(ref reader))
             {
                 reader.Read();
                 problem = JsonSerializer.Deserialize<Problem>(ref reader, options);
@@ -87,19 +87,19 @@ public sealed class ResultTJsonConverter<T> : JsonConverter<Result<T>>
         ArgumentNullException.ThrowIfNull(writer);
 
         writer.WriteStartObject();
-        writer.WriteBoolean(ResultJsonMembers.IsSuccessName, value.IsSuccess);
+        writer.WriteBoolean(ResultMemberEncoding.IsSuccess, value.IsSuccess);
 
         // Always written on success, including when it equals default: omitting it would leave a non-.NET
         // client unable to tell Succeed(0) from a result carrying nothing.
         if (value.IsSuccess || value.Value is not null)
         {
-            writer.WritePropertyName(ResultJsonMembers.ValueName);
+            writer.WritePropertyName(ResultMemberEncoding.Value);
             JsonSerializer.Serialize(writer, value.Value, options);
         }
 
         if (value.IsFailed)
         {
-            writer.WritePropertyName(ResultJsonMembers.ProblemName);
+            writer.WritePropertyName(ResultMemberEncoding.Problem);
             JsonSerializer.Serialize(writer, value.Problem, options);
         }
 

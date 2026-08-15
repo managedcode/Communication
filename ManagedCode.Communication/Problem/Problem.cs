@@ -28,7 +28,7 @@ public partial class Problem
     ///     "about:blank".
     /// </summary>
     [JsonPropertyOrder(-5)]
-    [JsonPropertyName("type")]
+    [JsonPropertyName(CommunicationJsonNames.ProblemType)]
     public string Type { get; set; } = "about:blank";
 
     /// <summary>
@@ -38,7 +38,7 @@ public partial class Problem
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyOrder(-4)]
-    [JsonPropertyName("title")]
+    [JsonPropertyName(CommunicationJsonNames.ProblemTitle)]
     public string? Title { get; set; }
 
     /// <summary>
@@ -46,7 +46,7 @@ public partial class Problem
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     [JsonPropertyOrder(-3)]
-    [JsonPropertyName("status")]
+    [JsonPropertyName(CommunicationJsonNames.ProblemStatus)]
     public int StatusCode { get; set; }
 
     /// <summary>
@@ -54,7 +54,7 @@ public partial class Problem
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyOrder(-2)]
-    [JsonPropertyName("detail")]
+    [JsonPropertyName(CommunicationJsonNames.ProblemDetail)]
     public string? Detail { get; set; }
 
     /// <summary>
@@ -63,7 +63,7 @@ public partial class Problem
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyOrder(-1)]
-    [JsonPropertyName("instance")]
+    [JsonPropertyName(CommunicationJsonNames.ProblemInstance)]
     public string? Instance { get; set; }
 
     /// <summary>

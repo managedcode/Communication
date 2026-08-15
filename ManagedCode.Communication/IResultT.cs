@@ -12,7 +12,7 @@ public interface IResult<out T> : IResult
     /// <summary>
     ///     Gets the value from the result.
     /// </summary>
-    [JsonPropertyName("value")]
+    [JsonPropertyName(CommunicationJsonNames.Value)]
     [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     T? Value { get; }

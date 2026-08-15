@@ -45,21 +45,21 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     Identity of the command. Generated as a time-ordered UUIDv7 unless supplied.
     /// </summary>
 
-    [JsonPropertyName("commandId")]
+    [JsonPropertyName(CommunicationJsonNames.CommandId)]
     [JsonPropertyOrder(1)]
     public Guid CommandId { get; set; }
     /// <summary>
     ///     Logical name of the command.
     /// </summary>
 
-    [JsonPropertyName("commandType")]
+    [JsonPropertyName(CommunicationJsonNames.CommandType)]
     [JsonPropertyOrder(2)]
     public string CommandType { get; set; }
     /// <summary>
     ///     The payload.
     /// </summary>
 
-    [JsonPropertyName("value")]
+    [JsonPropertyName(CommunicationJsonNames.Value)]
     [JsonPropertyOrder(3)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T? Value { get; set; }
@@ -67,14 +67,14 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     When the command was created (UTC).
     /// </summary>
 
-    [JsonPropertyName("timestamp")]
+    [JsonPropertyName(CommunicationJsonNames.Timestamp)]
     [JsonPropertyOrder(4)]
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     /// <summary>
     ///     Ties this command to every other operation in the same logical flow. Not generated — set it yourself.
     /// </summary>
 
-    [JsonPropertyName("correlationId")]
+    [JsonPropertyName(CommunicationJsonNames.CorrelationId)]
     [JsonPropertyOrder(5)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CorrelationId { get; set; }
@@ -82,7 +82,7 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     Identity of the command that caused this one. Not generated — set it yourself.
     /// </summary>
 
-    [JsonPropertyName("causationId")]
+    [JsonPropertyName(CommunicationJsonNames.CausationId)]
     [JsonPropertyOrder(6)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CausationId { get; set; }
@@ -90,7 +90,7 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     Distributed-tracing trace identifier.
     /// </summary>
 
-    [JsonPropertyName("traceId")]
+    [JsonPropertyName(CommunicationJsonNames.TraceId)]
     [JsonPropertyOrder(7)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? TraceId { get; set; }
@@ -98,7 +98,7 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     Distributed-tracing span identifier.
     /// </summary>
 
-    [JsonPropertyName("spanId")]
+    [JsonPropertyName(CommunicationJsonNames.SpanId)]
     [JsonPropertyOrder(8)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SpanId { get; set; }
@@ -106,7 +106,7 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     User on whose behalf the command runs.
     /// </summary>
 
-    [JsonPropertyName("userId")]
+    [JsonPropertyName(CommunicationJsonNames.UserId)]
     [JsonPropertyOrder(9)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? UserId { get; set; }
@@ -114,7 +114,7 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     Session the command belongs to.
     /// </summary>
 
-    [JsonPropertyName("sessionId")]
+    [JsonPropertyName(CommunicationJsonNames.SessionId)]
     [JsonPropertyOrder(10)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? SessionId { get; set; }
@@ -122,7 +122,7 @@ public partial class Command<T> : ICommand<T>, ICommandValueFactory<Command<T>, 
     ///     Execution policy and free-form metadata.
     /// </summary>
 
-    [JsonPropertyName("metadata")]
+    [JsonPropertyName(CommunicationJsonNames.Metadata)]
     [JsonPropertyOrder(11)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public CommandMetadata? Metadata { get; set; }

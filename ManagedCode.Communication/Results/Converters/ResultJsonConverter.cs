@@ -33,12 +33,12 @@ public sealed class ResultJsonConverter : JsonConverter<Result>
                 continue;
             }
 
-            if (ResultJsonMembers.IsSuccess(ref reader))
+            if (ResultMemberEncoding.MatchesIsSuccess(ref reader))
             {
                 reader.Read();
                 isSuccess = reader.TokenType == JsonTokenType.True;
             }
-            else if (ResultJsonMembers.IsProblem(ref reader))
+            else if (ResultMemberEncoding.MatchesProblem(ref reader))
             {
                 reader.Read();
                 problem = JsonSerializer.Deserialize<Problem>(ref reader, options);
@@ -59,12 +59,12 @@ public sealed class ResultJsonConverter : JsonConverter<Result>
         ArgumentNullException.ThrowIfNull(writer);
 
         writer.WriteStartObject();
-        writer.WriteBoolean(ResultJsonMembers.IsSuccessName, value.IsSuccess);
+        writer.WriteBoolean(ResultMemberEncoding.IsSuccess, value.IsSuccess);
 
         // Only a failure carries a problem, and the generic fallback is reconstructed on read.
         if (value.IsFailed)
         {
-            writer.WritePropertyName(ResultJsonMembers.ProblemName);
+            writer.WritePropertyName(ResultMemberEncoding.Problem);
             JsonSerializer.Serialize(writer, value.Problem, options);
         }
 

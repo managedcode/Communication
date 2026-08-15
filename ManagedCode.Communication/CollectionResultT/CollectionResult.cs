@@ -47,7 +47,7 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     ///     Whether the operation succeeded.
     /// </summary>
     [JsonInclude]
-    [JsonPropertyName("isSuccess")]
+    [JsonPropertyName(CommunicationJsonNames.IsSuccess)]
     [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Collection))]
     [MemberNotNullWhen(false, nameof(Problem))]
@@ -63,7 +63,7 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     /// <summary>
     ///     The items on this page. Empty when the result failed.
     /// </summary>
-    [JsonPropertyName("collection")]
+    [JsonPropertyName(CommunicationJsonNames.Collection)]
     [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public T[] Collection { get; init; } = [];
@@ -77,33 +77,33 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     /// <summary>
     ///     1-based index of this page.
     /// </summary>
-    [JsonPropertyName("pageNumber")]
+    [JsonPropertyName(CommunicationJsonNames.PageNumber)]
     [JsonPropertyOrder(3)]
     public int PageNumber { get; init; }
 
     /// <summary>
     ///     Maximum number of items per page.
     /// </summary>
-    [JsonPropertyName("pageSize")]
+    [JsonPropertyName(CommunicationJsonNames.PageSize)]
     [JsonPropertyOrder(4)]
     public int PageSize { get; init; }
 
     /// <summary>
     ///     Total number of items across all pages.
     /// </summary>
-    [JsonPropertyName("totalItems")]
+    [JsonPropertyName(CommunicationJsonNames.TotalItems)]
     [JsonPropertyOrder(5)]
     public int TotalItems { get; init; }
 
     /// <summary>
     ///     Total number of pages.
     /// </summary>
-    [JsonPropertyName("totalPages")]
+    [JsonPropertyName(CommunicationJsonNames.TotalPages)]
     [JsonPropertyOrder(6)]
     public int TotalPages { get; init; }
 
     [JsonInclude]
-    [JsonPropertyName("problem")]
+    [JsonPropertyName(CommunicationJsonNames.Problem)]
     [JsonPropertyOrder(7)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     private Problem? _problem;

@@ -13,7 +13,7 @@ public interface IResultCollection<out T> : IResult<T[]>
     ///     Gets the collection of items.
     /// </summary>
     /// <value>The collection of items, or empty array if the result does not contain items.</value>
-    [JsonPropertyName("collection")]
+    [JsonPropertyName(CommunicationJsonNames.Collection)]
     [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     T[] Collection { get; }
@@ -29,7 +29,7 @@ public interface IResultCollection<out T> : IResult<T[]>
     ///     Gets the current page number (1-based).
     /// </summary>
     /// <value>The current page number.</value>
-    [JsonPropertyName("pageNumber")]
+    [JsonPropertyName(CommunicationJsonNames.PageNumber)]
     [JsonPropertyOrder(3)]
     int PageNumber { get; }
 
@@ -37,7 +37,7 @@ public interface IResultCollection<out T> : IResult<T[]>
     ///     Gets the number of items per page.
     /// </summary>
     /// <value>The page size.</value>
-    [JsonPropertyName("pageSize")]
+    [JsonPropertyName(CommunicationJsonNames.PageSize)]
     [JsonPropertyOrder(4)]
     int PageSize { get; }
 
@@ -45,7 +45,7 @@ public interface IResultCollection<out T> : IResult<T[]>
     ///     Gets the total number of items across all pages.
     /// </summary>
     /// <value>The total item count.</value>
-    [JsonPropertyName("totalItems")]
+    [JsonPropertyName(CommunicationJsonNames.TotalItems)]
     [JsonPropertyOrder(5)]
     int TotalItems { get; }
 
@@ -53,7 +53,7 @@ public interface IResultCollection<out T> : IResult<T[]>
     ///     Gets the total number of pages.
     /// </summary>
     /// <value>The total page count.</value>
-    [JsonPropertyName("totalPages")]
+    [JsonPropertyName(CommunicationJsonNames.TotalPages)]
     [JsonPropertyOrder(6)]
     int TotalPages { get; }
 

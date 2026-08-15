@@ -66,12 +66,14 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     /// <summary>
     ///     Chunk kind in the stream lifecycle.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.Kind)]
     public CqrsStreamChunkKind Kind { get; init; }
 
     /// <summary>
     ///     Progress payload. Set for <see cref="CqrsStreamChunkKind.Started" /> and
     ///     <see cref="CqrsStreamChunkKind.Progress" /> chunks.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.ProgressResult)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Result<TProgress>? ProgressResult { get; init; }
 
@@ -79,12 +81,14 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     ///     Terminal payload. Set for <see cref="CqrsStreamChunkKind.Completed" /> and
     ///     <see cref="CqrsStreamChunkKind.Failed" /> chunks.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.Final)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Result<TResult>? Final { get; init; }
 
     /// <summary>
     ///     Human-readable chunk message.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.Message)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Message { get; init; }
 
@@ -107,7 +111,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     ///     <c>event:</c> field as well. Readers rebuild it through <see cref="EventType" />, so nothing is lost.
     /// </remarks>
     [JsonInclude]
-    [JsonPropertyName("eventType")]
+    [JsonPropertyName(CommunicationJsonNames.EventType)]
     [JsonPropertyOrder(5)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     internal string? StoredEventType
@@ -119,6 +123,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     /// <summary>
     ///     SSE <c>id:</c> value. When unset, the transport derives one from <see cref="Sequence" />.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.EventId)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? EventId { get; init; }
 
@@ -126,11 +131,13 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     ///     Monotonic position of this chunk within the stream. When a handler leaves it unset, the server transport
     ///     assigns one, so consumers can always rely on it to restore ordering.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.Sequence)]
     public long? Sequence { get; init; }
 
     /// <summary>
     ///     UTC timestamp for diagnostics and ordering. Always normalized to <see cref="DateTimeKind.Utc" />.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.TimestampUtc)]
     public DateTime TimestampUtc
     {
         get => _timestampUtc;

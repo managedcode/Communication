@@ -84,7 +84,7 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     ///     Gets a value indicating whether the result is a success.
     /// </summary>
     [JsonInclude]
-    [JsonPropertyName("isSuccess")]
+    [JsonPropertyName(CommunicationJsonNames.IsSuccess)]
     [JsonPropertyOrder(1)]
     [MemberNotNullWhen(true, nameof(Value))]
     [MemberNotNullWhen(false, nameof(Problem))]
@@ -121,12 +121,12 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     ///         nothing.
     ///     </para>
     /// </remarks>
-    [JsonPropertyName("value")]
+    [JsonPropertyName(CommunicationJsonNames.Value)]
     [JsonPropertyOrder(2)]
     public T? Value { get; init; }
 
     [JsonInclude]
-    [JsonPropertyName("problem")]
+    [JsonPropertyName(CommunicationJsonNames.Problem)]
     [JsonPropertyOrder(3)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     private Problem? _problem;

@@ -33,36 +33,43 @@ public sealed record PaginationRequest
     /// <summary>
     /// Gets the number of items to skip.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.Skip)]
     public int Skip { get; init; }
 
     /// <summary>
     /// Gets the number of items to take.
     /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.Take)]
     public int Take { get; init; }
 
     /// <summary>
     /// Gets the calculated page number (1-based) for the request. Defaults to the first page when <see cref="Take"/> is zero.
     /// </summary>
+    [JsonIgnore]
     public int PageNumber => Take <= 0 ? 1 : (Skip / Take) + 1;
 
     /// <summary>
     /// Gets the requested page size.
     /// </summary>
+    [JsonIgnore]
     public int PageSize => Take;
 
     /// <summary>
     /// Gets the offset equivalent of <see cref="Skip"/>.
     /// </summary>
+    [JsonIgnore]
     public int Offset => Skip;
 
     /// <summary>
     /// Gets the limit equivalent of <see cref="Take"/>.
     /// </summary>
+    [JsonIgnore]
     public int Limit => Take;
 
     /// <summary>
     /// Gets a value indicating whether the request has an explicit page size.
     /// </summary>
+    [JsonIgnore]
     public bool HasExplicitPageSize => Take > 0;
 
     /// <summary>

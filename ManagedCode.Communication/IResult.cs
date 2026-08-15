@@ -13,7 +13,7 @@ public interface IResult : IResultProblem, IResultInvalid
     ///     Gets a value indicating whether the operation was successful.
     /// </summary>
     /// <value>true if the operation was successful; otherwise, false.</value>
-    [JsonPropertyName("isSuccess")]
+    [JsonPropertyName(CommunicationJsonNames.IsSuccess)]
     [JsonPropertyOrder(1)]
     bool IsSuccess { get; }
 
