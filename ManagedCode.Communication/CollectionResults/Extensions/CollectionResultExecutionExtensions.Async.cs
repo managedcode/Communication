@@ -11,18 +11,30 @@ using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.CollectionResults.Extensions;
 
+/// <summary>
+///     Converts tasks and factories that produce sequences into <c>CollectionResult</c>, catching exceptions.
+/// </summary>
 public static partial class CollectionResultExecutionExtensions
 {
+    /// <summary>
+    ///     Awaits the task and wraps its items, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Task<T[]> task)
     {
         return await ExecuteAsync(task, CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Awaits the task and wraps its items, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Task<IEnumerable<T>> task)
     {
         return await ExecuteAsync(task, CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Awaits the task and returns its result, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Task<CollectionResult<T>> task)
     {
         try
@@ -35,16 +47,25 @@ public static partial class CollectionResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<Task<T[]>> taskFactory, CancellationToken cancellationToken = default)
     {
         return await ExecuteAsync(Task.Run(taskFactory, cancellationToken), CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<Task<IEnumerable<T>>> taskFactory, CancellationToken cancellationToken = default)
     {
         return await ExecuteAsync(Task.Run(taskFactory, cancellationToken), CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<Task<CollectionResult<T>>> taskFactory, CancellationToken cancellationToken = default)
     {
         try
@@ -57,16 +78,25 @@ public static partial class CollectionResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Awaits the value task and wraps its items, turning a thrown exception into a failure.
+    /// </summary>
     public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this ValueTask<T[]> valueTask)
     {
         return await ExecuteAsync(valueTask.AsTask(), CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Awaits the value task and wraps its items, turning a thrown exception into a failure.
+    /// </summary>
     public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this ValueTask<IEnumerable<T>> valueTask)
     {
         return await ExecuteAsync(valueTask.AsTask(), CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
+    /// <summary>
+    ///     Awaits the value task and returns its result, turning a thrown exception into a failure.
+    /// </summary>
     public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this ValueTask<CollectionResult<T>> valueTask)
     {
         try
@@ -79,6 +109,9 @@ public static partial class CollectionResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<T[]>> valueTaskFactory)
     {
         try
@@ -91,6 +124,9 @@ public static partial class CollectionResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<IEnumerable<T>>> valueTaskFactory, [CallerLineNumber] int lineNumber = 0,
         [CallerMemberName] string caller = null!, [CallerFilePath] string path = null!)
     {
@@ -107,6 +143,9 @@ public static partial class CollectionResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<CollectionResult<T>>> valueTaskFactory)
     {
         try

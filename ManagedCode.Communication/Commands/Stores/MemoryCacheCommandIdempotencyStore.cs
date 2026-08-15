@@ -21,6 +21,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     private readonly ConcurrentDictionary<string, DateTime> _commandTimestamps;
     private bool _disposed;
 
+    /// <summary>
+    ///     Creates the store over an <c>IMemoryCache</c>.
+    /// </summary>
     public MemoryCacheCommandIdempotencyStore(
         IMemoryCache memoryCache, 
         ILogger<MemoryCacheCommandIdempotencyStore> logger)
@@ -30,6 +33,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         _commandTimestamps = new ConcurrentDictionary<string, DateTime>();
     }
 
+    /// <summary>
+    ///     Reads the current status of a command.
+    /// </summary>
     public Task<CommandExecutionStatus> GetCommandStatusAsync(string commandId, CancellationToken cancellationToken = default)
     {
         var statusKey = GetStatusKey(commandId);
@@ -37,6 +43,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.FromResult(status);
     }
 
+    /// <summary>
+    ///     Writes the status of a command and refreshes its entry in the cleanup index.
+    /// </summary>
     public Task SetCommandStatusAsync(string commandId, CommandExecutionStatus status, CancellationToken cancellationToken = default)
     {
         var statusKey = GetStatusKey(commandId);
@@ -70,6 +79,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
 
     private sealed record TimestampIndexEviction(ConcurrentDictionary<string, DateTime> Index, string CommandId);
 
+    /// <summary>
+    ///     Reads the cached result of a completed command.
+    /// </summary>
     public Task<T?> GetCommandResultAsync<T>(string commandId, CancellationToken cancellationToken = default)
     {
         var resultKey = GetResultKey(commandId);
@@ -77,6 +89,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.FromResult(result);
     }
 
+    /// <summary>
+    ///     Caches the result of a completed command.
+    /// </summary>
     public Task SetCommandResultAsync<T>(string commandId, T result, CancellationToken cancellationToken = default)
     {
         var resultKey = GetResultKey(commandId);
@@ -85,6 +100,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    ///     Forgets a command entirely, status and result.
+    /// </summary>
     public Task RemoveCommandAsync(string commandId, CancellationToken cancellationToken = default)
     {
         var statusKey = GetStatusKey(commandId);
@@ -125,6 +143,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         }
     }
 
+    /// <summary>
+    ///     Moves a command between statuses only if it is currently in the expected one, holding a per-command lock.
+    /// </summary>
     public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
         using var scope = await AcquireLockAsync(commandId, cancellationToken);
@@ -140,6 +161,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return false;
     }
 
+    /// <summary>
+    ///     Reads the current status and writes a new one under a per-command lock.
+    /// </summary>
     public async Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
     {
         using var scope = await AcquireLockAsync(commandId, cancellationToken);
@@ -154,6 +178,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     }
 
     // Batch operations
+    /// <summary>
+    ///     Reads the status of several commands.
+    /// </summary>
     public Task<Dictionary<string, CommandExecutionStatus>> GetMultipleStatusAsync(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
     {
         var result = new Dictionary<string, CommandExecutionStatus>();
@@ -168,6 +195,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.FromResult(result);
     }
 
+    /// <summary>
+    ///     Reads the cached results of several commands.
+    /// </summary>
     public Task<Dictionary<string, T?>> GetMultipleResultsAsync<T>(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
     {
         var result = new Dictionary<string, T?>();
@@ -183,6 +213,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     }
 
     // Cleanup operations
+    /// <summary>
+    ///     Removes commands older than the given age.
+    /// </summary>
     public Task<int> CleanupExpiredCommandsAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
     {
         var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
@@ -208,6 +241,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.FromResult(cleanedCount);
     }
 
+    /// <summary>
+    ///     Removes commands in the given status that are older than the given age.
+    /// </summary>
     public Task<int> CleanupCommandsByStatusAsync(CommandExecutionStatus status, TimeSpan maxAge, CancellationToken cancellationToken = default)
     {
         var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
@@ -240,6 +276,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
         return Task.FromResult(cleanedCount);
     }
 
+    /// <summary>
+    ///     Counts tracked commands by status.
+    /// </summary>
     public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(CancellationToken cancellationToken = default)
     {
         var counts = new Dictionary<CommandExecutionStatus, int>();
@@ -261,6 +300,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
     private static string GetStatusKey(string commandId) => $"cmd_status_{commandId}";
     private static string GetResultKey(string commandId) => $"cmd_result_{commandId}";
 
+    /// <summary>
+    ///     Releases the per-command locks and clears the cleanup index.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -302,6 +344,9 @@ public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDis
             _commandLock = commandLock;
         }
 
+        /// <summary>
+        ///     Releases the per-command locks and clears the cleanup index.
+        /// </summary>
         public void Dispose()
         {
             if (_disposed)

@@ -25,16 +25,25 @@ public static partial class ResultRailwayExtensions
             : Result.Fail(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError);
     }
 
+    /// <summary>
+    ///     Runs the next step when this result succeeded; a failure short-circuits the chain.
+    /// </summary>
     public static Result Bind(this Result result, Func<Result> next)
     {
         return result.IsSuccess ? next() : result;
     }
 
+    /// <summary>
+    ///     Runs the next step, introducing a value; a failure short-circuits the chain.
+    /// </summary>
     public static Result<T> Bind<T>(this Result result, Func<Result<T>> next)
     {
         return result.IsSuccess ? next() : result.PropagateFailure<T>();
     }
 
+    /// <summary>
+    ///     Runs a side effect on success and passes the result through unchanged.
+    /// </summary>
     public static Result Tap(this Result result, Action action)
     {
         if (result.IsSuccess)
@@ -45,17 +54,26 @@ public static partial class ResultRailwayExtensions
         return result;
     }
 
+    /// <summary>
+    ///     Runs an action on both branches and passes the result through unchanged.
+    /// </summary>
     public static Result Finally(this Result result, Action<Result> action)
     {
         action(result);
         return result;
     }
 
+    /// <summary>
+    ///     Substitutes an alternative result when this one failed.
+    /// </summary>
     public static Result Else(this Result result, Func<Result> alternative)
     {
         return result.IsSuccess ? result : alternative();
     }
 
+    /// <summary>
+    ///     Transforms the value with a function that cannot fail; a failure short-circuits the chain.
+    /// </summary>
     public static Result<TOut> Map<TIn, TOut>(this Result<TIn> result, Func<TIn, TOut> mapper)
     {
         return result.IsSuccess
@@ -63,6 +81,9 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure<TOut>();
     }
 
+    /// <summary>
+    ///     Runs the next step on the value; a failure short-circuits the chain.
+    /// </summary>
     public static Result<TOut> Bind<TIn, TOut>(this Result<TIn> result, Func<TIn, Result<TOut>> binder)
     {
         return result.IsSuccess
@@ -70,6 +91,9 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure<TOut>();
     }
 
+    /// <summary>
+    ///     Runs the next step on the value, discarding it; a failure short-circuits the chain.
+    /// </summary>
     public static Result Bind<T>(this Result<T> result, Func<T, Result> binder)
     {
         return result.IsSuccess
@@ -77,6 +101,9 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure();
     }
 
+    /// <summary>
+    ///     Runs a side effect on the value and passes the result through unchanged.
+    /// </summary>
     public static Result<T> Tap<T>(this Result<T> result, Action<T> action)
     {
         if (result.IsSuccess)
@@ -87,6 +114,9 @@ public static partial class ResultRailwayExtensions
         return result;
     }
 
+    /// <summary>
+    ///     Fails with the given problem when the predicate does not hold.
+    /// </summary>
     public static Result<T> Ensure<T>(this Result<T> result, Func<T, bool> predicate, Problem problem)
     {
         if (result.IsSuccess && !predicate(result.Value))
@@ -97,23 +127,35 @@ public static partial class ResultRailwayExtensions
         return result;
     }
 
+    /// <summary>
+    ///     Substitutes an alternative result when this one failed.
+    /// </summary>
     public static Result<T> Else<T>(this Result<T> result, Func<Result<T>> alternative)
     {
         return result.IsSuccess ? result : alternative();
     }
 
+    /// <summary>
+    ///     Runs an action on both branches and passes the result through unchanged.
+    /// </summary>
     public static Result<T> Finally<T>(this Result<T> result, Action<Result<T>> action)
     {
         action(result);
         return result;
     }
 
+    /// <summary>
+    ///     Awaits the result, then runs the next step when it succeeded.
+    /// </summary>
     public static async Task<Result> BindAsync(this Task<Result> resultTask, Func<Task<Result>> next)
     {
         var result = await resultTask.ConfigureAwait(false);
         return result.IsSuccess ? await next().ConfigureAwait(false) : result;
     }
 
+    /// <summary>
+    ///     Awaits the result, then runs the next step on its value.
+    /// </summary>
     public static async Task<Result<TOut>> BindAsync<TIn, TOut>(this Task<Result<TIn>> resultTask, Func<TIn, Task<Result<TOut>>> binder)
     {
         var result = await resultTask.ConfigureAwait(false);
@@ -122,6 +164,9 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure<TOut>();
     }
 
+    /// <summary>
+    ///     Awaits the result, then transforms its value.
+    /// </summary>
     public static async Task<Result<TOut>> MapAsync<TIn, TOut>(this Task<Result<TIn>> resultTask, Func<TIn, Task<TOut>> mapper)
     {
         var result = await resultTask.ConfigureAwait(false);
@@ -130,6 +175,9 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure<TOut>();
     }
 
+    /// <summary>
+    ///     Awaits the result, then runs an asynchronous side effect on success.
+    /// </summary>
     public static async Task<Result<T>> TapAsync<T>(this Task<Result<T>> resultTask, Func<T, Task> action)
     {
         var result = await resultTask.ConfigureAwait(false);
@@ -141,6 +189,9 @@ public static partial class ResultRailwayExtensions
         return result;
     }
 
+    /// <summary>
+    ///     Runs an asynchronous next step on the value.
+    /// </summary>
     public static async Task<Result<TOut>> BindAsync<TIn, TOut>(this Result<TIn> result, Func<TIn, Task<Result<TOut>>> binder)
     {
         return result.IsSuccess
@@ -148,6 +199,9 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure<TOut>();
     }
 
+    /// <summary>
+    ///     Transforms the value asynchronously.
+    /// </summary>
     public static async Task<Result<TOut>> MapAsync<TIn, TOut>(this Result<TIn> result, Func<TIn, Task<TOut>> mapper)
     {
         return result.IsSuccess
@@ -155,6 +209,9 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure<TOut>();
     }
 
+    /// <summary>
+    ///     Runs an asynchronous next step when this result succeeded.
+    /// </summary>
     public static async Task<Result> BindAsync(this Result result, Func<Task<Result>> next)
     {
         return result.IsSuccess ? await next().ConfigureAwait(false) : result;
@@ -162,6 +219,9 @@ public static partial class ResultRailwayExtensions
 
     #region Pattern Matching Helpers
 
+    /// <summary>
+    ///     Collapses both branches into a single value. The usual way to leave the railway.
+    /// </summary>
     public static TOut Match<TOut>(this Result result, Func<TOut> onSuccess, Func<Problem, TOut> onFailure)
     {
         if (result.IsSuccess)
@@ -173,6 +233,9 @@ public static partial class ResultRailwayExtensions
         return onFailure(problem);
     }
 
+    /// <summary>
+    ///     Collapses both branches into a single value. The usual way to leave the railway.
+    /// </summary>
     public static TOut Match<TIn, TOut>(this Result<TIn> result, Func<TIn, TOut> onSuccess, Func<Problem, TOut> onFailure)
     {
         if (result.IsSuccess)
@@ -184,6 +247,9 @@ public static partial class ResultRailwayExtensions
         return onFailure(problem);
     }
 
+    /// <summary>
+    ///     Handles both branches without producing a value.
+    /// </summary>
     public static void Match(this Result result, Action onSuccess, Action<Problem> onFailure)
     {
         if (result.IsSuccess)
@@ -197,6 +263,9 @@ public static partial class ResultRailwayExtensions
         }
     }
 
+    /// <summary>
+    ///     Handles both branches without producing a value.
+    /// </summary>
     public static void Match<T>(this Result<T> result, Action<T> onSuccess, Action<Problem> onFailure)
     {
         if (result.IsSuccess)

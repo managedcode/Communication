@@ -21,12 +21,24 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
     {
     }
 
+    /// <summary>
+    ///     Number of items to skip.
+    /// </summary>
     public int Skip => Value?.Skip ?? 0;
 
+    /// <summary>
+    ///     Number of items to take.
+    /// </summary>
     public int Take => Value?.Take ?? 0;
 
+    /// <summary>
+    ///     1-based page index derived from skip/take.
+    /// </summary>
     public int PageNumber => Value?.PageNumber ?? 1;
 
+    /// <summary>
+    ///     Page size, equal to <c>Take</c>.
+    /// </summary>
     public int PageSize => Value?.PageSize ?? 0;
 
     /// <summary>

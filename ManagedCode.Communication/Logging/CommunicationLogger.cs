@@ -4,6 +4,9 @@ using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.Logging;
 
+/// <summary>
+///     The library's own logger. Configuring it is optional: with nothing registered it falls back to a factory that writes nowhere.
+/// </summary>
 public static class CommunicationLogger
 {
     private static IServiceProvider? _serviceProvider;
@@ -11,18 +14,27 @@ public static class CommunicationLogger
     private static ILoggerFactory? _lastResortLoggerFactory;
     private static ILogger<Result>? _logger;
 
+    /// <summary>
+    ///     Resolves the logger from a service provider.
+    /// </summary>
     public static void Configure(IServiceProvider serviceProvider)
     {
         _serviceProvider = serviceProvider;
         _logger = null;
     }
 
+    /// <summary>
+    ///     Uses the given factory to create the logger.
+    /// </summary>
     public static void Configure(ILoggerFactory loggerFactory)
     {
         _fallbackLoggerFactory = loggerFactory;
         _logger = null;
     }
 
+    /// <summary>
+    ///     Returns the configured logger, or a no-op one when nothing was configured.
+    /// </summary>
     public static ILogger<Result> GetLogger()
     {
         if (_logger != null)

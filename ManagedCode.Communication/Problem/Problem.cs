@@ -12,6 +12,9 @@ namespace ManagedCode.Communication;
 [JsonConverter(typeof(ProblemJsonConverter))]
 public partial class Problem
 {
+    /// <summary>
+    ///     Creates an empty problem with an initialized extensions dictionary.
+    /// </summary>
     public Problem()
     {
         // Extensions is created by its property initializer; assigning here too would allocate a second

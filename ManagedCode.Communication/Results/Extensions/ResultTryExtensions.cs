@@ -11,6 +11,9 @@ namespace ManagedCode.Communication.Results.Extensions;
 /// </summary>
 public static class ResultTryExtensions
 {
+    /// <summary>
+    ///     Runs the action, converting a thrown exception into a failure with the given status.
+    /// </summary>
     public static Result TryAsResult(this Action action, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
         try
@@ -24,6 +27,9 @@ public static class ResultTryExtensions
         }
     }
 
+    /// <summary>
+    ///     Runs the function, converting a thrown exception into a failure with the given status.
+    /// </summary>
     public static Result<T> TryAsResult<T>(this Func<T> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
         try
@@ -36,6 +42,9 @@ public static class ResultTryExtensions
         }
     }
 
+    /// <summary>
+    ///     Awaits the operation, converting a thrown exception into a failure with the given status.
+    /// </summary>
     public static async Task<Result> TryAsResultAsync(this Func<Task> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
         try
@@ -49,6 +58,9 @@ public static class ResultTryExtensions
         }
     }
 
+    /// <summary>
+    ///     Awaits the operation, converting a thrown exception into a failure with the given status.
+    /// </summary>
     public static async Task<Result<T>> TryAsResultAsync<T>(this Func<Task<T>> func, HttpStatusCode errorStatus = HttpStatusCode.InternalServerError)
     {
         try

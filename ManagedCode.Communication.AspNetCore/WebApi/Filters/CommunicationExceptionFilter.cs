@@ -8,8 +8,14 @@ using static ManagedCode.Communication.AspNetCore.Helpers.HttpStatusCodeHelper;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 
+/// <summary>
+///     MVC filter that converts an unhandled action exception into a failed result, and records the original exception in logs and traces.
+/// </summary>
 public class CommunicationExceptionFilter(ILogger<CommunicationExceptionFilter> logger) : IExceptionFilter
 {
+    /// <summary>
+    ///     Converts the exception into a failed result and stops further exception handling.
+    /// </summary>
     public virtual void OnException(ExceptionContext context)
     {
         try

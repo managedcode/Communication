@@ -62,38 +62,62 @@ public partial struct Result
     }
 
 
+    /// <summary>
+    ///     Creates a typed validation failure with no field details.
+    /// </summary>
     public static Result<T> Invalid<T>() => ResultFactoryBridge<Result<T>>.Invalid();
 
+    /// <summary>
+    ///     Creates a typed validation failure identified by an enum error code.
+    /// </summary>
     public static Result<T> Invalid<T, TEnum>(TEnum code) where TEnum : Enum
     {
         return ResultFactoryBridge<Result<T>>.Invalid(code);
     }
 
+    /// <summary>
+    ///     Creates a typed validation failure with a general message.
+    /// </summary>
     public static Result<T> Invalid<T>(string message)
     {
         return ResultFactoryBridge<Result<T>>.Invalid(message);
     }
 
+    /// <summary>
+    ///     Creates a typed validation failure with an enum error code and a general message.
+    /// </summary>
     public static Result<T> Invalid<T, TEnum>(TEnum code, string message) where TEnum : Enum
     {
         return ResultFactoryBridge<Result<T>>.Invalid(code, message);
     }
 
+    /// <summary>
+    ///     Creates a typed validation failure for a single field.
+    /// </summary>
     public static Result<T> Invalid<T>(string key, string value)
     {
         return ResultFactoryBridge<Result<T>>.Invalid(key, value);
     }
 
+    /// <summary>
+    ///     Creates a typed validation failure for a single field, identified by an enum error code.
+    /// </summary>
     public static Result<T> Invalid<T, TEnum>(TEnum code, string key, string value) where TEnum : Enum
     {
         return ResultFactoryBridge<Result<T>>.Invalid(code, key, value);
     }
 
+    /// <summary>
+    ///     Creates a typed validation failure from a field/message map.
+    /// </summary>
     public static Result<T> Invalid<T>(Dictionary<string, string> values)
     {
         return ResultFactoryBridge<Result<T>>.Invalid(values);
     }
 
+    /// <summary>
+    ///     Creates a typed validation failure from a field/message map, identified by an enum error code.
+    /// </summary>
     public static Result<T> Invalid<T, TEnum>(TEnum code, Dictionary<string, string> values) where TEnum : Enum
     {
         return ResultFactoryBridge<Result<T>>.Invalid(code, values);

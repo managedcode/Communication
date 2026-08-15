@@ -2,6 +2,9 @@ using System;
 
 namespace ManagedCode.Communication.Commands;
 
+/// <summary>
+///     The factory surface for commands that carry a payload.
+/// </summary>
 public partial interface ICommandValueFactory<TSelf, TValue>
     where TSelf : class, ICommandValueFactory<TSelf, TValue>
 {

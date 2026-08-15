@@ -5,9 +5,15 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Converters;
 
+/// <summary>
+///     Orleans converter between <c>CommandT</c> and its serialization surrogate.
+/// </summary>
 [RegisterConverter]
 public sealed class CommandTSurrogateConverter<T> : IConverter<Command<T>, CommandTSurrogate<T>>
 {
+    /// <summary>
+    ///     Rebuilds the value from its surrogate.
+    /// </summary>
     public Command<T> ConvertFromSurrogate(in CommandTSurrogate<T> surrogate)
     {
         var command = Command<T>.Create(surrogate.CommandType, surrogate.Value!, surrogate.CommandId);

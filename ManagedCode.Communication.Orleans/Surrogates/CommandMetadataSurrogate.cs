@@ -5,6 +5,9 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Surrogates;
 
+/// <summary>
+///     Orleans serialization surrogate for <c>CommandMetadata</c>.
+/// </summary>
 [Immutable]
 [GenerateSerializer]
 public struct CommandMetadataSurrogate
@@ -28,6 +31,9 @@ public struct CommandMetadataSurrogate
     [Id(16)] public Dictionary<string, object?>? Extensions;
 }
 
+/// <summary>
+///     Orleans serialization surrogate for <c>CommandMetadata</c>.
+/// </summary>
 [RegisterConverter]
 public sealed class CommandMetadataSurrogateConverter : IConverter<CommandMetadata, CommandMetadataSurrogate>
 {

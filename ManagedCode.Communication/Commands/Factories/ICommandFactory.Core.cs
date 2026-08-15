@@ -2,6 +2,9 @@ using System;
 
 namespace ManagedCode.Communication.Commands;
 
+/// <summary>
+///     The factory surface every command type implements.
+/// </summary>
 public partial interface ICommandFactory<TSelf>
     where TSelf : class, ICommandFactory<TSelf>
 {

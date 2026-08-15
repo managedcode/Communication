@@ -11,6 +11,9 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> Fail() => ResultFactoryBridge<Result<T>>.Fail();
 
+    /// <summary>
+    ///     Creates a failure that still carries a value, using the generic fallback problem.
+    /// </summary>
     public static Result<T> Fail(T value) => CreateFailed(Problem.GenericError(), value);
 
     /// <summary>

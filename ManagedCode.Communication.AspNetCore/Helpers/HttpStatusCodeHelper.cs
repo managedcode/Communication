@@ -9,8 +9,14 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace ManagedCode.Communication.AspNetCore.Helpers;
 
+/// <summary>
+///     Maps ASP.NET Core and SignalR exceptions to status codes, falling back to the core mapping for everything else.
+/// </summary>
 public static class HttpStatusCodeHelper
 {
+    /// <summary>
+    ///     Maps an exception to a status code, checking ASP.NET-specific types first.
+    /// </summary>
     public static HttpStatusCode GetStatusCodeForException(Exception exception)
     {
         // First check ASP.NET/SignalR-specific exceptions

@@ -6,28 +6,43 @@ namespace ManagedCode.Communication.CollectionResultT;
 
 public partial struct CollectionResult<T>
 {
+    /// <summary>
+    ///     Creates an empty successful page.
+    /// </summary>
     public static CollectionResult<T> Succeed()
     {
         return CreateSuccess(Array.Empty<T>(), 1, 0, 0);
     }
 
+    /// <summary>
+    ///     Creates a successful page with explicit paging metadata.
+    /// </summary>
     public static CollectionResult<T> Succeed(T[] value, int pageNumber, int pageSize, int totalItems)
     {
         return CreateSuccess(value, pageNumber, pageSize, totalItems);
     }
 
+    /// <summary>
+    ///     Creates a successful page with explicit paging metadata.
+    /// </summary>
     public static CollectionResult<T> Succeed(IEnumerable<T> value, int pageNumber, int pageSize, int totalItems)
     {
         var array = value as T[] ?? value.ToArray();
         return CreateSuccess(array, pageNumber, pageSize, totalItems);
     }
 
+    /// <summary>
+    ///     Creates a successful single page holding every item.
+    /// </summary>
     public static CollectionResult<T> Succeed(T[] value)
     {
         var length = value.Length;
         return CreateSuccess(value, 1, length, length);
     }
 
+    /// <summary>
+    ///     Creates a successful single page holding every item.
+    /// </summary>
     public static CollectionResult<T> Succeed(IEnumerable<T> value)
     {
         var array = value as T[] ?? value.ToArray();
@@ -35,6 +50,9 @@ public partial struct CollectionResult<T>
         return CreateSuccess(array, 1, length, length);
     }
 
+    /// <summary>
+    ///     Creates a successful single page holding one item.
+    /// </summary>
     public static CollectionResult<T> Succeed(T value)
     {
         return CreateSuccess(new[] { value }, 1, 1, 1);

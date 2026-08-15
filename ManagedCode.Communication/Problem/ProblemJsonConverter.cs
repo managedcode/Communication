@@ -17,6 +17,9 @@ public class ProblemJsonConverter : JsonConverter<Problem>
     private const string DetailMember = "detail";
     private const string InstanceMember = "instance";
 
+    /// <summary>
+    ///     Reads a problem, accepting both lowercase RFC 7807 member names and PascalCase.
+    /// </summary>
     public override Problem? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.Null)
@@ -82,6 +85,9 @@ public class ProblemJsonConverter : JsonConverter<Problem>
         throw new JsonException("Unexpected end of JSON input");
     }
 
+    /// <summary>
+    ///     Writes the RFC 7807 members followed by any extensions, skipping extensions that would duplicate a standard member.
+    /// </summary>
     public override void Write(Utf8JsonWriter writer, Problem value, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(writer);

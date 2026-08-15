@@ -628,6 +628,9 @@ public partial class Problem
         fieldErrors.Add(message);
     }
 
+    /// <summary>
+    ///     Adds a validation message not tied to a specific field.
+    /// </summary>
     public void AddValidationError(string message)
     {
         const string field = ProblemConstants.ValidationFields.General;
@@ -654,12 +657,18 @@ public partial class Problem
         return errors;
     }
 
+    /// <summary>
+    ///     Whether the named field has a validation error.
+    /// </summary>
     public bool InvalidField(string fieldName)
     {
         var errors = GetValidationErrors();
         return errors?.ContainsKey(fieldName) ?? false;
     }
 
+    /// <summary>
+    ///     The validation messages for a field, joined by commas; empty when the field has none.
+    /// </summary>
     public string InvalidFieldError(string fieldName)
     {
         var errors = GetValidationErrors();

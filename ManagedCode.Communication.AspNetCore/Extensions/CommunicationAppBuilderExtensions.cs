@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Builder;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
+/// <summary>
+///     Middleware registration for the Communication library.
+/// </summary>
 public static class CommunicationAppBuilderExtensions
 {
     /// <summary>

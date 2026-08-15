@@ -10,11 +10,17 @@ namespace ManagedCode.Communication.Results.Extensions;
 /// </summary>
 public static class ResultProblemExtensions
 {
+    /// <summary>
+    ///     Converts the carried problem into an exception, or <c>null</c> on success.
+    /// </summary>
     public static Exception? ToException(this IResultProblem result)
     {
         return result.Problem is not null ? new ProblemException(result.Problem) : null;
     }
 
+    /// <summary>
+    ///     Throws the carried problem as an exception when the result failed.
+    /// </summary>
     public static void ThrowIfProblem(this IResultProblem result)
     {
         if (result.Problem is not null)
@@ -23,6 +29,9 @@ public static class ResultProblemExtensions
         }
     }
 
+    /// <summary>
+    ///     Builds a message suitable for showing to a user, falling back when the problem carries nothing meaningful.
+    /// </summary>
     public static string ToDisplayMessage(this IResultProblem result, string? defaultMessage = null)
     {
         var problem = result.TryGetProblem(out var extractedProblem)
@@ -37,6 +46,9 @@ public static class ResultProblemExtensions
         return !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : ProblemConstants.Messages.GenericError;
     }
 
+    /// <summary>
+    ///     Builds a message suitable for showing to a user, falling back when the problem carries nothing meaningful.
+    /// </summary>
     public static string ToDisplayMessage(
         this IResultProblem result,
         Func<string, string?> errorCodeResolver,
@@ -56,6 +68,9 @@ public static class ResultProblemExtensions
         return !string.IsNullOrWhiteSpace(defaultMessage) ? defaultMessage : ProblemConstants.Messages.GenericError;
     }
 
+    /// <summary>
+    ///     Builds a message suitable for showing to a user, falling back when the problem carries nothing meaningful.
+    /// </summary>
     public static string ToDisplayMessage(
         this IResultProblem result,
         IReadOnlyDictionary<string, string> messages,
@@ -65,6 +80,9 @@ public static class ResultProblemExtensions
         return ToDisplayMessage(result, problem => messages.TryGetValue(problem, out var message) ? message : null, defaultMessage);
     }
 
+    /// <summary>
+    ///     Builds a message suitable for showing to a user, falling back when the problem carries nothing meaningful.
+    /// </summary>
     public static string ToDisplayMessage(
         this IResultProblem result,
         IEnumerable<KeyValuePair<string, string>> messages,
@@ -74,6 +92,9 @@ public static class ResultProblemExtensions
         return ToDisplayMessage(result, BuildMessageMap(messages), defaultMessage);
     }
 
+    /// <summary>
+    ///     Builds a message suitable for showing to a user, falling back when the problem carries nothing meaningful.
+    /// </summary>
     public static string ToDisplayMessage(
         this IResultProblem result,
         (string code, string message) firstMapping,
@@ -82,6 +103,9 @@ public static class ResultProblemExtensions
         return ToDisplayMessage(result, defaultMessage: null, firstMapping, additionalMappings);
     }
 
+    /// <summary>
+    ///     Builds a message suitable for showing to a user, falling back when the problem carries nothing meaningful.
+    /// </summary>
     public static string ToDisplayMessage(
         this IResultProblem result,
         string? defaultMessage,

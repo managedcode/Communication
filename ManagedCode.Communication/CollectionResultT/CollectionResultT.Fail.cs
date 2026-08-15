@@ -13,12 +13,18 @@ public partial struct CollectionResult<T>
     /// </summary>
     public static CollectionResult<T> Fail() => ResultFactoryBridge<CollectionResult<T>>.Fail();
 
+    /// <summary>
+    ///     Creates a failure that still carries items.
+    /// </summary>
     public static CollectionResult<T> Fail(IEnumerable<T> value)
     {
         var array = value as T[] ?? value.ToArray();
         return CollectionResultFactoryBridge<CollectionResult<T>, T>.Fail(array);
     }
 
+    /// <summary>
+    ///     Creates a failure that still carries items.
+    /// </summary>
     public static CollectionResult<T> Fail(T[] value) => CollectionResultFactoryBridge<CollectionResult<T>, T>.Fail(value);
 
     /// <summary>
@@ -26,6 +32,9 @@ public partial struct CollectionResult<T>
     /// </summary>
     public static CollectionResult<T> Fail(Problem problem) => CollectionResult<T>.CreateFailed(problem);
 
+    /// <summary>
+    ///     Creates a failure carrying both a problem and items.
+    /// </summary>
     public static CollectionResult<T> Fail(Problem problem, T[] items)
     {
         return CollectionResult<T>.CreateFailed(problem, items);

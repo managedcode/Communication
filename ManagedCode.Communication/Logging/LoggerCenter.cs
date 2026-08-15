@@ -9,6 +9,9 @@ namespace ManagedCode.Communication.Logging;
 public static partial class LoggerCenter
 {
     // Collection Result Logging
+    /// <summary>
+    ///     Logs an error raised while producing a collection result, with the call site.
+    /// </summary>
     [LoggerMessage(
         EventId = 1001,
         Level = LogLevel.Error,
@@ -17,6 +20,9 @@ public static partial class LoggerCenter
         ILogger logger, Exception exception, string message, string fileName, int lineNumber, string caller);
 
     // Command Store Logging
+    /// <summary>
+    ///     Logs how many expired commands a cleanup pass removed.
+    /// </summary>
     [LoggerMessage(
         EventId = 2001,
         Level = LogLevel.Information,
@@ -24,6 +30,9 @@ public static partial class LoggerCenter
     public static partial void LogCommandCleanupExpired(
         ILogger logger, int count, TimeSpan maxAge);
 
+    /// <summary>
+    ///     Logs how many commands in a given status a cleanup pass removed.
+    /// </summary>
     [LoggerMessage(
         EventId = 2002,
         Level = LogLevel.Information,
@@ -32,6 +41,9 @@ public static partial class LoggerCenter
         ILogger logger, int count, object status, TimeSpan maxAge);
 
     // Validation Filter Logging
+    /// <summary>
+    ///     Logs a validation failure.
+    /// </summary>
     [LoggerMessage(
         EventId = 3001,
         Level = LogLevel.Warning,
@@ -40,6 +52,9 @@ public static partial class LoggerCenter
         ILogger logger, string actionName);
 
     // Hub Exception Logging
+    /// <summary>
+    ///     Logs an exception thrown by a SignalR hub method.
+    /// </summary>
     [LoggerMessage(
         EventId = 4001,
         Level = LogLevel.Error,
@@ -48,6 +63,9 @@ public static partial class LoggerCenter
         ILogger logger, Exception exception, string hubType, string hubMethod);
 
     // Exception Filter Logging
+    /// <summary>
+    ///     Logs an exception thrown by an MVC action.
+    /// </summary>
     [LoggerMessage(
         EventId = 5001,
         Level = LogLevel.Error,
@@ -55,6 +73,9 @@ public static partial class LoggerCenter
     public static partial void LogControllerException(
         ILogger logger, Exception exception, string controllerName, string actionName);
 
+    /// <summary>
+    ///     Logs that a filter converted an exception into a failed result.
+    /// </summary>
     [LoggerMessage(
         EventId = 5002,
         Level = LogLevel.Information,
@@ -62,6 +83,9 @@ public static partial class LoggerCenter
     public static partial void LogExceptionHandled(
         ILogger logger, string filterType, string controllerName, string actionName);
 
+    /// <summary>
+    ///     Logs a fault inside a filter itself.
+    /// </summary>
     [LoggerMessage(
         EventId = 5003,
         Level = LogLevel.Error,
@@ -70,6 +94,9 @@ public static partial class LoggerCenter
         ILogger logger, Exception exception, string filterType);
 
     // Background Service Logging
+    /// <summary>
+    ///     Logs that the command cleanup background service started.
+    /// </summary>
     [LoggerMessage(
         EventId = 6001,
         Level = LogLevel.Information,
@@ -77,6 +104,9 @@ public static partial class LoggerCenter
     public static partial void LogCleanupServiceStarted(
         ILogger logger, TimeSpan interval);
 
+    /// <summary>
+    ///     Logs the outcome of a cleanup pass.
+    /// </summary>
     [LoggerMessage(
         EventId = 6002,
         Level = LogLevel.Information,
@@ -84,6 +114,9 @@ public static partial class LoggerCenter
     public static partial void LogCleanupCompleted(
         ILogger logger, int count);
 
+    /// <summary>
+    ///     Logs command counts by status.
+    /// </summary>
     [LoggerMessage(
         EventId = 6003,
         Level = LogLevel.Information,
@@ -92,6 +125,9 @@ public static partial class LoggerCenter
         ILogger logger, int totalCommands, int completedCommands, int failedCommands, 
         int inProgressCommands, double failureRate, double stuckRate);
 
+    /// <summary>
+    ///     Logs a fault during cleanup.
+    /// </summary>
     [LoggerMessage(
         EventId = 6004,
         Level = LogLevel.Error,
@@ -99,6 +135,9 @@ public static partial class LoggerCenter
     public static partial void LogCleanupError(
         ILogger logger, Exception exception);
 
+    /// <summary>
+    ///     Logs that the command cleanup background service stopped.
+    /// </summary>
     [LoggerMessage(
         EventId = 6005,
         Level = LogLevel.Information,
@@ -107,6 +146,9 @@ public static partial class LoggerCenter
         ILogger logger);
 
     // Orleans Grain Call Filter Logging
+    /// <summary>
+    ///     Logs that an Orleans grain call exception was converted into a failed result.
+    /// </summary>
     [LoggerMessage(
         EventId = 7001,
         Level = LogLevel.Error,

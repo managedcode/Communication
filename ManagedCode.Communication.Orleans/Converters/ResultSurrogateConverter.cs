@@ -3,9 +3,15 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Converters;
 
+/// <summary>
+///     Orleans converter between <c>Result</c> and its serialization surrogate.
+/// </summary>
 [RegisterConverter]
 public sealed class ResultSurrogateConverter : IConverter<Result, ResultSurrogate>
 {
+    /// <summary>
+    ///     Rebuilds the value from its surrogate.
+    /// </summary>
     public Result ConvertFromSurrogate(in ResultSurrogate surrogate)
     {
         if (surrogate.IsSuccess)

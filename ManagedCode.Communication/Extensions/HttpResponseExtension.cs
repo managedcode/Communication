@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace ManagedCode.Communication;
 
+/// <summary>
+///     Turns an <c>HttpResponseMessage</c> into a <c>Result</c>.
+/// </summary>
 public static class HttpResponseExtension
 {
     /// <summary>

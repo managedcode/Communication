@@ -7,8 +7,14 @@ using ManagedCode.Communication.Results.Extensions;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
+/// <summary>
+///     Converts results into MVC and Minimal API responses.
+/// </summary>
 public static class ControllerExtensions
 {
+    /// <summary>
+    ///     Converts the result into an MVC action result, mapping a failure onto its status code.
+    /// </summary>
     public static IActionResult ToActionResult<T>(this Result<T> result)
     {
         if (result.IsSuccess)
@@ -21,6 +27,9 @@ public static class ControllerExtensions
         };
     }
 
+    /// <summary>
+    ///     Converts the result into an MVC action result, mapping a failure onto its status code.
+    /// </summary>
     public static IActionResult ToActionResult(this Result result)
     {
         if (result.IsSuccess)
@@ -33,6 +42,9 @@ public static class ControllerExtensions
         };
     }
 
+    /// <summary>
+    ///     Converts the result into a Minimal API response, mapping a failure onto its status code.
+    /// </summary>
     public static Microsoft.AspNetCore.Http.IResult ToHttpResult<T>(this Result<T> result)
     {
         if (result.IsSuccess)
@@ -49,6 +61,9 @@ public static class ControllerExtensions
         );
     }
 
+    /// <summary>
+    ///     Converts the result into a Minimal API response, mapping a failure onto its status code.
+    /// </summary>
     public static Microsoft.AspNetCore.Http.IResult ToHttpResult(this Result result)
     {
         if (result.IsSuccess)

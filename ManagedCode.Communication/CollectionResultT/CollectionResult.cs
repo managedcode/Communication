@@ -10,6 +10,9 @@ using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
+/// <summary>
+///     A result carrying a page of items, with the paging metadata that describes it.
+/// </summary>
 [Serializable]
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Count: {Collection?.Length ?? 0}; Problem: {Problem?.Title}")]
 public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionResultFactory<CollectionResult<T>, T>
@@ -40,6 +43,9 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
         return new CollectionResult<T>(false, collection, 0, 0, 0, problem);
     }
 
+    /// <summary>
+    ///     Whether the operation succeeded.
+    /// </summary>
     [JsonInclude]
     [JsonPropertyName("isSuccess")]
     [JsonPropertyOrder(1)]
@@ -47,10 +53,16 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [MemberNotNullWhen(false, nameof(Problem))]
     public bool IsSuccess { get; init; }
 
+    /// <summary>
+    ///     Whether the operation failed.
+    /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
     public bool IsFailed => !IsSuccess;
 
+    /// <summary>
+    ///     The items on this page. Empty when the result failed.
+    /// </summary>
     [JsonPropertyName("collection")]
     [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -62,18 +74,30 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [JsonIgnore]
     public T[]? Value => Collection;
 
+    /// <summary>
+    ///     1-based index of this page.
+    /// </summary>
     [JsonPropertyName("pageNumber")]
     [JsonPropertyOrder(3)]
     public int PageNumber { get; init; }
 
+    /// <summary>
+    ///     Maximum number of items per page.
+    /// </summary>
     [JsonPropertyName("pageSize")]
     [JsonPropertyOrder(4)]
     public int PageSize { get; init; }
 
+    /// <summary>
+    ///     Total number of items across all pages.
+    /// </summary>
     [JsonPropertyName("totalItems")]
     [JsonPropertyOrder(5)]
     public int TotalItems { get; init; }
 
+    /// <summary>
+    ///     Total number of pages.
+    /// </summary>
     [JsonPropertyName("totalPages")]
     [JsonPropertyOrder(6)]
     public int TotalPages { get; init; }
@@ -84,6 +108,9 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     private Problem? _problem;
 
+    /// <summary>
+    ///     The failure, or <c>null</c> when the result succeeded.
+    /// </summary>
     [JsonIgnore]
     public Problem? Problem
     {
@@ -97,9 +124,15 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
         private init => _problem = value;
     }
 
+    /// <summary>
+    ///     Whether this page carries no items.
+    /// </summary>
     [JsonIgnore]
     public bool IsEmpty => Collection is null || Collection.Length == 0;
 
+    /// <summary>
+    ///     Whether this page carries at least one item.
+    /// </summary>
     [JsonIgnore]
     public bool HasItems => Collection?.Length > 0;
 
@@ -109,6 +142,9 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [JsonIgnore]
     public bool HasValue => !IsEmpty;
 
+    /// <summary>
+    ///     Whether the result carries a failure.
+    /// </summary>
     [JsonIgnore]
     [MemberNotNullWhen(true, nameof(Problem))]
     public bool HasProblem => !IsSuccess;
@@ -127,6 +163,9 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     /// </summary>
     internal Problem? GetProblemNoFallback() => _problem;
 
+    /// <summary>
+    ///     Throws the carried problem as an exception when the result failed.
+    /// </summary>
     public bool ThrowIfFail()
     {
         var problem = Problem;
@@ -138,6 +177,9 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
         return false;
     }
 
+    /// <summary>
+    ///     Gets the failure when there is one.
+    /// </summary>
     [MemberNotNullWhen(true, nameof(Problem))]
     public bool TryGetProblem([MaybeNullWhen(false)] out Problem problem)
     {
@@ -149,20 +191,35 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
 
     #region IResultInvalid Implementation
 
+    /// <summary>
+    ///     Whether the failure is a validation failure.
+    /// </summary>
     [JsonIgnore]
     public bool IsInvalid => Problem?.Type == ProblemConstants.Types.ValidationFailed;
 
+    /// <summary>
+    ///     Whether the result is anything other than a validation failure.
+    /// </summary>
     [JsonIgnore]
     public bool IsNotInvalid => !IsInvalid;
 
+    /// <summary>
+    ///     Validation errors by field, or <c>null</c> when there are none.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, List<string>>? InvalidObject => Problem?.GetValidationErrors();
 
+    /// <summary>
+    ///     Whether the named field has a validation error.
+    /// </summary>
     public bool InvalidField(string fieldName)
     {
         return !IsSuccess && Problem.InvalidField(fieldName);
     }
 
+    /// <summary>
+    ///     The validation messages for a field, joined by commas; empty when the field has none.
+    /// </summary>
     public string InvalidFieldError(string fieldName)
     {
         return IsSuccess

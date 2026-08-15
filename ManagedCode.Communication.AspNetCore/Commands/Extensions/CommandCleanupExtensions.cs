@@ -78,11 +78,29 @@ public static class CommandCleanupExtensions
 /// </summary>
 public record CommandStoreHealthMetrics
 {
+    /// <summary>
+    ///     Total number of tracked commands.
+    /// </summary>
     public int TotalCommands { get; init; }
+    /// <summary>
+    ///     Number of commands that finished successfully.
+    /// </summary>
     public int CompletedCommands { get; init; }
+    /// <summary>
+    ///     Number of commands currently claimed.
+    /// </summary>
     public int InProgressCommands { get; init; }
+    /// <summary>
+    ///     Number of commands that failed.
+    /// </summary>
     public int FailedCommands { get; init; }
+    /// <summary>
+    ///     Number of commands being processed.
+    /// </summary>
     public int ProcessingCommands { get; init; }
+    /// <summary>
+    ///     When the snapshot was taken (UTC).
+    /// </summary>
     public DateTime Timestamp { get; init; }
     
     /// <summary>
@@ -108,6 +126,9 @@ public class CommandCleanupBackgroundService : BackgroundService
     private readonly TimeSpan _cleanupInterval;
     private readonly CommandCleanupOptions _options;
 
+    /// <summary>
+    ///     Creates the background service that prunes old idempotency records.
+    /// </summary>
     public CommandCleanupBackgroundService(
         ICommandIdempotencyStore store,
         ILogger<CommandCleanupBackgroundService> logger,
@@ -119,6 +140,9 @@ public class CommandCleanupBackgroundService : BackgroundService
         _cleanupInterval = _options.CleanupInterval;
     }
 
+    /// <summary>
+    ///     Runs cleanup passes until the host shuts down.
+    /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         LoggerCenter.LogCleanupServiceStarted(_logger, _cleanupInterval);

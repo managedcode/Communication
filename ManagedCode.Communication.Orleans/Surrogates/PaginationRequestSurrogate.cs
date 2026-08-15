@@ -2,6 +2,9 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Surrogates;
 
+/// <summary>
+///     Orleans serialization surrogate for <c>PaginationRequest</c>.
+/// </summary>
 [Immutable]
 [GenerateSerializer]
 public struct PaginationRequestSurrogate

@@ -6,8 +6,14 @@ using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 
+/// <summary>
+///     MVC filter that turns model-state errors into a validation <c>Problem</c>.
+/// </summary>
 public class CommunicationModelValidationFilter(ILogger<CommunicationModelValidationFilter> logger) : IActionFilter
 {
+    /// <summary>
+    ///     Short-circuits the action when model validation failed.
+    /// </summary>
     public void OnActionExecuting(ActionExecutingContext context)
     {
         if (!context.ModelState.IsValid)
@@ -25,6 +31,9 @@ public class CommunicationModelValidationFilter(ILogger<CommunicationModelValida
         }
     }
 
+    /// <summary>
+    ///     No-op; validation is handled before the action runs.
+    /// </summary>
     public void OnActionExecuted(ActionExecutedContext context)
     {
         // Not needed for this filter

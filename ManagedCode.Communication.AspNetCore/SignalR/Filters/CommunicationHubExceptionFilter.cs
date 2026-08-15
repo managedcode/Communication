@@ -8,8 +8,14 @@ using static ManagedCode.Communication.AspNetCore.Helpers.HttpStatusCodeHelper;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 
+/// <summary>
+///     Hub filter that turns an exception thrown by a hub method into a failed result instead of faulting the connection.
+/// </summary>
 public class CommunicationHubExceptionFilter(ILogger<CommunicationHubExceptionFilter> logger) : IHubFilter
 {
+    /// <summary>
+    ///     Invokes the hub method, converting any exception into a failed result.
+    /// </summary>
     public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext, Func<HubInvocationContext, ValueTask<object?>> next)
     {
         try

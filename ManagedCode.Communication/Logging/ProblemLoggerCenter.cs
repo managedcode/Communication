@@ -14,6 +14,9 @@ namespace ManagedCode.Communication.Logging;
 /// </remarks>
 public static partial class ProblemLoggerCenter
 {
+    /// <summary>
+    ///     Logs a failure that has no originating exception.
+    /// </summary>
     [LoggerMessage(
         EventId = 8001,
         Level = LogLevel.Error,
@@ -24,6 +27,9 @@ public static partial class ProblemLoggerCenter
         int statusCode,
         string? problemDetail);
 
+    /// <summary>
+    ///     Logs a failure together with the exception it came from, preserving the stack trace.
+    /// </summary>
     [LoggerMessage(
         EventId = 8002,
         Level = LogLevel.Error,
@@ -35,6 +41,9 @@ public static partial class ProblemLoggerCenter
         int statusCode,
         string? problemDetail);
 
+    /// <summary>
+    ///     Logs a validation failure as a warning, listing the offending fields.
+    /// </summary>
     [LoggerMessage(
         EventId = 8003,
         Level = LogLevel.Warning,
@@ -44,6 +53,9 @@ public static partial class ProblemLoggerCenter
         int fieldCount,
         string fields);
 
+    /// <summary>
+    ///     Logs that an exception was converted into a problem.
+    /// </summary>
     [LoggerMessage(
         EventId = 8004,
         Level = LogLevel.Error,

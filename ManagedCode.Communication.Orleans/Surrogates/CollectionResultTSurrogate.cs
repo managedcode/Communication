@@ -3,6 +3,9 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Surrogates;
 
+/// <summary>
+///     Orleans serialization surrogate for <c>CollectionResultT</c>.
+/// </summary>
 [Immutable]
 [GenerateSerializer]
 public struct CollectionResultTSurrogate<T>

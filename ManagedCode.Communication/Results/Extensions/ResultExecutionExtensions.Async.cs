@@ -4,8 +4,14 @@ using System.Threading.Tasks;
 
 namespace ManagedCode.Communication.Results.Extensions;
 
+/// <summary>
+///     Converts delegates and tasks into <c>Result</c>, catching exceptions.
+/// </summary>
 public static partial class ResultExecutionExtensions
 {
+    /// <summary>
+    ///     Awaits the operation and wraps its outcome, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result> ToResultAsync(this Task task)
     {
         try
@@ -34,6 +40,9 @@ public static partial class ResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result> ToResultAsync(this Func<Task> taskFactory, CancellationToken cancellationToken = default)
     {
         try
@@ -47,6 +56,9 @@ public static partial class ResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Awaits the operation and wraps its outcome, turning a thrown exception into a failure.
+    /// </summary>
     public static async ValueTask<Result> ToResultAsync(this ValueTask valueTask)
     {
         try
@@ -70,6 +82,9 @@ public static partial class ResultExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result> ToResultAsync(this Func<ValueTask> taskFactory)
     {
         try

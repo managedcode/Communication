@@ -4,9 +4,15 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Converters;
 
+/// <summary>
+///     Orleans converter between <c>Problem</c> and its serialization surrogate.
+/// </summary>
 [RegisterConverter]
 public sealed class ProblemSurrogateConverter : IConverter<Problem, ProblemSurrogate>
 {
+    /// <summary>
+    ///     Rebuilds the value from its surrogate.
+    /// </summary>
     public Problem ConvertFromSurrogate(in ProblemSurrogate surrogate)
     {
         var problem = surrogate.Instance != null && surrogate.Type != null

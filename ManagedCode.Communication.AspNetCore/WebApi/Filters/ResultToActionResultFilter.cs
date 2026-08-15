@@ -6,8 +6,14 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 
+/// <summary>
+///     MVC filter that aligns the HTTP status code with a returned <c>Result</c>, leaving a status the action chose intact.
+/// </summary>
 public class ResultToActionResultFilter : IAsyncResultFilter
 {
+    /// <summary>
+    ///     Sets the status code from the result before the response is written.
+    /// </summary>
     public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
     {
         ArgumentNullException.ThrowIfNull(context);

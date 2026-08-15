@@ -4,8 +4,14 @@ using System.Threading.Tasks;
 
 namespace ManagedCode.Communication.Results.Extensions;
 
+/// <summary>
+///     Converts delegates and tasks into <c>Result&lt;T&gt;</c>, catching exceptions.
+/// </summary>
 public static partial class ResultValueExecutionExtensions
 {
+    /// <summary>
+    ///     Awaits the operation and wraps its outcome, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result<T>> ToResultAsync<T>(this Task<T> task)
     {
         try
@@ -18,6 +24,9 @@ public static partial class ResultValueExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Awaits the operation and wraps its outcome, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result<T>> ToResultAsync<T>(this Task<Result<T>> task)
     {
         try
@@ -30,6 +39,9 @@ public static partial class ResultValueExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result<T>> ToResultAsync<T>(this Func<Task<T>> taskFactory, CancellationToken cancellationToken = default)
     {
         try
@@ -42,6 +54,9 @@ public static partial class ResultValueExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result<T>> ToResultAsync<T>(this Func<Task<Result<T>>> taskFactory, CancellationToken cancellationToken = default)
     {
         try
@@ -54,6 +69,9 @@ public static partial class ResultValueExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Awaits the operation and wraps its outcome, turning a thrown exception into a failure.
+    /// </summary>
     public static async ValueTask<Result<T>> ToResultAsync<T>(this ValueTask<T> valueTask)
     {
         try
@@ -66,6 +84,9 @@ public static partial class ResultValueExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Awaits the operation and wraps its outcome, turning a thrown exception into a failure.
+    /// </summary>
     public static async ValueTask<Result<T>> ToResultAsync<T>(this ValueTask<Result<T>> valueTask)
     {
         try
@@ -78,6 +99,9 @@ public static partial class ResultValueExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result<T>> ToResultAsync<T>(this Func<ValueTask<T>> valueTaskFactory)
     {
         try
@@ -90,6 +114,9 @@ public static partial class ResultValueExecutionExtensions
         }
     }
 
+    /// <summary>
+    ///     Invokes and awaits the factory, turning a thrown exception into a failure.
+    /// </summary>
     public static async Task<Result<T>> ToResultAsync<T>(this Func<ValueTask<Result<T>>> valueTaskFactory)
     {
         try

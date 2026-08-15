@@ -4,9 +4,15 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Converters;
 
+/// <summary>
+///     Orleans converter between <c>PaginationCommand</c> and its serialization surrogate.
+/// </summary>
 [RegisterConverter]
 public sealed class PaginationCommandSurrogateConverter : IConverter<PaginationCommand, CommandTSurrogate<PaginationRequest>>
 {
+    /// <summary>
+    ///     Rebuilds the value from its surrogate.
+    /// </summary>
     public PaginationCommand ConvertFromSurrogate(in CommandTSurrogate<PaginationRequest> surrogate)
     {
         var value = surrogate.Value ?? new PaginationRequest(0, 0);

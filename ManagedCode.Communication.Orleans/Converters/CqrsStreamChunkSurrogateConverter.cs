@@ -4,10 +4,16 @@ using Orleans;
 
 namespace ManagedCode.Communication.Orleans.Converters;
 
+/// <summary>
+///     Orleans converter between <c>CqrsStreamChunk</c> and its serialization surrogate.
+/// </summary>
 [RegisterConverter]
 public sealed class CqrsStreamChunkSurrogateConverter<TProgress, TResult>
     : IConverter<CqrsStreamChunk<TProgress, TResult>, CqrsStreamChunkSurrogate<TProgress, TResult>>
 {
+    /// <summary>
+    ///     Rebuilds the value from its surrogate.
+    /// </summary>
     public CqrsStreamChunk<TProgress, TResult> ConvertFromSurrogate(
         in CqrsStreamChunkSurrogate<TProgress, TResult> surrogate)
     {
@@ -22,6 +28,9 @@ public sealed class CqrsStreamChunkSurrogateConverter<TProgress, TResult>
             surrogate.TimestampUtc);
     }
 
+    /// <summary>
+    ///     Converts the value into its surrogate for serialization.
+    /// </summary>
     public CqrsStreamChunkSurrogate<TProgress, TResult> ConvertToSurrogate(
         in CqrsStreamChunk<TProgress, TResult> value)
     {

@@ -171,17 +171,26 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     [MemberNotNullWhen(false, nameof(Value))]
     public bool IsInvalid => Problem?.Type == ProblemConstants.Types.ValidationFailed;
 
+    /// <summary>
+    ///     Whether the result is anything other than a validation failure.
+    /// </summary>
     [JsonIgnore]
     public bool IsNotInvalid => !IsInvalid;
 
 
 
 
+    /// <summary>
+    ///     Whether the named field has a validation error.
+    /// </summary>
     public bool InvalidField(string fieldName)
     {
         return !IsSuccess && Problem.InvalidField(fieldName);
     }
 
+    /// <summary>
+    ///     The validation messages for a field, joined by commas; empty when the field has none.
+    /// </summary>
     public string InvalidFieldError(string fieldName)
     {
         return IsSuccess
@@ -189,6 +198,9 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
             : Problem.InvalidFieldError(fieldName);
     }
 
+    /// <summary>
+    ///     Validation errors by field, or <c>null</c> when there are none.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Dictionary<string, List<string>>? InvalidObject => Problem?.GetValidationErrors();
 }

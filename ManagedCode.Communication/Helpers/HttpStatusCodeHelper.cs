@@ -34,6 +34,9 @@ namespace ManagedCode.Communication.Helpers;
 /// </remarks>
 public static class HttpStatusCodeHelper
 {
+    /// <summary>
+    ///     Maps an exception to a status code, honouring any override registered in <c>ExceptionStatusCodeMap</c>.
+    /// </summary>
     public static HttpStatusCode GetStatusCodeForException(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);

@@ -6,6 +6,9 @@ namespace ManagedCode.Communication.Results;
 public partial interface IResultFactory<TSelf>
     where TSelf : struct, IResultFactory<TSelf>
 {
+    /// <summary>
+    ///     Creates a 400 Bad Request failure.
+    /// </summary>
     static virtual TSelf FailBadRequest(string? detail = null)
     {
         return TSelf.Fail(Problem.Create(
@@ -14,6 +17,9 @@ public partial interface IResultFactory<TSelf>
             (int)HttpStatusCode.BadRequest));
     }
 
+    /// <summary>
+    ///     Creates a 401 Unauthorized failure.
+    /// </summary>
     static virtual TSelf FailUnauthorized(string? detail = null)
     {
         return TSelf.Fail(Problem.Create(
@@ -22,6 +28,9 @@ public partial interface IResultFactory<TSelf>
             (int)HttpStatusCode.Unauthorized));
     }
 
+    /// <summary>
+    ///     Creates a 403 Forbidden failure.
+    /// </summary>
     static virtual TSelf FailForbidden(string? detail = null)
     {
         return TSelf.Fail(Problem.Create(
@@ -30,6 +39,9 @@ public partial interface IResultFactory<TSelf>
             (int)HttpStatusCode.Forbidden));
     }
 
+    /// <summary>
+    ///     Creates a 404 Not Found failure.
+    /// </summary>
     static virtual TSelf FailNotFound(string? detail = null)
     {
         return TSelf.Fail(Problem.Create(
