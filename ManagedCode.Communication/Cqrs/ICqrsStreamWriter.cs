@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace ManagedCode.Communication.CQRS;
 
 /// <summary>
-///     Push-style writer handed to a <see cref="CqrsStream.Create{TProgress,TResult}" /> handler. Sequence numbers are
+///     Push-style writer handed to a <c>CqrsStream.Create</c> handler. Sequence numbers are
 ///     assigned automatically and the terminal chunk is emitted by the stream itself, so a handler only reports progress.
 /// </summary>
 /// <typeparam name="TProgress">Progress payload type.</typeparam>

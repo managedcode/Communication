@@ -44,7 +44,7 @@ public static class CqrsTestStreams
         yield return Completed(sequence: 3);
     }
 
-    /// <summary>Same shape as <see cref="CompletedAsync" /> but echoes the command payload.</summary>
+    /// <summary>Same shape as <c>CompletedAsync</c> but echoes the command payload.</summary>
     public static async IAsyncEnumerable<Chunk> CompletedAsync(SubmitCommand command)
     {
         yield return Started(sequence: 1);

@@ -4,28 +4,32 @@ namespace ManagedCode.Communication.Commands;
 
 public partial class Command
 {
-    public static Command<T> From<T>(Guid id, T value)
+    /// <summary>
+    ///     Creates a typed command carrying <paramref name="value" />, naming it after the payload's runtime type.
+    /// </summary>
+    /// <typeparam name="T">Payload type.</typeparam>
+    /// <param name="value">The payload.</param>
+    /// <param name="commandId">
+    ///     Identity of the command. Leave it unset — a time-ordered UUIDv7 is generated. Supply one only when the
+    ///     identity comes from outside: an idempotency key sent by the caller, or a replayed message.
+    /// </param>
+    public static Command<T> From<T>(T value, Guid? commandId = null)
     {
-        return Command<T>.From(id, value);
+        return Command<T>.From(value, commandId);
     }
 
-    public static Command<T> From<T>(T value)
+    /// <summary>
+    ///     Creates a typed command of the given type carrying <paramref name="value" />.
+    /// </summary>
+    /// <typeparam name="T">Payload type.</typeparam>
+    /// <param name="commandType">Logical command type.</param>
+    /// <param name="value">The payload.</param>
+    /// <param name="commandId">
+    ///     Identity of the command. Leave it unset — a time-ordered UUIDv7 is generated. Supply one only when the
+    ///     identity comes from outside: an idempotency key sent by the caller, or a replayed message.
+    /// </param>
+    public static Command<T> From<T>(string commandType, T value, Guid? commandId = null)
     {
-        return Command<T>.From(value);
-    }
-
-    public static Command<T> From<T>(Guid id, string commandType, T value)
-    {
-        return Command<T>.From(id, commandType, value);
-    }
-
-    static Command ICommandFactory<Command>.From<TEnum>(TEnum commandType)
-    {
-        return CommandFactoryBridge.From<Command, TEnum>(commandType);
-    }
-
-    static Command ICommandFactory<Command>.From<TEnum>(Guid commandId, TEnum commandType)
-    {
-        return CommandFactoryBridge.From<Command, TEnum>(commandId, commandType);
+        return Command<T>.From(commandType, value, commandId);
     }
 }

@@ -48,7 +48,7 @@ public static partial class ResultRailwayExtensions
     }
 
     /// <summary>
-    ///     Async version of Then for Task<Result<T>>.
+    ///     Async version of <c>Then</c> for a <c>Task&lt;Result&lt;T&gt;&gt;</c> receiver.
     /// </summary>
     public static Task<Result<TOut>> ThenAsync<TIn, TOut>(this Task<Result<TIn>> resultTask, Func<TIn, Task<Result<TOut>>> next)
     {

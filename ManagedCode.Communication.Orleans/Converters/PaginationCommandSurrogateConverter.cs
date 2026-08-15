@@ -10,7 +10,7 @@ public sealed class PaginationCommandSurrogateConverter : IConverter<PaginationC
     public PaginationCommand ConvertFromSurrogate(in CommandTSurrogate<PaginationRequest> surrogate)
     {
         var value = surrogate.Value ?? new PaginationRequest(0, 0);
-        var command = PaginationCommand.Create(surrogate.CommandId, surrogate.CommandType, value);
+        var command = PaginationCommand.Create(value, options: null, commandId: surrogate.CommandId);
         command.Timestamp = surrogate.Timestamp;
         command.CorrelationId = surrogate.CorrelationId;
         command.CausationId = surrogate.CausationId;

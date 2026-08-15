@@ -10,7 +10,7 @@ public sealed class CommandTSurrogateConverter<T> : IConverter<Command<T>, Comma
 {
     public Command<T> ConvertFromSurrogate(in CommandTSurrogate<T> surrogate)
     {
-        var command = Command<T>.Create(surrogate.CommandId, surrogate.CommandType, surrogate.Value!);
+        var command = Command<T>.Create(surrogate.CommandType, surrogate.Value!, surrogate.CommandId);
         command.Timestamp = surrogate.Timestamp;
         command.CorrelationId = surrogate.CorrelationId;
         command.CausationId = surrogate.CausationId;

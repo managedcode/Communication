@@ -5,51 +5,41 @@ namespace ManagedCode.Communication.Commands;
 public partial interface ICommandValueFactory<TSelf, TValue>
     where TSelf : class, ICommandValueFactory<TSelf, TValue>
 {
-    static virtual TSelf Create(TValue value)
+    /// <summary>
+    ///     Creates a command carrying <paramref name="value" />, naming it after the payload's runtime type.
+    /// </summary>
+    /// <inheritdoc cref="Create(string,TValue,Guid?)" />
+    static virtual TSelf Create(TValue value, Guid? commandId = null)
     {
-        var commandType = ResolveCommandType(value);
-        return TSelf.Create(Guid.CreateVersion7(), commandType, value);
+        return TSelf.Create(ResolveCommandType(value), value, commandId);
     }
 
-    static virtual TSelf Create(Guid commandId, TValue value)
+    /// <inheritdoc cref="Create(string,TValue,Guid?)" />
+    static virtual TSelf Create(string commandType, Func<TValue> valueFactory, Guid? commandId = null)
     {
-        var commandType = ResolveCommandType(value);
-        return TSelf.Create(commandId, commandType, value);
+        ArgumentNullException.ThrowIfNull(valueFactory);
+
+        return TSelf.Create(commandType, valueFactory(), commandId);
     }
 
-    static virtual TSelf Create(Guid commandId, string commandType, Func<TValue> valueFactory)
+    /// <inheritdoc cref="Create(TValue,Guid?)" />
+    static virtual TSelf Create(Func<TValue> valueFactory, Guid? commandId = null)
     {
-        if (valueFactory is null)
-        {
-            throw new ArgumentNullException(nameof(valueFactory));
-        }
+        ArgumentNullException.ThrowIfNull(valueFactory);
 
-        return TSelf.Create(commandId, commandType, valueFactory());
+        return TSelf.Create(valueFactory(), commandId);
     }
 
-    static virtual TSelf Create(Func<TValue> valueFactory)
+    /// <inheritdoc cref="Create(TValue,Guid?)" />
+    static virtual TSelf From(TValue value, Guid? commandId = null)
     {
-        if (valueFactory is null)
-        {
-            throw new ArgumentNullException(nameof(valueFactory));
-        }
-
-        return TSelf.Create(valueFactory());
+        return TSelf.Create(value, commandId);
     }
 
-    static virtual TSelf From(TValue value)
+    /// <inheritdoc cref="Create(string,TValue,Guid?)" />
+    static virtual TSelf From(string commandType, TValue value, Guid? commandId = null)
     {
-        return TSelf.Create(value);
-    }
-
-    static virtual TSelf From(Guid commandId, TValue value)
-    {
-        return TSelf.Create(commandId, value);
-    }
-
-    static virtual TSelf From(Guid commandId, string commandType, TValue value)
-    {
-        return TSelf.Create(commandId, commandType, value);
+        return TSelf.Create(commandType, value, commandId);
     }
 
     private static string ResolveCommandType(TValue value)

@@ -85,6 +85,7 @@ the core package as static methods on `Result`.
 | `Result<T>.Value` and the `CollectionResult<T>` members are `init`-only | A settable value let callers put a payload on a failed result, contradicting the nullable annotations. |
 | A successful `Result<T>` always writes `value` | `Result<int>.Succeed(0)` used to serialize as `{"isSuccess":true}`, indistinguishable to a non-.NET client from carrying nothing. Failed results now include `"value":null`. |
 | `HttpStatusCodeHelper.GetStatusCodeForException(null)` throws | It silently returned a status for a missing exception. |
+| Command factories take `commandId` as an optional **trailing** parameter | It used to be the first parameter of a parallel set of overloads, so it read as required and invited callers to pass a fresh `Guid.NewGuid()` — noise at best, and on a retry path it silently defeats idempotency. `Command.Create(id, type)` becomes `Command.Create(type, id)`. |
 
 **New**
 
@@ -1096,6 +1097,18 @@ root object, and serializers/Orleans surrogates round-trip them without custom p
 | `WithUserId(id)` | Acting user. |
 | `WithSessionId(id)` | Session the command belongs to. |
 | `WithMetadata(metadata)` / `WithMetadata(m => …)` | Replaces or edits the whole `CommandMetadata`. |
+
+Every factory generates the command id itself — a time-ordered UUIDv7 — and takes `commandId` as an **optional
+trailing parameter**. Pass one only when the identity comes from outside: an idempotency key sent by the caller,
+or a replayed message whose identity must be preserved.
+
+```csharp
+var command  = Command<PlaceOrder>.From(payload);                    // id generated
+var replayed = Command<PlaceOrder>.From(payload, idempotencyKey);    // id supplied
+```
+
+Only the command id is generated. Correlation, causation, trace, span, user and session describe how a command
+relates to the rest of the system, which the library cannot infer — they stay `null` until you set them.
 
 Correlation, causation, trace, span, user and session identifiers live on the command itself
 (`command.CorrelationId`, `command.UserId`, …); `CommandMetadata` carries the rest — priority, retries, timeout,

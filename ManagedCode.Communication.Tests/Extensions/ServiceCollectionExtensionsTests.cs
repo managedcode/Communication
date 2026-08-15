@@ -8,6 +8,7 @@ using Xunit;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
+[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
 public class ServiceCollectionExtensionsTests
 {
     [Fact]

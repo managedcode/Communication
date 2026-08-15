@@ -17,7 +17,7 @@ public sealed class CqrsStreamServerOptions
     public static CqrsStreamServerOptions Default { get; } = new();
 
     /// <summary>
-    ///     Fill in <see cref="CqrsStreamChunk{TProgress,TResult}.Sequence" /> for chunks a handler emitted without one,
+    ///     Fill in <c>CqrsStreamChunk.Sequence</c> for chunks a handler emitted without one,
     ///     and derive the SSE <c>id:</c> field from it. Lets clients restore ordering and resume by
     ///     <c>Last-Event-ID</c> without every handler having to number its own chunks.
     /// </summary>
@@ -25,7 +25,7 @@ public sealed class CqrsStreamServerOptions
 
     /// <summary>
     ///     When a handler's stream ends without a terminal chunk, append a terminal
-    ///     <see cref="CqrsStreamChunkKind.Failed" /> chunk carrying <see cref="CqrsStreamProblems.IncompleteStream" />
+    ///     <c>CqrsStreamChunkKind.Failed</c> chunk carrying <c>CqrsStreamProblems.IncompleteStream</c>
     ///     so consumers never have to guess whether the command finished.
     /// </summary>
     public bool EnsureTerminalChunk { get; set; } = true;

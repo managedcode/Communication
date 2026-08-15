@@ -154,7 +154,7 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
             }
         };
 
-        var command = Command<PaymentRequest>.From(Guid.CreateVersion7(), payload);
+        var command = Command<PaymentRequest>.From(payload, Guid.CreateVersion7());
         command.CommandType = "ProcessPayment";
         command.CorrelationId = "correlation-789";
         command.CausationId = "causation-012";
@@ -202,7 +202,7 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
         var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 50, minPageSize: 10);
 
-        var command = PaginationCommand.Create(Guid.CreateVersion7(), skip: 25, take: 5, options);
+        var command = PaginationCommand.Create(skip: 25, take: 5, options: options, commandId: Guid.CreateVersion7());
         command.CorrelationId = "pagination-correlation";
         command.Metadata = new CommandMetadata
         {

@@ -5,47 +5,34 @@ namespace ManagedCode.Communication.Commands;
 public partial interface ICommandFactory<TSelf>
     where TSelf : class, ICommandFactory<TSelf>
 {
-    static virtual TSelf Create(string commandType)
-    {
-        if (string.IsNullOrWhiteSpace(commandType))
-        {
-            throw new ArgumentException("Command type must be provided.", nameof(commandType));
-        }
-
-        return TSelf.Create(Guid.CreateVersion7(), commandType);
-    }
-
-    static virtual TSelf Create<TEnum>(TEnum commandType)
+    /// <inheritdoc cref="Create(string,Guid?)" />
+    static virtual TSelf Create<TEnum>(TEnum commandType, Guid? commandId = null)
         where TEnum : Enum
     {
-        return TSelf.Create(Guid.CreateVersion7(), commandType.ToString());
+        ArgumentNullException.ThrowIfNull(commandType);
+
+        return TSelf.Create(commandType.ToString(), commandId);
     }
 
-    static virtual TSelf Create<TEnum>(Guid commandId, TEnum commandType)
+    /// <inheritdoc cref="Create(string,Guid?)" />
+    static virtual TSelf From(string commandType, Guid? commandId = null)
+    {
+        return TSelf.Create(commandType, commandId);
+    }
+
+    /// <inheritdoc cref="Create(string,Guid?)" />
+    static virtual TSelf From<TEnum>(TEnum commandType, Guid? commandId = null)
         where TEnum : Enum
     {
-        return TSelf.Create(commandId, commandType.ToString());
+        return TSelf.Create(commandType, commandId);
     }
 
-    static virtual TSelf From(string commandType)
+    /// <summary>
+    ///     The identity a command gets when the caller does not supply one: a time-ordered UUIDv7, so ids sort by
+    ///     creation time and index well.
+    /// </summary>
+    protected static Guid NewCommandId()
     {
-        return TSelf.Create(commandType);
-    }
-
-    static virtual TSelf From(Guid commandId, string commandType)
-    {
-        return TSelf.Create(commandId, commandType);
-    }
-
-    static virtual TSelf From<TEnum>(TEnum commandType)
-        where TEnum : Enum
-    {
-        return TSelf.Create(commandType);
-    }
-
-    static virtual TSelf From<TEnum>(Guid commandId, TEnum commandType)
-        where TEnum : Enum
-    {
-        return TSelf.Create(commandId, commandType);
+        return Guid.CreateVersion7();
     }
 }

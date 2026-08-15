@@ -52,7 +52,7 @@ public static class CommunicationTelemetry
 
     /// <summary>
     ///     Activity source for spans the library starts. Also the source whose current activity
-    ///     <see cref="RecordFailure" /> annotates.
+    ///     <c>RecordFailure</c> annotates.
     /// </summary>
     public static ActivitySource ActivitySource { get; } = new(SourceName, ThisAssemblyVersion);
 

@@ -49,7 +49,7 @@ public class CommandExtensionsTests
     [Fact]
     public void WithMetadata_AssignsExistingInstance()
     {
-        var command = Command.Create(Guid.CreateVersion7(), "TestCommand");
+        var command = Command.Create("TestCommand", Guid.CreateVersion7());
         var metadata = new CommandMetadata { UserAgent = "cli" };
 
         command.WithMetadata(metadata);

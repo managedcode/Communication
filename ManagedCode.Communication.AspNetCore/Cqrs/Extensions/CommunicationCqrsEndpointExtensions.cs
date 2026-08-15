@@ -17,7 +17,7 @@ public static class CommunicationCqrsEndpointExtensions
     /// <summary>
     ///     Converts an <c>IAsyncEnumerable&lt;CqrsStreamChunk&lt;,&gt;&gt;</c> returned by this endpoint into a
     ///     Server-Sent Events response. Options come from DI when
-    ///     <see cref="CommunicationServiceCollectionExtensions.AddCommunicationCqrs" /> was called, otherwise defaults apply.
+    ///     <c>AddCommunicationCqrs</c> was called, otherwise defaults apply.
     /// </summary>
     public static RouteHandlerBuilder WithCommunicationCqrsResults(this RouteHandlerBuilder builder)
     {

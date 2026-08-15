@@ -33,7 +33,7 @@ public class PaginationCommandTests
     {
         var id = Guid.NewGuid();
 
-        var command = PaginationCommand.Create(id, 12, 6);
+        var command = PaginationCommand.Create(12, 6, options: null, commandId: id);
 
         command.CommandId
             .ShouldBe(id);

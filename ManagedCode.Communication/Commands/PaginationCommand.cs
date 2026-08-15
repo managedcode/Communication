@@ -30,121 +30,77 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
     public int PageSize => Value?.PageSize ?? 0;
 
     /// <summary>
-    /// Creates a command with an explicit identifier, command type, and normalized pagination payload.
+    ///     Creates a command of the given type from a pagination payload.
     /// </summary>
-    /// <param name="commandId">Unique command identifier.</param>
     /// <param name="commandType">Logical command name.</param>
     /// <param name="value">Pagination payload.</param>
-    /// <param name="options">Optional normalization options.</param>
-    public static new PaginationCommand Create(Guid commandId, string commandType, PaginationRequest value)
+    /// <param name="commandId">
+    ///     Identity of the command. Leave it unset — a time-ordered UUIDv7 is generated. Supply one only when the
+    ///     identity comes from outside: an idempotency key sent by the caller, or a replayed message.
+    /// </param>
+    public static new PaginationCommand Create(string commandType, PaginationRequest value, Guid? commandId = null)
     {
-        return Create(commandId, commandType, value, options: null);
+        return Create(value, options: null, commandId);
     }
 
     /// <summary>
-    /// Creates a command with an explicit identifier, command type, and normalized pagination payload.
-    /// </summary>
-    /// <param name="commandId">Unique command identifier.</param>
-    /// <param name="commandType">Logical command name.</param>
-    /// <param name="value">Pagination payload.</param>
-    /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand Create(Guid commandId, string commandType, PaginationRequest value, PaginationOptions? options = null)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        var normalizedCommandType = string.IsNullOrWhiteSpace(commandType) ? DefaultCommandType : commandType;
-
-        if (!string.Equals(normalizedCommandType, DefaultCommandType, StringComparison.Ordinal))
-        {
-            normalizedCommandType = DefaultCommandType;
-        }
-
-        var normalizedPayload = value.Normalize(options);
-
-        return new PaginationCommand(commandId, normalizedCommandType, normalizedPayload);
-    }
-
-    /// <summary>
-    /// Creates a command with a generated identifier from the supplied pagination request.
+    ///     Creates a command from a pagination payload, normalizing it first.
     /// </summary>
     /// <param name="request">Pagination payload.</param>
     /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand Create(PaginationRequest request, PaginationOptions? options = null)
+    /// <param name="commandId">
+    ///     Identity of the command. Leave it unset — a time-ordered UUIDv7 is generated. Supply one only when the
+    ///     identity comes from outside: an idempotency key sent by the caller, or a replayed message.
+    /// </param>
+    public static PaginationCommand Create(
+        PaginationRequest request,
+        PaginationOptions? options = null,
+        Guid? commandId = null)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var normalized = request.Normalize(options);
-        return Create(Guid.CreateVersion7(), DefaultCommandType, normalized, options);
+
+        return new PaginationCommand(
+            commandId ?? Guid.CreateVersion7(),
+            DefaultCommandType,
+            request.Normalize(options));
     }
 
     /// <summary>
-    /// Creates a command using the provided identifier and pagination request.
-    /// </summary>
-    /// <param name="commandId">Unique command identifier.</param>
-    /// <param name="request">Pagination payload.</param>
-    /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand Create(Guid commandId, PaginationRequest request, PaginationOptions? options = null)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        var normalized = request.Normalize(options);
-        return Create(commandId, DefaultCommandType, normalized, options);
-    }
-
-    /// <summary>
-    /// Creates a command from skip/take parameters.
+    ///     Creates a command from skip/take parameters.
     /// </summary>
     /// <param name="skip">Items to skip.</param>
     /// <param name="take">Items to take.</param>
     /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand Create(int skip, int take, PaginationOptions? options = null)
+    /// <param name="commandId">
+    ///     Identity of the command. Leave it unset — a time-ordered UUIDv7 is generated. Supply one only when the
+    ///     identity comes from outside: an idempotency key sent by the caller, or a replayed message.
+    /// </param>
+    public static PaginationCommand Create(
+        int skip,
+        int take,
+        PaginationOptions? options = null,
+        Guid? commandId = null)
     {
-        return Create(new PaginationRequest(skip, take), options);
+        return Create(new PaginationRequest(skip, take), options, commandId);
     }
 
-    /// <summary>
-    /// Creates a command with an explicit identifier from skip/take parameters.
-    /// </summary>
-    /// <param name="commandId">Unique command identifier.</param>
-    /// <param name="skip">Items to skip.</param>
-    /// <param name="take">Items to take.</param>
-    /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand Create(Guid commandId, int skip, int take, PaginationOptions? options = null)
+    /// <inheritdoc cref="Create(PaginationRequest,PaginationOptions,Guid?)" />
+    public static PaginationCommand From(
+        PaginationRequest request,
+        PaginationOptions? options = null,
+        Guid? commandId = null)
     {
-        return Create(commandId, new PaginationRequest(skip, take), options);
+        return Create(request, options, commandId);
     }
 
-    /// <summary>
-    /// Creates a command from the provided pagination payload.
-    /// </summary>
-    /// <param name="request">Pagination payload.</param>
-    /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand From(PaginationRequest request, PaginationOptions? options = null)
+    /// <inheritdoc cref="Create(int,int,PaginationOptions,Guid?)" />
+    public static PaginationCommand From(
+        int skip,
+        int take,
+        PaginationOptions? options = null,
+        Guid? commandId = null)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        var normalized = request.Normalize(options);
-        return Create(normalized, options);
-    }
-
-    /// <summary>
-    /// Creates a command from skip/take parameters.
-    /// </summary>
-    /// <param name="skip">Items to skip.</param>
-    /// <param name="take">Items to take.</param>
-    /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand From(int skip, int take, PaginationOptions? options = null)
-    {
-        return Create(skip, take, options);
-    }
-
-    /// <summary>
-    /// Creates a command from skip/take parameters with an explicit identifier.
-    /// </summary>
-    /// <param name="commandId">Unique command identifier.</param>
-    /// <param name="skip">Items to skip.</param>
-    /// <param name="take">Items to take.</param>
-    /// <param name="options">Optional normalization options.</param>
-    public static PaginationCommand From(Guid commandId, int skip, int take, PaginationOptions? options = null)
-    {
-        return Create(commandId, new PaginationRequest(skip, take), options);
+        return Create(skip, take, options, commandId);
     }
 
     /// <summary>

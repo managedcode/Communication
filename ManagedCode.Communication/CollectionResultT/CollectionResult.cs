@@ -57,7 +57,7 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     public T[] Collection { get; init; } = [];
 
     /// <summary>
-    ///     Gets the collection as Value property for IResult<T[]> compatibility.
+    ///     Gets the collection as a Value property, for <see cref="IResult{T}" /> compatibility.
     /// </summary>
     [JsonIgnore]
     public T[]? Value => Collection;
@@ -104,7 +104,7 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     public bool HasItems => Collection?.Length > 0;
 
     /// <summary>
-    ///     Gets a value indicating whether the result has a non-empty value (for IResult<T[]> compatibility).
+    ///     Gets a value indicating whether the result has a non-empty value, for <see cref="IResult{T}" /> compatibility.
     /// </summary>
     [JsonIgnore]
     public bool HasValue => !IsEmpty;

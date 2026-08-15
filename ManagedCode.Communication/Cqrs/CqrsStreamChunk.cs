@@ -36,8 +36,8 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     }
 
     /// <summary>
-    ///     Creates a fully specified chunk. Prefer <see cref="Started" />, <see cref="Progress" />,
-    ///     <see cref="Completed" /> or <see cref="Failed(Result{TResult},string?,string?,string?,long?,DateTime?)" />.
+    ///     Creates a fully specified chunk. Prefer <see cref="Started" />, <see cref="Progress(Result{TProgress},string,string,string,long?,DateTime?)" />,
+    ///     <see cref="Completed(Result{TResult},string,string,string,long?,DateTime?)" /> or <see cref="Failed(Result{TResult},string?,string?,string?,long?,DateTime?)" />.
     /// </summary>
     public CqrsStreamChunk(
         CqrsStreamChunkKind kind,

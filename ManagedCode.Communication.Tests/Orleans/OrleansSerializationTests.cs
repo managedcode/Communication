@@ -44,7 +44,7 @@ public class OrleansSerializationTests : IClassFixture<OrleansClusterFixture>
             }
         };
         
-        var command = Command<PaymentRequest>.From(commandId, paymentRequest);
+        var command = Command<PaymentRequest>.From(paymentRequest, commandId);
         command.CommandType = "ProcessPayment";
         command.CorrelationId = "workflow-123";
         command.Metadata = new CommandMetadata

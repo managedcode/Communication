@@ -292,7 +292,7 @@ public class SerializationTests
             Name = "Command Test",
             Tags = new[] { "cmd", "test" }
         };
-        var original = Command<TestModel>.Create(commandId, value);
+        var original = Command<TestModel>.Create(value, commandId);
         original.SessionId = "session-123";
         original.SpanId = "span-456";
 
@@ -317,7 +317,7 @@ public class SerializationTests
     {
         // Arrange
         var commandId = Guid.NewGuid();
-        var original = Command<string>.Create(commandId, "CustomType", "Test Value");
+        var original = Command<string>.Create("CustomType", "Test Value", commandId);
         original.CausationId = "cause-123";
 
         // Act

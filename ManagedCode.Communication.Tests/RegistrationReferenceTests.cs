@@ -21,6 +21,7 @@ namespace ManagedCode.Communication.Tests;
 ///     Setup instructions are the first thing a reader copies and the easiest thing to let rot. Keeping them here
 ///     means a renamed or removed entry point breaks the build rather than someone's afternoon.
 /// </remarks>
+[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
 public class RegistrationReferenceTests
 {
     [Fact]

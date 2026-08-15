@@ -11,7 +11,7 @@ namespace ManagedCode.Communication.CQRS;
 ///     Helpers for authoring CQRS command streams.
 /// </summary>
 /// <remarks>
-///     <see cref="Create{TProgress,TResult}" /> is the recommended way to write a handler: it assigns sequence numbers,
+///     <c>Create</c> is the recommended way to write a handler: it assigns sequence numbers,
 ///     guarantees exactly one terminal chunk, and turns an unhandled exception into a
 ///     <see cref="CqrsStreamChunkKind.Failed" /> chunk — none of which a hand-written iterator does for free.
 /// </remarks>

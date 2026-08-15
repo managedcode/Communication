@@ -12,6 +12,7 @@ using Xunit;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
+[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
 public class CommunicationServiceCollectionExtensionsTests
 {
     [Fact]

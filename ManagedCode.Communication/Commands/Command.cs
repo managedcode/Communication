@@ -69,49 +69,31 @@ public partial class Command : ICommand, ICommandFactory<Command>
     public CommandMetadata? Metadata { get; set; }
 
     /// <summary>
-    /// Creates a new command with generated ID and specified type
+    ///     Creates a command of the given type.
     /// </summary>
-    public static Command Create(string commandType)
-    {
-        return CommandFactoryBridge.Create<Command>(commandType);
-    }
-
-    /// <summary>
-    /// Creates a new command with a generated identifier using an enum value as the command type.
-    /// </summary>
-    /// <typeparam name="TEnum">Enum that represents the command type.</typeparam>
-    /// <param name="commandType">Enum value converted to the command type string.</param>
-    public static Command Create<TEnum>(TEnum commandType)
-        where TEnum : Enum
-    {
-        return CommandFactoryBridge.Create<Command, TEnum>(commandType);
-    }
-    
-    /// <summary>
-    /// Creates a new command with a specific identifier and command type.
-    /// </summary>
-    /// <param name="commandId">Unique command identifier.</param>
     /// <param name="commandType">Logical command type.</param>
-    public static Command Create(Guid commandId, string commandType)
+    /// <param name="commandId">
+    ///     Identity of the command. Leave it unset — a time-ordered UUIDv7 is generated. Supply one only when the
+    ///     identity comes from outside: an idempotency key sent by the caller, or a replayed message.
+    /// </param>
+    public static Command Create(string commandType, Guid? commandId = null)
     {
         if (string.IsNullOrWhiteSpace(commandType))
         {
             throw new ArgumentException("Command type must be provided.", nameof(commandType));
         }
 
-        return new Command(commandId, commandType);
+        return new Command(commandId ?? Guid.CreateVersion7(), commandType);
     }
 
-    /// <summary>
-    /// Creates a new command with a specific identifier using an enum value as the command type.
-    /// </summary>
+    /// <inheritdoc cref="Create(string,Guid?)" />
     /// <typeparam name="TEnum">Enum that represents the command type.</typeparam>
-    /// <param name="commandId">Unique command identifier.</param>
-    /// <param name="commandType">Enum value converted to the command type string.</param>
-    public static Command Create<TEnum>(Guid commandId, TEnum commandType)
+    public static Command Create<TEnum>(TEnum commandType, Guid? commandId = null)
         where TEnum : Enum
     {
-        return CommandFactoryBridge.Create<Command, TEnum>(commandId, commandType);
+        ArgumentNullException.ThrowIfNull(commandType);
+
+        return Create(commandType.ToString(), commandId);
     }
 
     /// <summary>

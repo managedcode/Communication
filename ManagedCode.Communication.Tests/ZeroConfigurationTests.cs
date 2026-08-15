@@ -22,6 +22,7 @@ namespace ManagedCode.Communication.Tests;
 ///     app or a unit test. These tests are the standing guarantee that registration is optional — if any code
 ///     path starts depending on configuration, one of them fails.
 /// </remarks>
+[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
 public class ZeroConfigurationTests
 {
     // ---------- core ----------

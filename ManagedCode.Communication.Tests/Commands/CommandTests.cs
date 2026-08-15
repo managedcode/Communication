@@ -19,7 +19,7 @@ public class CommandTests
     public void FromIdValue()
     {
         var expectedId = Guid.NewGuid();
-        var command = Command<string>.From(expectedId, nameof(Command));
+        var command = Command<string>.From(nameof(Command), expectedId);
         command.CommandId
             .ShouldBe(expectedId);
         command.Value
@@ -40,7 +40,7 @@ public class CommandTests
     [Fact]
     public void Create_WithEmptyCommandType_ShouldThrow()
     {
-        Should.Throw<ArgumentException>(() => Command.Create(Guid.NewGuid(), string.Empty));
+        Should.Throw<ArgumentException>(() => Command.Create(string.Empty, Guid.NewGuid()));
     }
 
     [Fact]
@@ -63,14 +63,14 @@ public class CommandTests
     [Fact]
     public void GenericCreate_WithEmptyCommandType_ShouldThrow()
     {
-        Should.Throw<ArgumentException>(() => Command<string>.Create(Guid.NewGuid(), string.Empty, "value"));
+        Should.Throw<ArgumentException>(() => Command<string>.Create(string.Empty, "value", Guid.NewGuid()));
     }
 
     [Fact]
     public void GenericFrom_WithCommandType_ShouldReturnCommand()
     {
         var id = Guid.NewGuid();
-        var command = Command<string>.From(id, "custom", "value");
+        var command = Command<string>.From("custom", "value", id);
 
         command.CommandId
             .ShouldBe(id);
