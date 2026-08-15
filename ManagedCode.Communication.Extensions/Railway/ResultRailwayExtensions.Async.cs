@@ -42,6 +42,98 @@ public static partial class ResultRailwayExtensions
             : result.PropagateFailure<TOut>();
     }
 
+    /// <summary>
+    ///     Awaits the result, then runs a synchronous next step on its value.
+    /// </summary>
+    /// <typeparam name="TIn">The incoming value type.</typeparam>
+    /// <typeparam name="TOut">The value type the step returns.</typeparam>
+    /// <param name="resultTask">The result being awaited.</param>
+    /// <param name="binder">Runs only on success.</param>
+    /// <returns>The step's result, or the incoming failure unchanged.</returns>
+    public static async Task<Result<TOut>> BindAsync<TIn, TOut>(
+        this Task<Result<TIn>> resultTask,
+        Func<TIn, Result<TOut>> binder)
+    {
+        ArgumentNullException.ThrowIfNull(binder);
+
+        var result = await resultTask.ConfigureAwait(false);
+        return result.IsSuccess ? binder(result.Value) : result.PropagateFailure<TOut>();
+    }
+
+    /// <summary>
+    ///     Awaits the result, then runs a synchronous side effect on success.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="resultTask">The result being awaited.</param>
+    /// <param name="action">Runs only on success. Its outcome does not affect the result.</param>
+    /// <returns>The result, unchanged.</returns>
+    public static async Task<Result<T>> TapAsync<T>(this Task<Result<T>> resultTask, Action<T> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        var result = await resultTask.ConfigureAwait(false);
+        if (result.IsSuccess)
+        {
+            action(result.Value);
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc cref="TapAsync{T}(Task{Result{T}},Action{T})" />
+    public static Task<Result<T>> DoAsync<T>(this Task<Result<T>> resultTask, Action<T> action)
+    {
+        return resultTask.TapAsync(action);
+    }
+
+    /// <summary>
+    ///     Awaits the result, then recovers from a failure synchronously.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="resultTask">The result being awaited.</param>
+    /// <param name="recovery">Runs only on failure, and may itself return a failure.</param>
+    /// <returns>The original success, or whatever the recovery produced.</returns>
+    public static async Task<Result<T>> CompensateAsync<T>(
+        this Task<Result<T>> resultTask,
+        Func<Problem, Result<T>> recovery)
+    {
+        ArgumentNullException.ThrowIfNull(recovery);
+
+        var result = await resultTask.ConfigureAwait(false);
+        return result.IsSuccess ? result : recovery(result.Problem!);
+    }
+
+    /// <summary>
+    ///     Awaits the result, then substitutes a synchronously produced alternative for a failure.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="resultTask">The result being awaited.</param>
+    /// <param name="alternative">Runs only on failure. Unlike a compensation, it is not given the problem.</param>
+    /// <returns>The original success, or the alternative.</returns>
+    public static async Task<Result<T>> ElseAsync<T>(this Task<Result<T>> resultTask, Func<Result<T>> alternative)
+    {
+        ArgumentNullException.ThrowIfNull(alternative);
+
+        var result = await resultTask.ConfigureAwait(false);
+        return result.IsSuccess ? result : alternative();
+    }
+
+    /// <summary>
+    ///     Awaits the result, then runs a synchronous action whatever the outcome.
+    /// </summary>
+    /// <typeparam name="T">The value type.</typeparam>
+    /// <param name="resultTask">The result being awaited.</param>
+    /// <param name="action">Runs on success and on failure alike.</param>
+    /// <returns>The result, unchanged.</returns>
+    public static async Task<Result<T>> FinallyAsync<T>(this Task<Result<T>> resultTask, Action<Result<T>> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        var result = await resultTask.ConfigureAwait(false);
+        action(result);
+        return result;
+    }
+
     /// <inheritdoc cref="Bind(Result,Func{Result})" />
     public static async Task<Result> ThenAsync(this Task<Result> resultTask, Func<Task<Result>> next)
     {

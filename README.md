@@ -7,30 +7,95 @@ to the HTTP response, and railway operators to chain it all without a pyramid of
 And when a command is too slow to answer in one call, [**CQRS Streaming**](#cqrs-streaming) reports its progress
 as a typed stream that is guaranteed to tell you how it ended.
 
-```csharp
-Result<Order> result = await PlaceOrderAsync(cart);
-
-if (result.IsFailed)
-    return result.Problem;          // already an RFC 7807 response
-
-var order = result.Value;
-```
-
 Built for .NET 10, with ASP.NET Core, SignalR and Orleans integration in the box.
 
 [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 
+## At a glance
+
+**Failure is a value, not a second return path.** Every method says up front that it can fail, and every failure
+is the same shape.
+
+```csharp
+public async Task<Result<Order>> PlaceOrderAsync(Cart cart)
+{
+    if (cart.IsEmpty)
+        return Result<Order>.FailValidation(("cart", "is empty"));
+
+    var payment = await ChargeAsync(cart.Total);
+    if (payment.IsFailed)
+        return Result<Order>.Fail(payment.Problem!);      // pass the failure along untouched
+
+    return Result<Order>.Succeed(await CreateOrderAsync(cart));
+}
+```
+
+**Railway: chain the happy path, short-circuit on the first failure.** Every operator runs only on success and
+passes a failure straight through — no `try`/`catch`, no null checks between the steps. Async or not, the chain
+never has to break for an `await`.
+
+```csharp
+var receipt = await LoadCartAsync(cartId)
+    .EnsureAsync(cart => !cart.IsEmpty, Problem.Validation(("cart", "is empty")))
+    .BindAsync(cart => ChargeAsync(cart.Total))
+    .Map(payment => payment.Receipt)
+    .TapAsync(receipt => logger.Issued(receipt))
+    .CompensateAsync(problem => RetryOnce(problem));
+```
+
+**A slow command becomes a typed stream.** Progress and result are both typed, and the stream is guaranteed to
+tell you how it ended — see [CQRS Streaming](#cqrs-streaming).
+
+```csharp
+// server
+app.MapGet("/import", (CancellationToken ct) =>
+        CqrsStream.Create<ImportProgress, ImportReport>(async writer =>
+        {
+            for (var i = 1; i <= 10; i++)
+                await writer.ProgressAsync(new ImportProgress(i * 10));
+
+            return Result<ImportReport>.Succeed(new ImportReport(10));
+        }, ct))
+    .WithCommunicationCqrsResults();
+
+// client — Server-Sent Events on the wire; progress arrives via the callback,
+// the answer comes back from the method, and nothing blocks
+Result<ImportReport> report = await http
+    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
+    .ToResultAsync(progress => Console.WriteLine($"{progress.Percent}%"));
+```
+
+A stream that breaks, or ends without saying how it went, comes back as an ordinary failed `Result` — so it
+joins the railway like anything else:
+
+```csharp
+var imported = await http
+    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
+    .ToResultAsync(progress => logger.Progress(progress.Percent))
+    .Map(report => report.Imported)
+    .CompensateAsync(problem => Result<int>.Succeed(0));
+```
+
+**And it maps itself to HTTP.** Return a `Result<T>` from an action and the filter turns it into a `200` or an
+RFC 7807 problem response — no plumbing in the controller.
+
+```csharp
+[HttpGet("{id}")]
+public Task<Result<Order>> Get(string id) => _orders.FindAsync(id);
+```
+
+
 ## Table of Contents
 
+- [At a glance](#at-a-glance)
 - [Overview](#overview)
 - [Key Features](#key-features)
 - [Installation](#installation)
 - [Logging Configuration](#logging-configuration)
 - [Core Concepts](#core-concepts)
 - [Quick Start](#quick-start)
-- [API Reference](#api-reference)
 - [CQRS Streaming](#cqrs-streaming)
 - [Railway-Oriented Programming](#railway-oriented-programming)
 - [Command Pattern and Idempotency](#command-pattern-and-idempotency)
@@ -45,6 +110,7 @@ Built for .NET 10, with ASP.NET Core, SignalR and Orleans integration in the box
 - [Comparison](#comparison)
 - [Best Practices](#best-practices)
 - [Examples](#examples)
+- [API Reference](#api-reference)
 
 ## Overview
 
@@ -93,6 +159,8 @@ failures your callers are expected to handle.
 - Travels over Server-Sent Events out of the box, so any client can read it without a client library.
 - A handler that throws, or ends early, still produces a terminal `Failed` chunk instead of a dead connection.
 - The same contract over SignalR, Orleans or gRPC via `CqrsStream.Normalize`.
+- `ToResultAsync(onProgress)` drains a stream to its answer, so callers never write the loop — and the result
+  feeds straight into the railway.
 - See [CQRS Streaming](#cqrs-streaming).
 
 ### ⚙️ Static Factory Abstractions
@@ -517,18 +585,18 @@ client library at all. The same stream works over SignalR, Orleans or gRPC witho
 A chunk is one of four kinds, and the transport guarantees the shape of the sequence:
 
 ```mermaid
-stateDiagram-v2
-    direction LR
-    [*] --> Started
-    [*] --> Progress
-    Started --> Progress
-    Progress --> Progress
-    Started --> Completed
-    Progress --> Completed
-    Started --> Failed
-    Progress --> Failed
-    Completed --> [*]
-    Failed --> [*]
+flowchart LR
+    Open([stream opens]) --> S["Started<br/><small>optional, at most one</small>"]
+    S --> P["Progress<br/><small>any number, including none</small>"]
+    P -- more work --> P
+    P --> T{{"exactly one<br/>terminal chunk"}}
+    T --> C["Completed<br/><small>carries the result</small>"]
+    T --> F["Failed<br/><small>carries a Problem</small>"]
+    C --> Close([stream closes])
+    F --> Close
+
+    style C stroke-width:2px
+    style F stroke-width:2px
 ```
 
 - `Started` — optional, announces that execution began.
@@ -605,6 +673,82 @@ The reader does not throw for transport problems. A non-success status code, a d
 undecodable frame all arrive as a terminal `Failed` chunk, so that loop covers every outcome. Only cancellation
 propagates, as an `OperationCanceledException`.
 
+### Consuming a stream without writing the loop
+
+`await foreach` is the right tool when you genuinely want to react chunk by chunk. Most callers do not — they
+want the answer, and maybe a progress callback on the way. Draining by hand means a loop, a list, a branch per
+chunk kind, and a decision about what a stream that simply stops means.
+
+`ToResultAsync` is that loop, written once:
+
+```csharp
+Result<ImportReport> report = await grain.StreamAsync().ToResultAsync();
+```
+
+The terminal chunk becomes the result. A stream that ends **without** one fails with
+`CqrsStreamProblems.IncompleteStream` rather than reporting a success the command never claimed.
+
+**With progress.** Pass a callback and it fires as each update arrives — the answer still comes back from the
+method:
+
+```csharp
+var report = await client
+    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
+    .ToResultAsync(progress => hub.Clients.All.SendAsync("progress", progress.Percent));
+```
+
+The callback also comes in an awaited form, which takes the cancellation token as its second parameter:
+
+```csharp
+var report = await stream.ToResultAsync(async (progress, token) =>
+    await hub.Clients.All.SendAsync("progress", progress.Percent, token));
+```
+
+Nothing here blocks, and the awaited callback finishes before the next chunk is pulled — a slow handler applies
+back-pressure instead of letting chunks pile up behind it. (The token parameter is also what stops an async
+lambda from binding to the `Action<TProgress>` overload and having its task silently dropped.)
+
+**When you want the whole picture.** `ToOutcomeAsync` keeps the result, every progress payload, and every chunk:
+
+```csharp
+var outcome = await grain.StreamAsync().ToOutcomeAsync();
+
+outcome.Chunks.Count.ShouldBe(3);
+outcome.Progress.Select(p => p.Percent).ShouldBe([30, 70]);
+outcome.Value!.Status.ShouldBe("done");
+```
+
+An outcome converts to its `Result<TResult>` implicitly, so it can be returned wherever a result is expected.
+
+| | Keeps | Use when |
+| --- | --- | --- |
+| `ToResultAsync()` | the terminal chunk only | you want the answer |
+| `ToResultAsync(onProgress)` | the terminal chunk only | you want the answer and live progress |
+| `ToOutcomeAsync()` | result, progress, chunks | tests, audit logs, replaying what happened |
+| `ToChunkListAsync()` | every chunk | you will interpret them yourself |
+| `chunks.ToStreamResult()` | — | you already have the chunks in hand |
+
+### Streams and the railway
+
+`ToResultAsync` returns `Task<Result<TResult>>`, which is exactly what the async railway operators take. A
+stream is therefore just the start of a chain — no `await`, no temporary variable, no `if` in between:
+
+```csharp
+var imported = await client
+    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
+    .ToResultAsync(progress => logger.Progress(progress.Percent))
+    .EnsureAsync(report => report.Imported > 0, Problem.Validation(("import", "produced nothing")))
+    .Map(report => report.Imported)
+    .TapAsync(count => metrics.Imported(count))
+    .CompensateAsync(problem => problem.StatusCode == 409
+        ? Result<int>.Succeed(0)          // already imported by someone else — not an error here
+        : Result<int>.Fail(problem));
+```
+
+Every step runs only on success; a failure anywhere — including the stream breaking, or ending without saying
+how it went — skips the rest and arrives at `CompensateAsync` as an ordinary `Problem`.
+
+
 ### Registration
 
 ```csharp
@@ -671,91 +815,11 @@ crossing a grain boundary. A missing serializer is a *startup* failure in Orlean
 whose grain interfaces mention an unserializable type refuses to boot.
 
 
-## API Reference
-
-### Result Creation Methods
-
-#### Success Methods
-
-```csharp
-// Basic success
-Result.Succeed()
-Result<T>.Succeed(T value)
-CollectionResult<T>.Succeed(T[] items, int pageNumber, int pageSize, int totalItems)
-
-// From operations
-Result.From(Action action)
-Result<T>.From(Func<T> func)
-Result<T>.From(Task<T> task)
-
-// Try pattern with exception catching
-Result.Try(Action action)
-Result<T>.Try(Func<T> func)
-```
-
-#### Failure Methods
-
-```csharp
-// Basic failures
-Result.Fail()
-Result.Fail(string title)
-Result.Fail(string title, string detail)
-Result.Fail(Problem problem)
-Result.Fail(Exception exception)
-
-// HTTP status failures
-Result.FailNotFound(string detail)
-Result.FailUnauthorized(string detail)
-Result.FailForbidden(string detail)
-
-// Validation failures
-Result.FailValidation(params (string field, string message)[] errors)
-Result.Invalid(string message)
-Result.Invalid(string field, string message)
-
-// Enum-based failures
-Result.Fail<TEnum>(TEnum errorCode) where TEnum : Enum
-```
-
-### Transformation Methods
-
-```csharp
-// Map: Transform the value
-Result<int> ageResult = userResult.Map(user => user.Age);
-
-// Bind: Chain operations that return Results
-Result<Order> orderResult = userResult
-    .Bind(user => GetUserCart(user.Id))
-    .Bind(cart => CreateOrder(cart));
-
-// Tap: Execute side effects
-Result<User> result = userResult
-    .Tap(user => _logger.LogInfo($"Processing user {user.Id}"))
-    .Tap(user => _cache.Set(user.Id, user));
-```
-
-### Validation Methods
-
-```csharp
-// Ensure: Add validation
-Result<User> validUser = userResult
-    .Ensure(user => user.Age >= 18, Problem.Create("User must be 18+"))
-    .Ensure(user => user.Email.Contains("@"), Problem.Create("Invalid email"));
-
-// Where: Filter with predicate
-Result<User> filtered = userResult
-    .Where(user => user.IsActive, "User is not active");
-
-// FailIf: Conditional failure
-Result<Order> order = orderResult
-    .FailIf(o => o.Total <= 0, "Order total must be positive");
-
-// OkIf: Must satisfy condition
-Result<Payment> payment = paymentResult
-    .OkIf(p => p.IsAuthorized, "Payment not authorized");
-```
-
 ## Railway-Oriented Programming
+
+Every operator has a `Task<Result<T>>` receiver and accepts an ordinary synchronous delegate, so an async chain
+never has to be broken by an `await` and a temporary variable just because one step happens not to be async.
+
 
 > **Package:** `ManagedCode.Communication.Extensions`, namespace `ManagedCode.Communication.Extensions`.
 > One `using` gives you the whole railway surface. ASP.NET Core applications get it transitively through
@@ -2193,6 +2257,90 @@ public class OrderProcessingService
             : Result.Succeed();
     }
 }
+```
+
+## API Reference
+
+### Result Creation Methods
+
+#### Success Methods
+
+```csharp
+// Basic success
+Result.Succeed()
+Result<T>.Succeed(T value)
+CollectionResult<T>.Succeed(T[] items, int pageNumber, int pageSize, int totalItems)
+
+// From operations
+Result.From(Action action)
+Result<T>.From(Func<T> func)
+Result<T>.From(Task<T> task)
+
+// Try pattern with exception catching
+Result.Try(Action action)
+Result<T>.Try(Func<T> func)
+```
+
+#### Failure Methods
+
+```csharp
+// Basic failures
+Result.Fail()
+Result.Fail(string title)
+Result.Fail(string title, string detail)
+Result.Fail(Problem problem)
+Result.Fail(Exception exception)
+
+// HTTP status failures
+Result.FailNotFound(string detail)
+Result.FailUnauthorized(string detail)
+Result.FailForbidden(string detail)
+
+// Validation failures
+Result.FailValidation(params (string field, string message)[] errors)
+Result.Invalid(string message)
+Result.Invalid(string field, string message)
+
+// Enum-based failures
+Result.Fail<TEnum>(TEnum errorCode) where TEnum : Enum
+```
+
+### Transformation Methods
+
+```csharp
+// Map: Transform the value
+Result<int> ageResult = userResult.Map(user => user.Age);
+
+// Bind: Chain operations that return Results
+Result<Order> orderResult = userResult
+    .Bind(user => GetUserCart(user.Id))
+    .Bind(cart => CreateOrder(cart));
+
+// Tap: Execute side effects
+Result<User> result = userResult
+    .Tap(user => _logger.LogInfo($"Processing user {user.Id}"))
+    .Tap(user => _cache.Set(user.Id, user));
+```
+
+### Validation Methods
+
+```csharp
+// Ensure: Add validation
+Result<User> validUser = userResult
+    .Ensure(user => user.Age >= 18, Problem.Create("User must be 18+"))
+    .Ensure(user => user.Email.Contains("@"), Problem.Create("Invalid email"));
+
+// Where: Filter with predicate
+Result<User> filtered = userResult
+    .Where(user => user.IsActive, "User is not active");
+
+// FailIf: Conditional failure
+Result<Order> order = orderResult
+    .FailIf(o => o.Total <= 0, "Order total must be positive");
+
+// OkIf: Must satisfy condition
+Result<Payment> payment = paymentResult
+    .OkIf(p => p.IsAuthorized, "Payment not authorized");
 ```
 
 ## Contributing

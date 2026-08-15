@@ -97,4 +97,42 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         chunks[2].TryGetResult(out var report).ShouldBeTrue();
         report.Status.ShouldBe("done");
     }
+
+    [Fact]
+    public async Task AGrainStreamDrainsStraightToItsResult()
+    {
+        var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
+
+        var result = await grain.StreamAsync().ToResultAsync();
+
+        result.IsSuccess.ShouldBeTrue();
+        result.Value!.Status.ShouldBe("done");
+    }
+
+    [Fact]
+    public async Task AGrainStreamReportsProgressThroughACallback()
+    {
+        var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
+        var seen = new List<string>();
+
+        var result = await grain.StreamAsync().ToResultAsync(progress => seen.Add(progress.State));
+
+        result.Value!.Status.ShouldBe("done");
+        seen.ShouldNotBeEmpty();
+    }
+
+    [Fact]
+    public async Task AGrainStreamMaterializesIntoAnOutcome()
+    {
+        var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
+
+        var outcome = await grain.StreamAsync().ToOutcomeAsync();
+
+        outcome.Chunks.Count.ShouldBe(3);
+        outcome.Chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Started);
+        outcome.Chunks[1].Kind.ShouldBe(CqrsStreamChunkKind.Progress);
+        outcome.Chunks[2].Kind.ShouldBe(CqrsStreamChunkKind.Completed);
+        outcome.Progress.ShouldNotBeEmpty();
+        outcome.Value!.Status.ShouldBe("done");
+    }
 }
