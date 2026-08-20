@@ -2,13 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using ManagedCode.Communication.CQRS;
 using ManagedCode.Communication.AspNetCore;
 using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -57,7 +56,7 @@ public class CqrsReadmeSampleTests
         return Task.Delay(1, cancellationToken);
     }
 
-    [Fact]
+    [Test]
     public async Task ThePushStyleSampleStreamsProgressAndCompletes()
     {
         await using var app = await CqrsTestHost.StartMinimalApiAsync(
@@ -72,7 +71,7 @@ public class CqrsReadmeSampleTests
         problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task TheHandWrittenIteratorSampleCompilesAndStreams()
     {
         await using var app = await CqrsTestHost.StartMinimalApiAsync(
@@ -86,7 +85,7 @@ public class CqrsReadmeSampleTests
         problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task TheSampleReportsAFailedResultThroughTheSameLoop()
     {
         await using var app = await CqrsTestHost.StartMinimalApiAsync(
@@ -106,7 +105,7 @@ public class CqrsReadmeSampleTests
         problem!.Title.ShouldBe("source_unavailable");
     }
 
-    [Fact]
+    [Test]
     public async Task TheClientOptionsSampleCompilesAndRuns()
     {
         // README: "Tuning" — client side.
@@ -131,7 +130,7 @@ public class CqrsReadmeSampleTests
         count.ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public async Task ThePerEndpointOptionsSampleCompilesAndRuns()
     {
         // README: "Tuning" — server side, per endpoint.

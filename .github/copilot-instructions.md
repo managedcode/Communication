@@ -38,26 +38,23 @@ dotnet test
 
 ## Testing
 
-* We use xUnit for tests with FluentAssertions for assertions.
+* We use TUnit on Microsoft.Testing.Platform with Shouldly for assertions.
 * Do not emit "Arrange", "Act" or "Assert" comments.
 * Use the naming pattern: `Method_Scenario_ExpectedResult()`.
 * Copy existing style in nearby test files for method names and capitalization.
 
 ```csharp
-[Fact]
+[Test]
 public void Succeed_ShouldCreateSuccessfulResult()
 {
     var result = Result.Succeed();
     
     result.IsSuccess
-        .Should()
-        .BeTrue();
+        .ShouldBeTrue();
     result.IsFailed
-        .Should()
-        .BeFalse();
+        .ShouldBeFalse();
     result.Problem
-        .Should()
-        .BeNull();
+        .ShouldBeNull();
 }
 ```
 

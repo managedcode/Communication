@@ -7,7 +7,6 @@ using ManagedCode.Communication.Commands.Stores;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
@@ -22,7 +21,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         return new MemoryCacheCommandIdempotencyStore(cache, NullLogger<MemoryCacheCommandIdempotencyStore>.Instance);
     }
 
-    [Fact]
+    [Test]
     public async Task EvictingACacheEntryAlsoPrunesTheTimestampIndex()
     {
         // The store keeps a shadow index of command ids so it can implement age-based cleanup. Cache entries
@@ -47,7 +46,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         counts.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task RemovingACommandDropsBothStatusAndResult()
     {
         using var store = CreateStore(out var cache);
@@ -63,7 +62,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         }
     }
 
-    [Fact]
+    [Test]
     public void DisposeIsIdempotent()
     {
         var store = CreateStore(out var cache);
@@ -77,7 +76,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ConcurrentCallersRunTheOperationExactlyOnce()
     {
         using var store = CreateStore(out var cache);
@@ -103,7 +102,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentRejectsMissingArguments()
     {
         using var store = CreateStore(out var cache);
@@ -118,7 +117,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task RetryReExecutesAfterAFailureAndEventuallySucceeds()
     {
         using var store = CreateStore(out var cache);
@@ -145,7 +144,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task RetryGivesUpAndRethrowsTheLastFailure()
     {
         using var store = CreateStore(out var cache);
@@ -162,7 +161,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task TimeoutSurfacesAsTimeoutExceptionRatherThanCancellation()
     {
         using var store = CreateStore(out var cache);
@@ -181,7 +180,7 @@ public class MemoryCacheIdempotencyStoreRegressionTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task CallerCancellationStillSurfacesAsCancellation()
     {
         using var store = CreateStore(out var cache);

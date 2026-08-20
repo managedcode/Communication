@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using ManagedCode.Communication.Extensions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -38,7 +37,7 @@ public class CqrsStreamExtensionsTests
         yield return CqrsTestStreams.Progress("half", 2);
     }
 
-    [Fact]
+    [Test]
     public async Task ToResultAsyncReturnsTheTerminalPayload()
     {
         var result = await ThreeChunkStream().ToResultAsync();
@@ -47,7 +46,7 @@ public class CqrsStreamExtensionsTests
         result.Value!.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task ToResultAsyncSurfacesATerminalFailure()
     {
         var result = await FailingStream().ToResultAsync();
@@ -57,7 +56,7 @@ public class CqrsStreamExtensionsTests
         result.Problem!.Title.ShouldBe("boom");
     }
 
-    [Fact]
+    [Test]
     public async Task AStreamThatStopsWithoutATerminalChunkIsAFailure()
     {
         // The alternative would be reporting a success that the command never actually claimed.
@@ -67,7 +66,7 @@ public class CqrsStreamExtensionsTests
         result.Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task AnEmptyStreamIsAlsoAnIncompleteFailure()
     {
         var result = await EmptyAsync().ToResultAsync();
@@ -82,7 +81,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task TheProgressCallbackSeesEveryPayloadInOrder()
     {
         var seen = new List<string>();
@@ -93,7 +92,7 @@ public class CqrsStreamExtensionsTests
         seen.ShouldBe(["started", "half"]);
     }
 
-    [Fact]
+    [Test]
     public async Task TheAsyncProgressCallbackIsAwaitedBeforeTheNextChunkIsRead()
     {
         var order = new List<string>();
@@ -127,7 +126,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ProgressChunksCarryingNoPayloadAreNotReported()
     {
         var seen = 0;
@@ -145,7 +144,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ReadingStopsAtTheTerminalChunk()
     {
         var pulled = 0;
@@ -167,7 +166,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task AStreamThatThrowsBecomesAFailedResultInOneCall()
     {
         // No AsCqrsStream in front: draining applies the guarantees itself, so a raw transport that faults does
@@ -186,7 +185,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ProgressReportedBeforeAFaultStillReachesTheCallback()
     {
         var seen = new List<string>();
@@ -204,7 +203,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ChunksAreNumberedEvenWhenTheSourceDidNotNumberThem()
     {
         var outcome = await Unnumbered().ToOutcomeAsync();
@@ -219,7 +218,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ApplyingTheGuaranteesTwiceChangesNothing()
     {
         // AsCqrsStream is no longer needed in front of a drain, but putting it there must stay harmless.
@@ -231,7 +230,7 @@ public class CqrsStreamExtensionsTests
         twice.Value!.Status.ShouldBe(once.Value!.Status);
     }
 
-    [Fact]
+    [Test]
     public async Task ToChunkListDoesNotSwallowAFault()
     {
         // The one method that hands back exactly what arrived, documented as such.
@@ -245,7 +244,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ToOutcomeAsyncKeepsTheResultTheProgressAndTheChunks()
     {
         var outcome = await ThreeChunkStream().ToOutcomeAsync();
@@ -262,7 +261,7 @@ public class CqrsStreamExtensionsTests
         outcome.Progress.Select(p => p.State).ShouldBe(["started", "half"]);
     }
 
-    [Fact]
+    [Test]
     public async Task AnOutcomeConvertsToItsResult()
     {
         var outcome = await ThreeChunkStream().ToOutcomeAsync();
@@ -272,7 +271,7 @@ public class CqrsStreamExtensionsTests
         outcome.ToResult().Value!.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task ToChunkListAsyncKeepsEverythingIncludingPastTheTerminalChunk()
     {
         var chunks = await ThreeChunkStream().ToChunkListAsync();
@@ -281,7 +280,7 @@ public class CqrsStreamExtensionsTests
         chunks[^1].IsTerminal.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void AlreadyCollectedChunksMaterializeToAResult()
     {
         var chunks = new List<Chunk>
@@ -296,7 +295,7 @@ public class CqrsStreamExtensionsTests
             .ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task ATerminalChunkWithNoPayloadAtAllStillYieldsAFailure()
     {
         var result = await Malformed().ToResultAsync();
@@ -311,7 +310,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task CancellationPropagates()
     {
         using var cts = new CancellationTokenSource();
@@ -328,7 +327,7 @@ public class CqrsStreamExtensionsTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task NullArgumentsAreRejected()
     {
         Should.Throw<ArgumentNullException>(() =>
@@ -346,7 +345,7 @@ public class CqrsStreamExtensionsTests
             ((IAsyncEnumerable<Chunk>)null!).ToChunkListAsync());
     }
 
-    [Fact]
+    [Test]
     public async Task TheResultFeedsStraightIntoTheAsyncRailway()
     {
         // The point of returning Task<Result<T>>: a stream is just the start of a chain.

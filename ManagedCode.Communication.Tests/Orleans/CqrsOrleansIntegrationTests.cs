@@ -6,7 +6,6 @@ using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using Orleans;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Orleans;
 
@@ -18,7 +17,9 @@ namespace ManagedCode.Communication.Tests.Orleans;
 ///     at call time — it stops the silo from booting at all. These tests exist so that failure mode can never
 ///     come back unnoticed: the fixture itself would refuse to start.
 /// </remarks>
-public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
+[ClassDataSource<OrleansClusterFixture>(Shared = SharedType.PerClass)]
+[NotInParallel(nameof(CqrsOrleansIntegrationTests))]
+public class CqrsOrleansIntegrationTests
 {
     private readonly IGrainFactory _grainFactory;
 
@@ -27,7 +28,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         _grainFactory = fixture.Cluster.GrainFactory;
     }
 
-    [Fact]
+    [Test]
     public async Task ACompletedChunkRoundTripsThroughAGrain()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
@@ -48,7 +49,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         report.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task AProgressChunkRoundTripsThroughAGrain()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
@@ -61,7 +62,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         progress.State.ShouldBe("half");
     }
 
-    [Fact]
+    [Test]
     public async Task AFailedChunkKeepsItsProblem()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
@@ -77,7 +78,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         problem.StatusCode.ShouldBe(429);
     }
 
-    [Fact]
+    [Test]
     public async Task AGrainCanStreamChunksAsAnAsyncEnumerable()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
@@ -96,7 +97,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         report.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task AGrainStreamDrainsStraightToItsResult()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
@@ -107,7 +108,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         result.Value!.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task AGrainStreamReportsProgressThroughACallback()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
@@ -119,7 +120,7 @@ public class CqrsOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
         seen.ShouldNotBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task AGrainStreamMaterializesIntoAnOutcome()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());

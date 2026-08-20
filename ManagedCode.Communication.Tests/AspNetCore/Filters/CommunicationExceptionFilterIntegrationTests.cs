@@ -6,23 +6,22 @@ using System.Threading.Tasks;
 using ManagedCode.Communication;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.AspNetCore.Filters;
-using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Filters;
 
 public class CommunicationExceptionFilterIntegrationTests
 {
-    [Fact]
+    [Test]
     public async Task CommunicationExceptionFilter_ConvertsControllerExceptionsToFailedResult()
     {
         await using var app = await CreateAppAsync();
@@ -38,7 +37,7 @@ public class CommunicationExceptionFilterIntegrationTests
         result.Problem!.Detail.ShouldBe("boom");
     }
 
-    [Fact]
+    [Test]
     public void UseCommunication_ReturnsSameBuilder()
     {
         var app = WebApplication.CreateSlimBuilder().Build();
@@ -47,13 +46,13 @@ public class CommunicationExceptionFilterIntegrationTests
         returned.ShouldBeSameAs(app);
     }
 
-    [Fact]
+    [Test]
     public void UseCommunication_NullBuilder_Throws()
     {
         Should.Throw<ArgumentNullException>(() => CommunicationAppBuilderExtensions.UseCommunication(null!));
     }
 
-    [Fact]
+    [Test]
     public void CommunicationExceptionFilter_ExceptionsInHandler_ReturnsFallbackResult()
     {
         var filter = new CommunicationExceptionFilter(NullLogger<CommunicationExceptionFilter>.Instance);

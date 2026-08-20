@@ -1,8 +1,7 @@
 using System;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -10,7 +9,7 @@ public class ResultConversionExtensionsTests
 {
     #region AsResult<T> for Values Tests
 
-    [Fact]
+    [Test]
     public void AsResult_WithStringValue_CreatesSuccessfulResult()
     {
         // Arrange
@@ -25,7 +24,7 @@ public class ResultConversionExtensionsTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void AsResult_WithIntValue_CreatesSuccessfulResult()
     {
         // Arrange
@@ -40,7 +39,7 @@ public class ResultConversionExtensionsTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void AsResult_WithNullValue_CreatesSuccessfulResultWithNull()
     {
         // Arrange
@@ -55,7 +54,7 @@ public class ResultConversionExtensionsTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void AsResult_WithComplexObject_CreatesSuccessfulResult()
     {
         // Arrange
@@ -75,7 +74,7 @@ public class ResultConversionExtensionsTests
 
     #region AsResult<T> for Exception Tests
 
-    [Fact]
+    [Test]
     public void AsResult_WithException_CreatesFailedResultWithProblem()
     {
         // Arrange
@@ -93,7 +92,7 @@ public class ResultConversionExtensionsTests
         result.Problem.StatusCode.ShouldBe(500);
     }
 
-    [Fact]
+    [Test]
     public void AsResult_WithArgumentException_CreatesFailedResultWithCorrectProblem()
     {
         // Arrange
@@ -111,7 +110,7 @@ public class ResultConversionExtensionsTests
         result.Problem.ErrorCode.ShouldBe("System.ArgumentException");
     }
 
-    [Fact]
+    [Test]
     public void AsResult_WithCustomException_CreatesFailedResultWithCustomMessage()
     {
         // Arrange
@@ -131,7 +130,7 @@ public class ResultConversionExtensionsTests
 
     #region Integration with Result Methods Tests
 
-    [Fact]
+    [Test]
     public void AsResult_CanBeChainedWithRailwayMethods()
     {
         // Arrange
@@ -147,7 +146,7 @@ public class ResultConversionExtensionsTests
         result.Value.ShouldBe(7); // "INITIAL".Length
     }
 
-    [Fact]
+    [Test]
     public void AsResult_ExceptionCanBeUsedInRailwayChain()
     {
         // Arrange
@@ -167,7 +166,7 @@ public class ResultConversionExtensionsTests
 
     #region Type Inference Tests
 
-    [Fact]
+    [Test]
     public void AsResult_InfersTypeFromValue()
     {
         // Arrange & Act
@@ -181,7 +180,7 @@ public class ResultConversionExtensionsTests
         boolResult.ShouldBeOfType<Result<bool>>();
     }
 
-    [Fact]
+    [Test]
     public void AsResult_ExplicitTypeSpecification_WorksCorrectly()
     {
         // Arrange

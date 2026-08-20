@@ -1,21 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
-using Orleans;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Orleans;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
 /// <summary>
 /// Tests for Command serialization through Orleans grain calls
 /// </summary>
-public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
+[ClassDataSource<OrleansClusterFixture>(Shared = SharedType.PerClass)]
+[NotInParallel(nameof(CommandSerializationTests))]
+public class CommandSerializationTests
 {
     private readonly IGrainFactory _grainFactory;
 
@@ -24,12 +25,12 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         _grainFactory = fixture.Cluster.GrainFactory;
     }
 
-    [Fact]
+    [Test]
     public async Task Command_WithAllFields_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var metadata = new CommandMetadata
         {
             InitiatedBy = "user123",
@@ -85,7 +86,7 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         result.Timestamp.ShouldBeCloseTo(command.Timestamp, TimeSpan.FromSeconds(1));
         result.CorrelationId.ShouldBe(command.CorrelationId);
         result.CausationId.ShouldBe(command.CausationId);
-        
+
         // Verify metadata
         result.Metadata.ShouldNotBeNull();
         result.Metadata!.InitiatedBy.ShouldBe(metadata.InitiatedBy);
@@ -99,19 +100,19 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         result.Metadata.Version.ShouldBe(metadata.Version);
         result.Metadata.Priority.ShouldBe(metadata.Priority);
         result.Metadata.TimeToLiveSeconds.ShouldBe(metadata.TimeToLiveSeconds);
-        
+
         result.Metadata.Tags.ShouldNotBeNull();
         result.Metadata.Tags.ShouldHaveCount(2);
         result.Metadata.Tags!["environment"].ShouldBe("production");
         result.Metadata.Tags!["region"].ShouldBe("us-west");
-        
+
         result.Metadata.Extensions.ShouldNotBeNull();
         result.Metadata.Extensions.ShouldHaveCount(2);
         result.Metadata.Extensions!["customField"].ShouldBe("customValue");
         result.Metadata.Extensions!["retryCount"].ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public async Task Command_WithMinimalFields_ShouldSerializeCorrectly()
     {
         // Arrange
@@ -131,12 +132,12 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         result.Metadata.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task CommandT_WithComplexPayload_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var payload = new PaymentRequest
         {
             OrderId = "order-123",
@@ -174,28 +175,28 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         result.CommandType.ShouldBe("ProcessPayment");
         result.CorrelationId.ShouldBe("correlation-789");
         result.CausationId.ShouldBe("causation-012");
-        
+
         result.Value.ShouldNotBeNull();
         result.Value!.OrderId.ShouldBe(payload.OrderId);
         result.Value.Amount.ShouldBe(payload.Amount);
         result.Value.Currency.ShouldBe(payload.Currency);
-        
+
         result.Value!.Items.ShouldNotBeNull();
         result.Value.Items.ShouldHaveCount(2);
         result.Value.Items[0].ProductId.ShouldBe("prod-1");
         result.Value.Items[0].Quantity.ShouldBe(2);
         result.Value.Items[0].Price.ShouldBe(25.50m);
-        
+
         result.Value.Metadata.ShouldNotBeNull();
         result.Value.Metadata["customer"].ShouldBe("cust-456");
         result.Value.Metadata["promotion"].ShouldBe("SUMMER20");
-        
+
         result.Metadata!.InitiatedBy.ShouldBe("system");
         result.Metadata.Priority.ShouldBe(CommandPriority.Critical);
         result.Metadata.Tags!["urgent"].ShouldBe("true");
     }
 
-    [Fact]
+    [Test]
     public async Task PaginationCommand_ShouldSerializeCorrectly()
     {
         // Arrange
@@ -236,12 +237,12 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         pagination.Metadata.Tags!["scope"].ShouldBe("pagination");
     }
 
-    [Fact]
+    [Test]
     public async Task CommandT_WithEnumType_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var command = Command<string>.From("test-data");
         command.CommandType = "CreateUser";
         command.Metadata = new CommandMetadata
@@ -262,7 +263,7 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         result.Metadata.TimeToLiveSeconds.ShouldBe(60);
     }
 
-    [Fact]
+    [Test]
     public async Task CommandT_WithNullPayload_ShouldSerializeCorrectly()
     {
         // Arrange
@@ -278,12 +279,12 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         result.IsEmpty.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task CommandMetadata_WithAllFields_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var metadata = new CommandMetadata
         {
             InitiatedBy = "user@example.com",
@@ -330,13 +331,13 @@ public class CommandSerializationTests : IClassFixture<OrleansClusterFixture>
         result.Version.ShouldBe(metadata.Version);
         result.Priority.ShouldBe(metadata.Priority);
         result.TimeToLiveSeconds.ShouldBe(metadata.TimeToLiveSeconds);
-        
+
         result.Tags.ShouldNotBeNull();
         result.Tags.ShouldHaveCount(3);
         result.Tags!["feature"].ShouldBe("payments");
         result.Tags!["client"].ShouldBe("ios");
         result.Tags!["version"].ShouldBe("14.5");
-        
+
         result.Extensions.ShouldNotBeNull();
         result.Extensions.ShouldHaveCount(3);
         result.Extensions!["rateLimitRemaining"].ShouldBe(50);

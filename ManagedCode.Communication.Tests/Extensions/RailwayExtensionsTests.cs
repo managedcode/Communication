@@ -1,8 +1,7 @@
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -10,7 +9,7 @@ public class RailwayExtensionsTests
 {
     #region Result Bind Tests
 
-    [Fact]
+    [Test]
     public void Bind_SuccessfulResult_ExecutesNext()
     {
         // Arrange
@@ -29,7 +28,7 @@ public class RailwayExtensionsTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Bind_FailedResult_DoesNotExecuteNext()
     {
         // Arrange
@@ -49,7 +48,7 @@ public class RailwayExtensionsTests
         executed.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void Bind_ResultToResultT_SuccessfulChain()
     {
         // Arrange
@@ -67,7 +66,7 @@ public class RailwayExtensionsTests
 
     #region Result<T> Map Tests
 
-    [Fact]
+    [Test]
     public void Map_SuccessfulResult_TransformsValue()
     {
         // Arrange
@@ -81,7 +80,7 @@ public class RailwayExtensionsTests
         mappedResult.Value.ShouldBe("42");
     }
 
-    [Fact]
+    [Test]
     public void Map_FailedResult_DoesNotTransform()
     {
         // Arrange
@@ -99,7 +98,7 @@ public class RailwayExtensionsTests
 
     #region Result<T> Bind Tests
 
-    [Fact]
+    [Test]
     public void Bind_SuccessfulResultT_ExecutesBinder()
     {
         // Arrange
@@ -113,7 +112,7 @@ public class RailwayExtensionsTests
         chainedResult.Value.ShouldBe("Value: 10");
     }
 
-    [Fact]
+    [Test]
     public void Bind_FailedResultT_DoesNotExecuteBinder()
     {
         // Arrange
@@ -127,14 +126,14 @@ public class RailwayExtensionsTests
         chainedResult.Problem!.Title.ShouldBe("Input error");
     }
 
-    [Fact]
+    [Test]
     public void Bind_ResultTToResult_SuccessfulChain()
     {
         // Arrange
         var result = Result<string>.Succeed("test");
 
         // Act
-        var chainedResult = result.Bind(value => 
+        var chainedResult = result.Bind(value =>
             value.Length > 0 ? Result.Succeed() : Result.Fail("Empty string"));
 
         // Assert
@@ -145,7 +144,7 @@ public class RailwayExtensionsTests
 
     #region Tap Tests
 
-    [Fact]
+    [Test]
     public void Tap_SuccessfulResult_ExecutesAction()
     {
         // Arrange
@@ -160,7 +159,7 @@ public class RailwayExtensionsTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Tap_FailedResult_DoesNotExecuteAction()
     {
         // Arrange
@@ -175,7 +174,7 @@ public class RailwayExtensionsTests
         executed.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void Tap_SuccessfulResultT_ExecutesActionWithValue()
     {
         // Arrange
@@ -194,7 +193,7 @@ public class RailwayExtensionsTests
 
     #region Ensure Tests
 
-    [Fact]
+    [Test]
     public void Ensure_SuccessfulResultValidPredicate_RemainsSuccessful()
     {
         // Arrange
@@ -209,7 +208,7 @@ public class RailwayExtensionsTests
         ensuredResult.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void Ensure_SuccessfulResultInvalidPredicate_BecomesFailed()
     {
         // Arrange
@@ -224,7 +223,7 @@ public class RailwayExtensionsTests
         ensuredResult.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void Ensure_FailedResult_RemainsFailedWithOriginalProblem()
     {
         // Arrange
@@ -244,7 +243,7 @@ public class RailwayExtensionsTests
 
     #region Else Tests
 
-    [Fact]
+    [Test]
     public void Else_SuccessfulResult_ReturnsOriginalResult()
     {
         // Arrange
@@ -258,7 +257,7 @@ public class RailwayExtensionsTests
         elseResult.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Else_FailedResult_ReturnsAlternative()
     {
         // Arrange
@@ -271,7 +270,7 @@ public class RailwayExtensionsTests
         elseResult.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Else_FailedResultT_ReturnsAlternativeValue()
     {
         // Arrange
@@ -289,7 +288,7 @@ public class RailwayExtensionsTests
 
     #region Finally Tests
 
-    [Fact]
+    [Test]
     public void Finally_SuccessfulResult_ExecutesAction()
     {
         // Arrange
@@ -304,7 +303,7 @@ public class RailwayExtensionsTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Finally_FailedResult_ExecutesAction()
     {
         // Arrange
@@ -323,7 +322,7 @@ public class RailwayExtensionsTests
 
     #region Pattern Matching Tests
 
-    [Fact]
+    [Test]
     public void Match_SuccessfulResult_ExecutesOnSuccess()
     {
         // Arrange
@@ -339,7 +338,7 @@ public class RailwayExtensionsTests
         output.ShouldBe("Success");
     }
 
-    [Fact]
+    [Test]
     public void Match_FailedResult_ExecutesOnFailure()
     {
         // Arrange
@@ -355,7 +354,7 @@ public class RailwayExtensionsTests
         output.ShouldBe("Failure: Error");
     }
 
-    [Fact]
+    [Test]
     public void Match_SuccessfulResultT_ExecutesOnSuccessWithValue()
     {
         // Arrange
@@ -371,7 +370,7 @@ public class RailwayExtensionsTests
         output.ShouldBe("Value: 42");
     }
 
-    [Fact]
+    [Test]
     public void Match_SideEffects_SuccessfulResult_CallsSuccessAction()
     {
         // Arrange
@@ -394,7 +393,7 @@ public class RailwayExtensionsTests
 
     #region Async Tests
 
-    [Fact]
+    [Test]
     public async Task BindAsync_SuccessfulResult_ExecutesNext()
     {
         // Arrange
@@ -407,7 +406,7 @@ public class RailwayExtensionsTests
         chainedResult.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task BindAsync_FailedResult_DoesNotExecuteNext()
     {
         // Arrange
@@ -421,7 +420,7 @@ public class RailwayExtensionsTests
         chainedResult.Problem!.Title.ShouldBe("Error");
     }
 
-    [Fact]
+    [Test]
     public async Task MapAsync_SuccessfulResult_TransformsValue()
     {
         // Arrange
@@ -435,7 +434,7 @@ public class RailwayExtensionsTests
         mappedResult.Value.ShouldBe("42");
     }
 
-    [Fact]
+    [Test]
     public async Task TapAsync_SuccessfulResult_ExecutesAction()
     {
         // Arrange
@@ -458,7 +457,7 @@ public class RailwayExtensionsTests
 
     #region Complex Chaining Tests
 
-    [Fact]
+    [Test]
     public void ComplexChain_SuccessPath_ExecutesAllSteps()
     {
         // Arrange
@@ -479,7 +478,7 @@ public class RailwayExtensionsTests
         sideEffectCalled.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ComplexChain_FailurePath_StopsAtFirstFailure()
     {
         // Arrange

@@ -1,17 +1,16 @@
 using System;
-using System.Reflection;
 using System.Net;
+using System.Reflection;
 using ManagedCode.Communication.Helpers;
 using ManagedCode.Communication.Orleans.Helpers;
 using Orleans.Runtime;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Orleans.Helpers;
 
 public class OrleansHttpStatusCodeHelperTests
 {
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_SiloUnavailable_ReturnsServiceUnavailable()
     {
         var statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(new SiloUnavailableException("silo down"));
@@ -19,7 +18,7 @@ public class OrleansHttpStatusCodeHelperTests
         statusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_OrleansMessageRejection_ReturnsServiceUnavailable()
     {
         var exception = (OrleansMessageRejectionException)Activator.CreateInstance(
@@ -33,7 +32,7 @@ public class OrleansHttpStatusCodeHelperTests
         statusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_Timeout_ReturnsGatewayTimeout()
     {
         var statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(new TimeoutException("timeout"));
@@ -41,7 +40,7 @@ public class OrleansHttpStatusCodeHelperTests
         statusCode.ShouldBe(HttpStatusCode.GatewayTimeout);
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_GrainExtensionNotInstalled_ReturnsNotImplemented()
     {
         var statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(
@@ -50,7 +49,7 @@ public class OrleansHttpStatusCodeHelperTests
         statusCode.ShouldBe(HttpStatusCode.NotImplemented);
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_OrleansConfiguration_ReturnsInternalServerError()
     {
         var statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(
@@ -59,7 +58,7 @@ public class OrleansHttpStatusCodeHelperTests
         statusCode.ShouldBe(HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_UnknownExceptionFallsBackToBaseHelper()
     {
         var statusCode = OrleansHttpStatusCodeHelper.GetStatusCodeForException(new InvalidOperationException("bad"));

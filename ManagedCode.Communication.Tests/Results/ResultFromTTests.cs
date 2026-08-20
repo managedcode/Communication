@@ -3,13 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultFromTTests
 {
-    [Fact]
+    [Test]
     public void From_FromFunc_ReturnsSucceededResult()
     {
         var result = Result.From<int>((Func<int>)(() => 42));
@@ -18,7 +17,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void From_FromFunc_WhenThrows_ReturnsFailedResult()
     {
         var result = Result.From<int>((Func<int>)(() => throw new InvalidOperationException("boom")));
@@ -27,7 +26,7 @@ public class ResultFromTTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromFuncResult_TaskAsync_ReturnsResult()
     {
         var result = await Result.From(async () => Result.Succeed(12));
@@ -36,7 +35,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(12);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromFuncResult_TaskAsync_WhenThrows_ReturnsFailedResult()
     {
         var result = await Result.From<int>(async () => throw new InvalidOperationException("task boom"));
@@ -45,7 +44,7 @@ public class ResultFromTTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTask_ReturnsResult()
     {
         var result = await Result.From(Task.FromResult(10));
@@ -54,7 +53,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(10);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTask_WhenFaulted_ReturnsFailedResult()
     {
         var result = await Result.From<int>(Task.FromException<int>(new InvalidOperationException("fault")));
@@ -63,7 +62,7 @@ public class ResultFromTTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTaskResult_ReturnsResult()
     {
         var result = await Result.From(Task.FromResult(Result.Succeed(11)));
@@ -72,7 +71,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(11);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTaskResult_WhenFaulted_ReturnsFailedResult()
     {
         var task = Task.FromException<Result<int>>(new InvalidOperationException("result task boom"));
@@ -82,7 +81,7 @@ public class ResultFromTTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTaskFunc_UsesCancellationToken_ReturnsFailedResultWhenCanceled()
     {
         using var cts = new CancellationTokenSource();
@@ -94,7 +93,7 @@ public class ResultFromTTests
         result.Problem!.Title.ShouldBe(nameof(TaskCanceledException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTaskFunc_ReturnsResult()
     {
         var result = await Result.From(async () => 99);
@@ -103,7 +102,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(99);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTaskFunc_WhenThrows_ReturnsFailedResult()
     {
         var result = await Result.From<int>(async () => throw new InvalidOperationException("delayed boom"));
@@ -112,7 +111,7 @@ public class ResultFromTTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTaskResultFunc_ReturnsResult()
     {
         var result = await Result.From(async () => Result.Succeed(77));
@@ -121,7 +120,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(77);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromTaskResultFunc_WhenThrows_ReturnsFailedResult()
     {
         var result = await Result.From<int>(async () => throw new InvalidOperationException("result task func boom"));
@@ -131,7 +130,7 @@ public class ResultFromTTests
 
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromValueTask_ReturnsResult()
     {
         var result = await Result.From(new ValueTask<int>(45));
@@ -140,7 +139,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(45);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromValueTask_WhenFaulted_ReturnsFailedResult()
     {
         var result = await Result.From<int>(new ValueTask<int>(Task.FromException<int>(new InvalidOperationException("value fault"))));
@@ -149,7 +148,7 @@ public class ResultFromTTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromValueTaskResult_ReturnsResult()
     {
         var result = await Result.From(new ValueTask<Result<int>>(Result.Succeed(33)));
@@ -158,7 +157,7 @@ public class ResultFromTTests
         result.Value.ShouldBe(33);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FromValueTaskResult_WhenFaulted_ReturnsFailedResult()
     {
         var result = await Result.From<int>(new ValueTask<Result<int>>(Task.FromException<Result<int>>(new InvalidOperationException("value result fault"))));

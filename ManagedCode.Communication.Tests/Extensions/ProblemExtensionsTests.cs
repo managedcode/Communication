@@ -1,16 +1,15 @@
 using System.Collections.Generic;
-using Shouldly;
 using ManagedCode.Communication.AspNetCore;
 using ManagedCode.Communication.Tests.Helpers;
-using Microsoft.AspNetCore.Mvc;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Microsoft.AspNetCore.Mvc;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
 public class ProblemExtensionsTests
 {
-    [Fact]
+    [Test]
     public void ToProblemDetails_ShouldConvertProblemToProblemDetails()
     {
         // Arrange
@@ -34,7 +33,7 @@ public class ProblemExtensionsTests
         problemDetails.Extensions["timestamp"].ShouldBe("2024-01-01T00:00:00Z");
     }
 
-    [Fact]
+    [Test]
     public void ToProblemDetails_WithZeroStatusCode_ShouldSetStatusToNull()
     {
         // Arrange
@@ -47,7 +46,7 @@ public class ProblemExtensionsTests
         problemDetails.Status.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void FromProblemDetails_ShouldConvertProblemDetailsToProblem()
     {
         // Arrange
@@ -77,7 +76,7 @@ public class ProblemExtensionsTests
         problem.Extensions["userId"].ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void FromProblemDetails_WithNullStatus_ShouldSetStatusCodeToZero()
     {
         // Arrange
@@ -96,7 +95,7 @@ public class ProblemExtensionsTests
         problem.StatusCode.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void AsProblemDetails_ShouldConvertProblemToProblemDetails()
     {
         // Arrange
@@ -113,7 +112,7 @@ public class ProblemExtensionsTests
         problemDetails.Detail.ShouldBe("detail");
     }
 
-    [Fact]
+    [Test]
     public void AsProblem_ShouldConvertProblemDetailsToProblem()
     {
         // Arrange
@@ -135,7 +134,7 @@ public class ProblemExtensionsTests
         problem.Detail.ShouldBe("detail");
     }
 
-    [Fact]
+    [Test]
     public void ToFailedResult_FromProblemDetails_ShouldCreateFailedResult()
     {
         // Arrange
@@ -160,7 +159,7 @@ public class ProblemExtensionsTests
         result.Problem.Detail.ShouldBe("Invalid input data");
     }
 
-    [Fact]
+    [Test]
     public void ToFailedResultT_FromProblemDetails_ShouldCreateFailedResultT()
     {
         // Arrange
@@ -186,7 +185,7 @@ public class ProblemExtensionsTests
         result.Problem.Detail.ShouldBe("User not found");
     }
 
-    [Fact]
+    [Test]
     public void ToFailedResult_FromProblem_ShouldCreateFailedResult()
     {
         // Arrange
@@ -201,7 +200,7 @@ public class ProblemExtensionsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ToFailedResultT_FromProblem_ShouldCreateFailedResultT()
     {
         // Arrange
@@ -217,7 +216,7 @@ public class ProblemExtensionsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void RoundTrip_ProblemToProblemDetailsAndBack_ShouldPreserveAllData()
     {
         // Arrange
@@ -239,7 +238,7 @@ public class ProblemExtensionsTests
         convertedProblem.Extensions.ShouldBeEquivalentTo(originalProblem.Extensions);
     }
 
-    [Fact]
+    [Test]
     public void RoundTrip_ProblemDetailsWithNullValues_ShouldHandleGracefully()
     {
         // Arrange
@@ -264,7 +263,7 @@ public class ProblemExtensionsTests
         problem.Instance.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ToFailedResult_WithComplexExtensions_ShouldPreserveAllData()
     {
         // Arrange
@@ -288,7 +287,7 @@ public class ProblemExtensionsTests
         errors["password"].ShouldContain("Too short");
     }
 
-    [Fact]
+    [Test]
     public void AddInvalidMessage_ShouldAddValidationError()
     {
         // Arrange
@@ -306,7 +305,7 @@ public class ProblemExtensionsTests
         emailErrors.ShouldContain("Email format is invalid");
     }
 
-    [Fact]
+    [Test]
     public void AddInvalidMessage_WithGeneralMessage_ShouldAddToGeneralErrors()
     {
         // Arrange

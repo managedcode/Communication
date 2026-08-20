@@ -1,13 +1,12 @@
 using System;
 using ManagedCode.Communication.Commands;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
 public class PaginationRequestTests
 {
-    [Fact]
+    [Test]
     public void Normalize_ShouldApplyDefaults_WhenTakeIsZero()
     {
         var request = new PaginationRequest(skip: 10, take: 0);
@@ -18,7 +17,7 @@ public class PaginationRequestTests
         normalized.Skip.ShouldBe(10);
     }
 
-    [Fact]
+    [Test]
     public void Normalize_ShouldRespectCustomOptions()
     {
         var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 40, minPageSize: 10);
@@ -30,7 +29,7 @@ public class PaginationRequestTests
         normalized.Take.ShouldBe(40);
     }
 
-    [Fact]
+    [Test]
     public void ClampToTotal_ShouldLimitSkip()
     {
         var request = new PaginationRequest(skip: 120, take: 10);
@@ -41,7 +40,7 @@ public class PaginationRequestTests
         clamped.Take.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void ToSlice_ShouldNormalizeAndClamp()
     {
         var options = new PaginationOptions(defaultPageSize: 20, maxPageSize: 50, minPageSize: 5);
@@ -53,7 +52,7 @@ public class PaginationRequestTests
         length.ShouldBe(15);
     }
 
-    [Fact]
+    [Test]
     public void FromPage_ShouldNormalizeWithOptions()
     {
         var request = PaginationRequest.FromPage(2, 500, new PaginationOptions(defaultPageSize: 25, maxPageSize: 100, minPageSize: 10));
@@ -62,7 +61,7 @@ public class PaginationRequestTests
         request.Take.ShouldBe(100);
     }
 
-    [Fact]
+    [Test]
     public void PaginationOptions_InvalidArguments_ShouldThrow()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new PaginationOptions(defaultPageSize: 0));

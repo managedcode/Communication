@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using ManagedCode.Communication.Helpers;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Helpers;
 
@@ -13,8 +12,7 @@ namespace ManagedCode.Communication.Tests.Helpers;
 ///     Not run in parallel with anything else: the override map is process-wide by design, since it is meant to be
 ///     configured once at startup.
 /// </remarks>
-[Collection(nameof(ExceptionStatusCodeMapTests))]
-[CollectionDefinition(nameof(ExceptionStatusCodeMapTests), DisableParallelization = true)]
+[NotInParallel]
 public sealed class ExceptionStatusCodeMapTests : IDisposable
 {
     public void Dispose()
@@ -28,12 +26,12 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
 
     // ---------- defaults ----------
 
-    [Theory]
-    [InlineData(typeof(InvalidOperationException))]
-    [InlineData(typeof(NotSupportedException))]
-    [InlineData(typeof(InvalidCastException))]
-    [InlineData(typeof(NullReferenceException))]
-    [InlineData(typeof(IndexOutOfRangeException))]
+    [Test]
+    [Arguments(typeof(InvalidOperationException))]
+    [Arguments(typeof(NotSupportedException))]
+    [Arguments(typeof(InvalidCastException))]
+    [Arguments(typeof(NullReferenceException))]
+    [Arguments(typeof(IndexOutOfRangeException))]
     public void ServerSideFaultsAre500(Type exceptionType)
     {
         // These say the server reached a state its own code did not allow for. Reporting them as 400 blames the
@@ -44,11 +42,11 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.InternalServerError);
     }
 
-    [Theory]
-    [InlineData(typeof(ArgumentException))]
-    [InlineData(typeof(ArgumentNullException))]
-    [InlineData(typeof(ArgumentOutOfRangeException))]
-    [InlineData(typeof(FormatException))]
+    [Test]
+    [Arguments(typeof(ArgumentException))]
+    [Arguments(typeof(ArgumentNullException))]
+    [Arguments(typeof(ArgumentOutOfRangeException))]
+    [Arguments(typeof(FormatException))]
     public void MalformedInputIs400(Type exceptionType)
     {
         var exception = (Exception)Activator.CreateInstance(exceptionType)!;
@@ -57,7 +55,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.BadRequest);
     }
 
-    [Fact]
+    [Test]
     public void NullIsRejected()
     {
         Should.Throw<ArgumentNullException>(() => HttpStatusCodeHelper.GetStatusCodeForException(null!));
@@ -65,7 +63,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
 
     // ---------- overrides ----------
 
-    [Fact]
+    [Test]
     public void AnOverrideWinsOverTheDefault()
     {
         ExceptionStatusCodeMap.Map<OrderNotFoundException>(HttpStatusCode.NotFound);
@@ -74,7 +72,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.NotFound);
     }
 
-    [Fact]
+    [Test]
     public void AnOverrideCanReclassifyABuiltInException()
     {
         HttpStatusCodeHelper.GetStatusCodeForException(new InvalidOperationException())
@@ -86,7 +84,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.Conflict);
     }
 
-    [Fact]
+    [Test]
     public void AnOverrideOnABaseTypeCoversDerivedTypes()
     {
         ExceptionStatusCodeMap.Map<InvalidOperationException>(HttpStatusCode.Conflict);
@@ -95,7 +93,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.Conflict);
     }
 
-    [Fact]
+    [Test]
     public void TheMostDerivedOverrideWins()
     {
         ExceptionStatusCodeMap.Map<InvalidOperationException>(HttpStatusCode.Conflict);
@@ -107,7 +105,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.Conflict);
     }
 
-    [Fact]
+    [Test]
     public void AnOverrideCanBeRemoved()
     {
         ExceptionStatusCodeMap.Map<InvalidOperationException>(HttpStatusCode.Conflict);
@@ -117,7 +115,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public void ResetRestoresTheDefaults()
     {
         ExceptionStatusCodeMap.Map<InvalidOperationException>(HttpStatusCode.Conflict);
@@ -127,7 +125,7 @@ public sealed class ExceptionStatusCodeMapTests : IDisposable
             .ShouldBe(HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public void MappingANonExceptionTypeIsRejected()
     {
         Should.Throw<ArgumentException>(() => ExceptionStatusCodeMap.Map(typeof(string), HttpStatusCode.OK));

@@ -1,15 +1,14 @@
-using Shouldly;
 using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.Tests.TestHelpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Xunit;
-using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class ControllerExtensionsTests
 {
-    [Fact]
+    [Test]
     public void ToActionResult_WithSuccessResult_ReturnsOkObjectResult()
     {
         // Arrange
@@ -26,7 +25,7 @@ public class ControllerExtensionsTests
         okResult.StatusCode.ShouldBe(200);
     }
 
-    [Fact]
+    [Test]
     public void ToActionResult_WithSuccessResultNoValue_ReturnsNoContent()
     {
         // Arrange
@@ -41,7 +40,7 @@ public class ControllerExtensionsTests
         noContentResult.StatusCode.ShouldBe(204);
     }
 
-    [Fact]
+    [Test]
     public void ToActionResult_WithFailedResult_ReturnsCorrectStatusCode()
     {
         // Arrange
@@ -63,7 +62,7 @@ public class ControllerExtensionsTests
         returnedProblem.Detail.ShouldBe("Resource not found");
     }
 
-    [Fact]
+    [Test]
     public void ToActionResult_WithValidationError_Returns400WithProblemDetails()
     {
         // Arrange
@@ -83,7 +82,7 @@ public class ControllerExtensionsTests
         returnedProblem.Title.ShouldBe("Validation Error");
     }
 
-    [Fact]
+    [Test]
     public void ToActionResult_WithNoProblem_ReturnsDefaultError()
     {
         // Arrange - manually create failed result without problem
@@ -102,7 +101,7 @@ public class ControllerExtensionsTests
         returnedProblem.Title.ShouldBe("Operation failed");
     }
 
-    [Fact]
+    [Test]
     public void ToHttpResult_WithSuccessResult_ReturnsOkResult()
     {
         // Arrange
@@ -117,7 +116,7 @@ public class ControllerExtensionsTests
         httpResult.GetType().Name.ShouldContain("Ok");
     }
 
-    [Fact]
+    [Test]
     public void ToHttpResult_WithSuccessResultNoValue_ReturnsNoContent()
     {
         // Arrange
@@ -131,7 +130,7 @@ public class ControllerExtensionsTests
         httpResult.GetType().Name.ShouldContain("NoContent");
     }
 
-    [Fact]
+    [Test]
     public void ToHttpResult_WithFailedResult_ReturnsProblemResult()
     {
         // Arrange
@@ -146,7 +145,7 @@ public class ControllerExtensionsTests
         httpResult.GetType().Name.ShouldContain("Problem");
     }
 
-    [Fact]
+    [Test]
     public void ToHttpResult_WithComplexFailure_PreservesProblemDetails()
     {
         // Arrange
@@ -164,14 +163,14 @@ public class ControllerExtensionsTests
         httpResult.GetType().Name.ShouldContain("Problem");
     }
 
-    [Theory]
-    [InlineData(400, "Bad Request")]
-    [InlineData(401, "Unauthorized")]
-    [InlineData(403, "Forbidden")]
-    [InlineData(404, "Not Found")]
-    [InlineData(409, "Conflict")]
-    [InlineData(422, "Unprocessable Entity")]
-    [InlineData(500, "Internal Server Error")]
+    [Test]
+    [Arguments(400, "Bad Request")]
+    [Arguments(401, "Unauthorized")]
+    [Arguments(403, "Forbidden")]
+    [Arguments(404, "Not Found")]
+    [Arguments(409, "Conflict")]
+    [Arguments(422, "Unprocessable Entity")]
+    [Arguments(500, "Internal Server Error")]
     public void ToActionResult_WithVariousStatusCodes_ReturnsCorrectStatusCode(int statusCode, string title)
     {
         // Arrange
@@ -191,7 +190,7 @@ public class ControllerExtensionsTests
         returnedProblem.Title.ShouldBe(title);
     }
 
-    [Fact]
+    [Test]
     public void ToActionResult_WithComplexObject_ReturnsCorrectValue()
     {
         // Arrange
@@ -212,7 +211,7 @@ public class ControllerExtensionsTests
         okResult.Value.ShouldBe(complexObject);
     }
 
-    [Fact]
+    [Test]
     public void ToHttpResult_WithNullValue_HandlesGracefully()
     {
         // Arrange
@@ -227,11 +226,11 @@ public class ControllerExtensionsTests
         httpResult.GetType().Name.ShouldContain("Ok");
     }
 
-    [Fact]
+    [Test]
     public void ToActionResult_NonGenericWithNoProblem_ReturnsDefaultError()
     {
         // Arrange - manually create failed result without problem
-        var result =  Result.Fail();
+        var result = Result.Fail();
 
         // Act
         var actionResult = result.ToActionResult();
@@ -247,7 +246,7 @@ public class ControllerExtensionsTests
         returnedProblem.Detail.ShouldBe("Unknown error occurred");
     }
 
-    [Fact]
+    [Test]
     public void ToHttpResult_NonGenericWithNoProblem_ReturnsDefaultError()
     {
         // Arrange - manually create failed result without problem

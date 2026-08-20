@@ -1,18 +1,16 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
-using Xunit;
-using Xunit.Abstractions;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultHelperMethodsTests
 {
-    [Fact]
+    [Test]
     public void Result_TryGetProblem_WithSuccess_ShouldReturnFalse()
     {
         // Arrange
@@ -26,7 +24,7 @@ public class ResultHelperMethodsTests
         problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_TryGetProblem_WithFailure_ShouldReturnTrueAndProblem()
     {
         // Arrange
@@ -42,7 +40,7 @@ public class ResultHelperMethodsTests
         problem.ShouldBe(expectedProblem);
     }
 
-    [Fact]
+    [Test]
     public void Result_ThrowIfFail_WithSuccess_ShouldReturnFalse()
     {
         // Arrange
@@ -55,7 +53,7 @@ public class ResultHelperMethodsTests
         threw.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void Result_ThrowIfFail_WithFailure_ShouldThrowProblemException()
     {
         // Arrange
@@ -67,7 +65,7 @@ public class ResultHelperMethodsTests
         exception.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_TryGetProblem_WithSuccess_ShouldReturnFalse()
     {
         // Arrange
@@ -81,7 +79,7 @@ public class ResultHelperMethodsTests
         problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_TryGetProblem_WithFailure_ShouldReturnTrueAndProblem()
     {
         // Arrange
@@ -97,7 +95,7 @@ public class ResultHelperMethodsTests
         problem.ShouldBe(expectedProblem);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ThrowIfFail_WithSuccess_ShouldReturnFalse()
     {
         // Arrange
@@ -110,7 +108,7 @@ public class ResultHelperMethodsTests
         threw.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ThrowIfFail_WithFailure_ShouldThrowProblemException()
     {
         // Arrange
@@ -122,7 +120,7 @@ public class ResultHelperMethodsTests
         exception.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void Result_Try_WithSuccessfulAction_ShouldReturnSuccess()
     {
         // Arrange
@@ -136,7 +134,7 @@ public class ResultHelperMethodsTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Result_Try_WithException_ShouldReturnFailure()
     {
         // Act
@@ -149,7 +147,7 @@ public class ResultHelperMethodsTests
         result.Problem.StatusCode.ShouldBe(500);
     }
 
-    [Fact]
+    [Test]
     public void Result_Try_WithCustomStatusCode_ShouldUseProvidedCode()
     {
         // Act
@@ -163,7 +161,7 @@ public class ResultHelperMethodsTests
         result.Problem!.StatusCode.ShouldBe(403);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Try_WithSuccessfulFunc_ShouldReturnSuccessWithValue()
     {
         // Act
@@ -174,7 +172,7 @@ public class ResultHelperMethodsTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Try_WithException_ShouldReturnFailure()
     {
         // Act
@@ -187,7 +185,7 @@ public class ResultHelperMethodsTests
         result.Problem!.Detail.ShouldBe("Invalid arg");
     }
 
-    [Fact]
+    [Test]
     public async Task Result_TryAsync_WithSuccessfulTask_ShouldReturnSuccess()
     {
         // Arrange
@@ -205,7 +203,7 @@ public class ResultHelperMethodsTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task Result_TryAsync_WithException_ShouldReturnFailure()
     {
         // Act
@@ -221,7 +219,7 @@ public class ResultHelperMethodsTests
         result.Problem!.Detail.ShouldBe("Async error");
     }
 
-    [Fact]
+    [Test]
     public async Task ResultT_TryAsync_WithSuccessfulTask_ShouldReturnSuccessWithValue()
     {
         // Act
@@ -236,7 +234,7 @@ public class ResultHelperMethodsTests
         result.Value.ShouldBe("async result");
     }
 
-    [Fact]
+    [Test]
     public async Task ResultT_TryAsync_WithException_ShouldReturnFailure()
     {
         // Act
@@ -253,7 +251,7 @@ public class ResultHelperMethodsTests
         result.Problem!.Detail.ShouldBe("Cannot divide");
     }
 
-    [Fact]
+    [Test]
     public void Result_From_WithSuccessResult_ShouldReturnSuccess()
     {
         // Act
@@ -263,7 +261,7 @@ public class ResultHelperMethodsTests
         result.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Result_From_WithFailedResult_ShouldReturnFailure()
     {
         // Arrange
@@ -277,7 +275,7 @@ public class ResultHelperMethodsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void Result_From_WithException_ShouldReturnFailure()
     {
         // Act
@@ -289,7 +287,7 @@ public class ResultHelperMethodsTests
         result.Problem!.Detail.ShouldBe("From error");
     }
 
-    [Fact]
+    [Test]
     public async Task Result_From_WithAsyncTask_ShouldReturnSuccess()
     {
         // Act
@@ -302,7 +300,7 @@ public class ResultHelperMethodsTests
         result.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_From_WithSuccessResult_ShouldReturnSuccessWithValue()
     {
         // Act
@@ -313,7 +311,7 @@ public class ResultHelperMethodsTests
         result.Value.ShouldBe(100);
     }
 
-    [Fact]
+    [Test]
     public void Result_FailNotFound_ShouldCreateNotFoundResult()
     {
         // Act
@@ -327,7 +325,7 @@ public class ResultHelperMethodsTests
         result.Problem.Detail.ShouldBe("Resource not found");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_FailNotFound_ShouldCreateNotFoundResult()
     {
         // Act
@@ -341,7 +339,7 @@ public class ResultHelperMethodsTests
         result.Problem.Detail.ShouldBe("User not found");
     }
 
-    [Fact]
+    [Test]
     public void Result_FailValidation_ShouldCreateValidationResult()
     {
         // Act
@@ -354,14 +352,14 @@ public class ResultHelperMethodsTests
         result.IsFailed.ShouldBeTrue();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.Type.ShouldBe("https://tools.ietf.org/html/rfc7231#section-6.5.1");
-        
+
         var errors = result.AssertValidationErrors();
         errors.ShouldNotBeNull();
         errors!["username"].ShouldContain("Username is required");
         errors["password"].ShouldContain("Password is too short");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_FailValidation_ShouldCreateValidationResult()
     {
         // Act
@@ -373,14 +371,14 @@ public class ResultHelperMethodsTests
         // Assert
         result.IsFailed.ShouldBeTrue();
         result.Value.ShouldBe(0);
-        
+
         var errors = result.AssertValidationErrors();
         errors!["value"].ShouldHaveCount(2);
         errors["value"].ShouldContain("Value must be positive");
         errors["value"].ShouldContain("Value must be less than 100");
     }
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithHttpStatusCode_ShouldCreateFailedResult()
     {
         // Act
@@ -392,7 +390,7 @@ public class ResultHelperMethodsTests
         result.Problem.Title.ShouldBe("ServiceUnavailable");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithHttpStatusCode_ShouldCreateFailedResult()
     {
         // Act
@@ -404,7 +402,7 @@ public class ResultHelperMethodsTests
         result.Problem.Title.ShouldBe("GatewayTimeout");
     }
 
-    [Fact]
+    [Test]
     public void Result_Match_WithSuccess_ShouldCallOnSuccess()
     {
         // Arrange
@@ -432,7 +430,7 @@ public class ResultHelperMethodsTests
         output.ShouldBe("success");
     }
 
-    [Fact]
+    [Test]
     public void Result_Match_WithFailure_ShouldCallOnFailure()
     {
         // Arrange
@@ -461,7 +459,7 @@ public class ResultHelperMethodsTests
         output.ShouldBe("title");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Match_WithSuccess_ShouldCallOnSuccess()
     {
         // Arrange
@@ -477,7 +475,7 @@ public class ResultHelperMethodsTests
         output.ShouldBe(84);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Match_WithFailure_ShouldCallOnFailure()
     {
         // Arrange

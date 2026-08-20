@@ -3,21 +3,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Commands.Extensions;
 using ManagedCode.Communication.Commands.Stores;
+using ManagedCode.Communication.Tests.TestHelpers;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
-using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
 public class CommandIdempotencyTests
 {
-    [Fact]
+    [Test]
     public void ServiceCollectionExtensions_AddCommandIdempotency_RegistersMemoryCacheStore()
     {
         // Arrange
@@ -30,11 +29,11 @@ public class CommandIdempotencyTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var store = serviceProvider.GetService<ICommandIdempotencyStore>();
-        
+
         store.ShouldBeOfType<MemoryCacheCommandIdempotencyStore>();
     }
 
-    [Fact]
+    [Test]
     public void ServiceCollectionExtensions_AddCommandIdempotency_WithCustomType_RegistersCustomStore()
     {
         // Arrange
@@ -48,11 +47,11 @@ public class CommandIdempotencyTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var store = serviceProvider.GetService<ICommandIdempotencyStore>();
-        
+
         store.ShouldBeOfType<TestCommandIdempotencyStore>();
     }
 
-    [Fact]
+    [Test]
     public void ServiceCollectionExtensions_AddCommandIdempotency_WithInstance_RegistersInstance()
     {
         // Arrange
@@ -65,11 +64,12 @@ public class CommandIdempotencyTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var store = serviceProvider.GetService<ICommandIdempotencyStore>();
-        
+
         store.ShouldBeSameAs(customStore);
     }
 }
 
+[NotInParallel(nameof(MemoryCacheCommandIdempotencyStoreTests))]
 public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
 {
     private readonly MemoryCacheCommandIdempotencyStore _store;
@@ -81,13 +81,13 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         services.AddMemoryCache();
         services.AddLogging();
         var serviceProvider = services.BuildServiceProvider();
-        
+
         _memoryCache = serviceProvider.GetRequiredService<IMemoryCache>();
         var logger = serviceProvider.GetRequiredService<ILogger<MemoryCacheCommandIdempotencyStore>>();
         _store = new MemoryCacheCommandIdempotencyStore(_memoryCache, logger);
     }
 
-    [Fact]
+    [Test]
     public async Task GetCommandStatusAsync_NewCommand_ReturnsNotFound()
     {
         // Act
@@ -97,7 +97,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         status.ShouldBe(CommandExecutionStatus.NotFound);
     }
 
-    [Fact]
+    [Test]
     public async Task SetCommandStatusAsync_SetsStatus()
     {
         // Arrange
@@ -111,7 +111,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         status.ShouldBe(CommandExecutionStatus.InProgress);
     }
 
-    [Fact]
+    [Test]
     public async Task SetCommandResultAsync_StoresResult()
     {
         // Arrange
@@ -126,7 +126,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         result.ShouldBe(expectedResult);
     }
 
-    [Fact]
+    [Test]
     public async Task RemoveCommandAsync_RemovesCommand()
     {
         // Arrange
@@ -140,12 +140,12 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         // Assert
         var status = await _store.GetCommandStatusAsync(commandId);
         var result = await _store.GetCommandResultAsync<string>(commandId);
-        
+
         status.ShouldBe(CommandExecutionStatus.NotFound);
         result.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task TrySetCommandStatusAsync_WhenExpectedMatches_SetsStatusAndReturnsTrue()
     {
         // Arrange
@@ -161,7 +161,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         status.ShouldBe(CommandExecutionStatus.Completed);
     }
 
-    [Fact]
+    [Test]
     public async Task TrySetCommandStatusAsync_WhenExpectedDoesNotMatch_DoesNotSetStatusAndReturnsFalse()
     {
         // Arrange
@@ -177,7 +177,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         status.ShouldBe(CommandExecutionStatus.InProgress); // Unchanged
     }
 
-    [Fact]
+    [Test]
     public async Task GetAndSetStatusAsync_ReturnsCurrentStatusAndSetsNew()
     {
         // Arrange
@@ -190,18 +190,18 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         // Assert
         currentStatus.ShouldBe(CommandExecutionStatus.InProgress);
         wasSet.ShouldBeTrue();
-        
+
         var newStatus = await _store.GetCommandStatusAsync(commandId);
         newStatus.ShouldBe(CommandExecutionStatus.Completed);
     }
 
-    [Fact]
+    [Test]
     public async Task GetMultipleStatusAsync_ReturnsStatusForMultipleCommands()
     {
         // Arrange
         await _store.SetCommandStatusAsync("cmd1", CommandExecutionStatus.Completed);
         await _store.SetCommandStatusAsync("cmd2", CommandExecutionStatus.InProgress);
-        
+
         var commandIds = new[] { "cmd1", "cmd2", "cmd3" };
 
         // Act
@@ -214,13 +214,13 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         statuses["cmd3"].ShouldBe(CommandExecutionStatus.NotFound);
     }
 
-    [Fact]
+    [Test]
     public async Task GetMultipleResultsAsync_ReturnsResultsForMultipleCommands()
     {
         // Arrange
         await _store.SetCommandResultAsync("cmd1", "result1");
         await _store.SetCommandResultAsync("cmd2", "result2");
-        
+
         var commandIds = new[] { "cmd1", "cmd2", "cmd3" };
 
         // Act
@@ -233,7 +233,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         results["cmd3"].ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_FirstExecution_ExecutesOperationAndStoresResult()
     {
         // Arrange
@@ -252,15 +252,15 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         // Assert
         result.ShouldBe(expectedResult);
         executionCount.ShouldBe(1);
-        
+
         var status = await _store.GetCommandStatusAsync(commandId);
         status.ShouldBe(CommandExecutionStatus.Completed);
-        
+
         var storedResult = await _store.GetCommandResultAsync<string>(commandId);
         storedResult.ShouldBe(expectedResult);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_SecondExecution_ReturnsStoredResultWithoutReexecuting()
     {
         // Arrange
@@ -286,7 +286,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         executionCount.ShouldBe(1); // Should not execute second time
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenOperationReturnsNull_CachesNullResult()
     {
         // Arrange
@@ -309,7 +309,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         executionCount.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenOperationReturnsDefaultStructValue_CachesResult()
     {
         // Arrange
@@ -332,7 +332,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         executionCount.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenConcurrentCallersShareCommand_WaitsForSingleExecution()
     {
         // Arrange
@@ -366,7 +366,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         results.ShouldBe(new[] { "shared-result", "shared-result" });
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenPrimaryExecutionFails_ConcurrentCallerReceivesFailure()
     {
         // Arrange
@@ -394,7 +394,8 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         status.ShouldBe(CommandExecutionStatus.Failed);
     }
 
-    [Fact]
+    [Test]
+    [NotInParallel]
     public async Task ExecuteIdempotentAsync_WithDifferentCommandIds_DoesNotSerializeExecution()
     {
         // Arrange
@@ -425,7 +426,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         (await task2).ShouldBe("result-2");
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenOperationFails_MarksCommandAsFailedAndRethrowsException()
     {
         // Arrange
@@ -446,7 +447,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         status.ShouldBe(CommandExecutionStatus.Failed);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteBatchIdempotentAsync_ExecutesMultipleOperations()
     {
         // Arrange
@@ -467,7 +468,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         results["batch-cmd-3"].ShouldBe("result-3");
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteBatchIdempotentAsync_WhenCommandIsAlreadyCompleted_ReusesCachedResult()
     {
         // Arrange
@@ -497,7 +498,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         results[pendingCommandId].ShouldBe("fresh-value");
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteBatchIdempotentAsync_WhenCachedResultIsNull_PreservesNull()
     {
         // Arrange
@@ -525,13 +526,13 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         results[cachedCommandId].ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task TryGetCachedResultAsync_WhenResultExists_ReturnsResult()
     {
         // Arrange
         const string commandId = "test-cached-1";
         const string expectedResult = "cached-result";
-        
+
         await _store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Completed);
         await _store.SetCommandResultAsync(commandId, expectedResult);
 
@@ -543,7 +544,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         result.ShouldBe(expectedResult);
     }
 
-    [Fact]
+    [Test]
     public async Task TryGetCachedResultAsync_WhenResultDoesNotExist_ReturnsNoResult()
     {
         // Arrange
@@ -557,7 +558,7 @@ public class MemoryCacheCommandIdempotencyStoreTests : IDisposable
         result.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task TryGetCachedResultAsync_WhenResultIsNull_ReturnsHasResultTrue()
     {
         // Arrange

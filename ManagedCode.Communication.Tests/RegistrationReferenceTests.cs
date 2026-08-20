@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests;
 
@@ -21,10 +20,10 @@ namespace ManagedCode.Communication.Tests;
 ///     Setup instructions are the first thing a reader copies and the easiest thing to let rot. Keeping them here
 ///     means a renamed or removed entry point breaks the build rather than someone's afternoon.
 /// </remarks>
-[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
+[NotInParallel]
 public class RegistrationReferenceTests
 {
-    [Fact]
+    [Test]
     public async Task TheTypicalWebApplicationSnippetRuns()
     {
         var builder = WebApplication.CreateSlimBuilder();
@@ -42,7 +41,7 @@ public class RegistrationReferenceTests
         app.Services.GetService<ICommandIdempotencyStore>().ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void EveryDocumentedServiceRegistrationResolves()
     {
         var services = new ServiceCollection();
@@ -59,7 +58,7 @@ public class RegistrationReferenceTests
         provider.GetRequiredService<ICommandIdempotencyStore>().ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void TheStoreOnlyRegistrationsResolve()
     {
         var services = new ServiceCollection();
@@ -72,7 +71,7 @@ public class RegistrationReferenceTests
         provider.GetRequiredService<ICommandIdempotencyStore>().ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void TheSignalRHubFilterRegistrationCompiles()
     {
         var services = new ServiceCollection();
@@ -84,7 +83,7 @@ public class RegistrationReferenceTests
             .Value.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void TheTelemetrySourceNameIsWhatCallersRegister()
     {
         // The snippet passes this constant to AddSource/AddMeter; if it drifts, the wiring silently collects
@@ -94,7 +93,7 @@ public class RegistrationReferenceTests
         CommunicationTelemetry.Meter.Name.ShouldBe(CommunicationTelemetry.SourceName);
     }
 
-    [Fact]
+    [Test]
     public void TheCommandMetadataSnippetCompiles()
     {
         var command = Command<string>.From("payload")

@@ -5,13 +5,12 @@ using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Results.Extensions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultValueExecutionExtensionsTests
 {
-    [Fact]
+    [Test]
     public void From_Func_ReturnsValue()
     {
         var result = Result<int>.From(new Func<int>(() => 42));
@@ -20,7 +19,7 @@ public class ResultValueExecutionExtensionsTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void From_Func_Throws_ReturnsFailure()
     {
         var result = Result<int>.From(new Func<int>(() => throw new InvalidOperationException("fail")));
@@ -30,7 +29,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem.Detail.ShouldBe("fail");
     }
 
-    [Fact]
+    [Test]
     public void From_FuncResult_ReturnsUnderlyingResult()
     {
         var original = Result<int>.Succeed(7);
@@ -41,7 +40,7 @@ public class ResultValueExecutionExtensionsTests
         result.Value.ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public void From_FuncResult_Throws_ReturnsFailure()
     {
         var result = Result<int>.From(new Func<Result<int>>(() => throw new InvalidOperationException("boom")));
@@ -50,7 +49,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_Task_ReturnsSuccess()
     {
         var result = await Result<int>.From(Task.FromResult(11));
@@ -59,7 +58,7 @@ public class ResultValueExecutionExtensionsTests
         result.Value.ShouldBe(11);
     }
 
-    [Fact]
+    [Test]
     public async Task From_TaskReturningResult_Succeeds()
     {
         var resultTask = Task.FromResult(Result<int>.Succeed(77));
@@ -70,7 +69,7 @@ public class ResultValueExecutionExtensionsTests
         result.Value.ShouldBe(77);
     }
 
-    [Fact]
+    [Test]
     public async Task From_Task_Throws_ReturnsFailure()
     {
         var exception = new InvalidOperationException("task boom");
@@ -83,7 +82,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem.Detail.ShouldBe("task boom");
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncTask_WithCanceledToken_ReturnsFailure()
     {
         using var cts = new CancellationTokenSource();
@@ -99,7 +98,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(TaskCanceledException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_TaskReturningResult_Throws_ReturnsFailure()
     {
         var exception = new InvalidOperationException("task result");
@@ -109,7 +108,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_ValueTask_ReturnsSuccess()
     {
         var result = await Result<int>.From(new ValueTask<int>(13));
@@ -118,7 +117,7 @@ public class ResultValueExecutionExtensionsTests
         result.Value.ShouldBe(13);
     }
 
-    [Fact]
+    [Test]
     public async Task From_ValueTask_Faulted_ReturnsFailure()
     {
         var valueTask = new ValueTask<int>(Task.FromException<int>(new InvalidOperationException("vt")));
@@ -129,7 +128,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncValueTask_ReturnsFailureOnException()
     {
         static async ValueTask<int> ThrowingValueTask()
@@ -144,7 +143,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncTaskReturningResult_Success()
     {
         var result = await Result<int>.From(() => Task.FromResult(Result<int>.Succeed(101)));
@@ -153,7 +152,7 @@ public class ResultValueExecutionExtensionsTests
         result.Value.ShouldBe(101);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncTaskReturningResult_Exception()
     {
         static Task<Result<int>> ThrowingTask()
@@ -167,7 +166,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_ValueTaskReturningResult_Success()
     {
         static ValueTask<Result<int>> Factory() => new(Result<int>.Succeed(205));
@@ -178,7 +177,7 @@ public class ResultValueExecutionExtensionsTests
         result.Value.ShouldBe(205);
     }
 
-    [Fact]
+    [Test]
     public async Task From_ValueTaskReturningResult_Exception()
     {
         static async ValueTask<Result<int>> ThrowingFactory()
@@ -193,7 +192,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
     }
 
-    [Fact]
+    [Test]
     public void ToResult_FromSuccessfulGenericResult_ReturnsSuccess()
     {
         IResult<int> generic = Result<int>.Succeed(5);
@@ -204,7 +203,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ToResult_FromFailedGenericResult_PreservesProblem()
     {
         var problem = Problem.Create("Failure", "problem detail");
@@ -216,7 +215,7 @@ public class ResultValueExecutionExtensionsTests
         result.Problem.ShouldBeSameAs(problem);
     }
 
-    [Fact]
+    [Test]
     public async Task ResultT_AsTaskAndAsValueTask_RoundTrip()
     {
         var original = Result<int>.Fail("fail", "metadata");

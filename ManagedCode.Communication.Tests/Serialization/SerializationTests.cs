@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
-using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Constants;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Serialization;
 
@@ -20,7 +19,7 @@ public class SerializationTests
 
     #region Problem Serialization
 
-    [Fact]
+    [Test]
     public void Problem_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -43,7 +42,7 @@ public class SerializationTests
         deserialized.Extensions["number"]?.ToString().ShouldBe("42");
     }
 
-    [Fact]
+    [Test]
     public void Problem_WithValidationErrors_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -68,7 +67,7 @@ public class SerializationTests
         errors["password"].ShouldContain("Too short");
     }
 
-    [Fact]
+    [Test]
     public void Problem_FromException_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -92,7 +91,7 @@ public class SerializationTests
 
     #region Result Serialization
 
-    [Fact]
+    [Test]
     public void Result_Success_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -107,7 +106,7 @@ public class SerializationTests
         deserialized.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_WithProblem_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -125,7 +124,7 @@ public class SerializationTests
         deserialized.Problem.StatusCode.ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_WithValue_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -141,7 +140,7 @@ public class SerializationTests
         deserialized.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_WithComplexValue_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -165,7 +164,7 @@ public class SerializationTests
         deserialized.Value!.Tags!.ShouldBeEquivalentTo(new[] { "tag1", "tag2" });
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Failed_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -188,7 +187,7 @@ public class SerializationTests
 
     #region CollectionResult Serialization
 
-    [Fact]
+    [Test]
     public void CollectionResult_WithItems_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -208,7 +207,7 @@ public class SerializationTests
         deserialized.TotalPages.ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_Empty_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -226,7 +225,7 @@ public class SerializationTests
         deserialized.TotalItems.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_Failed_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -249,7 +248,7 @@ public class SerializationTests
 
     #region Command Serialization
 
-    [Fact]
+    [Test]
     public void Command_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -281,7 +280,7 @@ public class SerializationTests
         deserialized.Metadata!.Tags["env"].ShouldBe("test");
     }
 
-    [Fact]
+    [Test]
     public void CommandT_WithValue_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -312,7 +311,7 @@ public class SerializationTests
         deserialized.SpanId.ShouldBe("span-456");
     }
 
-    [Fact]
+    [Test]
     public void CommandT_WithCustomType_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -336,7 +335,7 @@ public class SerializationTests
 
     #region CommandMetadata Serialization
 
-    [Fact]
+    [Test]
     public void CommandMetadata_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -374,7 +373,7 @@ public class SerializationTests
 
     #region Complex Scenarios
 
-    [Fact]
+    [Test]
     public void ComplexNestedStructure_ShouldSerializeAndDeserialize()
     {
         // Arrange
@@ -401,7 +400,7 @@ public class SerializationTests
         deserialized.Value.Value.Value.Name.ShouldBe("Inner");
     }
 
-    [Fact]
+    [Test]
     public void RoundTrip_PreservesAllData()
     {
         // Arrange

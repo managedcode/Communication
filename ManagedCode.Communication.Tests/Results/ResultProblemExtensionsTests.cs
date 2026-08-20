@@ -1,13 +1,12 @@
-using ManagedCode.Communication;
 using System.Collections.Generic;
+using ManagedCode.Communication;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultProblemExtensionsTests
 {
-    [Fact]
+    [Test]
     public void Result_ToException_WithNoProblem_ReturnsNull()
     {
         var result = Result.Succeed();
@@ -15,7 +14,7 @@ public class ResultProblemExtensionsTests
         result.ToException().ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_ToException_WithProblem_ReturnsProblemException()
     {
         var result = Result.Fail("oops", "details");
@@ -27,7 +26,7 @@ public class ResultProblemExtensionsTests
         ((ProblemException)exception!).Problem.ShouldBeSameAs(result.Problem);
     }
 
-    [Fact]
+    [Test]
     public void Result_ThrowIfProblem_WithSuccess_DoesNotThrow()
     {
         var result = Result.Succeed();
@@ -35,7 +34,7 @@ public class ResultProblemExtensionsTests
         Should.NotThrow(result.ThrowIfProblem);
     }
 
-    [Fact]
+    [Test]
     public void Result_ThrowIfProblem_WithFailure_ThrowsProblemException()
     {
         var result = Result.Fail("broken", "bad state");
@@ -44,7 +43,7 @@ public class ResultProblemExtensionsTests
         exception.Problem.ShouldBeSameAs(result.Problem);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ToException_WithProblem_ReturnsProblemException()
     {
         var result = Result<string>.Fail("Invalid", "bad");
@@ -56,7 +55,7 @@ public class ResultProblemExtensionsTests
         ((ProblemException)exception!).Problem.ShouldBeSameAs(result.Problem);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ToException_WithSuccess_ReturnsNull()
     {
         var result = Result<int>.Succeed(5);
@@ -64,7 +63,7 @@ public class ResultProblemExtensionsTests
         result.ToException().ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ThrowIfProblem_WithFailure_ThrowsProblemException()
     {
         var result = Result<int>.Fail("failure", "bad news");
@@ -73,7 +72,7 @@ public class ResultProblemExtensionsTests
         exception.Problem.ShouldBeSameAs(result.Problem);
     }
 
-    [Fact]
+    [Test]
     public void Result_ToDisplayMessage_WithErrorCodeResolver_ReturnsResolvedMessage()
     {
         var problem = Problem.Create("Validation Failed", "Raw validation detail", 400);
@@ -86,7 +85,7 @@ public class ResultProblemExtensionsTests
         message.ShouldBe("Friendly invalid input message");
     }
 
-    [Fact]
+    [Test]
     public void Result_ToDisplayMessage_WithSuccessResult_ReturnsDefaultMessage()
     {
         var result = Result.Succeed();
@@ -96,7 +95,7 @@ public class ResultProblemExtensionsTests
         message.ShouldBe("Everything is fine");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ToDisplayMessage_WithoutDetail_UsesTitle()
     {
         var result = Result<string>.Fail("Not Found", "", System.Net.HttpStatusCode.NotFound);
@@ -106,7 +105,7 @@ public class ResultProblemExtensionsTests
         message.ShouldBe("Not Found");
     }
 
-    [Fact]
+    [Test]
     public void Result_ToDisplayMessage_WithDictionaryOverload_ReturnsResolvedMessage()
     {
         var problem = Problem.Create("Registration", "Unavailable", 503);
@@ -124,7 +123,7 @@ public class ResultProblemExtensionsTests
         message.ShouldBe("Registration is currently unavailable.");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ToDisplayMessage_WithTupleOverload_ReturnsResolvedMessage()
     {
         var problem = Problem.Create("Registration", "Unavailable", 503);

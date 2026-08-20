@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.Constants;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -12,7 +11,7 @@ public class ResultTFailMethodsTests
 {
     #region Fail() Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_NoParameters_ShouldCreateFailedResult()
     {
         // Act
@@ -29,7 +28,7 @@ public class ResultTFailMethodsTests
 
     #region Fail(T value) Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithValue_ShouldCreateFailedResultWithValue()
     {
         // Arrange
@@ -44,7 +43,7 @@ public class ResultTFailMethodsTests
         result.HasProblem.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithNullValue_ShouldCreateFailedResultWithNull()
     {
         // Act
@@ -61,7 +60,7 @@ public class ResultTFailMethodsTests
 
     #region Fail(Problem) Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithProblem_ShouldCreateFailedResultWithProblem()
     {
         // Arrange
@@ -82,7 +81,7 @@ public class ResultTFailMethodsTests
 
     #region Fail(string title) Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithTitle_ShouldCreateFailedResultWithInternalServerError()
     {
         // Arrange
@@ -103,7 +102,7 @@ public class ResultTFailMethodsTests
 
     #region Fail(string title, string detail) Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithTitleAndDetail_ShouldCreateFailedResultWithDefaultStatus()
     {
         // Arrange
@@ -125,7 +124,7 @@ public class ResultTFailMethodsTests
 
     #region Fail(string title, string detail, HttpStatusCode status) Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithTitleDetailAndStatus_ShouldCreateFailedResultWithSpecifiedStatus()
     {
         // Arrange
@@ -144,12 +143,12 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(404);
     }
 
-    [Theory]
-    [InlineData(HttpStatusCode.BadRequest, 400)]
-    [InlineData(HttpStatusCode.Unauthorized, 401)]
-    [InlineData(HttpStatusCode.Forbidden, 403)]
-    [InlineData(HttpStatusCode.NotFound, 404)]
-    [InlineData(HttpStatusCode.InternalServerError, 500)]
+    [Test]
+    [Arguments(HttpStatusCode.BadRequest, 400)]
+    [Arguments(HttpStatusCode.Unauthorized, 401)]
+    [Arguments(HttpStatusCode.Forbidden, 403)]
+    [Arguments(HttpStatusCode.NotFound, 404)]
+    [Arguments(HttpStatusCode.InternalServerError, 500)]
     public void ResultT_Fail_WithVariousStatusCodes_ShouldSetCorrectStatusCode(HttpStatusCode statusCode, int expectedCode)
     {
         // Act
@@ -163,7 +162,7 @@ public class ResultTFailMethodsTests
 
     #region Fail(Exception) Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithException_ShouldCreateFailedResultWithInternalServerError()
     {
         // Arrange
@@ -181,7 +180,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithErrorCode(exception.GetType().FullName ?? exception.GetType().Name);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithInnerException_ShouldPreserveExceptionInfo()
     {
         // Arrange
@@ -201,7 +200,7 @@ public class ResultTFailMethodsTests
 
     #region Fail(Exception, HttpStatusCode) Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithExceptionAndStatus_ShouldCreateFailedResultWithSpecifiedStatus()
     {
         // Arrange
@@ -223,7 +222,7 @@ public class ResultTFailMethodsTests
 
     #region FailValidation Tests
 
-    [Fact]
+    [Test]
     public void ResultT_FailValidation_WithSingleError_ShouldCreateValidationFailedResult()
     {
         // Act
@@ -239,7 +238,7 @@ public class ResultTFailMethodsTests
         errors["email"].ShouldContain("Email is required");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_FailValidation_WithMultipleErrors_ShouldCreateValidationFailedResultWithAllErrors()
     {
         // Act
@@ -260,7 +259,7 @@ public class ResultTFailMethodsTests
         errors["age"].ShouldContain("Must be 18 or older");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_FailValidation_WithDuplicateFields_ShouldCombineErrors()
     {
         // Act
@@ -283,7 +282,7 @@ public class ResultTFailMethodsTests
 
     #region FailUnauthorized Tests
 
-    [Fact]
+    [Test]
     public void ResultT_FailUnauthorized_NoParameters_ShouldCreateUnauthorizedResult()
     {
         // Act
@@ -297,7 +296,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.UnauthorizedAccess);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_FailUnauthorized_WithDetail_ShouldCreateUnauthorizedResultWithCustomDetail()
     {
         // Arrange
@@ -317,7 +316,7 @@ public class ResultTFailMethodsTests
 
     #region FailForbidden Tests
 
-    [Fact]
+    [Test]
     public void ResultT_FailForbidden_NoParameters_ShouldCreateForbiddenResult()
     {
         // Act
@@ -331,7 +330,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ForbiddenAccess);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_FailForbidden_WithDetail_ShouldCreateForbiddenResultWithCustomDetail()
     {
         // Arrange
@@ -351,7 +350,7 @@ public class ResultTFailMethodsTests
 
     #region FailNotFound Tests
 
-    [Fact]
+    [Test]
     public void ResultT_FailNotFound_NoParameters_ShouldCreateNotFoundResult()
     {
         // Act
@@ -365,7 +364,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ResourceNotFound);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_FailNotFound_WithDetail_ShouldCreateNotFoundResultWithCustomDetail()
     {
         // Arrange
@@ -385,7 +384,7 @@ public class ResultTFailMethodsTests
 
     #region Fail<TEnum> Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithEnum_ShouldCreateFailedResultWithErrorCode()
     {
         // Act
@@ -398,7 +397,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(400); // Default for domain errors
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithEnumAndDetail_ShouldCreateFailedResultWithErrorCodeAndDetail()
     {
         // Arrange
@@ -414,7 +413,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(400);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithEnumAndStatus_ShouldCreateFailedResultWithErrorCodeAndStatus()
     {
         // Act
@@ -427,7 +426,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(500);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithEnumDetailAndStatus_ShouldCreateFailedResultWithAllSpecified()
     {
         // Arrange
@@ -444,7 +443,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(503);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithHttpStatusEnum_ShouldUseEnumValueAsStatusCode()
     {
         // Act
@@ -460,7 +459,7 @@ public class ResultTFailMethodsTests
 
     #region Edge Cases and Complex Scenarios
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithVeryLongStrings_ShouldHandleCorrectly()
     {
         // Arrange
@@ -476,7 +475,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithDetail(longDetail);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithSpecialCharacters_ShouldHandleCorrectly()
     {
         // Arrange
@@ -492,7 +491,7 @@ public class ResultTFailMethodsTests
         result.ShouldHaveProblem().WithDetail(detail);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithNullStrings_ShouldHandleGracefully()
     {
         // Act
@@ -503,7 +502,7 @@ public class ResultTFailMethodsTests
         result.HasProblem.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_ChainedOperations_ShouldMaintainFailureState()
     {
         // Act
@@ -518,7 +517,7 @@ public class ResultTFailMethodsTests
         result3.Problem!.Title.ShouldBe("Error 1");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithComplexTypes_ShouldWorkCorrectly()
     {
         // Act

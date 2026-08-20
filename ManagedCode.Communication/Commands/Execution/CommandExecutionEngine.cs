@@ -220,6 +220,18 @@ internal static class CommandExecutionEngine
                 "Command rate limit exceeded",
                 "The command could not acquire a rate-limit permit.",
                 HttpStatusCode.TooManyRequests);
+
+            // A custom or distributed limiter may keep protocol metadata on the lease instead of duplicating it
+            // on the Problem. Promote it here so retry decisions (especially Retry-After) behave consistently for
+            // every ICommandRateLimiter implementation. An adapter-supplied Problem remains authoritative.
+            foreach (var pair in lease.Metadata)
+            {
+                if (!problem.Extensions.ContainsKey(pair.Key))
+                {
+                    problem.Extensions[pair.Key] = pair.Value;
+                }
+            }
+
             problem.Extensions["attempt"] = attempt;
             CommunicationTelemetry.RecordRateLimitRejected(command, problem);
 
@@ -275,11 +287,21 @@ internal static class CommandExecutionEngine
         {
             if (retryAfter is TimeSpan retryAfterTimeSpan)
             {
+                if (retryAfterTimeSpan <= TimeSpan.Zero)
+                {
+                    return TimeSpan.Zero;
+                }
+
                 return retryAfterTimeSpan > options.MaxDelay ? options.MaxDelay : retryAfterTimeSpan;
             }
 
             if (retryAfter is double retryAfterSeconds)
             {
+                if (!double.IsFinite(retryAfterSeconds) || retryAfterSeconds <= 0D)
+                {
+                    return TimeSpan.Zero;
+                }
+
                 return TimeSpan.FromSeconds(Math.Min(retryAfterSeconds, options.MaxDelay.TotalSeconds));
             }
         }

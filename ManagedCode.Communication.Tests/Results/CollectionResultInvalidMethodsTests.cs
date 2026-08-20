@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -11,7 +10,7 @@ public class CollectionResultInvalidMethodsTests
 {
     #region Invalid() Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_NoParameters_ShouldCreateValidationResult()
     {
         // Act
@@ -31,7 +30,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Invalid<TEnum> Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithEnum_ShouldCreateValidationResultWithErrorCode()
     {
         // Act
@@ -51,7 +50,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Invalid(string) Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithMessage_ShouldCreateValidationResultWithMessage()
     {
         // Arrange
@@ -73,7 +72,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Invalid<TEnum>(TEnum, string) Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithEnumAndMessage_ShouldCreateValidationResultWithBoth()
     {
         // Arrange
@@ -96,7 +95,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Invalid(string, string) Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithKeyValue_ShouldCreateValidationResultWithKeyValue()
     {
         // Arrange
@@ -119,7 +118,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Invalid<TEnum>(TEnum, string, string) Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithEnumAndKeyValue_ShouldCreateValidationResultWithAll()
     {
         // Arrange
@@ -143,7 +142,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Invalid(Dictionary<string, string>) Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithDictionary_ShouldCreateValidationResultWithAllErrors()
     {
         // Arrange
@@ -169,7 +168,7 @@ public class CollectionResultInvalidMethodsTests
         errors["age"].ShouldContain("Age must be between 18 and 100");
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithEmptyDictionary_ShouldCreateValidationResultWithNoErrors()
     {
         // Arrange
@@ -193,7 +192,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Invalid<TEnum>(TEnum, Dictionary<string, string>) Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithEnumAndDictionary_ShouldCreateValidationResultWithErrorCodeAndErrors()
     {
         // Arrange
@@ -222,7 +221,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Complex Scenarios Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_ChainedValidations_ShouldWorkCorrectly()
     {
         // Arrange
@@ -243,7 +242,7 @@ public class CollectionResultInvalidMethodsTests
         results.ShouldAllBe(r => r.Problem!.StatusCode == 400);
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithNullValues_ShouldHandleGracefully()
     {
         // Act & Assert - null message
@@ -258,7 +257,7 @@ public class CollectionResultInvalidMethodsTests
         exception.ParamName.ShouldBe("key");
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithSpecialCharacters_ShouldHandleCorrectly()
     {
         // Arrange
@@ -276,7 +275,7 @@ public class CollectionResultInvalidMethodsTests
         errors![key].ShouldContain(value);
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_ComparedToFailValidation_ShouldBeEquivalent()
     {
         // Act
@@ -296,7 +295,7 @@ public class CollectionResultInvalidMethodsTests
 
     #region Pagination with Invalid Tests
 
-    [Fact]
+    [Test]
     public void CollectionResult_Invalid_WithPagination_ShouldNotHaveData()
     {
         // Act

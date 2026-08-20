@@ -3,7 +3,6 @@ using System.Net;
 using System.Text.Json;
 using ManagedCode.Communication.CQRS;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -14,7 +13,7 @@ public class CqrsStreamChunkTests
 {
     private static readonly JsonSerializerOptions Json = CqrsStreamSerialization.Default;
 
-    [Fact]
+    [Test]
     public void Started_UsesStartedKindAndEventType()
     {
         var before = DateTime.UtcNow;
@@ -30,7 +29,7 @@ public class CqrsStreamChunkTests
         // Not stamped unless asked for: ordering comes from Sequence, and nothing reads a timestamp.
     }
 
-    [Fact]
+    [Test]
     public void Started_AllowsOmittingProgressPayload()
     {
         var chunk = Chunk.Started();
@@ -39,7 +38,7 @@ public class CqrsStreamChunkTests
         chunk.TryGetProgress(out _).ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void Progress_CarriesPayloadAndProgressEventType()
     {
         var progress = Result<ProgressUpdate>.Succeed(new ProgressUpdate("running"));
@@ -54,7 +53,7 @@ public class CqrsStreamChunkTests
         value.State.ShouldBe("running");
     }
 
-    [Fact]
+    [Test]
     public void Progress_FromBarePayload_WrapsInSuccessfulResult()
     {
         var chunk = Chunk.Progress(new ProgressUpdate("running"), "step 1", sequence: 7);
@@ -66,7 +65,7 @@ public class CqrsStreamChunkTests
         value.State.ShouldBe("running");
     }
 
-    [Fact]
+    [Test]
     public void Completed_CarriesTerminalSuccess()
     {
         var result = Result<FinalResult>.Succeed(new FinalResult("ok"));
@@ -84,7 +83,7 @@ public class CqrsStreamChunkTests
         value.Status.ShouldBe("ok");
     }
 
-    [Fact]
+    [Test]
     public void Completed_FromBarePayload_WrapsInSuccessfulResult()
     {
         var chunk = Chunk.Completed(new FinalResult("ok"), "done", sequence: 9);
@@ -94,7 +93,7 @@ public class CqrsStreamChunkTests
         value.Status.ShouldBe("ok");
     }
 
-    [Fact]
+    [Test]
     public void Completed_RejectsFailedResult()
     {
         var failed = Result<FinalResult>.Fail("cannot complete");
@@ -103,7 +102,7 @@ public class CqrsStreamChunkTests
         exception.ParamName.ShouldBe("final");
     }
 
-    [Fact]
+    [Test]
     public void Failed_CarriesTerminalFailure()
     {
         var failed = Result<FinalResult>.Fail("failed", "boom", HttpStatusCode.InternalServerError);
@@ -121,7 +120,7 @@ public class CqrsStreamChunkTests
         problem.Title.ShouldBe("failed");
     }
 
-    [Fact]
+    [Test]
     public void Failed_RejectsSuccessfulResult()
     {
         var success = Result<FinalResult>.Succeed(new FinalResult("ok"));
@@ -130,7 +129,7 @@ public class CqrsStreamChunkTests
         exception.ParamName.ShouldBe("final");
     }
 
-    [Fact]
+    [Test]
     public void Failed_FromProblem_PreservesProblem()
     {
         var problem = Problem.Create("bad", "No progress", 500);
@@ -143,7 +142,7 @@ public class CqrsStreamChunkTests
         chunk.Problem!.Detail.ShouldBe("No progress");
     }
 
-    [Fact]
+    [Test]
     public void FromException_CapturesTypeAndMessage()
     {
         var chunk = Chunk.FromException(new InvalidOperationException("boom"), sequence: 4);
@@ -155,14 +154,14 @@ public class CqrsStreamChunkTests
         chunk.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public void Failed_RejectsNullProblemOrException()
     {
         Should.Throw<ArgumentNullException>(() => Chunk.Failed((Problem)null!));
         Should.Throw<ArgumentNullException>(() => Chunk.FromException(null!));
     }
 
-    [Fact]
+    [Test]
     public void CustomEventType_OverridesKindDefault()
     {
         var chunk = Chunk.Started(eventType: "custom-event");
@@ -170,7 +169,7 @@ public class CqrsStreamChunkTests
         chunk.EventType.ShouldBe("custom-event");
     }
 
-    [Fact]
+    [Test]
     public void BlankEventType_FallsBackToKindDefault()
     {
         var chunk = new Chunk(CqrsStreamChunkKind.Progress, eventType: "   ");
@@ -178,17 +177,17 @@ public class CqrsStreamChunkTests
         chunk.EventType.ShouldBe(Chunk.ProgressEventType);
     }
 
-    [Theory]
-    [InlineData(CqrsStreamChunkKind.Started, Chunk.StartedEventType)]
-    [InlineData(CqrsStreamChunkKind.Progress, Chunk.ProgressEventType)]
-    [InlineData(CqrsStreamChunkKind.Completed, Chunk.CompletedEventType)]
-    [InlineData(CqrsStreamChunkKind.Failed, Chunk.FailedEventType)]
+    [Test]
+    [Arguments(CqrsStreamChunkKind.Started, Chunk.StartedEventType)]
+    [Arguments(CqrsStreamChunkKind.Progress, Chunk.ProgressEventType)]
+    [Arguments(CqrsStreamChunkKind.Completed, Chunk.CompletedEventType)]
+    [Arguments(CqrsStreamChunkKind.Failed, Chunk.FailedEventType)]
     public void ResolveEventType_MapsEveryKind(CqrsStreamChunkKind kind, string expected)
     {
         Chunk.ResolveEventType(kind).ShouldBe(expected);
     }
 
-    [Fact]
+    [Test]
     public void WithExpression_ProducesAModifiedCopy()
     {
         var original = Chunk.Progress(new ProgressUpdate("running"), "step");
@@ -201,7 +200,7 @@ public class CqrsStreamChunkTests
         sequenced.Message.ShouldBe(original.Message);
     }
 
-    [Fact]
+    [Test]
     public void WithExpression_PreservesCustomEventType()
     {
         var original = Chunk.Progress(new ProgressUpdate("running")) with { EventType = "custom" };
@@ -211,7 +210,7 @@ public class CqrsStreamChunkTests
         copy.EventType.ShouldBe("custom");
     }
 
-    [Fact]
+    [Test]
     public void Serialization_WritesKindAsStringAndOmitsComputedMembers()
     {
         var chunk = Chunk.Started(Result<ProgressUpdate>.Succeed(new ProgressUpdate("running")), sequence: 1);
@@ -239,7 +238,7 @@ public class CqrsStreamChunkTests
         root.TryGetProperty("eventType", out _).ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void Serialization_KeepsACustomEventTypeOnTheWire()
     {
         var chunk = Chunk.Started(eventType: "order-placed", sequence: 1);
@@ -249,7 +248,7 @@ public class CqrsStreamChunkTests
         document.RootElement.GetProperty("eventType").GetString().ShouldBe("order-placed");
     }
 
-    [Fact]
+    [Test]
     public void Deserialization_RebuildsTheDefaultEventTypeWhenItWasOmitted()
     {
         var original = Chunk.Progress(new ProgressUpdate("running"), sequence: 2);
@@ -259,7 +258,7 @@ public class CqrsStreamChunkTests
         JsonSerializer.Deserialize<Chunk>(json, Json)!.EventType.ShouldBe(Chunk.ProgressEventType);
     }
 
-    [Fact]
+    [Test]
     public void Serialization_RoundTripsEveryField()
     {
         var original = Chunk.Completed(
@@ -281,7 +280,7 @@ public class CqrsStreamChunkTests
         value.Status.ShouldBe("ok");
     }
 
-    [Fact]
+    [Test]
     public void Deserialization_AcceptsNumericKindFromOlderProducers()
     {
         const string payload = """
@@ -299,7 +298,7 @@ public class CqrsStreamChunkTests
         progress.State.ShouldBe("running");
     }
 
-    [Fact]
+    [Test]
     public void Deserialization_FallsBackToKindDefaultEventTypeWhenMissing()
     {
         var chunk = JsonSerializer.Deserialize<Chunk>("""{"kind":"Failed"}""", Json);
@@ -308,7 +307,7 @@ public class CqrsStreamChunkTests
         chunk.EventType.ShouldBe(Chunk.FailedEventType);
     }
 
-    [Fact]
+    [Test]
     public void KindValues_ArePinnedToTheWireContract()
     {
         // Reordering these silently breaks producers and consumers that were built against different versions.

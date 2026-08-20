@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Shouldly;
-using Xunit;
 using ResultFilter = ManagedCode.Communication.AspNetCore.Filters.ResultToActionResultFilter;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Filters;
@@ -17,7 +16,7 @@ namespace ManagedCode.Communication.Tests.AspNetCore.Filters;
 /// </summary>
 public class ResultToActionResultFilterTests
 {
-    [Fact]
+    [Test]
     public async Task FailedResult_SetsTheStatusCodeFromTheProblem()
     {
         var context = CreateContext(new ObjectResult(Result.Fail(Problem.Create("nope", "d", 409))));
@@ -27,7 +26,7 @@ public class ResultToActionResultFilterTests
         ((ObjectResult)context.Result).StatusCode.ShouldBe(409);
     }
 
-    [Fact]
+    [Test]
     public async Task FailedResultOfT_SetsTheStatusCodeFromTheProblem()
     {
         var context = CreateContext(new ObjectResult(Result<int>.Fail(Problem.Create("nope", "d", 422))));
@@ -37,7 +36,7 @@ public class ResultToActionResultFilterTests
         ((ObjectResult)context.Result).StatusCode.ShouldBe(422);
     }
 
-    [Fact]
+    [Test]
     public async Task SuccessfulResultWithoutAStatusCode_DefaultsTo200()
     {
         var context = CreateContext(new ObjectResult(Result.Succeed()));
@@ -47,10 +46,10 @@ public class ResultToActionResultFilterTests
         ((ObjectResult)context.Result).StatusCode.ShouldBe(StatusCodes.Status200OK);
     }
 
-    [Theory]
-    [InlineData(StatusCodes.Status201Created)]
-    [InlineData(StatusCodes.Status202Accepted)]
-    [InlineData(StatusCodes.Status204NoContent)]
+    [Test]
+    [Arguments(StatusCodes.Status201Created)]
+    [Arguments(StatusCodes.Status202Accepted)]
+    [Arguments(StatusCodes.Status204NoContent)]
     public async Task SuccessfulResult_KeepsAStatusCodeTheActionChose(int statusCode)
     {
         // The filter used to overwrite this with 200, silently turning a deliberate 201/202/204 into an OK.
@@ -61,7 +60,7 @@ public class ResultToActionResultFilterTests
         ((ObjectResult)context.Result).StatusCode.ShouldBe(statusCode);
     }
 
-    [Fact]
+    [Test]
     public async Task NonResultValues_AreLeftAlone()
     {
         var objectResult = new ObjectResult(new { Name = "plain" }) { StatusCode = StatusCodes.Status418ImATeapot };
@@ -72,7 +71,7 @@ public class ResultToActionResultFilterTests
         ((ObjectResult)context.Result).StatusCode.ShouldBe(StatusCodes.Status418ImATeapot);
     }
 
-    [Fact]
+    [Test]
     public async Task NonObjectResults_AreLeftAlone()
     {
         var original = new NoContentResult();
@@ -83,7 +82,7 @@ public class ResultToActionResultFilterTests
         context.Result.ShouldBeSameAs(original);
     }
 
-    [Fact]
+    [Test]
     public async Task TheRestOfThePipelineStillRuns()
     {
         var context = CreateContext(new ObjectResult(Result.Succeed()));

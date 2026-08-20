@@ -1,76 +1,85 @@
-﻿using System;
-using System.IO;
-using System.Linq;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Orleans.Extensions;
-using ManagedCode.Communication.Results.Extensions;
 using ManagedCode.Communication.Tests.Common.TestApp.Controllers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Orleans.Hosting;
 using Orleans.TestingHost;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Common.TestApp;
 
-[CollectionDefinition(nameof(TestClusterApplication))]
-public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, ICollectionFixture<TestClusterApplication>
+public sealed class TestClusterApplication : IAsyncDisposable
 {
     public TestClusterApplication()
     {
-        var builder = new TestClusterBuilder();
-        builder.AddSiloBuilderConfigurator<TestSiloConfigurations>();
-        builder.AddClientBuilderConfigurator<TestClientConfigurations>();
-        Cluster = builder.Build();
+        var clusterBuilder = new TestClusterBuilder();
+        clusterBuilder.AddSiloBuilderConfigurator<TestSiloConfigurations>();
+        clusterBuilder.AddClientBuilderConfigurator<TestClientConfigurations>();
+        Cluster = clusterBuilder.Build();
         Cluster.Deploy();
+
+        var webBuilder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = "Development"
+        });
+        webBuilder.WebHost.UseTestServer();
+        webBuilder.Services.AddCommunication(options => { options.ShowErrorDetails = true; });
+        webBuilder.Services
+            .AddAuthentication("Test")
+            .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
+        webBuilder.Services.AddAuthorization();
+        webBuilder.Services.AddControllers(options => { options.AddCommunicationFilters(); });
+        webBuilder.Services.AddSignalR(options => { options.AddCommunicationFilters(); });
+
+        Application = webBuilder.Build();
+        Application.UseAuthentication();
+        Application.UseAuthorization();
+        Application.MapControllers();
+        Application.MapHub<TestHub>(nameof(TestHub));
+        Application.UseCommunication();
+        Application.StartAsync().GetAwaiter().GetResult();
+        Server = Application.GetTestServer();
     }
 
     public TestCluster Cluster { get; }
 
+    public WebApplication Application { get; }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    public TestServer Server { get; }
+
+    public HttpClient CreateClient()
     {
-        builder.UseEnvironment("Development");
-        builder.UseContentRoot(Directory.GetCurrentDirectory());
-        base.ConfigureWebHost(builder);
+        return Server.CreateClient();
     }
 
     public HubConnection CreateSignalRClient(string hubUrl, Action<HubConnectionBuilder>? configure = null)
     {
         var builder = new HubConnectionBuilder();
         configure?.Invoke(builder);
-        return builder.WithUrl(new Uri(Server.BaseAddress, hubUrl), o => o.HttpMessageHandlerFactory = _ => Server.CreateHandler())
+        return builder.WithUrl(new Uri(Server.BaseAddress, hubUrl), options =>
+            {
+                options.HttpMessageHandlerFactory = _ => Server.CreateHandler();
+            })
             .Build();
     }
 
-    protected override void Dispose(bool disposing)
+    public async ValueTask DisposeAsync()
     {
-        base.Dispose(disposing);
-        Cluster?.StopAllSilosAsync().Wait();
-        Cluster?.Dispose();
+        await Application.StopAsync();
+        await Application.DisposeAsync();
+        await Cluster.StopAllSilosAsync();
+        Cluster.Dispose();
     }
 
-    public override async ValueTask DisposeAsync()
-    {
-        await base.DisposeAsync();
-        if (Cluster != null)
-        {
-            await Cluster.StopAllSilosAsync();
-            Cluster.Dispose();
-        }
-    }
-
-    private class TestSiloConfigurations : ISiloConfigurator
+    private sealed class TestSiloConfigurations : ISiloConfigurator
     {
         public void Configure(ISiloBuilder siloBuilder)
         {
@@ -78,7 +87,7 @@ public class TestClusterApplication : WebApplicationFactory<HttpHostProgram>, IC
         }
     }
 
-    private class TestClientConfigurations : IClientBuilderConfigurator
+    private sealed class TestClientConfigurations : IClientBuilderConfigurator
     {
         public void Configure(IConfiguration configuration, IClientBuilder clientBuilder)
         {

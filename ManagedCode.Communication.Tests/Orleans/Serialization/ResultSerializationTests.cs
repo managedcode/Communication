@@ -1,20 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
-using Orleans;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Orleans;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
 /// <summary>
 /// Tests for Result serialization through Orleans grain calls
 /// </summary>
-public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
+[ClassDataSource<OrleansClusterFixture>(Shared = SharedType.PerClass)]
+[NotInParallel(nameof(ResultSerializationTests))]
+public class ResultSerializationTests
 {
     private readonly IGrainFactory _grainFactory;
 
@@ -23,7 +24,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         _grainFactory = fixture.Cluster.GrainFactory;
     }
 
-    [Fact]
+    [Test]
     public async Task Result_Success_ShouldSerializeCorrectly()
     {
         // Arrange
@@ -39,12 +40,12 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         echoed.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task Result_WithValidationProblem_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var problem = Problem.Validation(
             ("email", "Invalid email format"),
             ("password", "Password too weak"),
@@ -52,7 +53,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         );
         problem.Extensions["requestId"] = "req-123";
         problem.Extensions["timestamp"] = DateTime.UtcNow.ToString("O");
-        
+
         var result = Result.Fail(problem);
 
         // Act
@@ -66,24 +67,24 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         echoed.Problem!.Title.ShouldBe(problem.Title);
         echoed.Problem!.StatusCode.ShouldBe(problem.StatusCode);
         echoed.Problem!.Detail.ShouldBe(problem.Detail);
-        
+
         var errors = echoed.Problem!.GetValidationErrors();
         errors.ShouldNotBeNull();
         errors.ShouldHaveCount(3);
         errors!["email"].ShouldContain("Invalid email format");
         errors["password"].ShouldContain("Password too weak");
         errors["username"].ShouldContain("Username already taken");
-        
+
         echoed.Problem!.Extensions["requestId"].ShouldBe("req-123");
         echoed.Problem!.Extensions["timestamp"].ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task ResultT_WithComplexValue_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var response = new PaymentResponse
         {
             TransactionId = "txn-123",
@@ -96,7 +97,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
                 ["net"] = 97.01m
             }
         };
-        
+
         var result = Result<PaymentResponse>.Succeed(response);
 
         // Act
@@ -115,7 +116,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         echoed.Value.Details["net"].ShouldBe(97.01m);
     }
 
-    [Fact]
+    [Test]
     public async Task ResultT_WithNullValue_ShouldSerializeCorrectly()
     {
         // Arrange
@@ -130,12 +131,12 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         echoed.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task ResultT_WithDifferentProblemTypes_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         // Test different problem types
         var testCases = new[]
         {
@@ -162,12 +163,12 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         }
     }
 
-    [Fact]
+    [Test]
     public async Task ResultT_WithComplexNestedObject_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var profile = new UserProfile
         {
             Id = Guid.NewGuid(),
@@ -186,7 +187,7 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
                 ["scores"] = new[] { 85, 92, 78 }
             }
         };
-        
+
         var result = Result<UserProfile>.Succeed(profile);
 
         // Act
@@ -199,17 +200,17 @@ public class ResultSerializationTests : IClassFixture<OrleansClusterFixture>
         echoed.Value.Email.ShouldBe(profile.Email);
         echoed.Value.Name.ShouldBe(profile.Name);
         echoed.Value.CreatedAt.ShouldBeCloseTo(profile.CreatedAt, TimeSpan.FromSeconds(1));
-        
+
         echoed.Value.Attributes.ShouldNotBeNull();
         echoed.Value.Attributes["age"].ShouldBe(30);
         echoed.Value.Attributes["verified"].ShouldBe(true);
         echoed.Value.Attributes["preferences"].ShouldNotBeNull();
-        
+
         var preferences = echoed.Value.Attributes["preferences"] as Dictionary<string, string>;
         preferences.ShouldNotBeNull();
         preferences!["theme"].ShouldBe("dark");
         preferences["language"].ShouldBe("en");
-        
+
         var scores = echoed.Value.Attributes["scores"] as int[];
         scores.ShouldNotBeNull();
         scores.ShouldBeEquivalentTo(new[] { 85, 92, 78 });

@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -16,7 +15,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 /// </summary>
 public class CqrsStreamNormalizerTests
 {
-    [Fact]
+    [Test]
     public async Task AssignsSequenceNumbersWhenHandlerOmitsThem()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.CompletedWithoutSequencesAsync());
@@ -24,7 +23,7 @@ public class CqrsStreamNormalizerTests
         chunks.Select(chunk => chunk.Sequence).ShouldBe([1L, 2L, 3L]);
     }
 
-    [Fact]
+    [Test]
     public async Task PreservesSequenceNumbersTheHandlerSupplied()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.CompletedAsync());
@@ -32,7 +31,7 @@ public class CqrsStreamNormalizerTests
         chunks.Select(chunk => chunk.Sequence).ShouldBe([1L, 2L, 3L]);
     }
 
-    [Fact]
+    [Test]
     public async Task ContinuesNumberingAfterAnExplicitSequence()
     {
         var chunks = await NormalizeAsync(Stream(
@@ -44,7 +43,7 @@ public class CqrsStreamNormalizerTests
         chunks.Select(chunk => chunk.Sequence).ShouldBe([100L, 101L, 102L, 103L]);
     }
 
-    [Fact]
+    [Test]
     public async Task LeavesSequencesAloneWhenAssignmentIsDisabled()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.CompletedWithoutSequencesAsync(), assignSequenceNumbers: false);
@@ -52,7 +51,7 @@ public class CqrsStreamNormalizerTests
         chunks.ShouldAllBe(chunk => chunk.Sequence == null);
     }
 
-    [Fact]
+    [Test]
     public async Task DropsNullChunks()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.WithNullChunkAsync());
@@ -62,7 +61,7 @@ public class CqrsStreamNormalizerTests
         chunks[1].Kind.ShouldBe(CqrsStreamChunkKind.Completed);
     }
 
-    [Fact]
+    [Test]
     public async Task TurnsAnEnumerationFaultIntoATerminalFailedChunk()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.ThrowsAfterProgressAsync());
@@ -74,7 +73,7 @@ public class CqrsStreamNormalizerTests
         chunks[2].Sequence.ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public async Task TurnsAnImmediateFaultIntoTheOnlyChunk()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.ThrowsImmediatelyAsync());
@@ -85,7 +84,7 @@ public class CqrsStreamNormalizerTests
         chunks[0].Sequence.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task AppendsATerminalChunkWhenTheHandlerForgetsOne()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.WithoutTerminalChunkAsync());
@@ -96,7 +95,7 @@ public class CqrsStreamNormalizerTests
         chunks[^1].Sequence.ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public async Task AppendsATerminalChunkForAnEmptyStream()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.EmptyAsync());
@@ -106,7 +105,7 @@ public class CqrsStreamNormalizerTests
         chunks[0].Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task TreatsATerminalChunkFollowedByMoreChunksAsIncomplete()
     {
         var chunks = await NormalizeAsync(Stream(
@@ -119,7 +118,7 @@ public class CqrsStreamNormalizerTests
         chunks[^1].Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task LeavesAnIncompleteStreamAloneWhenTheGuaranteeIsDisabled()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.WithoutTerminalChunkAsync(), ensureTerminalChunk: false);
@@ -128,7 +127,7 @@ public class CqrsStreamNormalizerTests
         chunks[^1].Kind.ShouldBe(CqrsStreamChunkKind.Progress);
     }
 
-    [Fact]
+    [Test]
     public async Task DoesNotAppendATerminalChunkWhenTheHandlerAlreadyFailed()
     {
         var chunks = await NormalizeAsync(CqrsTestStreams.FailedByHandlerAsync());
@@ -138,7 +137,7 @@ public class CqrsStreamNormalizerTests
         chunks[^1].Problem!.Title.ShouldBe("payment_declined");
     }
 
-    [Fact]
+    [Test]
     public async Task PropagatesCancellationRatherThanReportingItAsAFailure()
     {
         using var cancellation = new CancellationTokenSource();
@@ -155,7 +154,7 @@ public class CqrsStreamNormalizerTests
         });
     }
 
-    [Fact]
+    [Test]
     public async Task DisposesTheSourceEnumeratorWhenTheConsumerStopsEarly()
     {
         var disposed = false;

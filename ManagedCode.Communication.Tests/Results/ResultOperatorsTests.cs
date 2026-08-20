@@ -1,16 +1,15 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultOperatorsTests
 {
-    [Fact]
+    [Test]
     public void Result_ImplicitOperator_FromException_ShouldCreateFailedResult()
     {
         // Arrange
@@ -26,7 +25,7 @@ public class ResultOperatorsTests
         result.Problem.Title.ShouldBe("InvalidOperationException");
     }
 
-    [Fact]
+    [Test]
     public void Result_ImplicitOperator_FromProblem_ShouldCreateFailedResult()
     {
         // Arrange
@@ -40,7 +39,7 @@ public class ResultOperatorsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ImplicitOperator_FromValue_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -55,7 +54,7 @@ public class ResultOperatorsTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ResultT_ImplicitOperator_FromException_ShouldCreateFailedResult()
     {
         // Arrange
@@ -72,7 +71,7 @@ public class ResultOperatorsTests
     }
 
 
-    [Fact]
+    [Test]
     public void Result_From_WithSuccessfulFunc_ShouldReturnSuccessResult()
     {
         // Arrange
@@ -92,7 +91,7 @@ public class ResultOperatorsTests
     }
 
 
-    [Fact]
+    [Test]
     public async Task Result_TryAsync_WithExceptionThrowingAction_ShouldReturnFailedResult()
     {
         // Act
@@ -109,7 +108,7 @@ public class ResultOperatorsTests
         result.Problem.Detail.ShouldBe("Async exception");
     }
 
-    [Fact]
+    [Test]
     public async Task Result_TryAsync_WithSuccessfulAction_ShouldReturnSuccessResult()
     {
         // Arrange
@@ -127,7 +126,7 @@ public class ResultOperatorsTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithEnum_ShouldCreateFailedResultWithErrorCode()
     {
         // Act
@@ -142,7 +141,7 @@ public class ResultOperatorsTests
         result.Problem.Extensions["errorType"].ShouldBe("TestError");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_From_WithFunc_ShouldExecuteAndWrapResult()
     {
         // Act
@@ -154,7 +153,7 @@ public class ResultOperatorsTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_From_WithExceptionThrowingFunc_ShouldReturnFailedResult()
     {
         // Act
@@ -169,7 +168,7 @@ public class ResultOperatorsTests
     }
 
 
-    [Fact]
+    [Test]
     public void CollectionResult_SucceedFromArray_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -186,7 +185,7 @@ public class ResultOperatorsTests
         result.TotalItems.ShouldBe(items.Length);
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_ImplicitOperator_ToBool_ShouldReturnIsSuccess()
     {
         // Arrange
@@ -198,7 +197,7 @@ public class ResultOperatorsTests
         ((bool)failResult).ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_ImplicitOperator_FromException_ShouldCreateFailedResult()
     {
         // Arrange
@@ -214,7 +213,7 @@ public class ResultOperatorsTests
         result.Problem!.Detail.ShouldBe("Collection error");
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_ImplicitOperator_FromProblem_ShouldCreateFailedResult()
     {
         // Arrange
@@ -229,7 +228,7 @@ public class ResultOperatorsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Fail_WithEnum_ShouldCreateFailedResultWithErrorCode()
     {
         // Act
@@ -244,7 +243,7 @@ public class ResultOperatorsTests
         result.Problem.Detail.ShouldBe("Resource is locked");
     }
 
-    [Fact]
+    [Test]
     public void CollectionResult_Fail_WithEnum_ShouldCreateFailedResultWithErrorCode()
     {
         // Act

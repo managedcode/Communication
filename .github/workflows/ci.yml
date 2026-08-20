@@ -30,7 +30,14 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+      run: >-
+        dotnet test --solution ManagedCode.Communication.slnx
+        --configuration Release
+        --no-build
+        --coverage
+        --coverage-output coverage.cobertura.xml
+        --coverage-output-format cobertura
+        --output Normal
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7

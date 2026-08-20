@@ -1,7 +1,6 @@
 using System.Text.Json;
-using Shouldly;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Serialization;
 
@@ -13,7 +12,7 @@ public class ProblemJsonConverterTests
         WriteIndented = true
     };
 
-    [Fact]
+    [Test]
     public void Serialize_BasicProblem_ProducesCorrectJson()
     {
         // Arrange
@@ -29,7 +28,7 @@ public class ProblemJsonConverterTests
         json.ShouldContain("\"detail\": \"Field is required\"");
     }
 
-    [Fact]
+    [Test]
     public void Deserialize_BasicProblem_RestoresCorrectObject()
     {
         // Arrange
@@ -55,7 +54,7 @@ public class ProblemJsonConverterTests
         problem.Instance.ShouldBe("/api/test");
     }
 
-    [Fact]
+    [Test]
     public void SerializeDeserialize_WithExtensions_PreservesData()
     {
         // Arrange
@@ -74,14 +73,14 @@ public class ProblemJsonConverterTests
         deserializedProblem.Title.ShouldBe(originalProblem.Title);
         deserializedProblem.StatusCode.ShouldBe(originalProblem.StatusCode);
         deserializedProblem.Detail.ShouldBe(originalProblem.Detail);
-        
+
         deserializedProblem.Extensions.ShouldHaveCount(3);
         deserializedProblem.Extensions.ShouldContainKey("errorCode");
         deserializedProblem.Extensions.ShouldContainKey("timestamp");
         deserializedProblem.Extensions.ShouldContainKey("userId");
     }
 
-    [Fact]
+    [Test]
     public void Serialize_ProblemWithErrorCode_IncludesErrorCode()
     {
         // Arrange
@@ -95,7 +94,7 @@ public class ProblemJsonConverterTests
         json.ShouldContain("\"status\": 400");
     }
 
-    [Fact]
+    [Test]
     public void Deserialize_ProblemWithErrorCode_RestoresErrorCode()
     {
         // Arrange
@@ -119,7 +118,7 @@ public class ProblemJsonConverterTests
         problem.Title.ShouldBe("Invalid Input");
     }
 
-    [Fact]
+    [Test]
     public void Serialize_ValidationProblem_IncludesValidationErrors()
     {
         // Arrange
@@ -140,7 +139,7 @@ public class ProblemJsonConverterTests
         json.ShouldContain("Password must be at least 8 characters");
     }
 
-    [Fact]
+    [Test]
     public void SerializeDeserialize_RoundTrip_PreservesBasicProperties()
     {
         // Arrange
@@ -168,10 +167,10 @@ public class ProblemJsonConverterTests
         roundTripProblem.Extensions.ShouldContainKey("custom");
     }
 
-    [Theory]
-    [InlineData(null, "about:blank")]
-    [InlineData("", "")]
-    [InlineData("custom-type", "custom-type")]
+    [Test]
+    [Arguments(null, "about:blank")]
+    [Arguments("", "")]
+    [Arguments("custom-type", "custom-type")]
     public void Serialize_DifferentTypeValues_HandlesCorrectly(string? inputType, string expectedType)
     {
         // Arrange

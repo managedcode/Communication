@@ -1,13 +1,12 @@
 using System;
 using ManagedCode.Communication.Commands;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
 public class PaginationCommandTests
 {
-    [Fact]
+    [Test]
     public void Create_WithSkipAndTake_ShouldPopulateProperties()
     {
         var command = PaginationCommand.Create(10, 5);
@@ -28,7 +27,7 @@ public class PaginationCommandTests
             .ShouldBe(10);
     }
 
-    [Fact]
+    [Test]
     public void Create_WithCommandId_ShouldRespectIdentifier()
     {
         var id = Guid.NewGuid();
@@ -43,7 +42,7 @@ public class PaginationCommandTests
             .ShouldBe(6);
     }
 
-    [Fact]
+    [Test]
     public void Create_WithoutTake_ShouldUseDefaultPageSize()
     {
         var command = PaginationCommand.Create(skip: 0, take: 0);
@@ -54,7 +53,7 @@ public class PaginationCommandTests
             .ShouldBe(PaginationOptions.Default.DefaultPageSize);
     }
 
-    [Fact]
+    [Test]
     public void Create_WithOptions_ShouldApplyMaxPageSize()
     {
         var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 30, minPageSize: 10);
@@ -69,7 +68,7 @@ public class PaginationCommandTests
             .ShouldBe("Pagination");
     }
 
-    [Fact]
+    [Test]
     public void From_ShouldReuseCreateLogic()
     {
         var command = PaginationCommand.From(5, 0);
@@ -80,19 +79,19 @@ public class PaginationCommandTests
             .ShouldBe(5);
     }
 
-    [Fact]
+    [Test]
     public void Create_WithNegativeSkip_ShouldThrow()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => PaginationCommand.Create(-1, 10));
     }
 
-    [Fact]
+    [Test]
     public void Create_WithNegativeTake_ShouldThrow()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => PaginationCommand.Create(0, -1));
     }
 
-    [Fact]
+    [Test]
     public void FromPage_WithValidParameters_ShouldCalculateSkipAndTake()
     {
         var command = PaginationCommand.FromPage(3, 20);
@@ -107,7 +106,7 @@ public class PaginationCommandTests
             .ShouldBe(20);
     }
 
-    [Fact]
+    [Test]
     public void PaginationRequest_FromPage_InvalidInput_ShouldThrow()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => PaginationRequest.FromPage(0, 10));

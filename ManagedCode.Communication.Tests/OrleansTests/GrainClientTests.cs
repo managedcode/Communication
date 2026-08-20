@@ -5,24 +5,22 @@ using ManagedCode.Communication.Tests.Common.TestApp;
 using ManagedCode.Communication.Tests.Common.TestApp.Grains;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace ManagedCode.Communication.Tests.OrleansTests;
 
-[Collection(nameof(TestClusterApplication))]
+[ClassDataSource<TestClusterApplication>(Shared = SharedType.Keyed, Key = nameof(TestClusterApplication))]
+[NotInParallel(nameof(TestClusterApplication))]
 public class GrainClientTests
 {
     private readonly TestClusterApplication _application;
-    private readonly ITestOutputHelper _outputHelper;
 
-    public GrainClientTests(ITestOutputHelper outputHelper, TestClusterApplication application)
+
+    public GrainClientTests(TestClusterApplication application)
     {
-        _outputHelper = outputHelper;
         _application = application;
     }
 
-    [Fact]
+    [Test]
     public async Task PlainTaskError()
     {
         var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
@@ -36,7 +34,7 @@ public class GrainClientTests
         exception.Message.ShouldContain("plain task error");
     }
 
-    [Fact]
+    [Test]
     public async Task PlainTaskIntError()
     {
         var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
@@ -50,7 +48,7 @@ public class GrainClientTests
         exception.Message.ShouldContain("plain task int error");
     }
 
-    [Fact]
+    [Test]
     public async Task IntResult()
     {
         var intResult = await _application.Cluster
@@ -63,7 +61,7 @@ public class GrainClientTests
             .ShouldBe(5);
     }
 
-    [Fact]
+    [Test]
     public async Task Result()
     {
         var intResult = await _application.Cluster
@@ -74,7 +72,7 @@ public class GrainClientTests
             .ShouldBe(true);
     }
 
-    [Fact]
+    [Test]
     public async Task IntResultError()
     {
         var intResult = await _application.Cluster
@@ -87,7 +85,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task IntResultInvalidOperationError()
     {
         var intResult = await _application.Cluster
@@ -100,7 +98,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task CollectionResultIntError()
     {
         var result = await _application.Cluster
@@ -114,7 +112,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task ResultError()
     {
         var intResult = await _application.Cluster
@@ -127,7 +125,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task PlainValueTaskIntError()
     {
         var exception = await Should.ThrowAsync<InvalidOperationException>(async () =>
@@ -141,7 +139,7 @@ public class GrainClientTests
         exception.Message.ShouldContain("plain valuetask int error");
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskResult()
     {
         var result = await _application.Cluster
@@ -152,7 +150,7 @@ public class GrainClientTests
             .ShouldBe(true);
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskResultString()
     {
         var result = await _application.Cluster
@@ -165,7 +163,7 @@ public class GrainClientTests
             .ShouldBe("test");
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskResultError()
     {
         var result = await _application.Cluster
@@ -178,7 +176,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskResultStringError()
     {
         var result = await _application.Cluster
@@ -191,7 +189,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskResultComplexObject()
     {
         var result = await _application.Cluster
@@ -224,7 +222,7 @@ public class GrainClientTests
             .ShouldBe(95.5);
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskResultComplexObjectError()
     {
         var result = await _application.Cluster
@@ -237,7 +235,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskCollectionResultStringError()
     {
         var result = await _application.Cluster
@@ -251,7 +249,7 @@ public class GrainClientTests
             .WithStatusCode((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task ValueTaskCollectionResultStringUnauthorizedError()
     {
         var result = await _application.Cluster

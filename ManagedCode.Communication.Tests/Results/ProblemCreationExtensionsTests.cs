@@ -1,14 +1,13 @@
 using System;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ProblemCreationExtensionsTests
 {
-    [Fact]
+    [Test]
     public void ToProblem_FromException_ShouldCreateProblemWithDefaultStatusCode()
     {
         // Arrange
@@ -26,7 +25,7 @@ public class ProblemCreationExtensionsTests
         problem.ErrorCode.ShouldBe("System.InvalidOperationException");
     }
 
-    [Fact]
+    [Test]
     public void ToProblem_FromException_WithCustomStatusCode_ShouldUseProvidedStatusCode()
     {
         // Arrange
@@ -40,7 +39,7 @@ public class ProblemCreationExtensionsTests
         problem.Type.ShouldBe("https://httpstatuses.io/400");
     }
 
-    [Fact]
+    [Test]
     public void ToProblem_FromException_WithHttpStatusCode_ShouldUseProvidedStatusCode()
     {
         // Arrange
@@ -56,7 +55,7 @@ public class ProblemCreationExtensionsTests
         problem.Detail.ShouldBe("Access denied");
     }
 
-    [Fact]
+    [Test]
     public void ToProblem_FromEnum_WithDefaultParameters_ShouldCreateProblem()
     {
         // Act
@@ -71,7 +70,7 @@ public class ProblemCreationExtensionsTests
         problem.ErrorCode.ShouldBe("InvalidInput");
     }
 
-    [Fact]
+    [Test]
     public void ToProblem_FromEnum_WithCustomDetail_ShouldUseProvidedDetail()
     {
         // Act
@@ -82,7 +81,7 @@ public class ProblemCreationExtensionsTests
         problem.Title.ShouldBe("ResourceLocked");
     }
 
-    [Fact]
+    [Test]
     public void ToProblem_FromEnum_WithCustomStatusCode_ShouldUseProvidedStatusCode()
     {
         // Act
@@ -94,7 +93,7 @@ public class ProblemCreationExtensionsTests
         problem.Detail.ShouldBe("Resource locked");
     }
 
-    [Fact]
+    [Test]
     public void ToProblem_FromEnum_WithHttpStatusCode_ShouldUseProvidedStatusCode()
     {
         // Act
@@ -107,7 +106,7 @@ public class ProblemCreationExtensionsTests
         problem.ErrorCode.ShouldBe("InvalidInput");
     }
 
-    [Fact]
+    [Test]
     public void ToException_FromProblem_ShouldCreateProblemException()
     {
         // Arrange
@@ -125,7 +124,7 @@ public class ProblemCreationExtensionsTests
         problemException.Detail.ShouldBe("Resource conflict detected");
     }
 
-    [Fact]
+    [Test]
     public void ToProblem_FromExceptionWithData_ShouldIncludeDataInExtensions()
     {
         // Arrange
@@ -143,7 +142,7 @@ public class ProblemCreationExtensionsTests
         problem.Extensions["exception.CorrelationId"].ShouldBe("abc-123");
     }
 
-    [Fact]
+    [Test]
     public void ToException_PreservesAllProblemDetails()
     {
         // Arrange

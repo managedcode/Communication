@@ -1,21 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Tests.Common.TestApp;
 using ManagedCode.Communication.Tests.Common.TestApp.Controllers;
 using Microsoft.AspNetCore.SignalR.Client;
-using Xunit;
-using Xunit.Abstractions;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.ControllerTests;
 
-[Collection(nameof(TestClusterApplication))]
-public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplication application)
+[ClassDataSource<TestClusterApplication>(Shared = SharedType.Keyed, Key = nameof(TestClusterApplication))]
+[NotInParallel(nameof(TestClusterApplication))]
+public class MiddlewareTests(TestClusterApplication application)
 {
-    private readonly ITestOutputHelper _outputHelper = outputHelper;
-
-    [Fact]
+    [Test]
     public async Task ValidationException()
     {
         var response = await application.CreateClient()
@@ -32,7 +29,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBe("ValidationException");
     }
 
-    [Fact]
+    [Test]
     public async Task InvalidDataException()
     {
         var response = await application.CreateClient()
@@ -49,7 +46,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBe("InvalidDataException");
     }
 
-    [Fact]
+    [Test]
     public async Task ValidationExceptionSginalR()
     {
         var connection = application.CreateSignalRClient(nameof(TestHub));
@@ -63,7 +60,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBe(5);
     }
 
-    [Fact]
+    [Test]
     public async Task InvalidDataExceptionSignalR()
     {
         var connection = application.CreateSignalRClient(nameof(TestHub));
@@ -79,7 +76,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBe("InvalidDataException");
     }
 
-    [Fact]
+    [Test]
     public async Task UnauthorizedAccess()
     {
         var response = await application.CreateClient()
@@ -92,7 +89,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
         content.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task UnauthorizedResult()
     {
         // Test endpoint that returns Result.FailUnauthorized()
@@ -113,7 +110,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBe("You need to log in to access this resource");
     }
 
-    [Fact]
+    [Test]
     public async Task ForbiddenResult()
     {
         // Test endpoint that returns Result.FailForbidden()
@@ -134,7 +131,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBe("You don't have permission to perform this action");
     }
 
-    [Fact]
+    [Test]
     public async Task NotFoundResult()
     {
         // Test endpoint that returns Result<string>.FailNotFound()
@@ -155,7 +152,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBe("User with ID 123 not found");
     }
 
-    [Fact]
+    [Test]
     public async Task SuccessResult()
     {
         // Test endpoint that returns Result.Succeed()
@@ -171,7 +168,7 @@ public class MiddlewareTests(ITestOutputHelper outputHelper, TestClusterApplicat
             .ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task FailResult()
     {
         // Test endpoint that returns Result.Fail()

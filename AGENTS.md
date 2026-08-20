@@ -10,6 +10,7 @@ If I tell you to remember something, you do the same, update
 
 ## Rules to follow
 always check all test are passed.
+- Use TUnit with Microsoft.Testing.Platform for all .NET tests; do not add or retain xUnit packages, attributes, fixtures, configuration, or documentation.
 - Prefer static interface members for result/command factories to centralize shared overloads and avoid duplication across result-like types.
 - Use `DateTime.UtcNow` (never `DateTimeOffset`) for all timestamps; we assume every stored time is in UTC.
 - For `MergeAll`/`CombineAll` scenarios with mixed failures, keep aggregated behavior and preserve original errors in `Problem.Extensions` (do not flatten everything into validation-only output).
@@ -41,15 +42,15 @@ The solution `ManagedCode.Communication.slnx` ties together the core library (`M
 ## Build, Test, and Development Commands
 - `dotnet restore ManagedCode.Communication.slnx` – restore all project dependencies.
 - `dotnet build -c Release ManagedCode.Communication.slnx` – compile every project with warnings treated as errors.
-- `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj` – run the xUnit suite; produces `*.trx` logs under `ManagedCode.Communication.Tests`.
-- `dotnet test ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj /p:CollectCoverage=true /p:CoverletOutputFormat=lcov` – refresh `coverage.info` via coverlet.
+- `dotnet test --project ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj` – run the complete TUnit suite on Microsoft.Testing.Platform.
+- `dotnet test --project ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj --coverage --coverage-output-format cobertura` – collect coverage through Microsoft.Testing.Platform.
 - `dotnet run -c Release --project ManagedCode.Communication.Benchmark` – execute benchmark scenarios before performance-sensitive changes.
 
 ## Coding Style & Naming Conventions
 Formatting is driven by the root `.editorconfig`: spaces only, 4-space indent for C#, CRLF endings for code, braces on new lines, and explicit types except when the type is obvious. The repo builds with C# 13, nullable reference types enabled, and analyzers elevated to errors—leave no compiler warnings behind. Stick to domain-centric names (e.g., `ResultExtensionsTests`) and prefer PascalCase for members and const fields per the configured naming rules.
 
 ## Testing Guidelines
-All automated tests use xUnit with Shouldly and Microsoft test hosts; follow the existing spec style (`MethodUnderTest_WithScenario_ShouldOutcome`). New fixtures belong in the matching feature folder and should assert both success and failure branches for Result types. Maintain the default coverage settings supplied by `coverlet.collector`; update snapshots or helper helpers under `TestHelpers` (including shared Shouldly extensions) when shared setup changes.
+All automated tests use TUnit with Shouldly on Microsoft.Testing.Platform; follow the existing spec style (`MethodUnderTest_WithScenario_ShouldOutcome`). New fixtures belong in the matching feature folder and should assert both success and failure branches for Result types. Use TUnit data sources and lifecycle hooks, collect coverage through `Microsoft.Testing.Extensions.CodeCoverage`, and update shared helpers under `TestHelpers` when shared setup changes.
 
 ## Commit & Pull Request Guidelines
 Commits in this repository stay short, imperative, and often reference the related issue or PR number (e.g., `Add FailBadRequest methods (#30)`). Mirror that tone, limit each commit to a coherent change, and include updates to docs or benchmarks when behavior shifts. Pull requests should summarize intent, list breaking changes, attach relevant `dotnet test` outputs or coverage deltas, and link tracked issues. Screenshots or sample payloads are welcome for HTTP-facing work.

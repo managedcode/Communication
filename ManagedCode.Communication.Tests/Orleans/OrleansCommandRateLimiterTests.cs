@@ -6,13 +6,12 @@ using ManagedCode.Orleans.RateLimiting.Core.Interfaces;
 using ManagedCode.Orleans.RateLimiting.Core.Models.Holders;
 using ManagedCode.Orleans.RateLimiting.Core.Models.Orchestration;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Orleans;
 
 public sealed class OrleansCommandRateLimiterTests
 {
-    [Fact]
+    [Test]
     public async Task AcquireAsync_MapsCommandContextAndUsesOrleansOrchestrator()
     {
         var orchestrator = new CapturingOrchestrator();

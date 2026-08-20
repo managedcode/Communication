@@ -4,10 +4,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Commands;
-using N = ManagedCode.Communication.CommunicationJsonNames;
 using ManagedCode.Communication.CQRS;
 using Shouldly;
-using Xunit;
+using N = ManagedCode.Communication.CommunicationJsonNames;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -36,7 +35,7 @@ public class ResultJsonInteropTests
     // The documented wire format
     // ---------------------------------------------------------------------------------------------------
 
-    [Fact]
+    [Test]
     public void TheDefaultWireFormatIsExactlyAsDocumented()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
@@ -51,7 +50,7 @@ public class ResultJsonInteropTests
             .ShouldContain($$"""{"{{N.IsSuccess}}":false,"{{N.Problem}}":{""");
     }
 
-    [Fact]
+    [Test]
     public void OptionsWithNoConfigurationAtAllStillProduceTheDocumentedNames()
     {
         // A plain `new JsonSerializerOptions()` leaves PropertyNamingPolicy null, which for ordinary types means
@@ -64,12 +63,12 @@ public class ResultJsonInteropTests
     // Naming policies
     // ---------------------------------------------------------------------------------------------------
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("camel")]
-    [InlineData("snake")]
-    [InlineData("kebab")]
-    [InlineData("upper_snake")]
+    [Test]
+    [Arguments(null)]
+    [Arguments("camel")]
+    [Arguments("snake")]
+    [Arguments("kebab")]
+    [Arguments("upper_snake")]
     public void TheEnvelopeIgnoresTheNamingPolicy(string? policyName)
     {
         // Every member of Result, Result<T> and CollectionResult<T> carries an explicit [JsonPropertyName],
@@ -83,7 +82,7 @@ public class ResultJsonInteropTests
         json.ShouldContain($"\"{N.Value}\":");
     }
 
-    [Fact]
+    [Test]
     public void ThePayloadStillFollowsThePolicy()
     {
         var json = JsonSerializer.Serialize(
@@ -93,7 +92,7 @@ public class ResultJsonInteropTests
         json.ShouldBe($$$"""{"{{{N.IsSuccess}}}":true,"{{{N.Value}}}":{"user_name":"bob"}}""");
     }
 
-    [Fact]
+    [Test]
     public void TheEnvelopeMatchesCollectionResultWhichHasNoConverter()
     {
         // CollectionResult<T> goes through the reflection path. If the converters applied a policy and it could
@@ -105,12 +104,12 @@ public class ResultJsonInteropTests
             .ShouldContain($"\"{N.IsSuccess}\":");
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("camel")]
-    [InlineData("snake")]
-    [InlineData("kebab")]
-    [InlineData("upper_snake")]
+    [Test]
+    [Arguments(null)]
+    [Arguments("camel")]
+    [Arguments("snake")]
+    [Arguments("kebab")]
+    [Arguments("upper_snake")]
     public void EveryPolicyRoundTrips(string? policyName)
     {
         var options = With(Policy(policyName));
@@ -128,7 +127,7 @@ public class ResultJsonInteropTests
         failure.Problem!.StatusCode.ShouldBe(409);
     }
 
-    [Fact]
+    [Test]
     public void ADocumentIsReadableWhateverCasingItsProducerChose()
     {
         // Reading is deliberately more permissive than writing: a payload may come from an older version, a
@@ -171,7 +170,7 @@ public class ResultJsonInteropTests
         }
     }
 
-    [Fact]
+    [Test]
     public void AConverterRegisteredInTheOptionsReplacesOurs()
     {
         // System.Text.Json ranks Options.Converters above a [JsonConverter] attribute on the type, so an
@@ -187,7 +186,7 @@ public class ResultJsonInteropTests
             .ShouldBe($$"""{"{{N.IsSuccess}}":true,"{{N.Value}}":"x"}""");
     }
 
-    [Fact]
+    [Test]
     public void AConverterForThePayloadTypeIsHonoured()
     {
         var options = new JsonSerializerOptions();
@@ -217,7 +216,7 @@ public class ResultJsonInteropTests
     // Other options that applications actually set
     // ---------------------------------------------------------------------------------------------------
 
-    [Fact]
+    [Test]
     public void IndentingAndRelaxedEscapingDoNotBreakTheConverters()
     {
         var options = new JsonSerializerOptions
@@ -233,7 +232,7 @@ public class ResultJsonInteropTests
         JsonSerializer.Deserialize<Result<string>>(json, options).Value.ShouldBe("naïve & bold");
     }
 
-    [Fact]
+    [Test]
     public void IgnoringNullsDoesNotRemoveTheEnvelope()
     {
         var options = new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -243,7 +242,7 @@ public class ResultJsonInteropTests
             JsonSerializer.Serialize(Result<int>.Succeed(0), options), options).Value.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void CaseInsensitivityBeingOffDoesNotBreakReading()
     {
         // The converters match member names themselves, so PropertyNameCaseInsensitive does not govern them.
@@ -252,7 +251,7 @@ public class ResultJsonInteropTests
         JsonSerializer.Deserialize<Result<int>>("""{"IsSuccess":true,"Value":7}""", strict).Value.ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public void MembersTheConvertersDoNotKnowAreSkippedWhateverTheirShape()
     {
         var json = """
@@ -266,7 +265,7 @@ public class ResultJsonInteropTests
     // The neighbouring types
     // ---------------------------------------------------------------------------------------------------
 
-    [Fact]
+    [Test]
     public void CollectionResultRoundTripsUnderANonDefaultPolicy()
     {
         // It has no converter of its own, so it goes through the reflection path — and still emits fixed member
@@ -283,7 +282,7 @@ public class ResultJsonInteropTests
         read.TotalItems.ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public void AStreamChunkRoundTripsUnderANonDefaultPolicy()
     {
         var options = With(JsonNamingPolicy.SnakeCaseLower);
@@ -299,7 +298,7 @@ public class ResultJsonInteropTests
         progress.UserName.ShouldBe("bob");
     }
 
-    [Fact]
+    [Test]
     public void ResultsNestedInsideAnotherObjectAreUnaffectedByTheOuterShape()
     {
         var options = With(JsonNamingPolicy.SnakeCaseLower);
@@ -320,10 +319,10 @@ public class ResultJsonInteropTests
     // The wire format must not depend on how either end is configured
     // ---------------------------------------------------------------------------------------------------
 
-    public static TheoryData<string> WireValues() => new()
-    {
+    public static string[] WireValues() =>
+    [
         "result", "resultT", "resultFailed", "collection", "problem", "chunk", "chunkFailed", "pagination"
-    };
+    ];
 
     private static object Sample(string key) => key switch
     {
@@ -337,8 +336,8 @@ public class ResultJsonInteropTests
         _ => new PaginationRequest(10, 25)
     };
 
-    [Theory]
-    [MemberData(nameof(WireValues))]
+    [Test]
+    [MethodDataSource(nameof(WireValues))]
     public void TheEnvelopeMemberNamesAreIdenticalUnderEveryNamingPolicy(string key)
     {
         // A member without an explicit [JsonPropertyName] silently follows the policy. Two services configured
@@ -368,7 +367,7 @@ public class ResultJsonInteropTests
         return names;
     }
 
-    [Fact]
+    [Test]
     public void AChunkWrittenByOneServiceIsReadByAnotherWhateverItsPolicy()
     {
         var chunk = CqrsStreamChunk<Payload, Payload>.Failed(Problem.Create("boom", "d", 500), "broke");
@@ -386,7 +385,7 @@ public class ResultJsonInteropTests
         }
     }
 
-    [Fact]
+    [Test]
     public void PaginationCarriesOnlyWhatCanBeReadBack()
     {
         // PageNumber, PageSize, Offset, Limit and HasExplicitPageSize are computed from Skip and Take and have

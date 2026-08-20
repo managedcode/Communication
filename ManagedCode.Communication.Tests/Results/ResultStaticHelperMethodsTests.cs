@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.Constants;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -12,7 +11,7 @@ public class ResultStaticHelperMethodsTests
 {
     #region Fail<T> Helper Methods
 
-    [Fact]
+    [Test]
     public void Result_FailT_NoParameters_ShouldCreateFailedResultT()
     {
         // Act
@@ -25,7 +24,7 @@ public class ResultStaticHelperMethodsTests
         result.HasProblem.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Result_FailT_WithMessage_ShouldCreateFailedResultTWithProblem()
     {
         // Arrange
@@ -43,7 +42,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void Result_FailT_WithProblem_ShouldCreateFailedResultTWithProblem()
     {
         // Arrange
@@ -59,7 +58,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_FailT_WithEnum_ShouldCreateFailedResultTWithErrorCode()
     {
         // Act
@@ -72,7 +71,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_FailT_WithEnumAndDetail_ShouldCreateFailedResultTWithErrorCodeAndDetail()
     {
         // Arrange
@@ -88,7 +87,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void Result_FailT_WithException_ShouldCreateFailedResultTWithException()
     {
         // Arrange
@@ -110,7 +109,7 @@ public class ResultStaticHelperMethodsTests
 
     #region FailValidation<T> Helper Methods
 
-    [Fact]
+    [Test]
     public void Result_FailValidationT_WithSingleError_ShouldCreateValidationFailedResultT()
     {
         // Act
@@ -126,7 +125,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_FailValidationT_WithMultipleErrors_ShouldCreateValidationFailedResultTWithAllErrors()
     {
         // Act
@@ -151,7 +150,7 @@ public class ResultStaticHelperMethodsTests
 
     #region FailUnauthorized<T> Helper Methods
 
-    [Fact]
+    [Test]
     public void Result_FailUnauthorizedT_NoParameters_ShouldCreateUnauthorizedResultT()
     {
         // Act
@@ -166,7 +165,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void Result_FailUnauthorizedT_WithDetail_ShouldCreateUnauthorizedResultTWithCustomDetail()
     {
         // Arrange
@@ -187,7 +186,7 @@ public class ResultStaticHelperMethodsTests
 
     #region FailForbidden<T> Helper Methods
 
-    [Fact]
+    [Test]
     public void Result_FailForbiddenT_NoParameters_ShouldCreateForbiddenResultT()
     {
         // Act
@@ -202,7 +201,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_FailForbiddenT_WithDetail_ShouldCreateForbiddenResultTWithCustomDetail()
     {
         // Arrange
@@ -223,7 +222,7 @@ public class ResultStaticHelperMethodsTests
 
     #region FailNotFound<T> Helper Methods
 
-    [Fact]
+    [Test]
     public void Result_FailNotFoundT_NoParameters_ShouldCreateNotFoundResultT()
     {
         // Act
@@ -238,7 +237,7 @@ public class ResultStaticHelperMethodsTests
         result.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_FailNotFoundT_WithDetail_ShouldCreateNotFoundResultTWithCustomDetail()
     {
         // Arrange
@@ -259,7 +258,7 @@ public class ResultStaticHelperMethodsTests
 
     #region Complex Type Tests
 
-    [Fact]
+    [Test]
     public void Result_StaticHelpers_WithComplexTypes_ShouldWorkCorrectly()
     {
         // Act
@@ -282,7 +281,7 @@ public class ResultStaticHelperMethodsTests
         result4.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Result_StaticHelpers_ChainedCalls_ShouldMaintainFailureState()
     {
         // Act

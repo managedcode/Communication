@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using ManagedCode.Communication.CQRS;
 using ManagedCode.Communication.AspNetCore;
 using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -20,7 +19,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 /// </summary>
 public class CqrsSseWireFormatTests
 {
-    [Fact]
+    [Test]
     public async Task EachChunkBecomesAFrameWithItsKindAsTheEventName()
     {
         await using var app = await StartAsync("/wire/completed", () => CqrsTestStreams.CompletedAsync());
@@ -38,7 +37,7 @@ public class CqrsSseWireFormatTests
         ]);
     }
 
-    [Fact]
+    [Test]
     public async Task SequenceNumbersSuppliedByTheHandlerAreWrittenAsTheEventId()
     {
         await using var app = await StartAsync("/wire/completed", () => CqrsTestStreams.CompletedAsync());
@@ -49,7 +48,7 @@ public class CqrsSseWireFormatTests
         frames.Select(frame => frame.Id).ShouldBe(["1", "2", "3"]);
     }
 
-    [Fact]
+    [Test]
     public async Task SequenceNumbersAreAssignedAndWrittenEvenWhenTheHandlerOmitsThem()
     {
         await using var app = await StartAsync("/wire/no-sequences", () => CqrsTestStreams.CompletedWithoutSequencesAsync());
@@ -62,7 +61,7 @@ public class CqrsSseWireFormatTests
         frames.Select(frame => frame.DeserializeChunk().Sequence).ShouldBe([1L, 2L, 3L]);
     }
 
-    [Fact]
+    [Test]
     public async Task SequenceAssignmentCanBeTurnedOff()
     {
         await using var app = await StartAsync(
@@ -78,7 +77,7 @@ public class CqrsSseWireFormatTests
         frames.ShouldAllBe(frame => frame.DeserializeChunk().Sequence == null);
     }
 
-    [Fact]
+    [Test]
     public async Task ACustomEventIdWinsOverTheSequenceNumber()
     {
         await using var app = await StartAsync("/wire/custom-id", () => Single(
@@ -92,7 +91,7 @@ public class CqrsSseWireFormatTests
         frames[0].Id.ShouldBe("evt-custom");
     }
 
-    [Fact]
+    [Test]
     public async Task ACustomEventTypeIsWrittenAsTheEventName()
     {
         await using var app = await StartAsync("/wire/custom-event", () => Single(
@@ -105,7 +104,7 @@ public class CqrsSseWireFormatTests
         frames[0].EventType.ShouldBe("order-placed");
     }
 
-    [Fact]
+    [Test]
     public async Task TheDataFieldCarriesTheWholeChunkAsJson()
     {
         await using var app = await StartAsync("/wire/completed", () => CqrsTestStreams.CompletedAsync());
@@ -123,7 +122,7 @@ public class CqrsSseWireFormatTests
         frames[^1].Data.ShouldContain("\"kind\":\"Completed\"");
     }
 
-    [Fact]
+    [Test]
     public async Task ASynthesizedTerminalChunkIsAlsoWrittenAsARealFrame()
     {
         await using var app = await StartAsync("/wire/no-terminal", () => CqrsTestStreams.WithoutTerminalChunkAsync());

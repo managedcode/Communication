@@ -5,7 +5,6 @@ using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Results;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -47,7 +46,7 @@ public class ResultFactoryInterfaceDefaultsTests
         Domain = 9999
     }
 
-    [Fact]
+    [Test]
     public void IResultFactory_Result_FailDefaults_ShouldCreateFailedResults()
     {
         ResultFactory<Result>.Fail().IsFailed.ShouldBeTrue();
@@ -56,7 +55,7 @@ public class ResultFactoryInterfaceDefaultsTests
         ResultFactory<Result>.Fail("title", "detail", HttpStatusCode.BadRequest).Problem!.StatusCode.ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public void IResultFactory_Result_FailExceptionDefaults_ShouldMapExceptionsToProblems()
     {
         var failFromException = ResultFactory<Result>.Fail(new InvalidOperationException("boom"));
@@ -67,7 +66,7 @@ public class ResultFactoryInterfaceDefaultsTests
         failFromExceptionWithStatus.Problem!.StatusCode.ShouldBe(403);
     }
 
-    [Fact]
+    [Test]
     public void IResultFactory_Result_FailEnumDefaults_ShouldConvertErrorCodes()
     {
         ResultFactory<Result>.Fail(TestError.Bad).Problem!.StatusCode.ShouldBe(400);
@@ -76,7 +75,7 @@ public class ResultFactoryInterfaceDefaultsTests
         ResultFactory<Result>.Fail(TestError.Domain, "custom", HttpStatusCode.BadGateway).Problem!.StatusCode.ShouldBe(502);
     }
 
-    [Fact]
+    [Test]
     public void IResultFactory_Result_FailHttpShortcuts_ShouldMapStatusCodes()
     {
         ResultFactory<Result>.FailBadRequest("bad request").Problem!.StatusCode.ShouldBe(400);
@@ -85,7 +84,7 @@ public class ResultFactoryInterfaceDefaultsTests
         ResultFactory<Result>.FailNotFound("missing").Problem!.StatusCode.ShouldBe(404);
     }
 
-    [Fact]
+    [Test]
     public void IResultFactory_Result_FailValidation_InvalidFactories_ShouldSetValidationProblem()
     {
         var invalidDefault = ResultFactory<Result>.Invalid();

@@ -14,13 +14,12 @@ using Microsoft.Extensions.Logging;
 using Orleans.Hosting;
 using Orleans.TestingHost;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Orleans.Filters;
 
 public sealed class OrleansCommunicationFilterLoggingTests
 {
-    [Fact]
+    [Test]
     public async Task IncomingFilter_ShouldLogOriginalExceptionBeforeReturningFailedResult()
     {
         var cluster = DeployCluster<CommunicationSiloConfigurator>();
@@ -48,7 +47,7 @@ public sealed class OrleansCommunicationFilterLoggingTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task OutgoingFilter_ShouldLogOriginalExceptionBeforeReturningFailedResult()
     {
         var cluster = DeployCluster<LoggingOnlySiloConfigurator>();

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Extensions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -22,7 +21,7 @@ public class RailwayAsyncChainTests
     private static Task<Result<int>> FailAsync(string title = "boom") =>
         Task.FromResult(Result<int>.Fail(Problem.Create(title, "detail", 500)));
 
-    [Fact]
+    [Test]
     public async Task AFullyAsyncHappyPathChainsWithoutBreaking()
     {
         var log = new List<string>();
@@ -39,7 +38,7 @@ public class RailwayAsyncChainTests
         log.ShouldBe(["tapped 6", "did 6"]);
     }
 
-    [Fact]
+    [Test]
     public async Task AFailureShortCircuitsEveryLaterStep()
     {
         var ran = false;
@@ -55,7 +54,7 @@ public class RailwayAsyncChainTests
         ran.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task EnsureAsyncFailsTheChainOnAFailingPredicate()
     {
         var result = await StartAsync(-1)
@@ -65,7 +64,7 @@ public class RailwayAsyncChainTests
         result.Problem!.Title.ShouldBe("non_positive");
     }
 
-    [Fact]
+    [Test]
     public async Task EnsureAsyncSupportsAnAsynchronousPredicate()
     {
         var result = await StartAsync(5)
@@ -79,7 +78,7 @@ public class RailwayAsyncChainTests
         result.Problem!.Title.ShouldBe("too_small");
     }
 
-    [Fact]
+    [Test]
     public async Task CompensateAsyncRecoversFromAFailure()
     {
         var result = await FailAsync()
@@ -93,14 +92,14 @@ public class RailwayAsyncChainTests
         result.Value.ShouldBe(99);
     }
 
-    [Fact]
+    [Test]
     public async Task CompensateWithAsyncSubstitutesADefault()
     {
         (await FailAsync().CompensateWithAsync(7)).Value.ShouldBe(7);
         (await StartAsync(1).CompensateWithAsync(7)).Value.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task ElseAsyncSubstitutesAnAlternative()
     {
         var result = await FailAsync().ElseAsync(() => Task.FromResult(Result<int>.Succeed(42)));
@@ -108,7 +107,7 @@ public class RailwayAsyncChainTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public async Task FinallyAsyncRunsOnBothBranches()
     {
         var seen = new List<bool>();
@@ -119,7 +118,7 @@ public class RailwayAsyncChainTests
         seen.ShouldBe([true, false]);
     }
 
-    [Fact]
+    [Test]
     public async Task MatchAsyncLeavesTheRailway()
     {
         var success = await StartAsync(3).MatchAsync(value => $"ok:{value}", problem => $"err:{problem.Title}");
@@ -129,7 +128,7 @@ public class RailwayAsyncChainTests
         failure.ShouldBe("err:boom");
     }
 
-    [Fact]
+    [Test]
     public async Task MatchAsyncSupportsAsynchronousHandlers()
     {
         var value = await StartAsync(3).MatchAsync(
@@ -139,7 +138,7 @@ public class RailwayAsyncChainTests
         value.ShouldBe("ok:3");
     }
 
-    [Fact]
+    [Test]
     public async Task ANonGenericResultChainsAsynchronouslyToo()
     {
         var log = new List<string>();
@@ -153,7 +152,7 @@ public class RailwayAsyncChainTests
         log.ShouldBe(["tapped", "finally"]);
     }
 
-    [Fact]
+    [Test]
     public async Task ANonGenericResultCanBindIntoATypedOne()
     {
         var result = await Task.FromResult(Result.Succeed())
@@ -162,7 +161,7 @@ public class RailwayAsyncChainTests
         result.Value.ShouldBe(5);
     }
 
-    [Fact]
+    [Test]
     public async Task ATypedResultCanBindIntoANonGenericOne()
     {
         var result = await StartAsync(5).BindAsync(value =>
@@ -174,7 +173,7 @@ public class RailwayAsyncChainTests
         result.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task ANonGenericFailurePropagatesThroughTheChain()
     {
         var ran = false;
@@ -188,7 +187,7 @@ public class RailwayAsyncChainTests
         ran.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task ASynchronousResultStartsAnAsyncChain()
     {
         var log = new List<string>();
@@ -201,7 +200,7 @@ public class RailwayAsyncChainTests
         log.ShouldBe(["tapped 4"]);
     }
 
-    [Fact]
+    [Test]
     public async Task MatchAsyncWorksOnASynchronousResult()
     {
         var value = await Result<int>.Succeed(1).MatchAsync(

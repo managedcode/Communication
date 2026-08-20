@@ -8,13 +8,12 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Filters;
 
 public class CommunicationModelValidationFilterTests
 {
-    [Fact]
+    [Test]
     public void OnActionExecuting_WithInvalidModelState_ReturnsBadRequestResult()
     {
         var actionDescriptor = new ActionDescriptor
@@ -43,7 +42,7 @@ public class CommunicationModelValidationFilterTests
         failed.Problem!.StatusCode.ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public void OnActionExecuting_WithValidModelState_LeavesResultNull()
     {
         var actionDescriptor = new ActionDescriptor
@@ -66,7 +65,7 @@ public class CommunicationModelValidationFilterTests
         context.Result.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void OnActionExecuted_DoesNothing()
     {
         var actionDescriptor = new ActionDescriptor

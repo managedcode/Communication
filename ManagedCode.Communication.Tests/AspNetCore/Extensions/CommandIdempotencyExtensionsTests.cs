@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Commands.Extensions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class CommandIdempotencyExtensionsTests
 {
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_ReturnsCompletedResultWithoutExecuting()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -34,7 +33,7 @@ public class CommandIdempotencyExtensionsTests
         store.SetCommandResultCalls.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_ExecutesWhenNotFoundAndPersistsResult()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -56,7 +55,7 @@ public class CommandIdempotencyExtensionsTests
         ((string?)store.GetResult("cmd-run")).ShouldBe("executed");
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenExecutionFails_MarksFailedAndRethrows()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -73,7 +72,7 @@ public class CommandIdempotencyExtensionsTests
         store.GetStatus("cmd-fail").ShouldBe(CommandExecutionStatus.Failed);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenInProgressWaitsUntilCompleted()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -93,7 +92,7 @@ public class CommandIdempotencyExtensionsTests
         store.GetCommandResultCalls.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentWithRetryAsync_RetriesAfterFailureAndReturnsResult()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -121,7 +120,7 @@ public class CommandIdempotencyExtensionsTests
         store.GetStatus("cmd-retry").ShouldBe(CommandExecutionStatus.Completed);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteBatchIdempotentAsync_ReturnsCachedResultsAndExecutesPending()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -145,7 +144,7 @@ public class CommandIdempotencyExtensionsTests
         store.GetCommandResultCalls.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public async Task TryGetCachedResultAsync_WhenCompleted_ReturnsValue()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -160,7 +159,7 @@ public class CommandIdempotencyExtensionsTests
         result.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task TryGetCachedResultAsync_WhenNotCompleted_ReturnsEmpty()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -173,7 +172,7 @@ public class CommandIdempotencyExtensionsTests
         result.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteWithTimeoutAsync_ReturnsResultWhenWithinTimeout()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -191,7 +190,7 @@ public class CommandIdempotencyExtensionsTests
         result.ShouldBe("quick");
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteBatchIdempotentAsync_AllCompletedResults_DoNotExecutePendingOperations()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -226,7 +225,7 @@ public class CommandIdempotencyExtensionsTests
         store.SetCommandResultCalls.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenWaitForCompletionHitsFailed_Throws()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -239,7 +238,7 @@ public class CommandIdempotencyExtensionsTests
                 () => Task.FromResult("should-not-run")));
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentAsync_WhenWaitForCompletionHitsNotFound_Throws()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -252,7 +251,7 @@ public class CommandIdempotencyExtensionsTests
                 () => Task.FromResult("should-not-run")));
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentWithRetryAsync_WhenMaxRetriesExceeded_ThrowsLastException()
     {
         var store = new TestCommandIdempotencyStoreSimulator();
@@ -274,7 +273,7 @@ public class CommandIdempotencyExtensionsTests
         exception.Message.ShouldBe("attempt-2");
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteIdempotentWithRetryAsync_CancelledToken_StopsWithoutExecutingOperation()
     {
         var store = new TestCommandIdempotencyStoreSimulator();

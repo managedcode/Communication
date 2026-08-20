@@ -5,11 +5,12 @@ using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using Orleans;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
-public class PaginationSerializationTests : IClassFixture<OrleansClusterFixture>
+[ClassDataSource<OrleansClusterFixture>(Shared = SharedType.PerClass)]
+[NotInParallel(nameof(PaginationSerializationTests))]
+public class PaginationSerializationTests
 {
     private readonly IGrainFactory _grainFactory;
 
@@ -18,7 +19,7 @@ public class PaginationSerializationTests : IClassFixture<OrleansClusterFixture>
         _grainFactory = fixture.Cluster.GrainFactory;
     }
 
-    [Fact]
+    [Test]
     public async Task PaginationRequest_ShouldSerializeCorrectly()
     {
         // Arrange

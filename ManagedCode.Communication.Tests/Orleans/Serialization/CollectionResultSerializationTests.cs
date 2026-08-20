@@ -1,21 +1,22 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.Orleans.Models;
-using Orleans;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Orleans;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 
 /// <summary>
 /// Tests for CollectionResult serialization through Orleans grain calls
 /// </summary>
-public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFixture>
+[ClassDataSource<OrleansClusterFixture>(Shared = SharedType.PerClass)]
+[NotInParallel(nameof(CollectionResultSerializationTests))]
+public class CollectionResultSerializationTests
 {
     private readonly IGrainFactory _grainFactory;
 
@@ -24,19 +25,19 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         _grainFactory = fixture.Cluster.GrainFactory;
     }
 
-    [Fact]
+    [Test]
     public async Task CollectionResult_WithPagination_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var items = Enumerable.Range(1, 5).Select(i => new TestItem
         {
             Id = i,
             Name = $"Item {i}",
             Tags = new[] { $"tag{i}", "common" }
         }).ToArray();
-        
+
         var collectionResult = CollectionResult<TestItem>.Succeed(
             items,
             pageNumber: 2,
@@ -55,7 +56,7 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         echoed.PageSize.ShouldBe(5);
         echoed.TotalItems.ShouldBe(50);
         echoed.TotalPages.ShouldBe(10);
-        
+
         for (int i = 0; i < 5; i++)
         {
             echoed.Collection[i].Id.ShouldBe(i + 1);
@@ -66,12 +67,12 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         }
     }
 
-    [Fact]
+    [Test]
     public async Task CollectionResult_EmptyCollection_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var collectionResult = CollectionResult<TestItem>.Succeed(
             Array.Empty<TestItem>(),
             pageNumber: 1,
@@ -92,12 +93,12 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         echoed.TotalPages.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public async Task CollectionResult_WithProblem_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var problem = Problem.FromStatusCode(System.Net.HttpStatusCode.ServiceUnavailable, "Database connection failed");
         var collectionResult = CollectionResult<TestItem>.Fail(problem);
 
@@ -114,12 +115,12 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         echoed.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public async Task CollectionResult_WithComplexObjects_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var profiles = Enumerable.Range(1, 3).Select(i => new UserProfile
         {
             Id = Guid.NewGuid(),
@@ -132,7 +133,7 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
                 ["active"] = i % 2 == 0
             }
         }).ToList();
-        
+
         var collectionResult = CollectionResult<UserProfile>.Succeed(
             profiles,
             pageNumber: 1,
@@ -149,7 +150,7 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         echoed.Collection.ShouldHaveCount(3);
         echoed.TotalItems.ShouldBe(100);
         echoed.TotalPages.ShouldBe(34); // ceiling(100/3)
-        
+
         for (int i = 0; i < 3; i++)
         {
             echoed.Collection[i].Id.ShouldBe(profiles[i].Id);
@@ -162,19 +163,19 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         }
     }
 
-    [Fact]
+    [Test]
     public async Task CollectionResult_LargePagination_ShouldSerializeCorrectly()
     {
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        
+
         var items = Enumerable.Range(991, 10).Select(i => new TestItem
         {
             Id = i,
             Name = $"Item {i}",
             Tags = new[] { "large-dataset" }
         }).ToArray();
-        
+
         var collectionResult = CollectionResult<TestItem>.Succeed(
             items,
             pageNumber: 100,
@@ -195,7 +196,7 @@ public class CollectionResultSerializationTests : IClassFixture<OrleansClusterFi
         // Pagination properties
         (echoed.PageNumber < echoed.TotalPages).ShouldBeTrue(); // Has next page
         (echoed.PageNumber > 1).ShouldBeTrue(); // Has previous page
-        
+
         // Verify items start from 991
         echoed.Collection[0].Id.ShouldBe(991);
         echoed.Collection[9].Id.ShouldBe(1000);

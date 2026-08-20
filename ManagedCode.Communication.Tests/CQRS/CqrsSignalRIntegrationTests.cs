@@ -7,7 +7,6 @@ using ManagedCode.Communication.Tests.Common.TestApp;
 using ManagedCode.Communication.Tests.Common.TestApp.Controllers;
 using Microsoft.AspNetCore.SignalR.Client;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -20,11 +19,13 @@ namespace ManagedCode.Communication.Tests.CQRS;
 ///     applies itself. These tests pin that the guarantees survive the hub's own serializer and streaming
 ///     protocol, not just the HTTP path.
 /// </remarks>
-[Collection(nameof(TestClusterApplication))]
-public class CqrsSignalRIntegrationTests(TestClusterApplication application) : IAsyncLifetime
+[ClassDataSource<TestClusterApplication>(Shared = SharedType.Keyed, Key = nameof(TestClusterApplication))]
+[NotInParallel(nameof(TestClusterApplication))]
+public class CqrsSignalRIntegrationTests(TestClusterApplication application)
 {
     private HubConnection _connection = null!;
 
+    [Before(HookType.Test)]
     public async Task InitializeAsync()
     {
         _connection = application.CreateSignalRClient(nameof(TestHub));
@@ -32,12 +33,13 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         _connection.State.ShouldBe(HubConnectionState.Connected);
     }
 
+    [After(HookType.Test)]
     public async Task DisposeAsync()
     {
         await _connection.DisposeAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task AWellFormedStreamArrivesIntact()
     {
         var chunks = await StreamAsync("StreamCommand");
@@ -54,7 +56,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         report.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task SequenceNumbersAreAssignedOverSignalRToo()
     {
         var chunks = await StreamAsync("StreamCommand");
@@ -62,7 +64,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         chunks.Select(chunk => chunk.Sequence).ShouldBe([1L, 2L, 3L]);
     }
 
-    [Fact]
+    [Test]
     public async Task EventTypeSurvivesTheHubSerializer()
     {
         var chunks = await StreamAsync("StreamCommand");
@@ -71,7 +73,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         chunks[^1].EventType.ShouldBe(CqrsStreamChunk<HubProgress, HubReport>.CompletedEventType);
     }
 
-    [Fact]
+    [Test]
     public async Task AStreamWithoutATerminalChunkStillGetsOne()
     {
         var chunks = await StreamAsync("StreamWithoutTerminal");
@@ -82,7 +84,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         problem.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task AnExceptionMidStreamBecomesATerminalFailedChunk()
     {
         // Without normalization the hub would fault the stream and the client would see a HubException
@@ -96,7 +98,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         problem.Detail.ShouldBe("hub command exploded");
     }
 
-    [Fact]
+    [Test]
     public async Task ThePushStyleWriterWorksFromAHubMethod()
     {
         var chunks = await StreamAsync("StreamViaWriter");
@@ -108,7 +110,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         report.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task AnUnnormalizedHubStreamFaultsTheEnumerator()
     {
         // The baseline the client-side helper exists to fix: without normalization anywhere, a hub method that
@@ -122,7 +124,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         });
     }
 
-    [Fact]
+    [Test]
     public async Task TheClientCanRestoreTheContractWhenTheServerDoesNot()
     {
         var chunks = new List<CqrsStreamChunk<HubProgress, HubReport>>();
@@ -139,7 +141,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         problem.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task AClientSideStreamDrainsToAResultLikeTheHttpOne()
     {
         var seen = new List<string>();
@@ -155,7 +157,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         seen.ShouldBe(["started", "half"]);
     }
 
-    [Fact]
+    [Test]
     public async Task AFaultingHubStreamBecomesAFailedResultRatherThanAThrow()
     {
         // The hub method does not normalize and throws part-way through; without this the caller would catch a
@@ -168,7 +170,7 @@ public class CqrsSignalRIntegrationTests(TestClusterApplication application) : I
         result.Problem.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task AClientSideStreamThatNeverTerminatesFailsRatherThanStopsQuietly()
     {
         var result = await _connection

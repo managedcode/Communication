@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class RailwayOrientedProgrammingTests
 {
-    [Fact]
+    [Test]
     public void Map_ChainedOperations_ShouldWork()
     {
         // Arrange
@@ -27,7 +26,7 @@ public class RailwayOrientedProgrammingTests
             .ShouldBe("13");
     }
 
-    [Fact]
+    [Test]
     public void Map_WithFailure_ShouldShortCircuit()
     {
         // Arrange
@@ -45,7 +44,7 @@ public class RailwayOrientedProgrammingTests
             .ShouldBe("Initial failure");
     }
 
-    [Fact]
+    [Test]
     public void Bind_ChainedOperations_ShouldWork()
     {
         // Arrange
@@ -62,7 +61,7 @@ public class RailwayOrientedProgrammingTests
             .ShouldBe("10");
     }
 
-    [Fact]
+    [Test]
     public void Bind_WithFailure_ShouldShortCircuit()
     {
         // Arrange
@@ -79,7 +78,7 @@ public class RailwayOrientedProgrammingTests
             .ShouldBe("Bind failure");
     }
 
-    [Fact]
+    [Test]
     public void Tap_ShouldExecuteSideEffectWithoutChangingResult()
     {
         // Arrange
@@ -96,7 +95,7 @@ public class RailwayOrientedProgrammingTests
         sideEffectValue.ShouldBe(10); // Side effect executed
     }
 
-    [Fact]
+    [Test]
     public void Tap_WithFailure_ShouldNotExecuteSideEffect()
     {
         // Arrange
@@ -111,7 +110,7 @@ public class RailwayOrientedProgrammingTests
         sideEffectExecuted.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void Match_WithSuccess_ShouldExecuteSuccessFunction()
     {
         // Arrange
@@ -124,7 +123,7 @@ public class RailwayOrientedProgrammingTests
         output.ShouldBe("Success: 42");
     }
 
-    [Fact]
+    [Test]
     public void Match_WithFailure_ShouldExecuteFailureFunction()
     {
         // Arrange
@@ -137,7 +136,7 @@ public class RailwayOrientedProgrammingTests
         output.ShouldBe("Failed: Something went wrong");
     }
 
-    [Fact]
+    [Test]
     public void ComplexChain_ShouldWorkCorrectly()
     {
         // Arrange
@@ -168,7 +167,7 @@ public class RailwayOrientedProgrammingTests
         });
     }
 
-    [Fact]
+    [Test]
     public void ComplexChain_WithFailure_ShouldShortCircuit()
     {
         // Arrange
@@ -192,7 +191,7 @@ public class RailwayOrientedProgrammingTests
         log.ShouldBe(new[] { "Starting with: abc" }); // Only first tap executed
     }
 
-    [Fact]
+    [Test]
     public void Try_WithSuccessfulOperation_ShouldReturnSuccess()
     {
         // Act
@@ -205,7 +204,7 @@ public class RailwayOrientedProgrammingTests
             .ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void Try_WithFailingOperation_ShouldReturnFailure()
     {
         // Act
@@ -220,7 +219,7 @@ public class RailwayOrientedProgrammingTests
             .ShouldContain("not-a-number");
     }
 
-    [Fact]
+    [Test]
     public void ResultTry_WithSuccessfulAction_ShouldReturnSuccess()
     {
         // Arrange
@@ -235,7 +234,7 @@ public class RailwayOrientedProgrammingTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ResultTry_WithFailingAction_ShouldReturnFailure()
     {
         // Act

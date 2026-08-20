@@ -18,7 +18,7 @@ public static class ProblemDetailsBuilder
             Detail = detail
         };
     }
-    
+
     public static ProblemDetails Create(string type, string title, int status, string detail, string instance)
     {
         return new ProblemDetails
@@ -32,8 +32,8 @@ public static class ProblemDetailsBuilder
     }
 
     public static ProblemDetails CreateWithValidationErrors(
-        string title, 
-        string detail, 
+        string title,
+        string detail,
         int status,
         params (string field, string[] messages)[] errors)
     {
@@ -50,7 +50,7 @@ public static class ProblemDetailsBuilder
         {
             errorDict[field] = new List<string>(messages);
         }
-        
+
         problemDetails.Extensions["errors"] = errorDict;
         return problemDetails;
     }
@@ -64,7 +64,7 @@ public static class ProblemDetailsBuilder
             "Authentication is required to access this resource."
         );
     }
-    
+
     public static ProblemDetails CreateUnauthorized(string detail)
     {
         return Create(
@@ -84,7 +84,7 @@ public static class ProblemDetailsBuilder
             "You do not have permission to access this resource."
         );
     }
-    
+
     public static ProblemDetails CreateForbidden(string detail)
     {
         return Create(
@@ -104,7 +104,7 @@ public static class ProblemDetailsBuilder
             "The requested resource was not found."
         );
     }
-    
+
     public static ProblemDetails CreateNotFound(string detail)
     {
         return Create(

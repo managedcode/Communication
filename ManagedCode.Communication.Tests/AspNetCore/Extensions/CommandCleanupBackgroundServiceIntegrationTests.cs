@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
@@ -10,13 +10,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class CommandCleanupBackgroundServiceIntegrationTests
 {
-    [Fact]
+    [Test]
     public async Task CommandCleanupBackgroundService_PerformsCleanupAndHealthLogging()
     {
         var store = new TrackingCleanupStore();
@@ -38,7 +37,7 @@ public class CommandCleanupBackgroundServiceIntegrationTests
         await app.StopAsync();
     }
 
-    [Fact]
+    [Test]
     public async Task CommandCleanupBackgroundService_ContinuesAfterCleanupFailure()
     {
         var store = new TrackingCleanupStore(throwOnFirstCompletedCleanup: true);

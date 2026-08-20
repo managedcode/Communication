@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Extensions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -21,7 +20,7 @@ public class AsyncRailwaySyncDelegateTests
     private static Task<Result<int>> FailAsync() =>
         Task.FromResult(Result<int>.Fail(Problem.Create("boom", "detail", 409)));
 
-    [Fact]
+    [Test]
     public async Task AChainOfSynchronousStepsNeverBreaksTheAwait()
     {
         var seen = 0;
@@ -38,7 +37,7 @@ public class AsyncRailwaySyncDelegateTests
         seen.ShouldBe(11);
     }
 
-    [Fact]
+    [Test]
     public async Task MapRunsOnSuccessAndPropagatesFailureUntouched()
     {
         (await SucceedAsync(3).Map(v => v * 2)).Value.ShouldBe(6);
@@ -48,7 +47,7 @@ public class AsyncRailwaySyncDelegateTests
         failed.Problem!.StatusCode.ShouldBe(409);
     }
 
-    [Fact]
+    [Test]
     public async Task MapStillAcceptsAnAsynchronousMapper()
     {
         // The overload that takes Func<TIn, Task<TOut>> keeps its name; adding a synchronous Map must not make
@@ -56,7 +55,7 @@ public class AsyncRailwaySyncDelegateTests
         (await SucceedAsync(3).MapAsync(v => Task.FromResult(v * 2))).Value.ShouldBe(6);
     }
 
-    [Fact]
+    [Test]
     public async Task BindShortCircuitsOnFailure()
     {
         var ran = false;
@@ -71,7 +70,7 @@ public class AsyncRailwaySyncDelegateTests
         result.IsFailed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task TapAndDoRunOnlyOnSuccess()
     {
         var taps = 0;
@@ -84,7 +83,7 @@ public class AsyncRailwaySyncDelegateTests
         taps.ShouldBe(2);
     }
 
-    [Fact]
+    [Test]
     public async Task CompensateReceivesTheProblemAndMayItselfFail()
     {
         Problem? seen = null;
@@ -102,7 +101,7 @@ public class AsyncRailwaySyncDelegateTests
         stillFailing.IsFailed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task CompensateLeavesASuccessAlone()
     {
         var ran = false;
@@ -117,14 +116,14 @@ public class AsyncRailwaySyncDelegateTests
         result.Value.ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public async Task ElseSubstitutesOnlyForAFailure()
     {
         (await FailAsync().ElseAsync(() => Result<int>.Succeed(5))).Value.ShouldBe(5);
         (await SucceedAsync(7).ElseAsync(() => Result<int>.Succeed(5))).Value.ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public async Task FinallyRunsWhateverTheOutcome()
     {
         var calls = 0;
@@ -135,7 +134,7 @@ public class AsyncRailwaySyncDelegateTests
         calls.ShouldBe(2);
     }
 
-    [Fact]
+    [Test]
     public async Task ANullDelegateIsRejected()
     {
         await Should.ThrowAsync<ArgumentNullException>(() => SucceedAsync().Map<int, int>(null!));

@@ -11,27 +11,27 @@ public interface ITestCommandGrain : IGrainWithGuidKey
     /// Echo back the command to verify all fields are preserved
     /// </summary>
     Task<Command> EchoCommandAsync(Command command);
-    
+
     /// <summary>
     /// Echo back the typed command to verify all fields are preserved
     /// </summary>
     Task<Command<T>> EchoCommandAsync<T>(Command<T> command);
-    
+
     /// <summary>
     /// Test Result serialization
     /// </summary>
     Task<Result> EchoResultAsync(Result result);
-    
+
     /// <summary>
     /// Test Result with value serialization
     /// </summary>
     Task<Result<T>> EchoResultAsync<T>(Result<T> result);
-    
+
     /// <summary>
     /// Test CollectionResult serialization
     /// </summary>
     Task<CollectionResult<T>> EchoCollectionResultAsync<T>(CollectionResult<T> result);
-    
+
     /// <summary>
     /// Test Problem serialization
     /// </summary>

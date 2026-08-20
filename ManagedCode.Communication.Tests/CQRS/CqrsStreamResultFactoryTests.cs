@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using ManagedCode.Communication.CQRS;
 using ManagedCode.Communication.AspNetCore;
+using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Http;
-using AspNetResult = Microsoft.AspNetCore.Http.IResult;
 using Shouldly;
-using Xunit;
+using AspNetResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -18,14 +17,14 @@ public class CqrsStreamResultFactoryTests
 {
     private static readonly CqrsStreamServerOptions Options = CqrsStreamServerOptions.Default;
 
-    [Fact]
+    [Test]
     public void Convert_NullValue_IsNotAStream()
     {
         CqrsStreamResultFactory.TryCreateServerSentEventsResult(null, Options, out var converted).ShouldBeFalse();
         converted.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Convert_ChunkStream_ProducesAResult()
     {
         CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.CompletedAsync(), Options, out var converted)
@@ -34,7 +33,7 @@ public class CqrsStreamResultFactoryTests
         converted.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ExplicitHttpResult_NullStream_ThrowsArgumentNullException()
     {
         IAsyncEnumerable<Chunk> updates = null!;
@@ -42,7 +41,7 @@ public class CqrsStreamResultFactoryTests
         Should.Throw<ArgumentNullException>(() => CqrsStreamHttpResults.ServerSentEvents(updates));
     }
 
-    [Fact]
+    [Test]
     public void Convert_NonChunkAsyncEnumerable_IsNotAStream()
     {
         CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.NonChunkAsync(), Options, out var converted)
@@ -51,7 +50,7 @@ public class CqrsStreamResultFactoryTests
         converted.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Convert_PlainObject_IsNotAStream()
     {
         CqrsStreamResultFactory.TryCreateServerSentEventsResult(new FinalResult("plain"), Options, out var converted)
@@ -60,7 +59,7 @@ public class CqrsStreamResultFactoryTests
         converted.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Convert_ExistingResult_IsLeftAloneAndDoesNotFillTheOutParameter()
     {
         var existing = TypedResults.Ok("already-converted");
@@ -71,7 +70,7 @@ public class CqrsStreamResultFactoryTests
         converted.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Convert_TypeThatIsBothResultAndChunkStream_PrefersTheExistingResult()
     {
         CqrsStreamResultFactory
@@ -81,7 +80,7 @@ public class CqrsStreamResultFactoryTests
         converted.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Convert_TypeWithTwoChunkContracts_FailsLoudlyInsteadOfPickingOne()
     {
         var exception = Should.Throw<InvalidOperationException>(() =>
@@ -90,7 +89,7 @@ public class CqrsStreamResultFactoryTests
         exception.Message.ShouldContain("more than one CqrsStreamChunk contract");
     }
 
-    [Fact]
+    [Test]
     public void Convert_ActionResultFlavour_WrapsTheStream()
     {
         CqrsStreamResultFactory
@@ -100,7 +99,7 @@ public class CqrsStreamResultFactoryTests
         converted.ShouldBeOfType<CqrsServerSentEventsActionResult>();
     }
 
-    [Fact]
+    [Test]
     public void Convert_ActionResultFlavour_NonStreamIsNotConverted()
     {
         CqrsStreamResultFactory
@@ -110,14 +109,14 @@ public class CqrsStreamResultFactoryTests
         converted.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Convert_RejectsNullOptions()
     {
         Should.Throw<ArgumentNullException>(() =>
             CqrsStreamResultFactory.TryCreateServerSentEventsResult(CqrsTestStreams.CompletedAsync(), null!, out _));
     }
 
-    [Fact]
+    [Test]
     public void Convert_RepeatedCallsForTheSameTypeStayConsistent()
     {
         // The converter is cached per runtime type; a second call must behave exactly like the first.

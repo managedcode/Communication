@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.Json;
 using ManagedCode.Communication.Constants;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.ProblemTests;
 
@@ -18,7 +17,7 @@ public class ProblemRegressionTests
 
     // ---------- validation errors survive a round trip ----------
 
-    [Fact]
+    [Test]
     public void AddValidationError_KeepsErrorsThatArrivedOverTheWire()
     {
         var original = new Problem { Title = "Validation", StatusCode = 400 };
@@ -38,7 +37,7 @@ public class ProblemRegressionTests
         errors["phone"].ShouldBe(["invalid"]);
     }
 
-    [Fact]
+    [Test]
     public void GetValidationErrors_ReturnsTheSameInstanceOnRepeatedReads()
     {
         var original = new Problem();
@@ -53,7 +52,7 @@ public class ProblemRegressionTests
         ReferenceEquals(first, second).ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void InvalidFieldHelpers_WorkOnADeserializedProblem()
     {
         var original = new Problem();
@@ -69,7 +68,7 @@ public class ProblemRegressionTests
 
     // ---------- JSON converter interop ----------
 
-    [Fact]
+    [Test]
     public void Deserialize_AcceptsPascalCaseMembers()
     {
         // Producers using default System.Text.Json options, Newtonsoft, or a non-.NET stack send PascalCase.
@@ -85,10 +84,10 @@ public class ProblemRegressionTests
         problem.Extensions.ShouldBeEmpty();
     }
 
-    [Theory]
-    [InlineData("""{"type":"x","status":null}""", 0)]
-    [InlineData("""{"type":"x","status":"503"}""", 503)]
-    [InlineData("""{"type":"x","status":404}""", 404)]
+    [Test]
+    [Arguments("""{"type":"x","status":null}""", 0)]
+    [Arguments("""{"type":"x","status":"503"}""", 503)]
+    [Arguments("""{"type":"x","status":404}""", 404)]
     public void Deserialize_ToleratesTheStatusShapesSeenInTheWild(string payload, int expected)
     {
         var problem = JsonSerializer.Deserialize<Problem>(payload, Web)!;
@@ -96,7 +95,7 @@ public class ProblemRegressionTests
         problem.StatusCode.ShouldBe(expected);
     }
 
-    [Fact]
+    [Test]
     public void Deserialize_AcceptsNullTitleAndDetail()
     {
         var problem = JsonSerializer.Deserialize<Problem>("""{"type":"x","title":null,"detail":null}""", Web)!;
@@ -105,13 +104,13 @@ public class ProblemRegressionTests
         problem.Detail.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Deserialize_NullPayloadBecomesNull()
     {
         JsonSerializer.Deserialize<Problem>("null", Web).ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Serialize_DoesNotEmitADuplicateKeyWhenAnExtensionShadowsAStandardMember()
     {
         var problem = Problem.Create("real title", "d", 400);
@@ -127,7 +126,7 @@ public class ProblemRegressionTests
         json.Split("\"title\"").Length.ShouldBe(2, "the title key must appear exactly once");
     }
 
-    [Fact]
+    [Test]
     public void Serialize_StillWritesGenuineExtensions()
     {
         var problem = Problem.Create("t", "d", 400);
@@ -141,7 +140,7 @@ public class ProblemRegressionTests
 
     // ---------- allocation ----------
 
-    [Fact]
+    [Test]
     public void Constructor_AllocatesASingleExtensionsDictionary()
     {
         // Warm up so JIT and type initialization are not counted.
@@ -162,7 +161,7 @@ public class ProblemRegressionTests
         perProblem.ShouldBeLessThan(160);
     }
 
-    [Fact]
+    [Test]
     public void Extensions_IsUsableImmediatelyAfterConstruction()
     {
         var problem = new Problem();
@@ -172,7 +171,7 @@ public class ProblemRegressionTests
         problem.Extensions["k"].ShouldBe("v");
     }
 
-    [Fact]
+    [Test]
     public void ValidationProblemType_MatchesTheInvalidCheck()
     {
         var problem = Problem.Validation(("field", "message"));

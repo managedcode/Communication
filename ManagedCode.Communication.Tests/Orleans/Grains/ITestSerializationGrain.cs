@@ -14,17 +14,17 @@ public interface ITestSerializationGrain : IGrainWithGuidKey
     /// Echo back the command to verify all fields are preserved
     /// </summary>
     Task<Command> EchoCommandAsync(Command command);
-    
+
     /// <summary>
     /// Echo back the typed command to verify all fields are preserved
     /// </summary>
     Task<Command<T>> EchoCommandAsync<T>(Command<T> command);
-    
+
     /// <summary>
     /// Test Result serialization
     /// </summary>
     Task<Result> EchoResultAsync(Result result);
-    
+
     /// <summary>
     /// Test Result with value serialization
     /// </summary>
@@ -39,17 +39,17 @@ public interface ITestSerializationGrain : IGrainWithGuidKey
     /// Test pagination request serialization
     /// </summary>
     Task<PaginationRequest> EchoPaginationRequestAsync(PaginationRequest request);
-    
+
     /// <summary>
     /// Test CollectionResult serialization
     /// </summary>
     Task<CollectionResult<T>> EchoCollectionResultAsync<T>(CollectionResult<T> result);
-    
+
     /// <summary>
     /// Test Problem serialization
     /// </summary>
     Task<Problem> EchoProblemAsync(Problem problem);
-    
+
     /// <summary>
     /// Test CommandMetadata serialization
     /// </summary>

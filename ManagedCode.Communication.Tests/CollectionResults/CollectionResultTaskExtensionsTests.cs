@@ -1,16 +1,15 @@
 using System.Threading.Tasks;
 using ManagedCode.Communication;
-using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.CollectionResults.Extensions;
+using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CollectionResults;
 
 public class CollectionResultTaskExtensionsTests
 {
-    [Fact]
+    [Test]
     public async Task AsTask_ReturnsSameCollectionResult()
     {
         var original = CollectionResult<int>.Succeed(new[] { 1, 2, 3 });
@@ -21,7 +20,7 @@ public class CollectionResultTaskExtensionsTests
         result.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3 });
     }
 
-    [Fact]
+    [Test]
     public async Task AsValueTask_ReturnsSameCollectionResult()
     {
         var problem = Problem.Create("failure", "oops");

@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class CollectionResultTests
 {
-    [Fact]
+    [Test]
     public void Succeed_WithArray_ShouldCreateSuccessfulResult()
     {
         // Arrange
@@ -42,7 +41,7 @@ public class CollectionResultTests
             .ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Succeed_WithEnumerable_ShouldCreateSuccessfulResult()
     {
         // Arrange
@@ -64,7 +63,7 @@ public class CollectionResultTests
             .ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public void Succeed_WithArrayOnly_ShouldCalculatePagingInfo()
     {
         // Arrange
@@ -88,7 +87,7 @@ public class CollectionResultTests
             .ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void Succeed_WithEnumerableOnly_ShouldCalculatePagingInfo()
     {
         // Arrange
@@ -112,7 +111,7 @@ public class CollectionResultTests
             .ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void Empty_ShouldCreateEmptyResult()
     {
         // Act
@@ -137,7 +136,7 @@ public class CollectionResultTests
             .ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithMessage_ShouldCreateFailedResult()
     {
         // Arrange
@@ -166,7 +165,7 @@ public class CollectionResultTests
             .ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithProblem_ShouldCreateFailedResult()
     {
         // Arrange
@@ -186,7 +185,7 @@ public class CollectionResultTests
             .ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void TotalPages_ShouldCalculateCorrectly()
     {
         // Arrange & Act
@@ -203,7 +202,7 @@ public class CollectionResultTests
             .ShouldBe(1); // 10 items / 10 per page = 1 page
     }
 
-    [Fact]
+    [Test]
     public void InvalidField_WithValidationProblem_ShouldReturnCorrectResult()
     {
         // Arrange
@@ -218,7 +217,7 @@ public class CollectionResultTests
             .ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void InvalidFieldError_WithValidationProblem_ShouldReturnErrorMessage()
     {
         // Arrange
@@ -237,7 +236,7 @@ public class CollectionResultTests
         nameErrors.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithSuccessfulResult_ShouldNotThrow()
     {
         // Arrange
@@ -247,7 +246,7 @@ public class CollectionResultTests
         Should.NotThrow(() => result.ThrowIfFail());
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithFailedResult_ShouldThrow()
     {
         // Arrange
@@ -258,7 +257,7 @@ public class CollectionResultTests
         exception.Problem.Title.ShouldBe("Operation failed");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithErrorCodeResolver_ShouldReturnResolvedMessage()
     {
         // Arrange
@@ -274,7 +273,7 @@ public class CollectionResultTests
         message.ShouldBe("Friendly invalid input message");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithSuccessResult_ShouldReturnDefaultMessage()
     {
         // Arrange
@@ -287,7 +286,7 @@ public class CollectionResultTests
         message.ShouldBe("No problem");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithTupleOverload_ShouldResolveRegistrationMessages()
     {
         // Arrange
@@ -306,7 +305,7 @@ public class CollectionResultTests
         message.ShouldBe("Registration is currently unavailable.");
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_ToBool_ShouldReturnIsSuccess()
     {
         // Arrange
@@ -318,7 +317,7 @@ public class CollectionResultTests
         ((bool)failResult).ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithSuccessfulResult_ShouldReturnFalse()
     {
         // Arrange
@@ -332,7 +331,7 @@ public class CollectionResultTests
         problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
     {
         // Arrange
@@ -348,7 +347,7 @@ public class CollectionResultTests
         problem.ShouldBe(expectedProblem);
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithEmptyCollection_ButSuccessful_ShouldReturnFalse()
     {
         // Arrange
@@ -364,7 +363,7 @@ public class CollectionResultTests
         result.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithProblemException_ShouldPreserveProblemDetails()
     {
         // Arrange
@@ -379,7 +378,7 @@ public class CollectionResultTests
         exception.Problem.Extensions["retryAfter"].ShouldBe(60);
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithValidationFailure_ShouldThrowWithValidationDetails()
     {
         // Arrange

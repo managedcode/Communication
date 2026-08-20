@@ -7,11 +7,12 @@ using ManagedCode.Communication.Orleans.Stores;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using Orleans;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Orleans;
 
-public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansClusterFixture>
+[ClassDataSource<OrleansClusterFixture>(Shared = SharedType.PerClass)]
+[NotInParallel(nameof(CommandIdempotencyOrleansIntegrationTests))]
+public class CommandIdempotencyOrleansIntegrationTests
 {
     private readonly IGrainFactory _grainFactory;
     private readonly OrleansCommandIdempotencyStore _store;
@@ -22,7 +23,7 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
         _store = new OrleansCommandIdempotencyStore(_grainFactory);
     }
 
-    [Fact]
+    [Test]
     public async Task Grain_StartAndCompleteLifecycle_ResetsForRetry()
     {
         var commandId = Guid.NewGuid().ToString();
@@ -65,7 +66,7 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
         (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.NotFound);
     }
 
-    [Fact]
+    [Test]
     public async Task Grain_TrySetStatusAsync_TransitionsBetweenStatuses()
     {
         var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(Guid.NewGuid().ToString());
@@ -90,7 +91,7 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
         (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.NotStarted);
     }
 
-    [Fact]
+    [Test]
     public async Task Store_BasicLifecycle_CoversCoreMethodsAndBatchReadPaths()
     {
         var inProgressCommand = Guid.NewGuid().ToString();
@@ -134,7 +135,7 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
         (await _store.GetCommandResultAsync<string>(commandWithoutResult)).ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task Store_BatchHelpers_ReturnExpectedMaps()
     {
         var command1 = Guid.NewGuid().ToString();
@@ -160,7 +161,7 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
         results[command3].ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task Store_ResultReads_CoverTypeMismatchAndFailureFallback()
     {
         var commandId = Guid.NewGuid().ToString();
@@ -179,7 +180,7 @@ public class CommandIdempotencyOrleansIntegrationTests : IClassFixture<OrleansCl
         (await _store.GetCommandStatusAsync(commandId)).ShouldBe(CommandExecutionStatus.NotFound);
     }
 
-    [Fact]
+    [Test]
     public async Task Store_NoOpCleanupAndCounts_ReturnDefaults()
     {
         var expiry = await _store.CleanupExpiredCommandsAsync(TimeSpan.FromMinutes(10));

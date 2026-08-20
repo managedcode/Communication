@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.TestHost;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -18,7 +17,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 /// </summary>
 public class CqrsMvcIntegrationTests
 {
-    [Fact]
+    [Test]
     public async Task CompletedStream_IsDeliveredAsEventStream()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -36,7 +35,7 @@ public class CqrsMvcIntegrationTests
         ]);
     }
 
-    [Fact]
+    [Test]
     public async Task SequenceNumbersAreAssignedForActionsToo()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -47,7 +46,7 @@ public class CqrsMvcIntegrationTests
         frames.Select(frame => frame.Id).ShouldBe(["1", "2", "3"]);
     }
 
-    [Fact]
+    [Test]
     public async Task PostWithBody_ReachesTheAction()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -64,7 +63,7 @@ public class CqrsMvcIntegrationTests
         result.Status.ShouldBe("done job-7");
     }
 
-    [Fact]
+    [Test]
     public async Task HandlerReportedFailure_ArrivesAsATerminalFailedChunk()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -76,7 +75,7 @@ public class CqrsMvcIntegrationTests
         chunks[^1].Problem!.Title.ShouldBe("payment_declined");
     }
 
-    [Fact]
+    [Test]
     public async Task ExceptionMidStream_BecomesATerminalFailedChunk()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -91,7 +90,7 @@ public class CqrsMvcIntegrationTests
         chunks[^1].Problem!.Detail.ShouldBe("Command failed unexpectedly");
     }
 
-    [Fact]
+    [Test]
     public async Task ExceptionBeforeTheFirstChunk_BecomesTheOnlyChunk()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -104,7 +103,7 @@ public class CqrsMvcIntegrationTests
         chunks[0].Problem!.Detail.ShouldBe("Immediate stream failure");
     }
 
-    [Fact]
+    [Test]
     public async Task ExceptionBeforeTheStreamIsReturned_IsNotTheTransportsToHandle()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -115,7 +114,7 @@ public class CqrsMvcIntegrationTests
         exception.Message.ShouldBe("Action crashed before returning a stream");
     }
 
-    [Fact]
+    [Test]
     public async Task StreamWithoutATerminalChunk_GetsOneAppended()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -127,7 +126,7 @@ public class CqrsMvcIntegrationTests
         chunks[^1].Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task TerminalGuaranteeFollowsTheConfiguredOptions()
     {
         await using var app = await CqrsTestHost.StartMvcAsync(options => options.EnsureTerminalChunk = false);
@@ -139,7 +138,7 @@ public class CqrsMvcIntegrationTests
         chunks[^1].Kind.ShouldBe(CqrsStreamChunkKind.Progress);
     }
 
-    [Fact]
+    [Test]
     public async Task SequenceAssignmentFollowsTheConfiguredOptions()
     {
         await using var app = await CqrsTestHost.StartMvcAsync(options => options.AssignSequenceNumbers = false);
@@ -150,7 +149,7 @@ public class CqrsMvcIntegrationTests
         frames.ShouldAllBe(frame => frame.Id == null);
     }
 
-    [Fact]
+    [Test]
     public async Task NullChunksAreDropped()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -161,7 +160,7 @@ public class CqrsMvcIntegrationTests
         chunks.Select(chunk => chunk.Kind).ShouldBe([CqrsStreamChunkKind.Started, CqrsStreamChunkKind.Completed]);
     }
 
-    [Fact]
+    [Test]
     public async Task EmptyStream_StillEndsOnATerminalChunk()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -173,7 +172,7 @@ public class CqrsMvcIntegrationTests
         chunks[0].Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task ANonChunkAsyncEnumerableActionIsPassedThroughUnchanged()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -183,7 +182,7 @@ public class CqrsMvcIntegrationTests
         (await response.Content.ReadFromJsonAsync<int[]>()).ShouldBe([1, 2]);
     }
 
-    [Fact]
+    [Test]
     public async Task APlainObjectActionIsPassedThroughUnchanged()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -193,7 +192,7 @@ public class CqrsMvcIntegrationTests
         (await response.Content.ReadFromJsonAsync<FinalResult>())!.Status.ShouldBe("not-a-stream");
     }
 
-    [Fact]
+    [Test]
     public async Task ClientDisconnect_CancelsTheAction()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();
@@ -213,7 +212,7 @@ public class CqrsMvcIntegrationTests
         chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Started);
     }
 
-    [Fact]
+    [Test]
     public async Task CancellingTheClientTokenStopsEnumeration()
     {
         await using var app = await CqrsTestHost.StartMvcAsync();

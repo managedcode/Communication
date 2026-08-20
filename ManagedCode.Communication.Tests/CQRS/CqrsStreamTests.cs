@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -15,7 +14,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 /// </summary>
 public class CqrsStreamTests
 {
-    [Fact]
+    [Test]
     public async Task Create_EmitsProgressThenTheReturnedResultAsCompleted()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(async writer =>
@@ -35,7 +34,7 @@ public class CqrsStreamTests
         result.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task Create_NumbersEveryChunkAutomatically()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(async writer =>
@@ -49,7 +48,7 @@ public class CqrsStreamTests
         chunks.Select(chunk => chunk.Sequence).ShouldBe([1L, 2L, 3L, 4L]);
     }
 
-    [Fact]
+    [Test]
     public async Task Create_TurnsAFailedResultIntoATerminalFailedChunk()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(async writer =>
@@ -64,7 +63,7 @@ public class CqrsStreamTests
         chunks[^1].Problem!.StatusCode.ShouldBe(429);
     }
 
-    [Fact]
+    [Test]
     public async Task Create_TurnsAThrownExceptionIntoATerminalFailedChunk()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(async writer =>
@@ -79,7 +78,7 @@ public class CqrsStreamTests
         chunks[^1].Problem!.Detail.ShouldBe("handler exploded");
     }
 
-    [Fact]
+    [Test]
     public async Task Create_AlwaysEndsOnATerminalChunkEvenWithoutAnyProgress()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(
@@ -90,7 +89,7 @@ public class CqrsStreamTests
         chunks[0].Sequence.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task Create_BarePayloadOverload_CompletesWithThatPayload()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(async writer =>
@@ -106,7 +105,7 @@ public class CqrsStreamTests
         result.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task Create_BarePayloadOverload_StillReportsThrownExceptions()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(
@@ -117,7 +116,7 @@ public class CqrsStreamTests
         chunks[0].Problem!.Title.ShouldBe(nameof(TimeoutException));
     }
 
-    [Fact]
+    [Test]
     public async Task Create_WriteAsync_PassesThroughCustomChunksAndKeepsExplicitSequences()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(async writer =>
@@ -132,7 +131,7 @@ public class CqrsStreamTests
         chunks[1].Sequence.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task Create_WriteAsync_RejectsNullChunks()
     {
         var chunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(async writer =>
@@ -146,7 +145,7 @@ public class CqrsStreamTests
         chunks[0].Problem!.Title.ShouldBe(nameof(ArgumentNullException));
     }
 
-    [Fact]
+    [Test]
     public async Task Create_ExposesTheConsumerCancellationTokenToTheHandler()
     {
         using var cancellation = new CancellationTokenSource();
@@ -179,7 +178,7 @@ public class CqrsStreamTests
         (await observed.Task.WaitAsync(TimeSpan.FromSeconds(10))).ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task Create_StopsTheHandlerWhenTheConsumerDisposesEarly()
     {
         var handlerFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -210,7 +209,7 @@ public class CqrsStreamTests
         await handlerFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
     }
 
-    [Fact]
+    [Test]
     public async Task Create_PropagatesCancellationToTheConsumer()
     {
         using var cancellation = new CancellationTokenSource();
@@ -232,7 +231,7 @@ public class CqrsStreamTests
         });
     }
 
-    [Fact]
+    [Test]
     public void Create_RejectsANullHandler()
     {
         Should.Throw<ArgumentNullException>(() =>

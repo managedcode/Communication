@@ -1,17 +1,16 @@
 using System;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
-[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
+[NotInParallel]
 public class ServiceCollectionExtensionsTests
 {
-    [Fact]
+    [Test]
     public void LoggerCenter_SourceGenerators_Work()
     {
         // Arrange
@@ -23,12 +22,12 @@ public class ServiceCollectionExtensionsTests
         LoggerCenter.LogControllerException(logger, exception, "TestController", "TestAction");
         LoggerCenter.LogValidationFailed(logger, "TestAction");
         LoggerCenter.LogCommandCleanupExpired(logger, 5, TimeSpan.FromHours(1));
-        
+
         // This test passes if Source Generators work correctly
         true.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void CommunicationLogger_Caching_WorksCorrectly()
     {
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
@@ -40,7 +39,7 @@ public class ServiceCollectionExtensionsTests
         logger1.ShouldBeSameAs(logger2);
     }
 
-    [Fact]
+    [Test]
     public void ConfigureCommunication_WithLoggerFactory_ConfiguresLoggerAndReturns()
     {
         // Arrange
@@ -56,7 +55,7 @@ public class ServiceCollectionExtensionsTests
         logger.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void GetLogger_WithDisposedServiceProvider_ShouldFallbackGracefully()
     {
         // Arrange

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
@@ -10,7 +11,6 @@ using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Telemetry;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Telemetry;
 
@@ -22,10 +22,11 @@ namespace ManagedCode.Communication.Tests.Telemetry;
 ///     OpenTelemetry SDK subscribes, so these tests prove what a real collector would receive without taking a
 ///     dependency on the SDK.
 /// </remarks>
+[NotInParallel]
 public sealed class CommunicationTelemetryTests : IDisposable
 {
     private readonly ActivityListener _activityListener;
-    private readonly List<Activity> _activities = [];
+    private readonly ConcurrentQueue<Activity> _activities = new();
 
     public CommunicationTelemetryTests()
     {
@@ -33,7 +34,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         {
             ShouldListenTo = source => source.Name == CommunicationTelemetry.SourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
-            ActivityStopped = activity => _activities.Add(activity)
+            ActivityStopped = activity => _activities.Enqueue(activity)
         };
 
         ActivitySource.AddActivityListener(_activityListener);
@@ -44,7 +45,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         _activityListener.Dispose();
     }
 
-    [Fact]
+    [Test]
     public void RecordFailure_MarksTheSpanAsErrored()
     {
         using (var activity = CommunicationTelemetry.StartActivity("test-op"))
@@ -60,7 +61,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         recorded.GetTagItem("problem.title").ShouldBe("boom");
     }
 
-    [Fact]
+    [Test]
     public void RecordFailure_AttachesTheRealExceptionWithItsStackTrace()
     {
         Exception captured;
@@ -92,15 +93,22 @@ public sealed class CommunicationTelemetryTests : IDisposable
         tags["exception.stacktrace"]!.ShouldContain(nameof(RecordFailure_AttachesTheRealExceptionWithItsStackTrace));
     }
 
-    [Fact]
+    [Test]
     public void RecordFailure_WithoutAnActivityDoesNothingHarmful()
     {
-        Activity.Current.ShouldBeNull();
-
-        Should.NotThrow(() => CommunicationTelemetry.RecordFailure(Problem.Create("boom", "d", 500)));
+        var testActivity = Activity.Current;
+        try
+        {
+            Activity.Current = null;
+            Should.NotThrow(() => CommunicationTelemetry.RecordFailure(Problem.Create("boom", "d", 500)));
+        }
+        finally
+        {
+            Activity.Current = testActivity;
+        }
     }
 
-    [Fact]
+    [Test]
     public void RecordFailure_IgnoresSuccessfulResults()
     {
         using (CommunicationTelemetry.StartActivity("test-op"))
@@ -112,7 +120,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         _activities.Single(a => a.DisplayName == "test-op").Status.ShouldBe(ActivityStatusCode.Unset);
     }
 
-    [Fact]
+    [Test]
     public void FailureCounterIsIncrementedForEachFailure()
     {
         var measurements = new List<long>();
@@ -127,7 +135,13 @@ public sealed class CommunicationTelemetryTests : IDisposable
                 }
             }
         };
-        meterListener.SetMeasurementEventCallback<long>((_, value, _, _) => measurements.Add(value));
+        meterListener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            if (HasTag(tags, "error.type", "a") || HasTag(tags, "error.type", "b"))
+            {
+                measurements.Add(value);
+            }
+        });
         meterListener.Start();
 
         CommunicationTelemetry.RecordFailure(Problem.Create("a", "d", 500));
@@ -138,7 +152,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         measurements.ShouldAllBe(value => value == 1);
     }
 
-    [Fact]
+    [Test]
     public void Report_LeavesTheResultUnchangedSoItCanSitInAChain()
     {
         var failed = Result<int>.Fail(Problem.Create("boom", "d", 500));
@@ -149,7 +163,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         returned.Problem!.Title.ShouldBe("boom");
     }
 
-    [Fact]
+    [Test]
     public void Track_TurnsAThrownExceptionIntoAReportedFailure()
     {
         var result = CommunicationDiagnostics.Track<int>(
@@ -166,7 +180,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         recorded.Events.ShouldContain(e => e.Name == "exception");
     }
 
-    [Fact]
+    [Test]
     public async Task TrackAsync_ReportsAFailedResultWithoutSwallowingIt()
     {
         var result = await CommunicationDiagnostics.TrackAsync(
@@ -180,7 +194,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         _activities.Single(a => a.DisplayName == "risky-async").Status.ShouldBe(ActivityStatusCode.Error);
     }
 
-    [Fact]
+    [Test]
     public void Track_LeavesASuccessfulResultAlone()
     {
         var result = CommunicationDiagnostics.Track("fine", () => Result<int>.Succeed(42), NullLogger.Instance);
@@ -190,7 +204,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         _activities.Single(a => a.DisplayName == "fine").Status.ShouldBe(ActivityStatusCode.Unset);
     }
 
-    [Fact]
+    [Test]
     public async Task CommandExecution_EmitsCorrelationTagsAndRetryEvents()
     {
         var command = Command.Create("payment.capture");
@@ -213,7 +227,10 @@ public sealed class CommunicationTelemetryTests : IDisposable
             new CommandExecutionRuntime(options));
 
         result.IsSuccess.ShouldBeTrue();
-        var activity = _activities.Single(a => a.DisplayName == "communication.command.execute");
+        var commandId = command.CommandId.ToString("D");
+        var activity = _activities.Single(a =>
+            a.DisplayName == "communication.command.execute"
+            && Equals(a.GetTagItem("command.id"), commandId));
         activity.GetTagItem("command.type").ShouldBe("payment.capture");
         activity.GetTagItem("command.correlation_id").ShouldBe("correlation-a");
         activity.GetTagItem("command.trace_id").ShouldBe("upstream-trace");
@@ -222,7 +239,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         activity.Status.ShouldBe(ActivityStatusCode.Ok);
     }
 
-    [Fact]
+    [Test]
     public async Task CommandExecution_IncrementsAttemptAndRetryMetrics()
     {
         var measurements = new Dictionary<string, long>(StringComparer.Ordinal);
@@ -238,8 +255,13 @@ public sealed class CommunicationTelemetryTests : IDisposable
                 }
             }
         };
-        meterListener.SetMeasurementEventCallback<long>((instrument, value, _, _) =>
-            measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + value);
+        meterListener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
+        {
+            if (HasTag(tags, "command.type", "metric.command"))
+            {
+                measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + value;
+            }
+        });
         meterListener.Start();
 
         var options = new CommandExecutionOptions();
@@ -260,5 +282,21 @@ public sealed class CommunicationTelemetryTests : IDisposable
 
         measurements[CommunicationTelemetry.CommandAttemptCounterName].ShouldBe(2);
         measurements[CommunicationTelemetry.CommandRetryCounterName].ShouldBe(1);
+    }
+
+    private static bool HasTag(
+        ReadOnlySpan<KeyValuePair<string, object?>> tags,
+        string key,
+        object expectedValue)
+    {
+        foreach (var tag in tags)
+        {
+            if (tag.Key == key && Equals(tag.Value, expectedValue))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

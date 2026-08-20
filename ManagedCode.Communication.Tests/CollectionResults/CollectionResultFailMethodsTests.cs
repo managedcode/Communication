@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.CollectionResults;
 
@@ -14,7 +13,7 @@ public class CollectionResultFailMethodsTests
 {
     #region Fail() Tests
 
-    [Fact]
+    [Test]
     public void Fail_NoParameters_ShouldCreateFailedResult()
     {
         // Act
@@ -35,7 +34,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(IEnumerable<T>) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithEnumerable_ShouldCreateFailedResultWithItems()
     {
         // Arrange
@@ -51,7 +50,7 @@ public class CollectionResultFailMethodsTests
         result.HasProblem.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithEmptyEnumerable_ShouldCreateFailedResultWithEmptyCollection()
     {
         // Arrange
@@ -71,7 +70,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(T[]) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithArray_ShouldCreateFailedResultWithItems()
     {
         // Arrange
@@ -87,7 +86,7 @@ public class CollectionResultFailMethodsTests
         result.HasProblem.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithEmptyArray_ShouldCreateFailedResultWithEmptyCollection()
     {
         // Act
@@ -103,7 +102,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(Problem) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithProblem_ShouldCreateFailedResultWithProblem()
     {
         // Arrange
@@ -126,7 +125,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(string title) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithTitle_ShouldCreateFailedResultWithInternalServerError()
     {
         // Arrange
@@ -148,7 +147,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(string title, string detail) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithTitleAndDetail_ShouldCreateFailedResultWithDefaultStatus()
     {
         // Arrange
@@ -170,7 +169,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(string title, string detail, HttpStatusCode status) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithTitleDetailAndStatus_ShouldCreateFailedResultWithSpecifiedStatus()
     {
         // Arrange
@@ -189,13 +188,13 @@ public class CollectionResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(404);
     }
 
-    [Theory]
-    [InlineData(HttpStatusCode.BadRequest, 400)]
-    [InlineData(HttpStatusCode.Unauthorized, 401)]
-    [InlineData(HttpStatusCode.Forbidden, 403)]
-    [InlineData(HttpStatusCode.NotFound, 404)]
-    [InlineData(HttpStatusCode.InternalServerError, 500)]
-    [InlineData(HttpStatusCode.ServiceUnavailable, 503)]
+    [Test]
+    [Arguments(HttpStatusCode.BadRequest, 400)]
+    [Arguments(HttpStatusCode.Unauthorized, 401)]
+    [Arguments(HttpStatusCode.Forbidden, 403)]
+    [Arguments(HttpStatusCode.NotFound, 404)]
+    [Arguments(HttpStatusCode.InternalServerError, 500)]
+    [Arguments(HttpStatusCode.ServiceUnavailable, 503)]
     public void Fail_WithVariousStatusCodes_ShouldSetCorrectStatusCode(HttpStatusCode statusCode, int expectedCode)
     {
         // Act
@@ -209,7 +208,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(Exception) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithException_ShouldCreateFailedResultWithInternalServerError()
     {
         // Arrange
@@ -228,7 +227,7 @@ public class CollectionResultFailMethodsTests
         result.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithInnerException_ShouldPreserveOuterExceptionInfo()
     {
         // Arrange
@@ -248,7 +247,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail(Exception, HttpStatusCode) Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithExceptionAndStatus_ShouldCreateFailedResultWithSpecifiedStatus()
     {
         // Arrange
@@ -271,7 +270,7 @@ public class CollectionResultFailMethodsTests
 
     #region FailValidation Tests
 
-    [Fact]
+    [Test]
     public void FailValidation_WithSingleError_ShouldCreateValidationFailedResult()
     {
         // Act
@@ -288,7 +287,7 @@ public class CollectionResultFailMethodsTests
         result.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void FailValidation_WithMultipleErrors_ShouldCreateValidationFailedResultWithAllErrors()
     {
         // Act
@@ -308,7 +307,7 @@ public class CollectionResultFailMethodsTests
         errors["age"].ShouldContain("Must be 18 or older");
     }
 
-    [Fact]
+    [Test]
     public void FailValidation_WithDuplicateFields_ShouldCombineErrors()
     {
         // Act
@@ -331,7 +330,7 @@ public class CollectionResultFailMethodsTests
 
     #region FailUnauthorized Tests
 
-    [Fact]
+    [Test]
     public void FailUnauthorized_NoParameters_ShouldCreateUnauthorizedResult()
     {
         // Act
@@ -346,7 +345,7 @@ public class CollectionResultFailMethodsTests
         result.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void FailUnauthorized_WithDetail_ShouldCreateUnauthorizedResultWithCustomDetail()
     {
         // Arrange
@@ -366,7 +365,7 @@ public class CollectionResultFailMethodsTests
 
     #region FailForbidden Tests
 
-    [Fact]
+    [Test]
     public void FailForbidden_NoParameters_ShouldCreateForbiddenResult()
     {
         // Act
@@ -381,7 +380,7 @@ public class CollectionResultFailMethodsTests
         result.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void FailForbidden_WithDetail_ShouldCreateForbiddenResultWithCustomDetail()
     {
         // Arrange
@@ -401,7 +400,7 @@ public class CollectionResultFailMethodsTests
 
     #region FailNotFound Tests
 
-    [Fact]
+    [Test]
     public void FailNotFound_NoParameters_ShouldCreateNotFoundResult()
     {
         // Act
@@ -416,7 +415,7 @@ public class CollectionResultFailMethodsTests
         result.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void FailNotFound_WithDetail_ShouldCreateNotFoundResultWithCustomDetail()
     {
         // Arrange
@@ -436,7 +435,7 @@ public class CollectionResultFailMethodsTests
 
     #region Fail<TEnum> Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithEnum_ShouldCreateFailedResultWithErrorCode()
     {
         // Act
@@ -450,7 +449,7 @@ public class CollectionResultFailMethodsTests
         result.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithEnumAndDetail_ShouldCreateFailedResultWithErrorCodeAndDetail()
     {
         // Arrange
@@ -466,7 +465,7 @@ public class CollectionResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(400);
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithEnumAndStatus_ShouldCreateFailedResultWithErrorCodeAndStatus()
     {
         // Act
@@ -479,7 +478,7 @@ public class CollectionResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(500);
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithEnumDetailAndStatus_ShouldCreateFailedResultWithAllSpecified()
     {
         // Arrange
@@ -496,7 +495,7 @@ public class CollectionResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(503);
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithHttpStatusEnum_ShouldUseEnumValueAsStatusCode()
     {
         // Act
@@ -512,7 +511,7 @@ public class CollectionResultFailMethodsTests
 
     #region Complex Type Tests
 
-    [Fact]
+    [Test]
     public void Fail_WithComplexTypes_ShouldHandleCorrectly()
     {
         // Act
@@ -539,7 +538,7 @@ public class CollectionResultFailMethodsTests
 
     #region Edge Cases
 
-    [Fact]
+    [Test]
     public void Fail_WithVeryLongStrings_ShouldHandleCorrectly()
     {
         // Arrange
@@ -555,7 +554,7 @@ public class CollectionResultFailMethodsTests
         result.ShouldHaveProblem().WithDetail(longDetail);
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithSpecialCharacters_ShouldHandleCorrectly()
     {
         // Arrange
@@ -571,19 +570,19 @@ public class CollectionResultFailMethodsTests
         result.ShouldHaveProblem().WithDetail(detail);
     }
 
-    [Fact]
+    [Test]
     public void Fail_ChainedOperations_ShouldMaintainFailureState()
     {
         // Act
         var problem = Problem.Create("Initial Error", "Initial Detail", 500);
         var result1 = CollectionResult<int>.Fail(problem);
-        
-        var result2 = result1.IsFailed 
-            ? CollectionResult<string>.Fail(result1.Problem!) 
+
+        var result2 = result1.IsFailed
+            ? CollectionResult<string>.Fail(result1.Problem!)
             : CollectionResult<string>.Succeed(new[] { "Success" });
-            
-        var result3 = result2.IsFailed 
-            ? CollectionResult<bool>.Fail(result2.Problem!) 
+
+        var result3 = result2.IsFailed
+            ? CollectionResult<bool>.Fail(result2.Problem!)
             : CollectionResult<bool>.Succeed(new[] { true });
 
         // Assert
@@ -594,7 +593,7 @@ public class CollectionResultFailMethodsTests
         result3.Problem.Detail.ShouldBe("Initial Detail");
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithLargeCollection_ShouldPreserveAllItems()
     {
         // Arrange

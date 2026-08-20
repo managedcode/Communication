@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -19,8 +18,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 public class CqrsHttpClientTests
 {
     // ---------- positive ----------
-
-    [Fact]
+    [Test]
     public async Task ReadsACompleteChunkStream()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithSse(
@@ -39,7 +37,7 @@ public class CqrsHttpClientTests
         result.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task RequestsTheEventStreamMediaType()
     {
         var handler = StubHttpMessageHandler.RespondingWithSse(CqrsTestStreams.Completed(sequence: 1));
@@ -52,7 +50,7 @@ public class CqrsHttpClientTests
         handler.LastRequest!.Headers.Accept.ShouldContain(header => header.MediaType == "text/event-stream");
     }
 
-    [Fact]
+    [Test]
     public async Task PostWithBody_SendsCamelCaseJson()
     {
         var handler = StubHttpMessageHandler.RespondingWithSse(CqrsTestStreams.Completed(sequence: 1));
@@ -66,7 +64,7 @@ public class CqrsHttpClientTests
         handler.LastRequestBody.ShouldBe("""{"payload":"hello"}""");
     }
 
-    [Fact]
+    [Test]
     public async Task PostWithoutBody_StillUsesPost()
     {
         var handler = StubHttpMessageHandler.RespondingWithSse(CqrsTestStreams.Completed(sequence: 1));
@@ -78,7 +76,7 @@ public class CqrsHttpClientTests
         handler.LastRequest!.Content.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task SendWithAnArbitraryMethodIsSupported()
     {
         var handler = StubHttpMessageHandler.RespondingWithSse(CqrsTestStreams.Completed(sequence: 1));
@@ -90,7 +88,7 @@ public class CqrsHttpClientTests
         handler.LastRequest!.Method.ShouldBe(HttpMethod.Put);
     }
 
-    [Fact]
+    [Test]
     public async Task TheRequestFactoryIsInvokedExactlyOncePerEnumeration()
     {
         var handler = StubHttpMessageHandler.RespondingWithSse(CqrsTestStreams.Completed(sequence: 1));
@@ -114,7 +112,7 @@ public class CqrsHttpClientTests
 
     // ---------- transport failures become terminal chunks ----------
 
-    [Fact]
+    [Test]
     public async Task ProblemJsonErrorResponse_BecomesATerminalFailedChunk()
     {
         var payload = JsonSerializer.Serialize(
@@ -133,7 +131,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Detail.ShouldBe("dependency failed");
     }
 
-    [Fact]
+    [Test]
     public async Task ProblemJsonWithMissingFields_IsFilledInFromTheResponse()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWith(
@@ -149,7 +147,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Detail.ShouldBe("dependency failed");
     }
 
-    [Fact]
+    [Test]
     public async Task ProblemJsonWithItsOwnTypeAndTitle_IsPreserved()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWith(
@@ -164,7 +162,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Detail.ShouldBe("custom issue");
     }
 
-    [Fact]
+    [Test]
     public async Task PlainTextErrorResponse_BecomesATerminalFailedChunk()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWith(
@@ -178,7 +176,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Detail.ShouldBe("upstream exploded");
     }
 
-    [Fact]
+    [Test]
     public async Task EmptyErrorResponse_StillDescribesTheStatusCode()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWith(
@@ -191,7 +189,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Detail!.ShouldContain("Request returned");
     }
 
-    [Fact]
+    [Test]
     public async Task LiteralNullErrorBody_FallsBackToTheRawBody()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWith(
@@ -203,7 +201,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Detail.ShouldBe("null");
     }
 
-    [Fact]
+    [Test]
     public async Task ANetworkFailureBecomesATerminalFailedChunkRatherThanThrowing()
     {
         using var client = Client(new StubHttpMessageHandler(
@@ -219,7 +217,7 @@ public class CqrsHttpClientTests
 
     // ---------- malformed frames ----------
 
-    [Fact]
+    [Test]
     public async Task MalformedFrame_BecomesATerminalFailedChunkByDefault()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithRawSse(
@@ -232,7 +230,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Title.ShouldBe(CqrsStreamProblems.MalformedChunk);
     }
 
-    [Fact]
+    [Test]
     public async Task NullFramePayload_BecomesATerminalFailedChunkByDefault()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithRawSse("data: null\n\n"));
@@ -243,7 +241,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Title.ShouldBe(CqrsStreamProblems.MalformedChunk);
     }
 
-    [Fact]
+    [Test]
     public async Task MalformedFrameAfterValidOnes_KeepsWhatWasAlreadyDelivered()
     {
         var valid = StubHttpMessageHandler.BuildSsePayload([CqrsTestStreams.Started(sequence: 1)]);
@@ -258,7 +256,7 @@ public class CqrsHttpClientTests
         chunks[1].Problem!.Title.ShouldBe(CqrsStreamProblems.MalformedChunk);
     }
 
-    [Fact]
+    [Test]
     public async Task MalformedFrame_CanBeSkipped()
     {
         var payload = "data: {invalid\n\n" +
@@ -274,7 +272,7 @@ public class CqrsHttpClientTests
         chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Completed);
     }
 
-    [Fact]
+    [Test]
     public async Task MalformedFrame_CanBeConfiguredToThrow()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithRawSse("data: {invalid\n\n"));
@@ -285,7 +283,7 @@ public class CqrsHttpClientTests
                 new CqrsStreamClientOptions { MalformedChunkBehavior = CqrsMalformedChunkBehavior.Throw })));
     }
 
-    [Fact]
+    [Test]
     public async Task KeepAliveAndCommentFramesAreIgnored()
     {
         var payload = ": keep-alive\n\n" +
@@ -304,7 +302,7 @@ public class CqrsHttpClientTests
 
     // ---------- terminal guarantee ----------
 
-    [Fact]
+    [Test]
     public async Task AStreamThatEndsWithoutATerminalChunkGetsOneAppended()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithSse(
@@ -318,7 +316,7 @@ public class CqrsHttpClientTests
         chunks[^1].Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task TheTerminalGuaranteeCanBeDisabled()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithSse(CqrsTestStreams.Started(sequence: 1)));
@@ -331,7 +329,7 @@ public class CqrsHttpClientTests
         chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Started);
     }
 
-    [Fact]
+    [Test]
     public async Task AnEmptyResponseBodyStillProducesATerminalChunk()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithRawSse(string.Empty));
@@ -342,7 +340,7 @@ public class CqrsHttpClientTests
         chunks[0].Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task MissingSequenceNumbersAreFilledInByTheClient()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithSse(
@@ -357,7 +355,7 @@ public class CqrsHttpClientTests
 
     // ---------- cancellation ----------
 
-    [Fact]
+    [Test]
     public async Task APreCancelledTokenThrowsRatherThanProducingAFailedChunk()
     {
         using var client = Client(new StubHttpMessageHandler(async (_, cancellationToken) =>
@@ -376,7 +374,7 @@ public class CqrsHttpClientTests
 
     // ---------- argument validation ----------
 
-    [Fact]
+    [Test]
     public void NullArgumentsAreRejectedEagerly()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithSse(CqrsTestStreams.Completed(sequence: 1)));

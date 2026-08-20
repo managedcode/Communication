@@ -1,13 +1,12 @@
 using System;
 using ManagedCode.Communication.Commands;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
 public class CommandExtensionsTests
 {
-    [Fact]
+    [Test]
     public void FluentSetters_ShouldAssignIdentifiers()
     {
         var command = Command<string>.Create("payload");
@@ -28,7 +27,7 @@ public class CommandExtensionsTests
         command.SessionId.ShouldBe("session");
     }
 
-    [Fact]
+    [Test]
     public void WithMetadata_Action_CreatesMetadataAndConfigures()
     {
         var command = Command.Create("TestCommand");
@@ -46,7 +45,7 @@ public class CommandExtensionsTests
         command.Metadata.Tags["env"].ShouldBe("test");
     }
 
-    [Fact]
+    [Test]
     public void WithMetadata_AssignsExistingInstance()
     {
         var command = Command.Create("TestCommand", Guid.CreateVersion7());

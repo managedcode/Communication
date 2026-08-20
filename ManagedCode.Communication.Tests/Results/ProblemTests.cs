@@ -2,10 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
-using Shouldly;
 using ManagedCode.Communication.Constants;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -22,7 +21,7 @@ public enum OtherError
 
 public class ProblemTests
 {
-    [Fact]
+    [Test]
     public void Create_ShouldCreateProblemWithAllProperties()
     {
         // Arrange
@@ -50,7 +49,7 @@ public class ProblemTests
             .ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void FromStatusCode_ShouldCreateProblemFromHttpStatusCode()
     {
         // Act
@@ -67,7 +66,7 @@ public class ProblemTests
             .ShouldBe("User not found");
     }
 
-    [Fact]
+    [Test]
     public void FromEnum_ShouldCreateProblemFromEnum()
     {
         // Act
@@ -88,7 +87,7 @@ public class ProblemTests
             .ShouldBe("TestError");
     }
 
-    [Fact]
+    [Test]
     public void FromException_ShouldCreateProblemFromException()
     {
         // Arrange
@@ -113,7 +112,7 @@ public class ProblemTests
             .ShouldBe("CustomValue");
     }
 
-    [Fact]
+    [Test]
     public void Validation_ShouldCreateValidationProblem()
     {
         // Act
@@ -141,7 +140,7 @@ public class ProblemTests
             .ShouldContain("Age must be greater than 0");
     }
 
-    [Fact]
+    [Test]
     public void ErrorCode_PropertyShouldWorkCorrectly()
     {
         // Arrange
@@ -157,7 +156,7 @@ public class ProblemTests
             .ShouldBe("TEST_ERROR");
     }
 
-    [Fact]
+    [Test]
     public void ErrorCode_SetToNull_ShouldRemoveFromExtensions()
     {
         // Arrange
@@ -174,7 +173,7 @@ public class ProblemTests
             .ShouldNotContainKey(ProblemConstants.ExtensionKeys.ErrorCode);
     }
 
-    [Fact]
+    [Test]
     public void HasErrorCode_WithMatchingEnum_ShouldReturnTrue()
     {
         // Arrange
@@ -187,7 +186,7 @@ public class ProblemTests
             .ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void GetErrorCodeAs_WithMatchingEnum_ShouldReturnEnumValue()
     {
         // Arrange
@@ -200,7 +199,7 @@ public class ProblemTests
         errorCode.ShouldBe(TestError.InvalidInput);
     }
 
-    [Fact]
+    [Test]
     public void GetErrorCodeAs_WithNonMatchingEnum_ShouldReturnNull()
     {
         // Arrange
@@ -213,7 +212,7 @@ public class ProblemTests
         errorCode.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void GetValidationErrors_WithValidationProblem_ShouldReturnErrors()
     {
         // Arrange
@@ -231,7 +230,7 @@ public class ProblemTests
             .ShouldContain("Age must be greater than 0");
     }
 
-    [Fact]
+    [Test]
     public void GetValidationErrors_WithNonValidationProblem_ShouldReturnNull()
     {
         // Arrange
@@ -244,7 +243,7 @@ public class ProblemTests
         errors.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Constructor_ShouldInitializeExtensions()
     {
         // Act
@@ -257,7 +256,7 @@ public class ProblemTests
             .ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithParameters_ShouldSetProperties()
     {
         // Act
@@ -278,13 +277,13 @@ public class ProblemTests
             .ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void WithExtensions_ShouldCreateNewProblemWithAdditionalExtensions()
     {
         // Arrange
         var originalProblem = Problem.Create("type", "title", 400, "detail");
         originalProblem.Extensions["existing"] = "value";
-        
+
         var additionalExtensions = new Dictionary<string, object?>
         {
             ["new"] = "newValue",
@@ -300,7 +299,7 @@ public class ProblemTests
         newProblem.StatusCode.ShouldBe(originalProblem.StatusCode);
         newProblem.Detail.ShouldBe(originalProblem.Detail);
         newProblem.Instance.ShouldBe(originalProblem.Instance);
-        
+
         newProblem.Extensions.ShouldContainKey("existing");
         newProblem.Extensions["existing"].ShouldBe("value");
         newProblem.Extensions.ShouldContainKey("new");
@@ -309,13 +308,13 @@ public class ProblemTests
         newProblem.Extensions["another"].ShouldBe(123);
     }
 
-    [Fact]
+    [Test]
     public void WithExtensions_ShouldOverwriteExistingExtensions()
     {
         // Arrange
         var originalProblem = Problem.Create("type", "title", 400, "detail");
         originalProblem.Extensions["key"] = "originalValue";
-        
+
         var additionalExtensions = new Dictionary<string, object?>
         {
             ["key"] = "newValue"
@@ -328,7 +327,7 @@ public class ProblemTests
         newProblem.Extensions["key"].ShouldBe("newValue");
     }
 
-    [Fact]
+    [Test]
     public void FromEnum_WithDefaultStatusCode_ShouldUse400()
     {
         // Act
@@ -339,7 +338,7 @@ public class ProblemTests
         problem.Detail.ShouldBe("An error occurred: InvalidInput");
     }
 
-    [Fact]
+    [Test]
     public void HasErrorCode_WithDifferentEnumType_ShouldReturnFalse()
     {
         // Arrange
@@ -349,7 +348,7 @@ public class ProblemTests
         problem.HasErrorCode(OtherError.SomethingElse).ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void GetErrorCodeAs_WithNoErrorCode_ShouldReturnNull()
     {
         // Arrange
@@ -362,7 +361,7 @@ public class ProblemTests
         errorCode.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_ToProblemException_ShouldCreateException()
     {
         // Arrange
@@ -379,7 +378,7 @@ public class ProblemTests
         exception.Detail.ShouldBe("Resource not found");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithResolver_ShouldUseMappedErrorCodeMessage()
     {
         // Arrange
@@ -394,7 +393,7 @@ public class ProblemTests
         message.ShouldBe("Friendly validation message");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithoutResolverMatch_ShouldUseDetailThenTitleThenDefaultMessage()
     {
         // Arrange
@@ -414,7 +413,7 @@ public class ProblemTests
         defaultMessage.ShouldBe("Default");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WhenProblemHasNoMessage_ShouldUseGenericError()
     {
         // Arrange
@@ -427,7 +426,7 @@ public class ProblemTests
         message.ShouldBe(ProblemConstants.Messages.GenericError);
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithDictionaryOverload_ShouldResolveRegistrationMessages()
     {
         // Arrange
@@ -448,7 +447,7 @@ public class ProblemTests
         displayMessage.ShouldBe("Registration is currently unavailable.");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithEnumerableOverload_ShouldResolveRegistrationMessages()
     {
         // Arrange
@@ -469,7 +468,7 @@ public class ProblemTests
         displayMessage.ShouldBe("Registration is temporarily blocked.");
     }
 
-    [Fact]
+    [Test]
     public void ToDisplayMessage_WithTupleOverload_ShouldResolveRegistrationMessages()
     {
         // Arrange
@@ -487,7 +486,7 @@ public class ProblemTests
         displayMessage.ShouldBe("Registration requires an invitation code.");
     }
 
-    [Fact]
+    [Test]
     public void TryGetExtension_WithJsonElementValues_ShouldReturnTypedValues()
     {
         // Arrange
@@ -517,7 +516,7 @@ public class ProblemTests
         enumCode.ShouldBe(TestError.InvalidInput);
     }
 
-    [Fact]
+    [Test]
     public void GetExtensionOrDefault_WhenKeyMissing_ShouldReturnProvidedDefault()
     {
         // Arrange
@@ -530,7 +529,7 @@ public class ProblemTests
         retryAfter.ShouldBe(15);
     }
 
-    [Fact]
+    [Test]
     public void TryGetExtension_WhenTypeMismatch_ShouldReturnFalse()
     {
         // Arrange
@@ -545,7 +544,7 @@ public class ProblemTests
         retryAfter.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void TryGetExtension_WhenKeyMissing_ShouldReturnFalse()
     {
         // Arrange

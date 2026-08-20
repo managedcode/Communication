@@ -4,7 +4,6 @@ using System.Text.Json;
 using ManagedCode.Communication.CQRS;
 using ManagedCode.Communication.Tests.CQRS;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -37,7 +36,7 @@ public class SerializationAllocationTests
         return (GC.GetAllocatedBytesForCurrentThread() - before) / (double)iterations;
     }
 
-    [Fact]
+    [Test]
     public void DeserializingAResultCostsLittleMoreThanItsPayload()
     {
         var payload = Encoding.UTF8.GetBytes("""{"state":"tick 12345"}""");
@@ -52,7 +51,7 @@ public class SerializationAllocationTests
         (resultCost - payloadCost).ShouldBeLessThan(128);
     }
 
-    [Fact]
+    [Test]
     public void DeserializingAChunkStaysWithinBudget()
     {
         var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(CqrsTestStreams.Progress("tick 12345", 12345), Json));
@@ -60,7 +59,7 @@ public class SerializationAllocationTests
         BytesPerOperation(() => JsonSerializer.Deserialize<Chunk>(bytes, Json)).ShouldBeLessThan(512);
     }
 
-    [Fact]
+    [Test]
     public void DeserializingAChunkCostsLittleMoreThanBuildingOneByHand()
     {
         // A string payload, so that what is measured is the transport's own cost rather than whatever the
@@ -78,7 +77,7 @@ public class SerializationAllocationTests
         (deserialized - byHand - payloadOnly).ShouldBeLessThan(96);
     }
 
-    [Fact]
+    [Test]
     public void SerializingAChunkStaysWithinBudget()
     {
         var chunk = CqrsTestStreams.Progress("tick 12345", 12345);
@@ -86,7 +85,7 @@ public class SerializationAllocationTests
         BytesPerOperation(() => JsonSerializer.SerializeToUtf8Bytes(chunk, Json)).ShouldBeLessThan(320);
     }
 
-    [Fact]
+    [Test]
     public void AProgressChunkStaysCompactOnTheWire()
     {
         var chunk = CqrsTestStreams.Progress("tick 12345", 12345);
@@ -101,7 +100,7 @@ public class SerializationAllocationTests
         Encoding.UTF8.GetByteCount(json).ShouldBeLessThan(180);
     }
 
-    [Fact]
+    [Test]
     public void ResultsStillRoundTripThroughTheirConverters()
     {
         var success = JsonSerializer.Deserialize<Result<int>>(
@@ -128,7 +127,7 @@ public class SerializationAllocationTests
         failedWithValue.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void TheConvertersAcceptPascalCasePayloads()
     {
         var result = JsonSerializer.Deserialize<Result<int>>("""{"IsSuccess":true,"Value":7}""", Json);
@@ -137,7 +136,7 @@ public class SerializationAllocationTests
         result.Value.ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public void TheConvertersIgnoreMembersTheyDoNotKnow()
     {
         var result = JsonSerializer.Deserialize<Result<int>>(

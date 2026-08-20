@@ -11,15 +11,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using HttpResults = Microsoft.AspNetCore.Http.Results;
 using Shouldly;
-using Xunit;
+using HttpResults = Microsoft.AspNetCore.Http.Results;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class ResultEndpointFilterTests
 {
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_SuccessResult_ReturnsOkResponse()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -34,7 +33,7 @@ public class ResultEndpointFilterTests
         payload.ShouldBe("pong");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_SuccessResult_IsReadableByResultHttpClient()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -48,7 +47,7 @@ public class ResultEndpointFilterTests
         result.Value.ShouldBe("pong");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_FailedResult_ReturnsProblem()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -65,7 +64,7 @@ public class ResultEndpointFilterTests
         problem.Title.ShouldBe("Operation failed");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_FailedResult_IsReadableByResultHttpClient()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -89,7 +88,7 @@ public class ResultEndpointFilterTests
         result.Problem.Extensions.ShouldContainKey("operationId");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_GroupBuilder_AppliesFilterToAllEndpoints()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -113,7 +112,7 @@ public class ResultEndpointFilterTests
         error.Title.ShouldBe("Not Found");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_PassesThroughExistingIResult()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -126,7 +125,7 @@ public class ResultEndpointFilterTests
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_GenericFailedResultIsNormalizedToDefaultProblem()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -145,7 +144,7 @@ public class ResultEndpointFilterTests
         problem.Detail.ShouldBe("Unknown error occurred");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_NullResultReturnsNull()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -159,7 +158,7 @@ public class ResultEndpointFilterTests
         (await response.Content.ReadAsStringAsync()).ShouldBe("null");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_PlainObjectPassesThroughFilter()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -176,7 +175,7 @@ public class ResultEndpointFilterTests
         payload.Status.ShouldBe("ok");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_CustomIResultWithoutValueProperty_ReturnsNoContent()
     {
         await using var app = await CreateAppAsync(static app =>
@@ -190,7 +189,7 @@ public class ResultEndpointFilterTests
         (await response.Content.ReadAsStringAsync()).ShouldBe("");
     }
 
-    [Fact]
+    [Test]
     public async Task WithCommunicationResults_CustomIResultWithoutValuePropertyFailure_ConvertsToProblem()
     {
         await using var app = await CreateAppAsync(static app =>

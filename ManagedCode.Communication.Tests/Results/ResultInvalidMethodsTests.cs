@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Shouldly;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -11,7 +10,7 @@ public class ResultInvalidMethodsTests
 {
     #region Result Invalid Tests
 
-    [Fact]
+    [Test]
     public void Result_Invalid_WithoutParameters_ShouldCreateValidationResult()
     {
         // Act
@@ -23,13 +22,13 @@ public class ResultInvalidMethodsTests
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.Type.ShouldBe("https://tools.ietf.org/html/rfc7231#section-6.5.1");
         result.Problem.Title.ShouldBe("Validation Failed");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors.ShouldNotBeNull();
         validationErrors!["message"].ShouldContain("Invalid");
     }
 
-    [Fact]
+    [Test]
     public void Result_Invalid_WithEnum_ShouldCreateValidationResultWithErrorCode()
     {
         // Act
@@ -40,12 +39,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain("Invalid");
     }
 
-    [Fact]
+    [Test]
     public void Result_Invalid_WithMessage_ShouldCreateValidationResultWithMessage()
     {
         // Arrange
@@ -58,12 +57,12 @@ public class ResultInvalidMethodsTests
         result.IsFailed.ShouldBeTrue();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain(message);
     }
 
-    [Fact]
+    [Test]
     public void Result_Invalid_WithEnumAndMessage_ShouldCreateValidationResultWithBoth()
     {
         // Arrange
@@ -77,12 +76,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("ResourceLocked");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain(message);
     }
 
-    [Fact]
+    [Test]
     public void Result_Invalid_WithKeyValue_ShouldCreateValidationResultWithCustomField()
     {
         // Arrange
@@ -96,12 +95,12 @@ public class ResultInvalidMethodsTests
         result.IsFailed.ShouldBeTrue();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors![key].ShouldContain(value);
     }
 
-    [Fact]
+    [Test]
     public void Result_Invalid_WithEnumKeyValue_ShouldCreateValidationResultWithAll()
     {
         // Arrange
@@ -116,12 +115,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors![key].ShouldContain(value);
     }
 
-    [Fact]
+    [Test]
     public void Result_Invalid_WithDictionary_ShouldCreateValidationResultWithMultipleFields()
     {
         // Arrange
@@ -139,7 +138,7 @@ public class ResultInvalidMethodsTests
         result.IsFailed.ShouldBeTrue();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["email"].ShouldContain("Invalid email format");
         validationErrors["age"].ShouldContain("Age must be positive");
@@ -152,7 +151,7 @@ public class ResultInvalidMethodsTests
 
     #region Result<T> Invalid Tests
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithoutParameters_ShouldCreateValidationResult()
     {
         // Act
@@ -164,12 +163,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.Title.ShouldBe("Validation Failed");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain("Invalid");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithEnum_ShouldCreateValidationResultWithErrorCode()
     {
         // Act
@@ -181,12 +180,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain("Invalid");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithMessage_ShouldCreateValidationResultWithMessage()
     {
         // Arrange
@@ -200,12 +199,12 @@ public class ResultInvalidMethodsTests
         result.Value.ShouldBe(default(bool));
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain(message);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithEnumAndMessage_ShouldCreateValidationResultWithBoth()
     {
         // Arrange
@@ -220,12 +219,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("ResourceLocked");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain(message);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithKeyValue_ShouldCreateValidationResultWithCustomField()
     {
         // Arrange
@@ -240,12 +239,12 @@ public class ResultInvalidMethodsTests
         result.Value.ShouldBeNull();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors![key].ShouldContain(value);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithEnumKeyValue_ShouldCreateValidationResultWithAll()
     {
         // Arrange
@@ -261,12 +260,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors![key].ShouldContain(value);
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithDictionary_ShouldCreateValidationResultWithMultipleFields()
     {
         // Arrange
@@ -285,14 +284,14 @@ public class ResultInvalidMethodsTests
         result.Value.ShouldBeNull();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["email"].ShouldContain("Invalid email format");
         validationErrors["age"].ShouldContain("Age must be positive");
         validationErrors["name"].ShouldContain("Name is required");
     }
 
-    [Fact]
+    [Test]
     public void ResultT_Invalid_WithEnumAndDictionary_ShouldCreateValidationResultWithAllData()
     {
         // Arrange
@@ -311,7 +310,7 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["field1"].ShouldContain("Error 1");
         validationErrors["field2"].ShouldContain("Error 2");
@@ -321,7 +320,7 @@ public class ResultInvalidMethodsTests
 
     #region Generic Result.Invalid<T> Tests
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithoutParameters_ShouldCreateValidationResult()
     {
         // Act
@@ -333,12 +332,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.Title.ShouldBe("Validation Failed");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain("Invalid");
     }
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithEnum_ShouldCreateValidationResultWithErrorCode()
     {
         // Act
@@ -350,12 +349,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain("Invalid");
     }
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithMessage_ShouldCreateValidationResultWithMessage()
     {
         // Arrange
@@ -369,12 +368,12 @@ public class ResultInvalidMethodsTests
         result.Value.ShouldBe(default(bool));
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain(message);
     }
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithEnumAndMessage_ShouldCreateValidationResultWithBoth()
     {
         // Arrange
@@ -389,12 +388,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("ResourceLocked");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["message"].ShouldContain(message);
     }
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithKeyValue_ShouldCreateValidationResultWithCustomField()
     {
         // Arrange
@@ -409,12 +408,12 @@ public class ResultInvalidMethodsTests
         result.Value.ShouldBeNull();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors![key].ShouldContain(value);
     }
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithEnumKeyValue_ShouldCreateValidationResultWithAll()
     {
         // Arrange
@@ -430,12 +429,12 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors![key].ShouldContain(value);
     }
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithDictionary_ShouldCreateValidationResultWithMultipleFields()
     {
         // Arrange
@@ -453,13 +452,13 @@ public class ResultInvalidMethodsTests
         result.Value.ShouldBeNull();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["email"].ShouldContain("Invalid email format");
         validationErrors["age"].ShouldContain("Age must be positive");
     }
 
-    [Fact]
+    [Test]
     public void Result_InvalidT_WithEnumAndDictionary_ShouldCreateValidationResultWithAllData()
     {
         // Arrange
@@ -478,7 +477,7 @@ public class ResultInvalidMethodsTests
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
         result.Problem.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["field1"].ShouldContain("Error 1");
         validationErrors["field2"].ShouldContain("Error 2");
@@ -488,7 +487,7 @@ public class ResultInvalidMethodsTests
 
     #region Edge Cases and Complex Scenarios
 
-    [Fact]
+    [Test]
     public void Invalid_WithEmptyDictionary_ShouldCreateValidationResultWithoutErrors()
     {
         // Arrange
@@ -501,13 +500,13 @@ public class ResultInvalidMethodsTests
         result.IsFailed.ShouldBeTrue();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors.ShouldNotBeNull();
         validationErrors!.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void Invalid_WithDictionaryContainingEmptyValues_ShouldHandleGracefully()
     {
         // Arrange
@@ -524,13 +523,13 @@ public class ResultInvalidMethodsTests
         result.IsFailed.ShouldBeTrue();
         result.Problem.ShouldNotBeNull();
         result.Problem!.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors!["field1"].ShouldContain("Valid error");
         validationErrors["field2"].ShouldContain(string.Empty);
     }
 
-    [Fact]
+    [Test]
     public void Invalid_WithDuplicateKeysInDictionary_ShouldOverwritePreviousValue()
     {
         // Arrange
@@ -548,13 +547,13 @@ public class ResultInvalidMethodsTests
         result.IsFailed.ShouldBeTrue();
         result.Problem.ShouldNotBeNull();
         result.Problem!.ErrorCode.ShouldBe("InvalidInput");
-        
+
         var validationErrors = result.AssertValidationErrors();
         validationErrors![key].ShouldContain("Second error");
         validationErrors[key].ShouldNotContain("First error");
     }
 
-    [Fact]
+    [Test]
     public void Invalid_DifferentEnumTypes_ShouldWorkWithAnyEnum()
     {
         // Act

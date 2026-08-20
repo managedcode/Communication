@@ -1,14 +1,13 @@
 using System;
-using Shouldly;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using Microsoft.AspNetCore.SignalR;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class HubOptionsExtensionsTests
 {
-    [Fact]
+    [Test]
     public void AddCommunicationHubFilter_DoesNotThrow()
     {
         // Arrange
@@ -19,7 +18,7 @@ public class HubOptionsExtensionsTests
         Should.NotThrow(act);
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationHubFilter_WithNullHubOptions_ThrowsArgumentNullException()
     {
         // Arrange
@@ -31,7 +30,7 @@ public class HubOptionsExtensionsTests
         exception.ParamName.ShouldBe("options");
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationHubFilter_CanBeCalledMultipleTimes_DoesNotThrow()
     {
         // Arrange
@@ -44,7 +43,7 @@ public class HubOptionsExtensionsTests
             hubOptions.AddCommunicationHubFilter();
             hubOptions.AddCommunicationHubFilter();
         };
-        
+
         Should.NotThrow(act);
     }
 }

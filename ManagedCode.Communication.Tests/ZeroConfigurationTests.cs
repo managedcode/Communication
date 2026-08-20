@@ -10,7 +10,6 @@ using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Logging;
 using ManagedCode.Communication.Telemetry;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests;
 
@@ -22,12 +21,11 @@ namespace ManagedCode.Communication.Tests;
 ///     app or a unit test. These tests are the standing guarantee that registration is optional — if any code
 ///     path starts depending on configuration, one of them fails.
 /// </remarks>
-[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
+[NotInParallel]
 public class ZeroConfigurationTests
 {
     // ---------- core ----------
-
-    [Fact]
+    [Test]
     public void ResultsAndProblemsWorkWithNothingRegistered()
     {
         var success = Result<int>.Succeed(42);
@@ -39,7 +37,7 @@ public class ZeroConfigurationTests
         failure.IsFailed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ValidationProblemsWorkWithNothingRegistered()
     {
         var problem = Problem.Validation(("email", "required"));
@@ -49,7 +47,7 @@ public class ZeroConfigurationTests
         Result.Fail(problem).IsInvalid.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void SerializationWorksWithNothingRegistered()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
@@ -58,7 +56,7 @@ public class ZeroConfigurationTests
         JsonSerializer.Deserialize<Result<int>>(json, options).Value.ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public void ExceptionMappingWorksWithNothingRegistered()
     {
         Result.Fail(new InvalidOperationException("boom"), HttpStatusCode.InternalServerError)
@@ -67,7 +65,7 @@ public class ZeroConfigurationTests
 
     // ---------- logging ----------
 
-    [Fact]
+    [Test]
     public void TheLoggerResolvesWithoutAnyConfiguration()
     {
         // Never call CommunicationLogger.Configure: the last-resort factory must cover it.
@@ -77,7 +75,7 @@ public class ZeroConfigurationTests
         Should.NotThrow(() => logger.LogAtWarning());
     }
 
-    [Fact]
+    [Test]
     public void ReportingAFailureWithoutALoggerOnlyRecordsTelemetry()
     {
         var result = Result<int>.Fail(Problem.Create("boom", "d", 500));
@@ -87,7 +85,7 @@ public class ZeroConfigurationTests
         result.Report().IsFailed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void TrackWorksWithoutALogger()
     {
         var result = CommunicationDiagnostics.Track<int>("op", () => throw new InvalidOperationException("boom"));
@@ -98,7 +96,7 @@ public class ZeroConfigurationTests
 
     // ---------- telemetry ----------
 
-    [Fact]
+    [Test]
     public void RecordingTelemetryWithNoListenerIsANoOp()
     {
         // No ActivityListener and no MeterListener are attached here, which is the state of any application
@@ -111,7 +109,7 @@ public class ZeroConfigurationTests
         });
     }
 
-    [Fact]
+    [Test]
     public void StartingAnActivityIsSafeWhetherOrNotAnythingIsListening()
     {
         // Deliberately does not assert that the activity is null: ActivityListener registration is
@@ -126,7 +124,7 @@ public class ZeroConfigurationTests
 
     // ---------- railway ----------
 
-    [Fact]
+    [Test]
     public void RailwayWorksWithNothingRegistered()
     {
         var result = Result<int>.Succeed(2)
@@ -138,7 +136,7 @@ public class ZeroConfigurationTests
         result.Value.ShouldBe("v=6");
     }
 
-    [Fact]
+    [Test]
     public async Task AsyncRailwayWorksWithNothingRegistered()
     {
         var value = await Task.FromResult(Result<int>.Succeed(2))
@@ -148,7 +146,7 @@ public class ZeroConfigurationTests
         value.ShouldBe("ok:3");
     }
 
-    [Fact]
+    [Test]
     public void AggregationWorksWithNothingRegistered()
     {
         Result.Merge(Result.Succeed(), Result.Succeed()).IsSuccess.ShouldBeTrue();
@@ -158,7 +156,7 @@ public class ZeroConfigurationTests
 
     // ---------- CQRS ----------
 
-    [Fact]
+    [Test]
     public async Task AuthoringACqrsStreamWorksWithNothingRegistered()
     {
         var chunks = new List<CqrsStreamChunk<string, string>>();
@@ -177,7 +175,7 @@ public class ZeroConfigurationTests
         chunks.Select(chunk => chunk.Sequence).ShouldBe([1L, 2L]);
     }
 
-    [Fact]
+    [Test]
     public async Task NormalizingAStreamWorksWithNothingRegistered()
     {
         var chunks = new List<CqrsStreamChunk<string, string>>();
@@ -196,7 +194,7 @@ public class ZeroConfigurationTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task TheCqrsHttpClientWorksWithNothingRegistered()
     {
         using var client = new HttpClient(new UnreachableHandler());

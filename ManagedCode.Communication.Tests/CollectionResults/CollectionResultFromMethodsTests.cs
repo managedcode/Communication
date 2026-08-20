@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.CollectionResults;
 
@@ -15,7 +14,7 @@ public class CollectionResultFromMethodsTests
 {
     #region From(Func<T[]>) Tests
 
-    [Fact]
+    [Test]
     public void From_FuncReturningArray_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -34,7 +33,7 @@ public class CollectionResultFromMethodsTests
         result.TotalItems.ShouldBe(5);
     }
 
-    [Fact]
+    [Test]
     public void From_FuncReturningEmptyArray_ShouldCreateEmptySuccessResult()
     {
         // Arrange
@@ -50,7 +49,7 @@ public class CollectionResultFromMethodsTests
         result.HasItems.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void From_FuncThrowingException_ShouldCreateFailedResult()
     {
         // Arrange
@@ -69,7 +68,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void From_FuncReturningNull_ShouldCreateFailedResultDueToNullReference()
     {
         // Arrange
@@ -89,7 +88,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<IEnumerable<T>>) Tests
 
-    [Fact]
+    [Test]
     public void From_FuncReturningEnumerable_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -104,7 +103,7 @@ public class CollectionResultFromMethodsTests
         result.TotalItems.ShouldBe(3);
     }
 
-    [Fact]
+    [Test]
     public void From_FuncReturningLinqQuery_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -119,7 +118,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { 3, 4, 5 });
     }
 
-    [Fact]
+    [Test]
     public void From_FuncReturningHashSet_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -137,7 +136,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<CollectionResult<T>>) Tests
 
-    [Fact]
+    [Test]
     public void From_FuncReturningCollectionResult_ShouldReturnSameResult()
     {
         // Arrange
@@ -152,7 +151,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { 10, 20, 30 });
     }
 
-    [Fact]
+    [Test]
     public void From_FuncReturningFailedCollectionResult_ShouldReturnFailedResult()
     {
         // Arrange
@@ -167,7 +166,7 @@ public class CollectionResultFromMethodsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void From_FuncThrowingExceptionForCollectionResult_ShouldReturnFailedResult()
     {
         // Arrange
@@ -186,7 +185,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Task<T[]>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_TaskReturningArray_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -200,7 +199,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3 });
     }
 
-    [Fact]
+    [Test]
     public async Task From_TaskWithDelay_ShouldWaitAndReturnSuccessResult()
     {
         // Arrange
@@ -218,7 +217,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { "delayed", "result" });
     }
 
-    [Fact]
+    [Test]
     public async Task From_FaultedTask_ShouldReturnFailedResult()
     {
         // Arrange
@@ -233,7 +232,7 @@ public class CollectionResultFromMethodsTests
         result.ShouldHaveProblem().WithDetail("Task failed");
     }
 
-    [Fact]
+    [Test]
     public async Task From_CanceledTask_ShouldReturnFailedResult()
     {
         // Arrange
@@ -253,7 +252,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Task<IEnumerable<T>>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_TaskReturningEnumerable_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -267,7 +266,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { 1.5m, 2.5m, 3.5m });
     }
 
-    [Fact]
+    [Test]
     public async Task From_TaskReturningList_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -285,7 +284,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Task<CollectionResult<T>>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_TaskReturningCollectionResult_ShouldReturnSameResult()
     {
         // Arrange
@@ -299,7 +298,7 @@ public class CollectionResultFromMethodsTests
         result.ShouldBe(expectedResult);
     }
 
-    [Fact]
+    [Test]
     public async Task From_TaskReturningFailedCollectionResult_ShouldReturnFailedResult()
     {
         // Arrange
@@ -318,7 +317,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<Task<T[]>>) with CancellationToken Tests
 
-    [Fact]
+    [Test]
     public async Task From_FuncTaskWithCancellationToken_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -336,7 +335,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { 5, 10, 15 });
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncTaskWithCancellation_ShouldReturnFailedResult()
     {
         // Arrange
@@ -356,7 +355,7 @@ public class CollectionResultFromMethodsTests
         result.HasProblem.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncTaskThrowingException_ShouldReturnFailedResult()
     {
         // Arrange
@@ -375,7 +374,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<Task<IEnumerable<T>>>) with CancellationToken Tests
 
-    [Fact]
+    [Test]
     public async Task From_FuncTaskEnumerable_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -397,7 +396,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<Task<CollectionResult<T>>>) with CancellationToken Tests
 
-    [Fact]
+    [Test]
     public async Task From_FuncTaskCollectionResult_ShouldReturnResult()
     {
         // Arrange
@@ -419,7 +418,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(CollectionResult<T>) Tests
 
-    [Fact]
+    [Test]
     public void From_SuccessCollectionResult_ShouldReturnSameResult()
     {
         // Arrange
@@ -434,7 +433,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { "test1", "test2" });
     }
 
-    [Fact]
+    [Test]
     public void From_FailedCollectionResultWithProblem_ShouldReturnFailedResult()
     {
         // Arrange
@@ -449,7 +448,7 @@ public class CollectionResultFromMethodsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void From_FailedCollectionResultWithoutProblem_ShouldReturnFailedResult()
     {
         // Arrange
@@ -467,7 +466,7 @@ public class CollectionResultFromMethodsTests
 
     #region From<U>(CollectionResult<U>) Tests
 
-    [Fact]
+    [Test]
     public void From_GenericSuccessCollectionResult_ShouldReturnSuccessResult()
     {
         // Arrange
@@ -481,7 +480,7 @@ public class CollectionResultFromMethodsTests
         result.IsFailed.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void From_GenericFailedCollectionResultWithProblem_ShouldReturnFailedResult()
     {
         // Arrange
@@ -496,7 +495,7 @@ public class CollectionResultFromMethodsTests
         result.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void From_GenericFailedCollectionResultWithoutProblem_ShouldReturnFailedResult()
     {
         // Arrange
@@ -514,7 +513,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(ValueTask<T[]>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_ValueTaskReturningArray_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -528,7 +527,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { 11, 22, 33 });
     }
 
-    [Fact]
+    [Test]
     public async Task From_ValueTaskWithException_ShouldReturnFailedResult()
     {
         // Arrange
@@ -546,7 +545,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(ValueTask<IEnumerable<T>>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_ValueTaskReturningEnumerable_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -564,7 +563,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(ValueTask<CollectionResult<T>>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_ValueTaskReturningCollectionResult_ShouldReturnSameResult()
     {
         // Arrange
@@ -582,7 +581,7 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<ValueTask<T[]>>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_FuncValueTaskArray_ShouldCreateSuccessResult()
     {
         // Arrange
@@ -596,7 +595,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldHaveCount(2);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncValueTaskThrowingException_ShouldReturnFailedResult()
     {
         // Arrange
@@ -615,11 +614,11 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<ValueTask<IEnumerable<T>>>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_FuncValueTaskEnumerable_ShouldCreateSuccessResult()
     {
         // Arrange
-        Func<ValueTask<IEnumerable<double>>> func = () => 
+        Func<ValueTask<IEnumerable<double>>> func = () =>
             new ValueTask<IEnumerable<double>>(new[] { 1.1, 2.2, 3.3 });
 
         // Act
@@ -634,11 +633,11 @@ public class CollectionResultFromMethodsTests
 
     #region From(Func<ValueTask<CollectionResult<T>>>) Tests
 
-    [Fact]
+    [Test]
     public async Task From_FuncValueTaskCollectionResult_ShouldReturnResult()
     {
         // Arrange
-        Func<ValueTask<CollectionResult<string>>> func = () => 
+        Func<ValueTask<CollectionResult<string>>> func = () =>
             new ValueTask<CollectionResult<string>>(CollectionResult<string>.Succeed(new[] { "value" }));
 
         // Act
@@ -653,7 +652,7 @@ public class CollectionResultFromMethodsTests
 
     #region Complex Type Tests
 
-    [Fact]
+    [Test]
     public void From_ComplexTypes_ShouldHandleCorrectly()
     {
         // Arrange
@@ -673,7 +672,7 @@ public class CollectionResultFromMethodsTests
         result.Collection[1].ShouldContainKey("key2");
     }
 
-    [Fact]
+    [Test]
     public async Task From_TupleTypes_ShouldHandleCorrectly()
     {
         // Arrange
@@ -697,7 +696,7 @@ public class CollectionResultFromMethodsTests
 
     #region Edge Cases
 
-    [Fact]
+    [Test]
     public void From_FuncWithSideEffects_ShouldExecuteOnce()
     {
         // Arrange
@@ -719,7 +718,7 @@ public class CollectionResultFromMethodsTests
         collection2.ShouldBeEquivalentTo(new[] { 1 });
     }
 
-    [Fact]
+    [Test]
     public void From_LargeCollection_ShouldHandleEfficiently()
     {
         // Arrange
@@ -735,7 +734,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.Last().ShouldBe(10000);
     }
 
-    [Fact]
+    [Test]
     public async Task From_SlowAsyncOperation_ShouldComplete()
     {
         // Arrange
@@ -753,7 +752,7 @@ public class CollectionResultFromMethodsTests
         result.Collection.ShouldBeEquivalentTo(new[] { "slow", "operation" });
     }
 
-    [Fact]
+    [Test]
     public void From_RecursiveDataStructure_ShouldHandleCorrectly()
     {
         // Arrange
@@ -761,7 +760,7 @@ public class CollectionResultFromMethodsTests
         var node2 = new Node { Value = 2 };
         node1.Next = node2;
         node2.Next = node1; // Circular reference
-        
+
         Func<Node[]> func = () => new[] { node1, node2 };
 
         // Act

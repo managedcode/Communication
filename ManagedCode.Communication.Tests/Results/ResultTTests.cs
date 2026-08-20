@@ -1,16 +1,15 @@
 using System;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultTTests
 {
-    [Fact]
+    [Test]
     public void Succeed_WithValue_ShouldCreateSuccessfulResult()
     {
         // Arrange
@@ -30,7 +29,7 @@ public class ResultTTests
             .ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithMessage_ShouldCreateFailedResult()
     {
         // Arrange
@@ -59,7 +58,7 @@ public class ResultTTests
             .ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithProblem_ShouldCreateFailedResult()
     {
         // Arrange
@@ -79,7 +78,7 @@ public class ResultTTests
             .ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void FailValidation_ShouldCreateValidationResult()
     {
         // Act
@@ -106,7 +105,7 @@ public class ResultTTests
             .ShouldContain("Age must be greater than 0");
     }
 
-    [Fact]
+    [Test]
     public void FailNotFound_ShouldCreateNotFoundResult()
     {
         // Act
@@ -126,7 +125,7 @@ public class ResultTTests
             .ShouldBe("Resource not found");
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_FromValue_ShouldCreateSuccessfulResult()
     {
         // Arrange
@@ -142,7 +141,7 @@ public class ResultTTests
             .ShouldBe(value);
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_FromProblem_ShouldCreateFailedResult()
     {
         // Arrange
@@ -158,7 +157,7 @@ public class ResultTTests
             .ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_ToBool_ShouldReturnIsSuccess()
     {
         // Arrange
@@ -170,7 +169,7 @@ public class ResultTTests
         ((bool)failResult).ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void Map_WithSuccessfulResult_ShouldTransformValue()
     {
         // Arrange
@@ -186,7 +185,7 @@ public class ResultTTests
             .ShouldBe("5");
     }
 
-    [Fact]
+    [Test]
     public void Map_WithFailedResult_ShouldReturnFailedResult()
     {
         // Arrange
@@ -202,7 +201,7 @@ public class ResultTTests
             .ShouldBe(result.Problem);
     }
 
-    [Fact]
+    [Test]
     public void Bind_WithSuccessfulResult_ShouldExecuteFunction()
     {
         // Arrange
@@ -218,7 +217,7 @@ public class ResultTTests
             .ShouldBe("5");
     }
 
-    [Fact]
+    [Test]
     public void Bind_WithFailedResult_ShouldReturnFailedResult()
     {
         // Arrange
@@ -234,7 +233,7 @@ public class ResultTTests
             .ShouldBe(result.Problem);
     }
 
-    [Fact]
+    [Test]
     public void Tap_WithSuccessfulResult_ShouldExecuteAction()
     {
         // Arrange
@@ -249,7 +248,7 @@ public class ResultTTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Match_ShouldExecuteCorrectFunction()
     {
         // Arrange
@@ -266,7 +265,7 @@ public class ResultTTests
         failOutput.ShouldBe("Failed: Failed");
     }
 
-    [Fact]
+    [Test]
     public void From_WithFunc_ShouldExecuteAndWrapResult()
     {
         // Act
@@ -280,7 +279,7 @@ public class ResultTTests
             .ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void From_WithExceptionThrowingFunc_ShouldCreateFailedResult()
     {
         // Act
@@ -296,7 +295,7 @@ public class ResultTTests
             .ShouldBe("Test exception");
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithSuccessfulResult_ShouldReturnFalse()
     {
         // Arrange
@@ -310,7 +309,7 @@ public class ResultTTests
         problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
     {
         // Arrange
@@ -326,7 +325,7 @@ public class ResultTTests
         problem.ShouldBe(expectedProblem);
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithSuccessfulResult_ShouldNotThrow()
     {
         // Arrange
@@ -336,7 +335,7 @@ public class ResultTTests
         Should.NotThrow(() => result.ThrowIfFail());
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithFailedResult_ShouldThrowProblemException()
     {
         // Arrange
@@ -348,7 +347,7 @@ public class ResultTTests
         exception.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithValidationFailure_ShouldThrowWithValidationDetails()
     {
         // Arrange
@@ -359,7 +358,7 @@ public class ResultTTests
 
         exception.Problem.Title.ShouldBe("Validation Failed");
         exception.Problem.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = exception.Problem.GetValidationErrors();
         validationErrors.ShouldNotBeNull();
         validationErrors!["username"].ShouldContain("Username is required");

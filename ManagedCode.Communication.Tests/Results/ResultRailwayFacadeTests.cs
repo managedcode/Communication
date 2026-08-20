@@ -2,13 +2,12 @@ using System.Linq;
 using System.Net;
 using ManagedCode.Communication.Constants;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultRailwayFacadeTests
 {
-    [Fact]
+    [Test]
     public void Merge_WithFirstFailure_ShouldReturnFirstFailure()
     {
         // Arrange
@@ -26,7 +25,7 @@ public class ResultRailwayFacadeTests
         result.Problem.StatusCode.ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public void MergeAll_WithMixedFailures_ShouldReturnAggregateProblem()
     {
         // Arrange
@@ -47,7 +46,7 @@ public class ResultRailwayFacadeTests
         errors.Select(problem => problem.StatusCode).ShouldContain(403);
     }
 
-    [Fact]
+    [Test]
     public void Combine_WithSuccessfulValues_ShouldReturnCollection()
     {
         // Arrange
@@ -63,7 +62,7 @@ public class ResultRailwayFacadeTests
         result.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3 });
     }
 
-    [Fact]
+    [Test]
     public void CombineAll_WithMixedFailures_ShouldReturnAggregateProblem()
     {
         // Arrange

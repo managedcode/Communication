@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Shouldly;
 using ManagedCode.Communication.Constants;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.ProblemTests;
 
@@ -11,7 +10,7 @@ public class ProblemCreateMethodsTests
 {
     #region Create<TEnum> with Status Code Tests
 
-    [Fact]
+    [Test]
     public void Problem_Create_WithEnumAndStatusCode_ShouldCreateProblemWithErrorCode()
     {
         // Act
@@ -28,7 +27,7 @@ public class ProblemCreateMethodsTests
         problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].ShouldBe("TestError");
     }
 
-    [Fact]
+    [Test]
     public void Problem_Create_WithEnumDetailAndStatusCode_ShouldCreateProblemWithCustomDetail()
     {
         // Arrange
@@ -48,10 +47,10 @@ public class ProblemCreateMethodsTests
         problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].ShouldBe("TestError");
     }
 
-    [Theory]
-    [InlineData(400, "BadRequest")]
-    [InlineData(404, "NotFound")]
-    [InlineData(500, "InternalServerError")]
+    [Test]
+    [Arguments(400, "BadRequest")]
+    [Arguments(404, "NotFound")]
+    [Arguments(500, "InternalServerError")]
     public void Problem_Create_WithEnumAndVariousStatusCodes_ShouldSetCorrectType(int statusCode, string enumValue)
     {
         // Arrange
@@ -70,7 +69,7 @@ public class ProblemCreateMethodsTests
 
     #region Create from Exception Tests
 
-    [Fact]
+    [Test]
     public void Problem_Create_FromException_ShouldCreateProblemWithExceptionDetails()
     {
         // Arrange
@@ -90,7 +89,7 @@ public class ProblemCreateMethodsTests
         problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType].ShouldBe(typeof(InvalidOperationException).FullName);
     }
 
-    [Fact]
+    [Test]
     public void Problem_Create_FromExceptionWithData_ShouldIncludeExceptionData()
     {
         // Arrange
@@ -111,7 +110,7 @@ public class ProblemCreateMethodsTests
         problem.Extensions.ShouldContainKey($"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}Timestamp");
     }
 
-    [Fact]
+    [Test]
     public void Problem_Create_FromExceptionWithData_ShouldHandleValidKeysOnly()
     {
         // Arrange
@@ -130,7 +129,7 @@ public class ProblemCreateMethodsTests
         problem.Extensions[$"{ProblemConstants.ExtensionKeys.ExceptionDataPrefix}AnotherKey"].ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void Problem_Create_FromInnerException_ShouldUseOuterException()
     {
         // Arrange
@@ -150,7 +149,7 @@ public class ProblemCreateMethodsTests
 
     #region Complex Enum Scenarios
 
-    [Fact]
+    [Test]
     public void Problem_Create_WithFlagsEnum_ShouldHandleCorrectly()
     {
         // Arrange
@@ -165,7 +164,7 @@ public class ProblemCreateMethodsTests
         problem.Extensions[ProblemConstants.ExtensionKeys.ErrorType].ShouldBe("FlagsError");
     }
 
-    [Fact]
+    [Test]
     public void Problem_Create_WithNumericEnum_ShouldUseEnumName()
     {
         // Act
@@ -180,7 +179,7 @@ public class ProblemCreateMethodsTests
 
     #region AddValidationError Tests
 
-    [Fact]
+    [Test]
     public void Problem_AddValidationError_ToEmptyProblem_ShouldCreateErrorsDictionary()
     {
         // Arrange
@@ -196,7 +195,7 @@ public class ProblemCreateMethodsTests
         errors!["email"].ShouldContain("Email is required");
     }
 
-    [Fact]
+    [Test]
     public void Problem_AddValidationError_ToExistingField_ShouldAppendError()
     {
         // Arrange
@@ -214,7 +213,7 @@ public class ProblemCreateMethodsTests
         errors["password"].ShouldContain("Must contain special characters");
     }
 
-    [Fact]
+    [Test]
     public void Problem_AddValidationError_MultipleFields_ShouldCreateSeparateLists()
     {
         // Arrange
@@ -236,7 +235,7 @@ public class ProblemCreateMethodsTests
         errorDictionary["age"].ShouldHaveCount(1);
     }
 
-    [Fact]
+    [Test]
     public void Problem_AddValidationError_WithNonDictionaryExtension_ShouldReplaceWithDictionary()
     {
         // Arrange
@@ -256,7 +255,7 @@ public class ProblemCreateMethodsTests
 
     #region GetOrCreateValidationErrors Tests
 
-    [Fact]
+    [Test]
     public void Problem_GetValidationErrors_WithNoErrors_ShouldReturnNull()
     {
         // Arrange
@@ -269,7 +268,7 @@ public class ProblemCreateMethodsTests
         errors.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Problem_GetValidationErrors_WithInvalidType_ShouldReturnNull()
     {
         // Arrange
@@ -283,7 +282,7 @@ public class ProblemCreateMethodsTests
         errors.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Problem_GetValidationErrors_WithValidErrors_ShouldReturnDictionary()
     {
         // Arrange

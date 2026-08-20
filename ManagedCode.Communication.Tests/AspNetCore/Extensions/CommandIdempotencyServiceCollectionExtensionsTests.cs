@@ -5,13 +5,12 @@ using ManagedCode.Communication.Tests.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class CommandIdempotencyServiceCollectionExtensionsTests
 {
-    [Fact]
+    [Test]
     public void AddCommandIdempotency_RegistersStoreAndBackgroundCleanup()
     {
         var services = new ServiceCollection();
@@ -38,7 +37,7 @@ public class CommandIdempotencyServiceCollectionExtensionsTests
         hosted.Count.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void AddCommandIdempotency_WithInstance_RegistersSameStoreInstance()
     {
         var services = new ServiceCollection();
@@ -56,7 +55,7 @@ public class CommandIdempotencyServiceCollectionExtensionsTests
         hosted.Count.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void AddCommandIdempotencyStore_DoesNotRegisterBackgroundCleanup()
     {
         var services = new ServiceCollection();
@@ -72,7 +71,7 @@ public class CommandIdempotencyServiceCollectionExtensionsTests
         hosted.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void AddCommandIdempotencyWithManualCleanup_DoesNotRegisterHostedServiceAndPreservesOptions()
     {
         var services = new ServiceCollection();

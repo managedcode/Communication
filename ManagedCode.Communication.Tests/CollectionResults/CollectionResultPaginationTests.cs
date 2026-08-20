@@ -1,13 +1,12 @@
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Commands;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CollectionResults;
 
 public class CollectionResultPaginationTests
 {
-    [Fact]
+    [Test]
     public void Succeed_WithPaginationRequest_ShouldPopulateMetadata()
     {
         var items = new[] { 1, 2, 3 };
@@ -22,7 +21,7 @@ public class CollectionResultPaginationTests
         result.TotalPages.ShouldBe(4);
     }
 
-    [Fact]
+    [Test]
     public void Succeed_WithOptions_ShouldClampPageSize()
     {
         var items = new[] { 1, 2, 3, 4, 5 };

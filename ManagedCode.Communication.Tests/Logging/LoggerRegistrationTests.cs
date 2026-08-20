@@ -7,7 +7,6 @@ using ManagedCode.Communication.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Logging;
 
@@ -19,12 +18,11 @@ namespace ManagedCode.Communication.Tests.Logging;
 ///     that silently goes nowhere is worse than no logging at all. Register nothing and the same calls must stay
 ///     silent without throwing, so the library can be used from a console app or a unit test as-is.
 /// </remarks>
-[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
+[NotInParallel]
 public sealed class LoggerRegistrationTests
 {
     // ---------- logger registered: entries appear ----------
-
-    [Fact]
+    [Test]
     public void AReportedFailureReachesARegisteredLogger()
     {
         var sink = new LogSink();
@@ -44,7 +42,7 @@ public sealed class LoggerRegistrationTests
         entry.Message.ShouldContain("402");
     }
 
-    [Fact]
+    [Test]
     public void TheOriginatingExceptionIsAttachedToTheLogEntry()
     {
         var sink = new LogSink();
@@ -71,7 +69,7 @@ public sealed class LoggerRegistrationTests
         entry.Exception!.StackTrace.ShouldNotBeNullOrWhiteSpace();
     }
 
-    [Fact]
+    [Test]
     public void AValidationFailureLogsAsAWarningRatherThanAnError()
     {
         var sink = new LogSink();
@@ -90,7 +88,7 @@ public sealed class LoggerRegistrationTests
         entry.Message.ShouldContain("name");
     }
 
-    [Fact]
+    [Test]
     public void ReportOnAResultLogsOnlyWhenItFailed()
     {
         var sink = new LogSink();
@@ -108,7 +106,7 @@ public sealed class LoggerRegistrationTests
         sink.Entries.Count.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void ConfiguringTheLibraryLoggerRoutesItsInternalLoggingToYourFactory()
     {
         var sink = new LogSink();
@@ -131,7 +129,7 @@ public sealed class LoggerRegistrationTests
         }
     }
 
-    [Fact]
+    [Test]
     public void ConfiguringFromAServiceProviderAlsoWorks()
     {
         var sink = new LogSink();
@@ -158,7 +156,7 @@ public sealed class LoggerRegistrationTests
 
     // ---------- no logger registered: silence, not failure ----------
 
-    [Fact]
+    [Test]
     public void WithoutAnyRegistrationNothingIsLoggedAndNothingThrows()
     {
         ResetLibraryLogger();
@@ -178,7 +176,7 @@ public sealed class LoggerRegistrationTests
         sink.Entries.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void PassingNullAsTheLoggerSkipsLoggingButStillRecordsTelemetry()
     {
         var sink = new LogSink();
@@ -190,7 +188,7 @@ public sealed class LoggerRegistrationTests
         sink.Entries.ShouldBeEmpty();
     }
 
-    [Fact]
+    [Test]
     public void ADisabledLogLevelProducesNoEntries()
     {
         var sink = new LogSink();

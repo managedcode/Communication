@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ProblemExceptionTests
 {
-    [Fact]
+    [Test]
     public void Constructor_WithProblem_ShouldSetPropertiesCorrectly()
     {
         // Arrange
@@ -27,7 +26,7 @@ public class ProblemExceptionTests
         exception.Message.ShouldContain("404");
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithBasicDetails_ShouldCreateProblemAndSetProperties()
     {
         // Act
@@ -43,7 +42,7 @@ public class ProblemExceptionTests
         exception.Problem.Detail.ShouldBe("Database connection failed");
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithTitleOnly_ShouldUseDefaultStatusCodeAndDuplicateDetail()
     {
         // Act
@@ -55,7 +54,7 @@ public class ProblemExceptionTests
         exception.Detail.ShouldBe("Bad Request");
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithInnerException_ShouldCreateProblemFromException()
     {
         // Arrange
@@ -71,7 +70,7 @@ public class ProblemExceptionTests
         exception.Problem.ErrorCode.ShouldBe("System.ArgumentNullException");
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithProblemContainingErrorCode_ShouldPopulateData()
     {
         // Arrange
@@ -86,7 +85,7 @@ public class ProblemExceptionTests
         exception.Data[$"{nameof(Problem)}.{nameof(problem.ErrorCode)}"].ShouldBe("InvalidInput");
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithValidationProblem_ShouldPopulateValidationErrors()
     {
         // Arrange
@@ -100,18 +99,18 @@ public class ProblemExceptionTests
         exception.ValidationErrors.ShouldNotBeNull();
         exception.ValidationErrors!["email"].ShouldContain("Email is required");
         exception.ValidationErrors["age"].ShouldContain("Age must be positive");
-        
+
         exception.Data.Contains($"{nameof(Problem)}.ValidationError.email").ShouldBeTrue();
         exception.Data[$"{nameof(Problem)}.ValidationError.email"].ShouldBe("Email is required");
         exception.Data.Contains($"{nameof(Problem)}.ValidationError.age").ShouldBeTrue();
         exception.Data[$"{nameof(Problem)}.ValidationError.age"].ShouldBe("Age must be positive");
-        
+
         exception.Message.ShouldContain("Validation failed");
         exception.Message.ShouldContain("email: Email is required");
         exception.Message.ShouldContain("age: Age must be positive");
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithProblemExtensions_ShouldPopulateData()
     {
         // Arrange
@@ -129,7 +128,7 @@ public class ProblemExceptionTests
         exception.Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.retryAfter"].ShouldBe(60);
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithProblemHavingNullProperties_ShouldHandleGracefully()
     {
         // Arrange
@@ -146,7 +145,7 @@ public class ProblemExceptionTests
         exception.Message.ShouldBe("An error occurred");
     }
 
-    [Fact]
+    [Test]
     public void FromProblem_ShouldCreateProblemException()
     {
         // Arrange
@@ -161,7 +160,7 @@ public class ProblemExceptionTests
         exception.StatusCode.ShouldBe(409);
     }
 
-    [Fact]
+    [Test]
     public void IsValidationProblem_WithNonValidationProblem_ShouldReturnFalse()
     {
         // Arrange
@@ -172,7 +171,7 @@ public class ProblemExceptionTests
         exception.IsValidationProblem.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void ValidationErrors_WithNonValidationProblem_ShouldReturnNull()
     {
         // Arrange
@@ -183,12 +182,12 @@ public class ProblemExceptionTests
         exception.ValidationErrors.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithProblemContainingMultipleValidationErrorsPerField_ShouldJoinWithSemicolon()
     {
         // Arrange
         var problem = Problem.Validation(
-            ("email", "Email is required"), 
+            ("email", "Email is required"),
             ("email", "Email format is invalid"),
             ("email", "Email domain is not allowed")
         );
@@ -200,7 +199,7 @@ public class ProblemExceptionTests
         exception.Data[$"{nameof(Problem)}.ValidationError.email"].ShouldBe("Email is required; Email format is invalid; Email domain is not allowed");
     }
 
-    [Fact]
+    [Test]
     public void Message_WithErrorCode_ShouldIncludeErrorCodeInBrackets()
     {
         // Arrange
@@ -213,7 +212,7 @@ public class ProblemExceptionTests
         exception.Message.ShouldContain("[ResourceLocked]");
     }
 
-    [Fact]
+    [Test]
     public void Constructor_AllDataFieldsShouldUseNameof()
     {
         // Arrange
@@ -232,7 +231,7 @@ public class ProblemExceptionTests
         exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.ErrorCode)}").ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Constructor_WithEmptyErrorCode_ShouldNotPopulateErrorCodeDataEntry()
     {
         // Arrange

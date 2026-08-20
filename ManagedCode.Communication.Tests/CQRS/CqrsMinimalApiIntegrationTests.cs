@@ -5,14 +5,13 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using ManagedCode.Communication.CQRS;
 using ManagedCode.Communication.AspNetCore;
 using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -24,8 +23,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 public class CqrsMinimalApiIntegrationTests
 {
     // ---------- positive ----------
-
-    [Fact]
+    [Test]
     public async Task CompletedStream_IsDeliveredAsEventStream()
     {
         await using var app = await StartAsync(app => app
@@ -48,7 +46,7 @@ public class CqrsMinimalApiIntegrationTests
         result.Status.ShouldBe("done");
     }
 
-    [Fact]
+    [Test]
     public async Task ExplicitHttpResult_UsesTheSameCqrsWireContractWithoutAFilter()
     {
         await using var app = await StartAsync(app => app
@@ -67,7 +65,7 @@ public class CqrsMinimalApiIntegrationTests
         ]);
     }
 
-    [Fact]
+    [Test]
     public async Task RouteGroup_AppliesToEveryEndpointInTheGroup()
     {
         await using var app = await StartAsync(app =>
@@ -87,7 +85,7 @@ public class CqrsMinimalApiIntegrationTests
         }
     }
 
-    [Fact]
+    [Test]
     public async Task PushStyleHandler_StreamsProgressAndCompletes()
     {
         await using var app = await StartAsync(app => app
@@ -109,7 +107,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks[^1].Kind.ShouldBe(CqrsStreamChunkKind.Completed);
     }
 
-    [Fact]
+    [Test]
     public async Task PostWithBody_ReachesTheHandler()
     {
         await using var app = await StartAsync(app => app
@@ -129,7 +127,7 @@ public class CqrsMinimalApiIntegrationTests
 
     // ---------- handled failures ----------
 
-    [Fact]
+    [Test]
     public async Task HandlerReportedFailure_ArrivesAsATerminalFailedChunkOnA200Response()
     {
         await using var app = await StartAsync(app => app
@@ -151,7 +149,7 @@ public class CqrsMinimalApiIntegrationTests
 
     // ---------- unhandled failures ----------
 
-    [Fact]
+    [Test]
     public async Task ExceptionMidStream_BecomesATerminalFailedChunk()
     {
         await using var app = await StartAsync(app => app
@@ -171,7 +169,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks[^1].Problem!.StatusCode.ShouldBe((int)HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public async Task ExceptionBeforeTheFirstChunk_BecomesTheOnlyChunk()
     {
         await using var app = await StartAsync(app => app
@@ -187,7 +185,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks[0].Problem!.Detail.ShouldBe("Immediate stream failure");
     }
 
-    [Fact]
+    [Test]
     public async Task ExceptionThrownBeforeTheStreamIsReturned_IsNotTheTransportsToHandle()
     {
         // The filter converts return values. A handler that throws before returning one never reaches it, so the
@@ -202,7 +200,7 @@ public class CqrsMinimalApiIntegrationTests
         exception.Message.ShouldBe("crashed before stream");
     }
 
-    [Fact]
+    [Test]
     public async Task ExceptionThrownBeforeTheStream_IsHandledByAnExceptionHandlerWhenOneIsConfigured()
     {
         await using var app = await CqrsTestHost.StartMinimalApiAsync(app =>
@@ -226,7 +224,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks[0].Problem!.Detail.ShouldBe("handled centrally");
     }
 
-    [Fact]
+    [Test]
     public async Task StreamWithoutATerminalChunk_GetsOneAppended()
     {
         await using var app = await StartAsync(app => app
@@ -242,7 +240,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks[^1].Problem!.Title.ShouldBe(CqrsStreamProblems.IncompleteStream);
     }
 
-    [Fact]
+    [Test]
     public async Task TerminalGuaranteeCanBeDisabled()
     {
         await using var app = await StartAsync(app => app
@@ -257,7 +255,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks[^1].Kind.ShouldBe(CqrsStreamChunkKind.Progress);
     }
 
-    [Fact]
+    [Test]
     public async Task NullChunksAreDropped()
     {
         await using var app = await StartAsync(app => app
@@ -271,7 +269,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks.Select(chunk => chunk.Kind).ShouldBe([CqrsStreamChunkKind.Started, CqrsStreamChunkKind.Completed]);
     }
 
-    [Fact]
+    [Test]
     public async Task EmptyStream_StillEndsOnATerminalChunk()
     {
         await using var app = await StartAsync(app => app
@@ -288,7 +286,7 @@ public class CqrsMinimalApiIntegrationTests
 
     // ---------- things the transport must not touch ----------
 
-    [Fact]
+    [Test]
     public async Task AnIResultReturnedByTheHandlerIsPassedThroughUnchanged()
     {
         await using var app = await StartAsync(app => app
@@ -301,7 +299,7 @@ public class CqrsMinimalApiIntegrationTests
         (await response.Content.ReadAsStringAsync()).Trim().ShouldBe("already-result");
     }
 
-    [Fact]
+    [Test]
     public async Task ANonChunkAsyncEnumerableIsPassedThroughUnchanged()
     {
         await using var app = await StartAsync(app => app
@@ -314,7 +312,7 @@ public class CqrsMinimalApiIntegrationTests
         (await response.Content.ReadAsStringAsync()).ShouldBe("[1,2]");
     }
 
-    [Fact]
+    [Test]
     public async Task APlainObjectIsPassedThroughUnchanged()
     {
         await using var app = await StartAsync(app => app
@@ -327,7 +325,7 @@ public class CqrsMinimalApiIntegrationTests
         (await response.Content.ReadAsStringAsync()).ShouldContain("not-a-stream");
     }
 
-    [Fact]
+    [Test]
     public async Task ANullReturnValueIsPassedThroughUnchanged()
     {
         await using var app = await StartAsync(app => app
@@ -342,7 +340,7 @@ public class CqrsMinimalApiIntegrationTests
 
     // ---------- cancellation and disconnects ----------
 
-    [Fact]
+    [Test]
     public async Task ClientDisconnect_CancelsTheHandler()
     {
         var cancellationObserved = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -368,7 +366,7 @@ public class CqrsMinimalApiIntegrationTests
         (await cancellationObserved.Task.WaitAsync(TimeSpan.FromSeconds(30))).ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task CancellingTheClientTokenStopsEnumerationPromptly()
     {
         await using var app = await StartAsync(app => app
@@ -398,7 +396,7 @@ public class CqrsMinimalApiIntegrationTests
         chunks.ShouldAllBe(chunk => chunk.Kind != CqrsStreamChunkKind.Completed);
     }
 
-    [Fact]
+    [Test]
     public async Task APreCancelledTokenNeverReachesTheServer()
     {
         await using var app = await StartAsync(app => app
@@ -417,7 +415,7 @@ public class CqrsMinimalApiIntegrationTests
         });
     }
 
-    [Fact]
+    [Test]
     public async Task AStoppedConsumerCanStartTheStreamAgainFromScratch()
     {
         await using var app = await StartAsync(app => app

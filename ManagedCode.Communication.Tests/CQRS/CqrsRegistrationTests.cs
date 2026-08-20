@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Shouldly;
-using Xunit;
 using CqrsEndpointExtensions = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsEndpointExtensions;
 using CqrsMvcExtensions = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsMvcOptionsExtensions;
 using CqrsServices = ManagedCode.Communication.AspNetCore.Extensions.CommunicationCqrsServiceCollectionExtensions;
@@ -18,7 +17,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 /// </summary>
 public class CqrsRegistrationTests
 {
-    [Fact]
+    [Test]
     public void AddCommunicationCqrs_RegistersTheActionFilter()
     {
         var services = new ServiceCollection();
@@ -28,7 +27,7 @@ public class CqrsRegistrationTests
         FilterCount(services).ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationCqrs_IsIdempotent()
     {
         var services = new ServiceCollection();
@@ -43,7 +42,7 @@ public class CqrsRegistrationTests
         FilterCount(services).ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationCqrsFiltersOnMvcOptions_IsIdempotent()
     {
         var options = new MvcOptions();
@@ -57,7 +56,7 @@ public class CqrsRegistrationTests
             .ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationCqrs_ExposesDefaultOptionsWhenNotConfigured()
     {
         var services = new ServiceCollection();
@@ -71,7 +70,7 @@ public class CqrsRegistrationTests
         options.EnsureTerminalChunk.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationCqrs_AppliesTheConfigurationCallback()
     {
         var services = new ServiceCollection();
@@ -89,7 +88,7 @@ public class CqrsRegistrationTests
         options.EnsureTerminalChunk.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void RegistrationAppliesConfigurationAndRegistersTheFilterOnce()
     {
         var services = new ServiceCollection();
@@ -102,7 +101,7 @@ public class CqrsRegistrationTests
         provider.GetRequiredService<IOptions<CqrsStreamServerOptions>>().Value.EnsureTerminalChunk.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void TheActionFilterFallsBackToDefaultsWhenOptionsAreAbsent()
     {
         // Constructed by hand (no DI), as MVC does when the filter is added as an instance.
@@ -110,13 +109,13 @@ public class CqrsRegistrationTests
         Should.NotThrow(() => new CqrsResultActionFilter(Options.Create(new CqrsStreamServerOptions())));
     }
 
-    [Fact]
+    [Test]
     public void TheEndpointFilterRejectsNullOptions()
     {
         Should.Throw<System.ArgumentNullException>(() => new CqrsResultEndpointFilter(null!));
     }
 
-    [Fact]
+    [Test]
     public void EndpointExtensionsRejectNullBuilders()
     {
         Should.Throw<System.ArgumentNullException>(() =>
@@ -125,7 +124,7 @@ public class CqrsRegistrationTests
             CqrsEndpointExtensions.WithCommunicationCqrsResults((Microsoft.AspNetCore.Routing.RouteGroupBuilder)null!));
     }
 
-    [Fact]
+    [Test]
     public void MvcOptionsExtensionRejectsNull()
     {
         Should.Throw<System.ArgumentNullException>(() => CqrsMvcExtensions.AddCommunicationCqrsFilters(null!));

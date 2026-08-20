@@ -2,12 +2,11 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -15,7 +14,7 @@ public class AdvancedRailwayExtensionsTests
 {
     #region Then/ThenAsync Tests
 
-    [Fact]
+    [Test]
     public void Then_WithSuccessfulResult_ExecutesNext()
     {
         // Arrange
@@ -31,7 +30,7 @@ public class AdvancedRailwayExtensionsTests
         final.Value.ShouldBe("Value: 5");
     }
 
-    [Fact]
+    [Test]
     public void Then_WithFailedResult_DoesNotExecuteNext()
     {
         // Arrange
@@ -45,7 +44,7 @@ public class AdvancedRailwayExtensionsTests
         final.Problem!.Title.ShouldBe("Initial error");
     }
 
-    [Fact]
+    [Test]
     public async Task ThenAsync_WithSuccessfulResult_ExecutesNext()
     {
         // Arrange
@@ -67,7 +66,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region FailIf/OkIf Tests
 
-    [Fact]
+    [Test]
     public void FailIf_WithTrueCondition_FailsResult()
     {
         // Arrange
@@ -82,7 +81,7 @@ public class AdvancedRailwayExtensionsTests
         final.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void FailIf_WithFalseCondition_KeepsSuccess()
     {
         // Arrange
@@ -97,7 +96,7 @@ public class AdvancedRailwayExtensionsTests
         final.Value.ShouldBe(15);
     }
 
-    [Fact]
+    [Test]
     public void FailIf_WithEnum_FailsWithErrorCode()
     {
         // Arrange
@@ -111,7 +110,7 @@ public class AdvancedRailwayExtensionsTests
         final.Problem!.ErrorCode.ShouldBe("InvalidInput");
     }
 
-    [Fact]
+    [Test]
     public void FailIf_WithValidationErrors_FailsWithMultipleErrors()
     {
         // Arrange
@@ -131,7 +130,7 @@ public class AdvancedRailwayExtensionsTests
         errors["age"].ShouldContain("Must be 18 or older");
     }
 
-    [Fact]
+    [Test]
     public void OkIf_WithTrueCondition_KeepsSuccess()
     {
         // Arrange
@@ -146,7 +145,7 @@ public class AdvancedRailwayExtensionsTests
         final.Value.ShouldBe(15);
     }
 
-    [Fact]
+    [Test]
     public void OkIf_WithFalseCondition_FailsResult()
     {
         // Arrange
@@ -165,7 +164,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region Merge/Combine Tests
 
-    [Fact]
+    [Test]
     public void Merge_WithAllSuccessful_ReturnsSuccess()
     {
         // Arrange
@@ -180,7 +179,7 @@ public class AdvancedRailwayExtensionsTests
         merged.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Merge_WithOneFailure_ReturnsFirstFailure()
     {
         // Arrange
@@ -196,7 +195,7 @@ public class AdvancedRailwayExtensionsTests
         merged.Problem!.Title.ShouldBe("Error 2");
     }
 
-    [Fact]
+    [Test]
     public void MergeAll_WithMultipleFailures_CollectsAllErrors()
     {
         // Arrange
@@ -215,7 +214,7 @@ public class AdvancedRailwayExtensionsTests
         errors["field3"].ShouldContain("Error 3");
     }
 
-    [Fact]
+    [Test]
     public void MergeAll_WithMixedFailures_ReturnsAggregateProblemWithOriginalErrors()
     {
         // Arrange
@@ -238,7 +237,7 @@ public class AdvancedRailwayExtensionsTests
         aggregatedErrors.Select(problem => problem.StatusCode).ShouldBeEquivalentTo(new[] { 401, 403, 500 });
     }
 
-    [Fact]
+    [Test]
     public void MergeAll_WithValidationAndHttpFailures_ReturnsAggregateProblem()
     {
         // Arrange
@@ -259,7 +258,7 @@ public class AdvancedRailwayExtensionsTests
         aggregatedErrors.Select(problem => problem.StatusCode).ShouldContain(401);
     }
 
-    [Fact]
+    [Test]
     public void Combine_WithAllSuccessful_ReturnsAllValues()
     {
         // Arrange
@@ -275,7 +274,7 @@ public class AdvancedRailwayExtensionsTests
         combined.Collection.ShouldBeEquivalentTo(new[] { 1, 2, 3 });
     }
 
-    [Fact]
+    [Test]
     public void CombineAll_WithValidationFailures_CollectsAllErrors()
     {
         // Arrange
@@ -293,7 +292,7 @@ public class AdvancedRailwayExtensionsTests
         errors["error2"].ShouldContain("Second error");
     }
 
-    [Fact]
+    [Test]
     public void CombineAll_WithMixedFailures_ReturnsAggregateProblem()
     {
         // Arrange
@@ -320,7 +319,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region Switch/Case Tests
 
-    [Fact]
+    [Test]
     public void Switch_WithSuccess_ExecutesSuccessAction()
     {
         // Arrange
@@ -339,7 +338,7 @@ public class AdvancedRailwayExtensionsTests
         failureExecuted.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void SwitchFirst_WithMatchingCondition_ExecutesCorrectCase()
     {
         // Arrange
@@ -361,7 +360,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region Compensate/Recover Tests
 
-    [Fact]
+    [Test]
     public void Compensate_WithFailure_ExecutesRecovery()
     {
         // Arrange
@@ -375,7 +374,7 @@ public class AdvancedRailwayExtensionsTests
         recovered.Value.ShouldBe("Recovered");
     }
 
-    [Fact]
+    [Test]
     public void Compensate_WithSuccess_DoesNotExecuteRecovery()
     {
         // Arrange
@@ -389,7 +388,7 @@ public class AdvancedRailwayExtensionsTests
         recovered.Value.ShouldBe("Original");
     }
 
-    [Fact]
+    [Test]
     public void CompensateWith_WithFailure_ReturnsDefaultValue()
     {
         // Arrange
@@ -403,7 +402,7 @@ public class AdvancedRailwayExtensionsTests
         recovered.Value.ShouldBe(100);
     }
 
-    [Fact]
+    [Test]
     public async Task CompensateAsync_WithFailure_ExecutesAsyncRecovery()
     {
         // Arrange
@@ -425,7 +424,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region Check/Verify Tests
 
-    [Fact]
+    [Test]
     public void Check_WithSuccessAndNoException_ReturnsSuccess()
     {
         // Arrange
@@ -440,7 +439,7 @@ public class AdvancedRailwayExtensionsTests
         checked_.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Check_WithException_ReturnsFailure()
     {
         // Arrange
@@ -457,7 +456,7 @@ public class AdvancedRailwayExtensionsTests
         final.Problem!.Title.ShouldBe("InvalidOperationException");
     }
 
-    [Fact]
+    [Test]
     public void Verify_WithTrueCondition_ReturnsSuccess()
     {
         // Arrange
@@ -470,7 +469,7 @@ public class AdvancedRailwayExtensionsTests
         verified.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Verify_WithFalseCondition_ReturnsFailureWithContext()
     {
         // Arrange
@@ -489,7 +488,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region ToResult Tests
 
-    [Fact]
+    [Test]
     public void ToResult_WithNonNullValue_ReturnsSuccess()
     {
         // Arrange
@@ -503,7 +502,7 @@ public class AdvancedRailwayExtensionsTests
         result.Value.ShouldBe("test");
     }
 
-    [Fact]
+    [Test]
     public void ToResult_WithNullValue_ReturnsNotFound()
     {
         // Arrange
@@ -517,7 +516,7 @@ public class AdvancedRailwayExtensionsTests
         result.Problem!.StatusCode.ShouldBe(404);
     }
 
-    [Fact]
+    [Test]
     public void ToResult_WithNullableStruct_HandlesCorrectly()
     {
         // Arrange
@@ -540,7 +539,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region Do/Execute Tests
 
-    [Fact]
+    [Test]
     public void Do_WithSuccess_ExecutesAction()
     {
         // Arrange
@@ -555,7 +554,7 @@ public class AdvancedRailwayExtensionsTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task DoAsync_WithSuccess_ExecutesAsyncAction()
     {
         // Arrange
@@ -578,7 +577,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region Filter/Where Tests
 
-    [Fact]
+    [Test]
     public void Where_WithMatchingPredicate_ReturnsSuccess()
     {
         // Arrange
@@ -592,7 +591,7 @@ public class AdvancedRailwayExtensionsTests
         filtered.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void Where_WithNonMatchingPredicate_ReturnsFailure()
     {
         // Arrange
@@ -611,7 +610,7 @@ public class AdvancedRailwayExtensionsTests
 
     #region Complex Railway Chains
 
-    [Fact]
+    [Test]
     public async Task ComplexRailwayChain_DemonstratesFullCapabilities()
     {
         // Arrange
@@ -623,13 +622,13 @@ public class AdvancedRailwayExtensionsTests
             .FailIf(x => x > 100, Problem.Create("Too large", "Value exceeded limit", 400))
             .Where(x => x % 2 == 0, "Must be even")            // Verify it's even
             .Do(x => Console.WriteLine($"Value: {x}"));        // Side effect
-            
+
         var asyncResult = await intermediateResult.ThenAsync(async x =>  // Async operation
         {
             await Task.Delay(1);
             return Result<string>.Succeed($"Final: {x}");
         });
-        
+
         var result = await asyncResult.CompensateAsync(async problem =>  // Recovery if failed
         {
             await Task.Delay(1);
@@ -641,7 +640,7 @@ public class AdvancedRailwayExtensionsTests
         result.Value.ShouldBe("Final: 20");
     }
 
-    [Fact]
+    [Test]
     public void ParallelValidation_CollectsAllErrors()
     {
         // Arrange

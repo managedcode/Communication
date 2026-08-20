@@ -1,14 +1,13 @@
 using System;
 using System.Net;
-using Shouldly;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultTests
 {
-    [Fact]
+    [Test]
     public void Succeed_ShouldCreateSuccessfulResult()
     {
         // Act
@@ -23,7 +22,7 @@ public class ResultTests
             .ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithMessage_ShouldCreateFailedResult()
     {
         // Arrange
@@ -50,7 +49,7 @@ public class ResultTests
             .ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public void Fail_WithProblem_ShouldCreateFailedResult()
     {
         // Arrange
@@ -68,7 +67,7 @@ public class ResultTests
             .ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void FailValidation_ShouldCreateValidationResult()
     {
         // Act
@@ -93,7 +92,7 @@ public class ResultTests
             .ShouldContain("Age must be greater than 0");
     }
 
-    [Fact]
+    [Test]
     public void FailNotFound_ShouldCreateNotFoundResult()
     {
         // Act
@@ -111,7 +110,7 @@ public class ResultTests
             .ShouldBe("Resource not found");
     }
 
-    [Fact]
+    [Test]
     public void FailUnauthorized_ShouldCreateUnauthorizedResult()
     {
         // Act
@@ -129,7 +128,7 @@ public class ResultTests
             .ShouldBe("Authentication required");
     }
 
-    [Fact]
+    [Test]
     public void FailForbidden_ShouldCreateForbiddenResult()
     {
         // Act
@@ -147,7 +146,7 @@ public class ResultTests
             .ShouldBe("Access denied");
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithSuccessfulResult_ShouldNotThrow()
     {
         // Arrange
@@ -157,7 +156,7 @@ public class ResultTests
         Should.NotThrow(() => result.ThrowIfFail());
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithFailedResult_ShouldThrow()
     {
         // Arrange
@@ -168,7 +167,7 @@ public class ResultTests
         exception.Problem.Title.ShouldBe("Operation failed");
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_FromBool_True_ShouldCreateSuccessfulResult()
     {
         // Act
@@ -179,7 +178,7 @@ public class ResultTests
             .ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_FromBool_False_ShouldCreateFailedResult()
     {
         // Act
@@ -190,7 +189,7 @@ public class ResultTests
             .ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void ImplicitOperator_ToBool_ShouldReturnIsSuccess()
     {
         // Arrange
@@ -202,7 +201,7 @@ public class ResultTests
         ((bool)failResult).ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void From_WithException_ShouldCreateFailedResult()
     {
         // Arrange
@@ -221,7 +220,7 @@ public class ResultTests
             .ShouldBe("Test exception");
     }
 
-    [Fact]
+    [Test]
     public void Try_WithSuccessfulAction_ShouldCreateSuccessfulResult()
     {
         // Arrange
@@ -236,7 +235,7 @@ public class ResultTests
         executed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Try_WithExceptionThrowingAction_ShouldCreateFailedResult()
     {
         // Act
@@ -251,7 +250,7 @@ public class ResultTests
             .ShouldBe("Test exception");
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithSuccessfulResult_ShouldReturnFalse()
     {
         // Arrange
@@ -265,7 +264,7 @@ public class ResultTests
         problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithFailedResult_ShouldReturnTrueAndProblem()
     {
         // Arrange
@@ -281,7 +280,7 @@ public class ResultTests
         problem.ShouldBe(expectedProblem);
     }
 
-    [Fact]
+    [Test]
     public void TryGetProblem_WithValidationResult_ShouldReturnTrueAndValidationProblem()
     {
         // Arrange
@@ -295,13 +294,13 @@ public class ResultTests
         problem.ShouldNotBeNull();
         problem!.Title.ShouldBe("Validation Failed");
         problem.StatusCode.ShouldBe(400);
-        
+
         var validationErrors = problem.GetValidationErrors();
         validationErrors.ShouldNotBeNull();
         validationErrors!["email"].ShouldContain("Email is required");
     }
 
-    [Fact]
+    [Test]
     public void ThrowIfFail_WithProblemException_ShouldPreserveProblemDetails()
     {
         // Arrange

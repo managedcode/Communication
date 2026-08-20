@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.CQRS;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -34,13 +33,13 @@ public class CqrsStreamSerializationTests
         return (GC.GetAllocatedBytesForCurrentThread() - before) / (double)iterations;
     }
 
-    [Fact]
+    [Test]
     public void ARejectedResolverIsReportedImmediately()
     {
         Should.Throw<ArgumentNullException>(() => CqrsStreamSerialization.WithPayloadContext(null!));
     }
 
-    [Fact]
+    [Test]
     public void TheReturnedOptionsAreFrozen()
     {
         // Shared between streams, so nothing may reconfigure them after the fact.
@@ -48,7 +47,7 @@ public class CqrsStreamSerializationTests
         Should.Throw<InvalidOperationException>(() => WithContext.PropertyNamingPolicy = JsonNamingPolicy.KebabCaseLower);
     }
 
-    [Fact]
+    [Test]
     public void ChunksCarryingAContextBackedPayloadRoundTrip()
     {
         var chunk = CqrsStreamChunk<Positional, Positional>.Progress(new Positional("tick 12345"), sequence: 7);
@@ -63,7 +62,7 @@ public class CqrsStreamSerializationTests
         read.ProgressResult!.Value.Value!.State.ShouldBe("tick 12345");
     }
 
-    [Fact]
+    [Test]
     public void TerminalChunksAndProblemsSurviveAlongsideACallerContext()
     {
         // The context knows nothing about Problem or the chunk itself; the combined resolver has to cover them.
@@ -80,7 +79,7 @@ public class CqrsStreamSerializationTests
         read.Final!.Value.Problem!.Title.ShouldBe("boom");
     }
 
-    [Fact]
+    [Test]
     public void TheWireFormatIsIdenticalWithAndWithoutAContext()
     {
         // A context is a performance choice, not a protocol change: one end may use it and the other not.
@@ -90,7 +89,7 @@ public class CqrsStreamSerializationTests
             .ShouldBe(JsonSerializer.Serialize(chunk, CqrsStreamSerialization.Default));
     }
 
-    [Fact]
+    [Test]
     public void APositionalRecordPayloadCostsLessThroughAContext()
     {
         var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(

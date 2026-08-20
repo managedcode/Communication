@@ -4,13 +4,12 @@ using System.Threading.Tasks;
 using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultExecutionExtensionsTests
 {
-    [Fact]
+    [Test]
     public void From_Action_Success_ReturnsSuccess()
     {
         var executed = false;
@@ -22,7 +21,7 @@ public class ResultExecutionExtensionsTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void From_Action_Exception_ReturnsFailure()
     {
         var exception = new InvalidOperationException("boom");
@@ -35,7 +34,7 @@ public class ResultExecutionExtensionsTests
         result.Problem.Detail.ShouldBe("boom");
     }
 
-    [Fact]
+    [Test]
     public async Task From_Task_CompletedTask_ReturnsSuccess()
     {
         var result = await Result.From(Task.CompletedTask);
@@ -43,7 +42,7 @@ public class ResultExecutionExtensionsTests
         result.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task From_Task_Faulted_ReturnsProblemWithExceptionDetails()
     {
         var exception = new InvalidOperationException("faulted");
@@ -57,7 +56,7 @@ public class ResultExecutionExtensionsTests
         result.Problem.Detail!.ShouldContain("faulted");
     }
 
-    [Fact]
+    [Test]
     public async Task From_Task_Canceled_ReturnsTaskCanceledProblem()
     {
         using var cts = new CancellationTokenSource();
@@ -70,7 +69,7 @@ public class ResultExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(nameof(TaskCanceledException));
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncTask_Exception_ReturnsFailure()
     {
         var result = await Result.From(async () =>
@@ -83,7 +82,7 @@ public class ResultExecutionExtensionsTests
         result.Problem!.Detail.ShouldBe("delayed error");
     }
 
-    [Fact]
+    [Test]
     public async Task From_ValueTask_Success_ReturnsSuccess()
     {
         var valueTask = new ValueTask();
@@ -93,7 +92,7 @@ public class ResultExecutionExtensionsTests
         result.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task From_ValueTask_Faulted_ReturnsGenericFailure()
     {
         var valueTask = new ValueTask(Task.FromException(new InvalidOperationException("vt boom")));
@@ -104,7 +103,7 @@ public class ResultExecutionExtensionsTests
         result.Problem!.Title.ShouldBe(ProblemConstants.Titles.Error);
     }
 
-    [Fact]
+    [Test]
     public async Task From_FuncValueTask_Exception_ReturnsFailure()
     {
         static async ValueTask ThrowingValueTask()
@@ -119,7 +118,7 @@ public class ResultExecutionExtensionsTests
         result.Problem!.Detail.ShouldBe("value task failure");
     }
 
-    [Fact]
+    [Test]
     public void From_Bool_WithProblemFalse_ReturnsProvidedProblem()
     {
         var problem = Problem.Create("Custom", "Failure");
@@ -130,7 +129,7 @@ public class ResultExecutionExtensionsTests
         result.Problem.ShouldBeSameAs(problem);
     }
 
-    [Fact]
+    [Test]
     public void From_FuncBool_WithProblemFalse_ReturnsProvidedProblem()
     {
         var problem = Problem.Create("Predicate", "Failed");
@@ -141,7 +140,7 @@ public class ResultExecutionExtensionsTests
         result.Problem.ShouldBeSameAs(problem);
     }
 
-    [Fact]
+    [Test]
     public void From_Result_RoundTripsInstance()
     {
         var failure = Result.Fail("title", "detail");
@@ -152,7 +151,7 @@ public class ResultExecutionExtensionsTests
         copy.Problem.ShouldBeSameAs(failure.Problem);
     }
 
-    [Fact]
+    [Test]
     public void From_ResultT_PreservesProblem()
     {
         var generic = Result<string>.Fail("failure", "something broke");
@@ -163,7 +162,7 @@ public class ResultExecutionExtensionsTests
         result.Problem.ShouldBeSameAs(generic.Problem);
     }
 
-    [Fact]
+    [Test]
     public async Task AsTask_And_AsValueTask_RoundTripResult()
     {
         var original = Result.Fail("oh no", "still broken");

@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
-using Shouldly;
 using ManagedCode.Communication.Constants;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ProblemToExceptionErrorTests
 {
-    [Fact]
+    [Test]
     public void ToException_WithInnerException_ShouldPreserveInnerException()
     {
         // Arrange
@@ -26,7 +25,7 @@ public class ProblemToExceptionErrorTests
         reconstructedException.InnerException.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithArgumentNullException_ShouldReconstructWithMessage()
     {
         // Arrange
@@ -42,7 +41,7 @@ public class ProblemToExceptionErrorTests
         reconstructedException.Message.ShouldContain("Parameter cannot be null");
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithAggregateException_ShouldHandleCorrectly()
     {
         // Arrange
@@ -64,7 +63,7 @@ public class ProblemToExceptionErrorTests
         reconstructedException.Message.ShouldContain("Multiple errors");
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithCustomExceptionWithoutDefaultConstructor_ShouldFallbackToProblemException()
     {
         // Arrange
@@ -80,7 +79,7 @@ public class ProblemToExceptionErrorTests
         problemException.Problem.Detail.ShouldBe("Custom error");
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithStackTrace_ShouldNotPreserveStackTrace()
     {
         // Arrange
@@ -93,7 +92,7 @@ public class ProblemToExceptionErrorTests
         {
             originalException = ex;
         }
-        
+
         var problem = Problem.FromException(originalException!);
 
         // Act
@@ -106,7 +105,7 @@ public class ProblemToExceptionErrorTests
         reconstructedException.StackTrace.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithExceptionDataContainingComplexTypes_ShouldPreserveSerializableData()
     {
         // Arrange
@@ -115,7 +114,7 @@ public class ProblemToExceptionErrorTests
         originalException.Data["Number"] = 123;
         originalException.Data["Date"] = new DateTime(2024, 1, 1);
         originalException.Data["ComplexObject"] = new { Name = "Test", Value = 42 }; // This might not serialize properly
-        
+
         var problem = Problem.FromException(originalException);
 
         // Act
@@ -129,7 +128,7 @@ public class ProblemToExceptionErrorTests
         reconstructedException.Data.Contains("ComplexObject").ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithNullDetail_ShouldUseTitle()
     {
         // Arrange
@@ -144,7 +143,7 @@ public class ProblemToExceptionErrorTests
         exception.Message.ShouldBe("Server Error");
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithNullDetailAndTitle_ShouldUseDefaultMessage()
     {
         // Arrange
@@ -159,7 +158,7 @@ public class ProblemToExceptionErrorTests
         exception.Message.ShouldBe("An error occurred");
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithMalformedOriginalExceptionType_ShouldFallbackToProblemException()
     {
         // Arrange
@@ -173,14 +172,14 @@ public class ProblemToExceptionErrorTests
         exception.ShouldBeOfType<ProblemException>();
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithExceptionDataKeyConflicts_ShouldHandleGracefully()
     {
         // Arrange
         var originalException = new InvalidOperationException("Test");
         originalException.Data["key1"] = "value1";
         originalException.Data[ProblemConstants.ExtensionKeys.ExceptionDataPrefix + "key2"] = "This should not happen";
-        
+
         var problem = Problem.FromException(originalException);
 
         // Act
@@ -192,7 +191,7 @@ public class ProblemToExceptionErrorTests
         reconstructedException.Data.Count.ShouldBeGreaterThanOrEqualTo(1);
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithHttpRequestException_ShouldHandleSpecialCases()
     {
         // Arrange
@@ -207,13 +206,13 @@ public class ProblemToExceptionErrorTests
         reconstructedException.Message.ShouldContain("Network error");
     }
 
-    [Fact]
+    [Test]
     public void ToException_PerformanceTest_ShouldNotTakeExcessiveTime()
     {
         // Arrange
         var problem = Problem.Create("type", "title", 500, "detail");
         problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = typeof(InvalidOperationException).FullName;
-        
+
         // Add many data items
         for (int i = 0; i < 100; i++)
         {
@@ -236,7 +235,7 @@ public class ProblemToExceptionErrorTests
 public class NoDefaultConstructorException : Exception
 {
     public int Code { get; }
-    
+
     public NoDefaultConstructorException(int code, string message) : base(message)
     {
         Code = code;

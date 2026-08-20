@@ -2,20 +2,19 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
-[Collection(ManagedCode.Communication.Tests.Logging.GlobalLoggerCollection.Name)]
+[NotInParallel]
 public class CommunicationServiceCollectionExtensionsTests
 {
-    [Fact]
+    [Test]
     public void AddCommunicationAspNetCore_RegistersHostedService()
     {
         // Arrange
@@ -28,11 +27,11 @@ public class CommunicationServiceCollectionExtensionsTests
         // Assert
         var serviceProvider = services.BuildServiceProvider();
         var hostedServices = serviceProvider.GetServices<IHostedService>();
-        
+
         hostedServices.ShouldContain(x => x.GetType().Name == "CommunicationLoggerConfigurationService");
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationAspNetCore_WithLoggerFactory_ConfiguresLogger()
     {
         // Arrange
@@ -48,7 +47,7 @@ public class CommunicationServiceCollectionExtensionsTests
         logger.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationAspNetCore_ReturnsServiceCollection()
     {
         // Arrange
@@ -61,7 +60,7 @@ public class CommunicationServiceCollectionExtensionsTests
         result.ShouldBeSameAs(services);
     }
 
-    [Fact]
+    [Test]
     public void AddCommunicationAspNetCore_WithLoggerFactory_ReturnsServiceCollection()
     {
         // Arrange
@@ -75,7 +74,7 @@ public class CommunicationServiceCollectionExtensionsTests
         result.ShouldBeSameAs(services);
     }
 
-    [Fact]
+    [Test]
     public async Task CommunicationLoggerConfigurationService_StartsAndConfiguresLogger()
     {
         // Arrange
@@ -95,7 +94,7 @@ public class CommunicationServiceCollectionExtensionsTests
         logger.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task CommunicationLoggerConfigurationService_StopsWithoutError()
     {
         // Arrange
@@ -114,7 +113,7 @@ public class CommunicationServiceCollectionExtensionsTests
         await Should.NotThrowAsync(act);
     }
 
-    [Fact]
+    [Test]
     public async Task CommunicationLoggerConfigurationService_WithCancellation_HandlesCancellation()
     {
         // Arrange

@@ -1,6 +1,5 @@
 using ManagedCode.Communication;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -25,7 +24,7 @@ public class ResultWideningTests
         return Result<Order>.Succeed(new Order("o-1"));
     }
 
-    [Fact]
+    [Test]
     public void ANonGenericFailureWidensAndKeepsItsProblem()
     {
         var result = GuardClause(empty: true);
@@ -36,7 +35,7 @@ public class ResultWideningTests
         result.Problem!.GetValidationErrors()!.ShouldContainKey("cart");
     }
 
-    [Fact]
+    [Test]
     public void TheSuccessPathIsUnaffected()
     {
         var result = GuardClause(empty: false);
@@ -45,7 +44,7 @@ public class ResultWideningTests
         result.Value!.Id.ShouldBe("o-1");
     }
 
-    [Fact]
+    [Test]
     public void AFailedResultCanBePassedStraightAlong()
     {
         var probe = Result.Fail(Problem.Create("upstream", "went down", 503));
@@ -57,7 +56,7 @@ public class ResultWideningTests
         widened.Problem!.Title.ShouldBe("upstream");
     }
 
-    [Fact]
+    [Test]
     public void ASuccessDoesNotSurviveTheConversion()
     {
         // Deliberate: a Result carries no value, so the alternative would be a "success" whose Value is null,
@@ -68,7 +67,7 @@ public class ResultWideningTests
         widened.Value.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void AProblemWidensDirectly()
     {
         Result<Order> fromProblem = Problem.Validation(("cart", "is empty"));
@@ -77,7 +76,7 @@ public class ResultWideningTests
         fromProblem.Problem!.GetValidationErrors()!.ShouldContainKey("cart");
     }
 
-    [Fact]
+    [Test]
     public void ABareValueWidensToASuccess()
     {
         Result<Order> fromValue = new Order("o-2");

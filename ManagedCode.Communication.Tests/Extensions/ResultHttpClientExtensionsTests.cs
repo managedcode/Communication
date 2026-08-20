@@ -10,13 +10,12 @@ using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Extensions.Http;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
 public class ResultHttpClientExtensionsTests
 {
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_NullClient_ThrowsArgumentNullException()
     {
         HttpClient client = null!;
@@ -25,7 +24,7 @@ public class ResultHttpClientExtensionsTests
         await Should.ThrowAsync<ArgumentNullException>(act);
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_NullRequestFactory_ThrowsArgumentNullException()
     {
         using var client = new HttpClient();
@@ -35,7 +34,7 @@ public class ResultHttpClientExtensionsTests
         await Should.ThrowAsync<ArgumentNullException>(act);
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithCommandExecution_SucceedsAfterRetry()
     {
         var attempt = 0;
@@ -68,7 +67,7 @@ public class ResultHttpClientExtensionsTests
         result.Value.ShouldBe(21);
     }
 
-    [Fact]
+    [Test]
     public async Task GetAsResultAsync_NullClient_ThrowsArgumentNullException()
     {
         HttpClient client = null!;
@@ -78,7 +77,7 @@ public class ResultHttpClientExtensionsTests
         await Should.ThrowAsync<ArgumentNullException>(act);
     }
 
-    [Fact]
+    [Test]
     public async Task GetAsResultAsync_NullOrEmptyUri_ThrowsArgumentException()
     {
         using var client = new HttpClient();
@@ -88,7 +87,7 @@ public class ResultHttpClientExtensionsTests
         await Should.ThrowAsync<ArgumentException>(act);
     }
 
-    [Fact]
+    [Test]
     public async Task GetAsResultAsync_WithoutPayload_ReturnsSuccessResult()
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
@@ -102,7 +101,7 @@ public class ResultHttpClientExtensionsTests
         result.IsSuccess.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithSuccessResponse_ReturnsSuccessResult()
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
@@ -122,7 +121,7 @@ public class ResultHttpClientExtensionsTests
         result.Value.ShouldBe("pong");
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithFailureResponse_ReturnsFailedResult()
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
@@ -142,7 +141,7 @@ public class ResultHttpClientExtensionsTests
         result.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.BadRequest);
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithSuccessProjection_ReturnsProjectedValue()
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
@@ -160,7 +159,7 @@ public class ResultHttpClientExtensionsTests
         result.Value.ShouldBe("payload");
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithSuccessProjectionAndProblem_DoesNotInvokeProjection()
     {
         var projectionInvoked = false;
@@ -186,7 +185,7 @@ public class ResultHttpClientExtensionsTests
         projectionInvoked.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithNullSuccessProjection_ReturnsInvalidResponseProblem()
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
@@ -200,7 +199,7 @@ public class ResultHttpClientExtensionsTests
         result.Problem!.Title.ShouldBe("Invalid response body");
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithTransportFailure_ReturnsServiceUnavailableResult()
     {
         using var client = new HttpClient(new StubHandler(static (_, _) =>
@@ -214,7 +213,7 @@ public class ResultHttpClientExtensionsTests
         result.Problem.Detail.ShouldBe("network unavailable");
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithCallerCancellation_PropagatesCancellation()
     {
         using var cancellationSource = new CancellationTokenSource();
@@ -229,7 +228,7 @@ public class ResultHttpClientExtensionsTests
         await Should.ThrowAsync<OperationCanceledException>(act);
     }
 
-    [Fact]
+    [Test]
     public async Task SendForResultAsync_WithNativeRetry_RetriesUntilSuccess()
     {
         var attempt = 0;

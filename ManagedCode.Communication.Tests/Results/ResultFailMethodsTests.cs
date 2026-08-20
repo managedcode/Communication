@@ -1,17 +1,15 @@
 using System;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.Constants;
-using Xunit;
-
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultFailMethodsTests
 {
     #region Fail() Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_NoParameters_ShouldCreateFailedResult()
     {
         // Act
@@ -27,7 +25,7 @@ public class ResultFailMethodsTests
 
     #region Fail(Problem) Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithProblem_ShouldCreateFailedResultWithProblem()
     {
         // Arrange
@@ -49,7 +47,7 @@ public class ResultFailMethodsTests
 
     #region Fail(string) Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithTitle_ShouldCreateFailedResultWithInternalServerError()
     {
         // Arrange
@@ -70,7 +68,7 @@ public class ResultFailMethodsTests
 
     #region Fail(string, string) Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithTitleAndDetail_ShouldCreateFailedResultWithDefaultStatus()
     {
         // Arrange
@@ -92,7 +90,7 @@ public class ResultFailMethodsTests
 
     #region Fail(string, string, HttpStatusCode) Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithTitleDetailAndStatus_ShouldCreateFailedResultWithSpecifiedStatus()
     {
         // Arrange
@@ -111,12 +109,12 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(404);
     }
 
-    [Theory]
-    [InlineData(HttpStatusCode.BadRequest, 400)]
-    [InlineData(HttpStatusCode.Unauthorized, 401)]
-    [InlineData(HttpStatusCode.Forbidden, 403)]
-    [InlineData(HttpStatusCode.NotFound, 404)]
-    [InlineData(HttpStatusCode.InternalServerError, 500)]
+    [Test]
+    [Arguments(HttpStatusCode.BadRequest, 400)]
+    [Arguments(HttpStatusCode.Unauthorized, 401)]
+    [Arguments(HttpStatusCode.Forbidden, 403)]
+    [Arguments(HttpStatusCode.NotFound, 404)]
+    [Arguments(HttpStatusCode.InternalServerError, 500)]
     public void Result_Fail_WithVariousStatusCodes_ShouldSetCorrectStatusCode(HttpStatusCode statusCode, int expectedCode)
     {
         // Act
@@ -130,7 +128,7 @@ public class ResultFailMethodsTests
 
     #region Fail(Exception) Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithException_ShouldCreateFailedResultWithInternalServerError()
     {
         // Arrange
@@ -148,7 +146,7 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithErrorCode(exception.GetType().FullName ?? exception.GetType().Name);
     }
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithInnerException_ShouldPreserveExceptionInfo()
     {
         // Arrange
@@ -168,7 +166,7 @@ public class ResultFailMethodsTests
 
     #region Fail(Exception, HttpStatusCode) Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithExceptionAndStatus_ShouldCreateFailedResultWithSpecifiedStatus()
     {
         // Arrange
@@ -190,7 +188,7 @@ public class ResultFailMethodsTests
 
     #region FailValidation Tests
 
-    [Fact]
+    [Test]
     public void Result_FailValidation_WithSingleError_ShouldCreateValidationFailedResult()
     {
         // Act
@@ -206,7 +204,7 @@ public class ResultFailMethodsTests
         errors["email"].ShouldContain("Email is required");
     }
 
-    [Fact]
+    [Test]
     public void Result_FailValidation_WithMultipleErrors_ShouldCreateValidationFailedResultWithAllErrors()
     {
         // Act
@@ -231,7 +229,7 @@ public class ResultFailMethodsTests
 
     #region FailUnauthorized Tests
 
-    [Fact]
+    [Test]
     public void Result_FailUnauthorized_NoParameters_ShouldCreateUnauthorizedResult()
     {
         // Act
@@ -245,7 +243,7 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.UnauthorizedAccess);
     }
 
-    [Fact]
+    [Test]
     public void Result_FailUnauthorized_WithDetail_ShouldCreateUnauthorizedResultWithCustomDetail()
     {
         // Arrange
@@ -265,7 +263,7 @@ public class ResultFailMethodsTests
 
     #region FailForbidden Tests
 
-    [Fact]
+    [Test]
     public void Result_FailForbidden_NoParameters_ShouldCreateForbiddenResult()
     {
         // Act
@@ -279,7 +277,7 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ForbiddenAccess);
     }
 
-    [Fact]
+    [Test]
     public void Result_FailForbidden_WithDetail_ShouldCreateForbiddenResultWithCustomDetail()
     {
         // Arrange
@@ -299,7 +297,7 @@ public class ResultFailMethodsTests
 
     #region FailNotFound Tests
 
-    [Fact]
+    [Test]
     public void Result_FailNotFound_NoParameters_ShouldCreateNotFoundResult()
     {
         // Act
@@ -313,7 +311,7 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithDetail(ProblemConstants.Messages.ResourceNotFound);
     }
 
-    [Fact]
+    [Test]
     public void Result_FailNotFound_WithDetail_ShouldCreateNotFoundResultWithCustomDetail()
     {
         // Arrange
@@ -333,7 +331,7 @@ public class ResultFailMethodsTests
 
     #region Fail<TEnum> Tests
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithEnum_ShouldCreateFailedResultWithErrorCode()
     {
         // Act
@@ -346,7 +344,7 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(400); // Default for domain errors
     }
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithEnumAndDetail_ShouldCreateFailedResultWithErrorCodeAndDetail()
     {
         // Arrange
@@ -362,7 +360,7 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(400);
     }
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithEnumAndStatus_ShouldCreateFailedResultWithErrorCodeAndStatus()
     {
         // Act
@@ -375,7 +373,7 @@ public class ResultFailMethodsTests
         result.ShouldHaveProblem().WithStatusCode(500);
     }
 
-    [Fact]
+    [Test]
     public void Result_Fail_WithEnumDetailAndStatus_ShouldCreateFailedResultWithAllSpecified()
     {
         // Arrange

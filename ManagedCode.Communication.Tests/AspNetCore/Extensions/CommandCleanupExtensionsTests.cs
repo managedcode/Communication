@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Commands;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class CommandCleanupExtensionsTests
 {
-    [Fact]
+    [Test]
     public async Task AutoCleanupAsync_UsesDefaultAgesAndAggregatesResults()
     {
         var store = new TrackingCommandIdempotencyStore
@@ -33,7 +32,7 @@ public class CommandCleanupExtensionsTests
         store.CleanupCalls[2].MaxAge.ShouldBe(TimeSpan.FromMinutes(30));
     }
 
-    [Fact]
+    [Test]
     public async Task GetHealthMetricsAsync_ReturnsCommandCountsAndRatios()
     {
         var store = new TrackingCommandIdempotencyStore
@@ -58,7 +57,7 @@ public class CommandCleanupExtensionsTests
         metrics.FailureRate.ShouldBe(10);
     }
 
-    [Fact]
+    [Test]
     public async Task GetHealthMetricsAsync_WhenNoCommands_ReturnsZeroRates()
     {
         var store = new TrackingCommandIdempotencyStore

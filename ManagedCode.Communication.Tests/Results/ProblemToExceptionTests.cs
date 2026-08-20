@@ -1,23 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using Shouldly;
 using ManagedCode.Communication.Constants;
-using Xunit;
 using ManagedCode.Communication.Tests.TestHelpers;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ProblemToExceptionTests
 {
-    [Fact]
+    [Test]
     public void ToException_FromProblemCreatedFromInvalidOperationException_ShouldReconstructOriginalExceptionType()
     {
         // Arrange
         var originalException = new InvalidOperationException("Operation not allowed");
         originalException.Data["UserId"] = 123;
         originalException.Data["CorrelationId"] = "abc-123";
-        
+
         var problem = Problem.FromException(originalException);
 
         // Act
@@ -30,7 +29,7 @@ public class ProblemToExceptionTests
         reconstructedException.Data["CorrelationId"].ShouldBe("abc-123");
     }
 
-    [Fact]
+    [Test]
     public void ToException_FromProblemCreatedFromArgumentException_ShouldReconstructOriginalExceptionType()
     {
         // Arrange
@@ -45,7 +44,7 @@ public class ProblemToExceptionTests
         reconstructedException.Message.ShouldContain("Invalid argument provided");
     }
 
-    [Fact]
+    [Test]
     public void ToException_FromProblemCreatedFromNullReferenceException_ShouldReconstructOriginalExceptionType()
     {
         // Arrange
@@ -60,7 +59,7 @@ public class ProblemToExceptionTests
         reconstructedException.Message.ShouldBe("Object reference not set");
     }
 
-    [Fact]
+    [Test]
     public void ToException_FromProblemCreatedManually_ShouldReturnProblemException()
     {
         // Arrange
@@ -75,7 +74,7 @@ public class ProblemToExceptionTests
         problemException.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ToException_FromProblemWithoutOriginalType_ShouldReturnProblemException()
     {
         // Arrange
@@ -90,7 +89,7 @@ public class ProblemToExceptionTests
         problemException.Problem.ShouldBe(problem);
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithCustomExceptionType_ShouldHandleGracefully()
     {
         // Arrange
@@ -107,7 +106,7 @@ public class ProblemToExceptionTests
         reconstructedException.Data["CustomKey"].ShouldBe("CustomValue");
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithInvalidOriginalType_ShouldFallbackToProblemException()
     {
         // Arrange
@@ -121,7 +120,7 @@ public class ProblemToExceptionTests
         exception.ShouldBeOfType<ProblemException>();
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithNonExceptionType_ShouldFallbackToProblemException()
     {
         // Arrange
@@ -135,7 +134,7 @@ public class ProblemToExceptionTests
         exception.ShouldBeOfType<ProblemException>();
     }
 
-    [Fact]
+    [Test]
     public void ToException_PreservesAllExceptionData()
     {
         // Arrange
@@ -144,7 +143,7 @@ public class ProblemToExceptionTests
         originalException.Data["IntValue"] = 42;
         originalException.Data["BoolValue"] = true;
         originalException.Data["DateValue"] = DateTime.UtcNow;
-        
+
         var problem = Problem.FromException(originalException);
 
         // Act
@@ -157,7 +156,7 @@ public class ProblemToExceptionTests
         reconstructedException.Data["DateValue"].ShouldBeOfType<DateTime>();
     }
 
-    [Fact]
+    [Test]
     public void ToException_FromValidationProblem_ShouldReturnProblemException()
     {
         // Arrange
@@ -173,7 +172,7 @@ public class ProblemToExceptionTests
         problemException.ValidationErrors.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ToException_WithOriginalExceptionTypeAsJsonElement_ShouldReconstructOriginalException()
     {
         // Arrange

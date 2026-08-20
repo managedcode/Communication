@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using ManagedCode.Communication.Commands;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
@@ -18,7 +17,7 @@ namespace ManagedCode.Communication.Tests.Commands;
 /// </remarks>
 public class CommandIdentityTests
 {
-    [Fact]
+    [Test]
     public void ACommandGeneratesItsOwnIdentity()
     {
         var command = Command.Create("PlaceOrder");
@@ -27,7 +26,7 @@ public class CommandIdentityTests
         command.CommandType.ShouldBe("PlaceOrder");
     }
 
-    [Fact]
+    [Test]
     public void ATypedCommandGeneratesItsOwnIdentity()
     {
         var command = Command<string>.From("payload");
@@ -36,7 +35,7 @@ public class CommandIdentityTests
         command.Value.ShouldBe("payload");
     }
 
-    [Fact]
+    [Test]
     public void GeneratedIdentitiesAreUniqueAndVersion7()
     {
         var ids = Enumerable.Range(0, 100).Select(_ => Command.Create("X").CommandId).ToArray();
@@ -53,7 +52,7 @@ public class CommandIdentityTests
         }
     }
 
-    [Fact]
+    [Test]
     public void GeneratedIdentitiesCarryTheCurrentTimestamp()
     {
         var before = DateTimeOffset.UtcNow.AddSeconds(-5);
@@ -67,7 +66,7 @@ public class CommandIdentityTests
         timestamp.ShouldBeLessThan(DateTimeOffset.UtcNow.AddSeconds(5));
     }
 
-    [Fact]
+    [Test]
     public void AnExplicitIdentityIsHonouredWhenItComesFromOutside()
     {
         // The case the trailing parameter exists for: an idempotency key supplied by the caller, or a replayed
@@ -80,7 +79,7 @@ public class CommandIdentityTests
         Command.From("Custom", "payload", idempotencyKey).CommandId.ShouldBe(idempotencyKey);
     }
 
-    [Fact]
+    [Test]
     public void PaginationCommandsBehaveTheSameWay()
     {
         var generated = PaginationCommand.Create(skip: 10, take: 5);
@@ -93,7 +92,7 @@ public class CommandIdentityTests
             .CommandId.ShouldBe(supplied);
     }
 
-    [Fact]
+    [Test]
     public void EnumCommandTypesGenerateAnIdentityToo()
     {
         var command = Command.Create(SampleCommandType.Ship);
@@ -102,7 +101,7 @@ public class CommandIdentityTests
         command.CommandType.ShouldBe(nameof(SampleCommandType.Ship));
     }
 
-    [Fact]
+    [Test]
     public void CorrelationAndCausationAreNotGenerated()
     {
         // Only the command id is generated. Correlation and causation describe how this command relates to
@@ -117,7 +116,7 @@ public class CommandIdentityTests
         command.SessionId.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void CorrelationAndCausationAreSetThroughTheFluentBuilders()
     {
         var command = Command.Create("PlaceOrder")
@@ -128,7 +127,7 @@ public class CommandIdentityTests
         command.CausationId.ShouldBe("parent-1");
     }
 
-    [Fact]
+    [Test]
     public void TheCommandTypeIsStillRequired()
     {
         Should.Throw<ArgumentException>(() => Command.Create(string.Empty));

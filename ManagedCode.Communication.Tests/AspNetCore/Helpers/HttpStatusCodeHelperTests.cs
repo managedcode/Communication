@@ -1,6 +1,5 @@
 using System;
 using System.Net;
-using Shouldly;
 using ManagedCode.Communication.AspNetCore.Helpers;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
@@ -8,20 +7,20 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.SignalR;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Helpers;
 
 public class HttpStatusCodeHelperTests
 {
-    [Theory]
-    [InlineData(typeof(BadHttpRequestException), HttpStatusCode.BadRequest)]
-    [InlineData(typeof(ConnectionAbortedException), HttpStatusCode.BadRequest)]
-    [InlineData(typeof(ConnectionResetException), HttpStatusCode.BadRequest)]
-    [InlineData(typeof(AmbiguousActionException), HttpStatusCode.InternalServerError)]
-    [InlineData(typeof(AuthenticationFailureException), HttpStatusCode.Unauthorized)]
-    [InlineData(typeof(HubException), HttpStatusCode.BadRequest)]
-    [InlineData(typeof(AntiforgeryValidationException), HttpStatusCode.BadRequest)]
+    [Test]
+    [Arguments(typeof(BadHttpRequestException), HttpStatusCode.BadRequest)]
+    [Arguments(typeof(ConnectionAbortedException), HttpStatusCode.BadRequest)]
+    [Arguments(typeof(ConnectionResetException), HttpStatusCode.BadRequest)]
+    [Arguments(typeof(AmbiguousActionException), HttpStatusCode.InternalServerError)]
+    [Arguments(typeof(AuthenticationFailureException), HttpStatusCode.Unauthorized)]
+    [Arguments(typeof(HubException), HttpStatusCode.BadRequest)]
+    [Arguments(typeof(AntiforgeryValidationException), HttpStatusCode.BadRequest)]
     public void GetStatusCodeForException_AspNetSpecificExceptions_ReturnsCorrectStatusCode(Type exceptionType, HttpStatusCode expectedStatusCode)
     {
         // Arrange
@@ -34,7 +33,7 @@ public class HttpStatusCodeHelperTests
         result.ShouldBe(expectedStatusCode);
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_StandardException_FallsBackToBaseHelper()
     {
         // Arrange
@@ -48,7 +47,7 @@ public class HttpStatusCodeHelperTests
         result.ShouldBe(HttpStatusCode.BadRequest); // ArgumentException maps to BadRequest in base helper
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_UnknownException_FallsBackToBaseHelper()
     {
         // Arrange
@@ -62,7 +61,7 @@ public class HttpStatusCodeHelperTests
         result.ShouldBe(HttpStatusCode.InternalServerError);
     }
 
-    [Fact]
+    [Test]
     public void GetStatusCodeForException_NullException_Throws()
     {
         Exception? exception = null;

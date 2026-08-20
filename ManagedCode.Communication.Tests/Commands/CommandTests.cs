@@ -1,13 +1,12 @@
 using System;
-using Shouldly;
 using ManagedCode.Communication.Commands;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
 public class CommandTests
 {
-    [Fact]
+    [Test]
     public void FromValue()
     {
         var command = Command.From(nameof(Command));
@@ -15,7 +14,7 @@ public class CommandTests
             .ShouldBe(nameof(Command));
     }
 
-    [Fact]
+    [Test]
     public void FromIdValue()
     {
         var expectedId = Guid.NewGuid();
@@ -26,7 +25,7 @@ public class CommandTests
             .ShouldBe(nameof(Command));
     }
 
-    [Fact]
+    [Test]
     public void Create_WithEnumType_ShouldSetCommandType()
     {
         var command = Command.Create(TestCommandType.Delete);
@@ -37,13 +36,13 @@ public class CommandTests
             .ShouldNotBe(Guid.Empty);
     }
 
-    [Fact]
+    [Test]
     public void Create_WithEmptyCommandType_ShouldThrow()
     {
         Should.Throw<ArgumentException>(() => Command.Create(string.Empty, Guid.NewGuid()));
     }
 
-    [Fact]
+    [Test]
     public void GenericCreate_WithValueFactory_ShouldInvokeFactoryOnce()
     {
         var callCount = 0;
@@ -60,13 +59,13 @@ public class CommandTests
             .ShouldBe("payload");
     }
 
-    [Fact]
+    [Test]
     public void GenericCreate_WithEmptyCommandType_ShouldThrow()
     {
         Should.Throw<ArgumentException>(() => Command<string>.Create(string.Empty, "value", Guid.NewGuid()));
     }
 
-    [Fact]
+    [Test]
     public void GenericFrom_WithCommandType_ShouldReturnCommand()
     {
         var id = Guid.NewGuid();
@@ -80,7 +79,7 @@ public class CommandTests
             .ShouldBe("value");
     }
 
-    [Fact]
+    [Test]
     public void Create_ShouldStampTimestampWithUtcNow()
     {
         var before = DateTime.UtcNow;
@@ -92,7 +91,7 @@ public class CommandTests
         command.Timestamp.Kind.ShouldBe(DateTimeKind.Utc);
     }
 
-    [Fact]
+    [Test]
     public void Create_ShouldUseVersion7CommandId()
     {
         var command = Command.Create("VersionTest");
@@ -100,7 +99,7 @@ public class CommandTests
         GetGuidVersion(command.CommandId).ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public void GenericCreate_WithDerivedValue_ShouldUseDerivedTypeName()
     {
         var payload = new DerivedPayload();

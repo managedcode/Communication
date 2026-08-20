@@ -10,13 +10,12 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Commands;
 
 public sealed class CommandExecutionTests
 {
-    [Fact]
+    [Test]
     public async Task CommandExecutor_WithTaskValue_WrapsResult()
     {
         var command = Command.Create("payment.capture");
@@ -30,7 +29,7 @@ public sealed class CommandExecutionTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public async Task CommandExecutor_WithValueTaskValue_WrapsResult()
     {
         var command = Command.Create("payment.capture");
@@ -44,7 +43,7 @@ public sealed class CommandExecutionTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public async Task AddCommandExecution_RegistersDependencyInjectedExecutor()
     {
         var services = new ServiceCollection();
@@ -60,7 +59,7 @@ public sealed class CommandExecutionTests
         result.Value.ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public async Task ResultExecuteAsync_WithResultHandler_PreservesProblem()
     {
         var command = Command.Create("payment.capture");
@@ -75,7 +74,7 @@ public sealed class CommandExecutionTests
         result.Problem.ShouldBeSameAs(problem);
     }
 
-    [Fact]
+    [Test]
     public async Task CommandExecutorExecuteAsync_WithResultHandler_DoesNotNestResult()
     {
         var command = Command.Create("payment.capture");
@@ -89,7 +88,7 @@ public sealed class CommandExecutionTests
         result.Problem.ShouldBeSameAs(problem);
     }
 
-    [Fact]
+    [Test]
     public async Task ResultExecuteAsync_WithValueTaskResult_PreservesValue()
     {
         var command = Command.Create("payment.capture");
@@ -102,7 +101,7 @@ public sealed class CommandExecutionTests
         result.Value.ShouldBe(84);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteResultAsync_WithTransientProblems_RetriesUntilSuccess()
     {
         var attempt = 0;
@@ -127,7 +126,7 @@ public sealed class CommandExecutionTests
         result.Value.ShouldBe(7);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteResultAsync_WithNonRetryableProblem_DoesNotRetry()
     {
         var attempt = 0;
@@ -146,7 +145,7 @@ public sealed class CommandExecutionTests
         result.IsFailed.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteAsync_WithCallerCancellation_DoesNotRetry()
     {
         var attempt = 0;
@@ -168,7 +167,7 @@ public sealed class CommandExecutionTests
         attempt.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteAsync_WhenTimeoutExpires_ReturnsRequestTimeout()
     {
         var runtime = CreateRuntime(options =>
@@ -190,7 +189,7 @@ public sealed class CommandExecutionTests
         result.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.RequestTimeout);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteAsync_WithIdempotencyStore_ExecutesHandlerOnce()
     {
         using var cache = new MemoryCache(new MemoryCacheOptions());
@@ -215,7 +214,7 @@ public sealed class CommandExecutionTests
         second.Value.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteAsync_AfterTimedOutIdempotentAttempt_CanClaimCommandAgain()
     {
         using var cache = new MemoryCache(new MemoryCacheOptions());
@@ -248,7 +247,7 @@ public sealed class CommandExecutionTests
         succeeded.Value.ShouldBe(2);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteAsync_WhenRateLimiterRejects_ReturnsTooManyRequestsAndSkipsHandler()
     {
         var limiter = new StubRateLimiter(CommandRateLimitLease.Rejected(
@@ -278,7 +277,7 @@ public sealed class CommandExecutionTests
         rejected.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task PartitionedRateLimiter_WithExhaustedWindow_RejectsSecondCommand()
     {
         await using var limiter = PartitionedCommandRateLimiter.CreateFixedWindow(
@@ -300,7 +299,7 @@ public sealed class CommandExecutionTests
         second.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.TooManyRequests);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteAsync_WithQueuedLease_ReportsQueueAndDisposesLease()
     {
         var queued = 0;
@@ -330,7 +329,7 @@ public sealed class CommandExecutionTests
         disposed.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task CommandRateLimitLease_DisposeAsync_ReleasesOnlyOnce()
     {
         var disposed = 0;
@@ -346,7 +345,7 @@ public sealed class CommandExecutionTests
         disposed.ShouldBe(1);
     }
 
-    [Fact]
+    [Test]
     public async Task ExecuteResultAsync_WhenRetriesExhausted_ReportsCallbackAndProblemMetadata()
     {
         CommandRetryEvent? exhausted = null;

@@ -1,7 +1,6 @@
 using System;
 using System.Text.Json;
 using Shouldly;
-using Xunit;
 
 namespace ManagedCode.Communication.Tests.Results;
 
@@ -25,7 +24,7 @@ public class ResultProblemFallbackTests
         public Problem? ReadProblemOfT() => _resultOfT.Problem;
     }
 
-    [Fact]
+    [Test]
     public void DefaultResult_ReportsAFailureWithAGenericProblem()
     {
         var result = default(Result);
@@ -36,7 +35,7 @@ public class ResultProblemFallbackTests
         result.Problem.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void DefaultResultOfT_ReportsAFailureWithAGenericProblem()
     {
         var result = default(Result<int>);
@@ -45,7 +44,7 @@ public class ResultProblemFallbackTests
         result.Problem.ShouldNotBeNull();
     }
 
-    [Fact]
+    [Test]
     public void SuccessfulResult_HasNoProblemHoweverItIsRead()
     {
         var holder = new ReadonlyHolder(Result.Succeed(), Result<int>.Succeed(1));
@@ -54,7 +53,7 @@ public class ResultProblemFallbackTests
         holder.ReadProblemOfT().ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public void ReadingTheFallbackThroughAReadonlyFieldStaysConsistent()
     {
         var holder = new ReadonlyHolder(default, default);
@@ -68,7 +67,7 @@ public class ResultProblemFallbackTests
         first.StatusCode.ShouldBe(second.StatusCode);
     }
 
-    [Fact]
+    [Test]
     public void AnExplicitProblemIsNeverReplacedByTheFallback()
     {
         var problem = Problem.Create("specific", "detail", 409);
@@ -81,7 +80,7 @@ public class ResultProblemFallbackTests
         }
     }
 
-    [Fact]
+    [Test]
     public void ReadingAnExplicitProblemFromAReadonlyFieldAllocatesNothing()
     {
         var holder = new ReadonlyHolder(Result.Fail(Problem.Create("t", "d", 500)), default);
@@ -101,7 +100,7 @@ public class ResultProblemFallbackTests
         perRead.ShouldBe(0);
     }
 
-    [Fact]
+    [Test]
     public void AFailurePayloadWithoutAProblemStillDeserializesToAFailure()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);

@@ -3,9 +3,8 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;
 
@@ -13,7 +12,7 @@ public class HttpResponseExtensionTests
 {
     #region FromJsonToResult<T> Tests
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_SuccessStatusCode_WithLegacyResultEnvelope_ReturnsFailedResult()
     {
         // Arrange
@@ -35,7 +34,7 @@ public class HttpResponseExtensionTests
         result.Problem.Detail.ShouldContain("envelopes are not accepted");
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_SuccessStatusCode_WithRawPayload_ReturnsSuccessResult()
     {
         // Arrange
@@ -55,7 +54,7 @@ public class HttpResponseExtensionTests
         result.Value.Name.ShouldBe("Test");
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_SuccessStatusCode_WithLegacyFailedResultEnvelope_ReturnsInvalidBodyFailure()
     {
         // Arrange
@@ -78,7 +77,7 @@ public class HttpResponseExtensionTests
         result.Problem.Detail.ShouldContain("envelopes are not accepted");
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_ErrorStatusCode_ReturnsFailedResult()
     {
         // Arrange
@@ -99,7 +98,7 @@ public class HttpResponseExtensionTests
         result.Problem.StatusCode.ShouldBe(500);
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_BadRequestStatusCode_ReturnsFailedResultWithCorrectStatus()
     {
         // Arrange
@@ -119,7 +118,7 @@ public class HttpResponseExtensionTests
         result.Problem.Detail.ShouldBe("Bad Request - Invalid input");
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_ProblemDetailsResponse_PreservesStructuredProblem()
     {
         // Arrange
@@ -151,7 +150,7 @@ public class HttpResponseExtensionTests
         result.Problem.Extensions.ShouldContainKey("operationId");
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_ProblemDetailsResponse_UsesActualHttpStatus()
     {
         var response = new HttpResponseMessage(HttpStatusCode.BadGateway)
@@ -170,7 +169,7 @@ public class HttpResponseExtensionTests
         result.Problem.Detail.ShouldBe("gateway rejected the response");
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_NotFoundStatusCode_ReturnsFailedResult()
     {
         // Arrange
@@ -190,7 +189,7 @@ public class HttpResponseExtensionTests
         result.Problem.Detail.ShouldBe("Resource not found");
     }
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_EmptyContent_WithErrorStatus_ReturnsFailedResult()
     {
         // Arrange
@@ -213,7 +212,7 @@ public class HttpResponseExtensionTests
 
     #region FromRequestToResult Tests
 
-    [Fact]
+    [Test]
     public async Task FromRequestToResult_SuccessStatusCode_ReturnsSuccessResult()
     {
         // Arrange
@@ -230,7 +229,7 @@ public class HttpResponseExtensionTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task FromRequestToResult_CreatedStatusCode_ReturnsSuccessResult()
     {
         // Arrange
@@ -247,7 +246,7 @@ public class HttpResponseExtensionTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task FromRequestToResult_NoContentStatusCode_ReturnsSuccessResult()
     {
         // Arrange
@@ -261,7 +260,7 @@ public class HttpResponseExtensionTests
         result.Problem.ShouldBeNull();
     }
 
-    [Fact]
+    [Test]
     public async Task FromRequestToResult_ErrorStatusCode_ReturnsFailedResult()
     {
         // Arrange
@@ -282,7 +281,7 @@ public class HttpResponseExtensionTests
         result.Problem.StatusCode.ShouldBe(500);
     }
 
-    [Fact]
+    [Test]
     public async Task FromRequestToResult_ForbiddenStatusCode_ReturnsFailedResult()
     {
         // Arrange
@@ -302,7 +301,7 @@ public class HttpResponseExtensionTests
         result.Problem.Detail.ShouldBe("Access forbidden");
     }
 
-    [Fact]
+    [Test]
     public async Task FromRequestToResult_ConflictStatusCode_ReturnsFailedResult()
     {
         // Arrange
@@ -326,7 +325,7 @@ public class HttpResponseExtensionTests
 
     #region Edge Cases Tests
 
-    [Fact]
+    [Test]
     public async Task FromJsonToResult_NullContent_WithErrorStatus_ReturnsFailedResult()
     {
         // Arrange
@@ -341,7 +340,7 @@ public class HttpResponseExtensionTests
         result.Problem!.StatusCode.ShouldBe(400);
     }
 
-    [Fact]
+    [Test]
     public async Task FromRequestToResult_NullContent_WithErrorStatus_ReturnsFailedResult()
     {
         // Arrange
@@ -360,11 +359,11 @@ public class HttpResponseExtensionTests
 
     #region Different Success Status Codes Tests
 
-    [Theory]
-    [InlineData(HttpStatusCode.OK)]
-    [InlineData(HttpStatusCode.Created)]
-    [InlineData(HttpStatusCode.Accepted)]
-    [InlineData(HttpStatusCode.NoContent)]
+    [Test]
+    [Arguments(HttpStatusCode.OK)]
+    [Arguments(HttpStatusCode.Created)]
+    [Arguments(HttpStatusCode.Accepted)]
+    [Arguments(HttpStatusCode.NoContent)]
     public async Task FromRequestToResult_VariousSuccessCodes_ReturnsSuccessResult(HttpStatusCode statusCode)
     {
         // Arrange
@@ -381,13 +380,13 @@ public class HttpResponseExtensionTests
         result.Problem.ShouldBeNull();
     }
 
-    [Theory]
-    [InlineData(HttpStatusCode.BadRequest)]
-    [InlineData(HttpStatusCode.Unauthorized)]
-    [InlineData(HttpStatusCode.Forbidden)]
-    [InlineData(HttpStatusCode.NotFound)]
-    [InlineData(HttpStatusCode.InternalServerError)]
-    [InlineData(HttpStatusCode.BadGateway)]
+    [Test]
+    [Arguments(HttpStatusCode.BadRequest)]
+    [Arguments(HttpStatusCode.Unauthorized)]
+    [Arguments(HttpStatusCode.Forbidden)]
+    [Arguments(HttpStatusCode.NotFound)]
+    [Arguments(HttpStatusCode.InternalServerError)]
+    [Arguments(HttpStatusCode.BadGateway)]
     public async Task FromRequestToResult_VariousErrorCodes_ReturnsFailedResult(HttpStatusCode statusCode)
     {
         // Arrange

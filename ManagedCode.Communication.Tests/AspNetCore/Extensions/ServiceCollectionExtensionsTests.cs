@@ -2,16 +2,16 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Tests.Common.TestApp;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
-[Collection(nameof(TestClusterApplication))]
+[ClassDataSource<TestClusterApplication>(Shared = SharedType.Keyed, Key = nameof(TestClusterApplication))]
+[NotInParallel(nameof(TestClusterApplication))]
 public class ServiceCollectionExtensionsTests(TestClusterApplication app)
 {
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Successful_Result()
     {
         // Arrange
@@ -26,7 +26,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("Test Success");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Failed_Result()
     {
         // Arrange
@@ -41,7 +41,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("400");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_NotFound_Result()
     {
         // Arrange
@@ -56,7 +56,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("404");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Collection_Results()
     {
         // Arrange
@@ -72,7 +72,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("totalItems");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Empty_Collections()
     {
         // Arrange
@@ -87,7 +87,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("collection");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Enum_Errors()
     {
         // Arrange
@@ -102,7 +102,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("400");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Valid_Model_Validation()
     {
         // Arrange
@@ -119,7 +119,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("Validation passed");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Reject_Invalid_Model()
     {
         // Arrange
@@ -134,7 +134,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         response.StatusCode.ShouldBe(System.Net.HttpStatusCode.BadRequest);
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Custom_Problems()
     {
         // Arrange
@@ -149,7 +149,7 @@ public class ServiceCollectionExtensionsTests(TestClusterApplication app)
         content.ShouldContain("409");
     }
 
-    [Fact]
+    [Test]
     public async Task Communication_Should_Handle_Exceptions()
     {
         // Arrange

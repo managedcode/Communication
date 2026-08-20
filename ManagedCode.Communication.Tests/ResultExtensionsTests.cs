@@ -1,10 +1,9 @@
 using System;
 using System.Globalization;
 using System.Threading.Tasks;
-using Shouldly;
 using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Results.Extensions;
-using Xunit;
+using Shouldly;
 
 namespace ManagedCode.Communication.Tests;
 
@@ -12,7 +11,7 @@ public class ResultExtensionsTests
 {
     #region Result Extensions Tests
 
-    [Fact]
+    [Test]
     public void Bind_WithSuccessResult_ShouldExecuteNext()
     {
         // Arrange
@@ -32,7 +31,7 @@ public class ResultExtensionsTests
             .ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Bind_WithFailedResult_ShouldNotExecuteNext()
     {
         // Arrange
@@ -55,7 +54,7 @@ public class ResultExtensionsTests
             .ShouldBe("Error");
     }
 
-    [Fact]
+    [Test]
     public void BindToGeneric_WithSuccessResult_ShouldTransformToResultT()
     {
         // Arrange
@@ -71,7 +70,7 @@ public class ResultExtensionsTests
             .ShouldBe(42);
     }
 
-    [Fact]
+    [Test]
     public void Tap_WithSuccessResult_ShouldExecuteAction()
     {
         // Arrange
@@ -86,7 +85,7 @@ public class ResultExtensionsTests
         tapped.ShouldBe(result);
     }
 
-    [Fact]
+    [Test]
     public void Finally_ShouldAlwaysExecute()
     {
         // Arrange
@@ -104,7 +103,7 @@ public class ResultExtensionsTests
         failedExecuted.ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public void Else_WithFailedResult_ShouldReturnAlternative()
     {
         // Arrange
@@ -122,7 +121,7 @@ public class ResultExtensionsTests
 
     #region Result<T> Extensions Tests
 
-    [Fact]
+    [Test]
     public void Map_WithSuccessResult_ShouldTransformValue()
     {
         // Arrange
@@ -138,7 +137,7 @@ public class ResultExtensionsTests
             .ShouldBe(20);
     }
 
-    [Fact]
+    [Test]
     public void Map_WithFailedResult_ShouldPropagateFailure()
     {
         // Arrange
@@ -155,7 +154,7 @@ public class ResultExtensionsTests
             .ShouldBe("Error");
     }
 
-    [Fact]
+    [Test]
     public void BindGeneric_WithSuccessResult_ShouldChainOperations()
     {
         // Arrange
@@ -171,7 +170,7 @@ public class ResultExtensionsTests
             .ShouldBe("Value is 10");
     }
 
-    [Fact]
+    [Test]
     public void Ensure_WithFailingPredicate_ShouldFail()
     {
         // Arrange
@@ -189,7 +188,7 @@ public class ResultExtensionsTests
             .ShouldBe("Value too small");
     }
 
-    [Fact]
+    [Test]
     public void TapGeneric_WithSuccessResult_ShouldExecuteActionWithValue()
     {
         // Arrange
@@ -208,7 +207,7 @@ public class ResultExtensionsTests
 
     #region Async Extensions Tests
 
-    [Fact]
+    [Test]
     public async Task BindAsync_WithSuccessResult_ShouldExecuteNextAsync()
     {
         // Arrange
@@ -226,7 +225,7 @@ public class ResultExtensionsTests
             .ShouldBeTrue();
     }
 
-    [Fact]
+    [Test]
     public async Task BindAsyncGeneric_WithSuccessResult_ShouldChainAsyncOperations()
     {
         // Arrange
@@ -246,7 +245,7 @@ public class ResultExtensionsTests
             .ShouldBe("Value: 10");
     }
 
-    [Fact]
+    [Test]
     public async Task MapAsync_WithSuccessResult_ShouldTransformValueAsync()
     {
         // Arrange
@@ -266,7 +265,7 @@ public class ResultExtensionsTests
             .ShouldBe(15);
     }
 
-    [Fact]
+    [Test]
     public async Task TapAsync_WithSuccessResult_ShouldExecuteAsyncAction()
     {
         // Arrange
@@ -292,7 +291,7 @@ public class ResultExtensionsTests
 
     #region Pattern Matching Tests
 
-    [Fact]
+    [Test]
     public void Match_WithResultT_ShouldReturnCorrectBranch()
     {
         // Arrange
@@ -309,7 +308,7 @@ public class ResultExtensionsTests
         failedValue.ShouldBe("Failed: Error");
     }
 
-    [Fact]
+    [Test]
     public void MatchAction_ShouldExecuteCorrectBranch()
     {
         // Arrange
@@ -329,7 +328,7 @@ public class ResultExtensionsTests
 
     #region Edge Cases and Complex Scenarios
 
-    [Fact]
+    [Test]
     public void ChainedOperations_ShouldShortCircuitOnFailure()
     {
         // Arrange
@@ -360,7 +359,7 @@ public class ResultExtensionsTests
         step3Executed.ShouldBeFalse();
     }
 
-    [Fact]
+    [Test]
     public void ComplexPipeline_ShouldProcessCorrectly()
     {
         // Arrange
