@@ -38,6 +38,33 @@ public static class CommunicationTelemetry
     /// <summary>Counter of exceptions converted into a <see cref="Problem" />.</summary>
     public const string ExceptionCounterName = "communication.exceptions";
 
+    /// <summary>Counter of command attempts.</summary>
+    public const string CommandAttemptCounterName = "communication.command.attempts";
+
+    /// <summary>Counter of command retries.</summary>
+    public const string CommandRetryCounterName = "communication.command.retries";
+
+    /// <summary>Counter of command executions that exhausted their retry budget.</summary>
+    public const string CommandRetriesExhaustedCounterName = "communication.command.retries.exhausted";
+
+    /// <summary>Counter of timed-out command executions.</summary>
+    public const string CommandTimeoutCounterName = "communication.command.timeouts";
+
+    /// <summary>Counter of commands queued by a rate limiter.</summary>
+    public const string CommandRateLimitQueuedCounterName = "communication.command.rate_limit.queued";
+
+    /// <summary>Counter of commands rejected by a rate limiter.</summary>
+    public const string CommandRateLimitRejectedCounterName = "communication.command.rate_limit.rejected";
+
+    /// <summary>Histogram of total command execution duration.</summary>
+    public const string CommandDurationName = "communication.command.duration";
+
+    /// <summary>Histogram of individual command attempt duration.</summary>
+    public const string CommandAttemptDurationName = "communication.command.attempt.duration";
+
+    /// <summary>Histogram of rate-limiter queue duration.</summary>
+    public const string CommandRateLimitQueueDurationName = "communication.command.rate_limit.queue.duration";
+
     private static readonly Meter MeterInstance = new(SourceName, ThisAssemblyVersion);
 
     private static readonly Counter<long> FailureCounter = MeterInstance.CreateCounter<long>(
@@ -49,6 +76,42 @@ public static class CommunicationTelemetry
         ExceptionCounterName,
         unit: "{exception}",
         description: "Number of exceptions converted into a Problem.");
+
+    private static readonly Counter<long> CommandAttemptCounter = MeterInstance.CreateCounter<long>(
+        CommandAttemptCounterName,
+        unit: "{attempt}");
+
+    private static readonly Counter<long> CommandRetryCounter = MeterInstance.CreateCounter<long>(
+        CommandRetryCounterName,
+        unit: "{retry}");
+
+    private static readonly Counter<long> CommandRetriesExhaustedCounter = MeterInstance.CreateCounter<long>(
+        CommandRetriesExhaustedCounterName,
+        unit: "{execution}");
+
+    private static readonly Counter<long> CommandTimeoutCounter = MeterInstance.CreateCounter<long>(
+        CommandTimeoutCounterName,
+        unit: "{execution}");
+
+    private static readonly Counter<long> CommandRateLimitQueuedCounter = MeterInstance.CreateCounter<long>(
+        CommandRateLimitQueuedCounterName,
+        unit: "{command}");
+
+    private static readonly Counter<long> CommandRateLimitRejectedCounter = MeterInstance.CreateCounter<long>(
+        CommandRateLimitRejectedCounterName,
+        unit: "{command}");
+
+    private static readonly Histogram<double> CommandDuration = MeterInstance.CreateHistogram<double>(
+        CommandDurationName,
+        unit: "ms");
+
+    private static readonly Histogram<double> CommandAttemptDuration = MeterInstance.CreateHistogram<double>(
+        CommandAttemptDurationName,
+        unit: "ms");
+
+    private static readonly Histogram<double> CommandRateLimitQueueDuration = MeterInstance.CreateHistogram<double>(
+        CommandRateLimitQueueDurationName,
+        unit: "ms");
 
     /// <summary>
     ///     Activity source for spans the library starts. Also the source whose current activity
@@ -149,6 +212,127 @@ public static class CommunicationTelemetry
         return ActivitySource.StartActivity(name, kind);
     }
 
+    /// <summary>Starts a command execution span and attaches command correlation metadata.</summary>
+    public static Activity? StartCommandExecution(ICommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var activity = ActivitySource.StartActivity("communication.command.execute", ActivityKind.Internal);
+        if (activity is null)
+        {
+            return null;
+        }
+
+        activity.SetTag("command.type", command.CommandType);
+        activity.SetTag("command.id", command.CommandId.ToString("D"));
+        activity.SetTag("command.correlation_id", command.CorrelationId);
+        activity.SetTag("command.causation_id", command.CausationId);
+        activity.SetTag("command.trace_id", command.TraceId);
+        activity.SetTag("command.span_id", command.SpanId);
+        activity.SetTag("enduser.id", command.UserId);
+        return activity;
+    }
+
+    /// <summary>Records one command handler or rate-limit attempt.</summary>
+    public static void RecordCommandAttempt(
+        ICommand command,
+        int attempt,
+        IResult result,
+        TimeSpan duration)
+    {
+        var tags = BuildCommandTags(command, result.IsSuccess);
+        CommandAttemptCounter.Add(1, tags);
+        CommandAttemptDuration.Record(duration.TotalMilliseconds, tags);
+        Activity.Current?.AddEvent(new ActivityEvent(
+            "command.attempt",
+            tags: new ActivityTagsCollection
+            {
+                { "command.attempt", attempt },
+                { "command.success", result.IsSuccess }
+            }));
+    }
+
+    /// <summary>Records the final result and duration of a command execution.</summary>
+    public static void RecordCommandCompleted(
+        ICommand command,
+        IResult result,
+        TimeSpan duration)
+    {
+        var tags = BuildCommandTags(command, result.IsSuccess);
+        CommandDuration.Record(duration.TotalMilliseconds, tags);
+
+        if (result.IsFailed)
+        {
+            RecordFailure(result.Problem, activity: Activity.Current);
+        }
+        else
+        {
+            Activity.Current?.SetStatus(ActivityStatusCode.Ok);
+        }
+    }
+
+    /// <summary>Records a scheduled retry.</summary>
+    public static void RecordCommandRetry(
+        ICommand command,
+        int attempt,
+        TimeSpan delay,
+        Problem problem,
+        Activity? activity = null)
+    {
+        CommandRetryCounter.Add(1, BuildCommandTags(command, false));
+        (activity ?? Activity.Current)?.AddEvent(new ActivityEvent(
+            "command.retry",
+            tags: new ActivityTagsCollection
+            {
+                { "command.attempt", attempt },
+                { "command.retry_delay_ms", delay.TotalMilliseconds },
+                { "problem.status", problem.StatusCode }
+            }));
+    }
+
+    /// <summary>Records retry-budget exhaustion.</summary>
+    public static void RecordRetriesExhausted(
+        ICommand command,
+        int attempts,
+        Problem problem,
+        Activity? activity = null)
+    {
+        CommandRetriesExhaustedCounter.Add(1, BuildCommandTags(command, false));
+        (activity ?? Activity.Current)?.AddEvent(new ActivityEvent(
+            "command.retries.exhausted",
+            tags: new ActivityTagsCollection
+            {
+                { "command.attempts", attempts },
+                { "problem.status", problem.StatusCode }
+            }));
+    }
+
+    /// <summary>Records an execution timeout.</summary>
+    public static void RecordCommandTimeout(ICommand command, Problem problem, Activity? activity = null)
+    {
+        CommandTimeoutCounter.Add(1, BuildCommandTags(command, false));
+        (activity ?? Activity.Current)?.AddEvent(new ActivityEvent(
+            "command.timeout",
+            tags: new ActivityTagsCollection { { "problem.status", problem.StatusCode } }));
+    }
+
+    /// <summary>Records rate-limit queueing.</summary>
+    public static void RecordRateLimitQueued(ICommand command, TimeSpan queueDuration)
+    {
+        var tags = BuildCommandTags(command, false);
+        CommandRateLimitQueuedCounter.Add(1, tags);
+        CommandRateLimitQueueDuration.Record(queueDuration.TotalMilliseconds, tags);
+        Activity.Current?.AddEvent(new ActivityEvent("command.rate_limit.queued"));
+    }
+
+    /// <summary>Records rate-limit rejection.</summary>
+    public static void RecordRateLimitRejected(ICommand command, Problem problem)
+    {
+        CommandRateLimitRejectedCounter.Add(1, BuildCommandTags(command, false));
+        Activity.Current?.AddEvent(new ActivityEvent(
+            "command.rate_limit.rejected",
+            tags: new ActivityTagsCollection { { "problem.status", problem.StatusCode } }));
+    }
+
     private static string ResolveErrorType(Problem? problem, Exception? exception)
     {
         if (exception is not null)
@@ -176,6 +360,15 @@ public static class CommunicationTelemetry
         }
 
         return tags;
+    }
+
+    private static TagList BuildCommandTags(ICommand command, bool success)
+    {
+        return new TagList
+        {
+            { "command.type", command.CommandType },
+            { "command.success", success }
+        };
     }
 
     private static string ThisAssemblyVersion =>

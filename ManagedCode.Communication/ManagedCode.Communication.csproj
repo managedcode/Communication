@@ -9,13 +9,14 @@
     <PropertyGroup>
         <Title>ManagedCode.Communication</Title>
         <PackageId>ManagedCode.Communication</PackageId>
-        <Description>Communication for .NET</Description>
-        <PackageTags>managedcode, Communication, Result</PackageTags>
+        <Description>Result, RFC 7807, CQRS streaming, and native reliable command execution for .NET.</Description>
+        <PackageTags>managedcode;communication;result;commands;retry;timeout;idempotency;rate-limiting;opentelemetry</PackageTags>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.11" />
         <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.11" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+        <PackageReference Include="System.Threading.RateLimiting" Version="10.0.11" />
     </ItemGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="ManagedCode.Communication.AspNetCore"/>

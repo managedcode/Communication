@@ -248,10 +248,10 @@ Pre-defined error categories with appropriate HTTP status codes:
 
 | Package | Contains | Depends on ASP.NET Core? |
 | --- | --- | --- |
-| `ManagedCode.Communication` | `Result`, `Result<T>`, `CollectionResult<T>`, `Problem`, commands and idempotency, and the CQRS streaming contract (`CqrsStreamChunk<,>`, `CqrsStream`, the SSE reader) | no |
-| `ManagedCode.Communication.Extensions` | Railway composition (`Bind`, `Map`, `Tap`, `Then`, `Ensure`, `Match`, `Compensate`…) and `HttpClient` → `Result` helpers with optional Polly | no |
+| `ManagedCode.Communication` | `Result`, `Problem`, commands, native retry/timeout/idempotency/rate limiting, telemetry, and the CQRS streaming contract | no |
+| `ManagedCode.Communication.Extensions` | Railway composition (`Bind`, `Map`, `Tap`, `Then`, `Ensure`, `Match`, `Compensate`…) and `HttpClient` → `Result` helpers | no |
 | `ManagedCode.Communication.AspNetCore` | MVC filters, Minimal API filter, SignalR, DI wiring, and the CQRS Server-Sent Events transport | yes |
-| `ManagedCode.Communication.Orleans` | Orleans grain filters and serialization | no (Orleans) |
+| `ManagedCode.Communication.Orleans` | Orleans grain filters, serialization, idempotency, and the `ManagedCode.Orleans.RateLimiting` command adapter | no (Orleans) |
 
 The two "no" packages work anywhere .NET runs — console, worker, Blazor WebAssembly, MAUI. The CQRS streaming
 contract and its client live in the base package on purpose: both ends of a stream need the same chunk type, and
@@ -355,29 +355,106 @@ app.Run();
 Handlers can return any `Result` or `Result<T>` instance and the filter will reuse the existing ASP.NET Core converters so
 you do not need to write manual `IResult` translations.
 
+### Native Command Execution
+
+Reliability is part of `ICommand` execution rather than a separate request or pipeline abstraction. Configure the runtime
+once and execute either a raw-value handler or a handler that already returns `Result<T>`:
+
+```csharp
+using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Commands.Execution;
+
+var options = new CommandExecutionOptions();
+options.Retry.Enabled = true;
+options.Retry.MaxRetries = 3;
+options.Retry.Delay = TimeSpan.FromMilliseconds(200);
+options.Timeout.Timeout = TimeSpan.FromSeconds(15);
+
+var execution = new CommandExecutionRuntime(options);
+var command = Command.From("payment.capture", new CapturePayment(paymentId));
+
+// A raw Task<Payment> is wrapped into Result<Payment>.
+Result<Payment> payment = await CommandExecutor.ExecuteAsync(
+    command,
+    (current, cancellationToken) =>
+        paymentHandler.HandleAsync(current, cancellationToken),
+    execution,
+    cancellationToken);
+
+// An existing Result<Payment> is preserved, not wrapped as Result<Result<Payment>>.
+Result<Payment> preserved = await Result<Payment>.ExecuteAsync(
+    command,
+    (current, cancellationToken) =>
+        resultPaymentHandler.HandleAsync(current, cancellationToken),
+    execution,
+    cancellationToken);
+```
+
+`Task` and `ValueTask` overloads are available for handlers with and without values. Retry decisions are explicit through
+`Retry.ShouldRetry` and `Retry.ShouldRetryException`; caller cancellation is never retried. Timeout covers idempotency waits,
+retry delays, rate-limit queues, and handler execution. A final failed result is cached by the configured idempotency store,
+so the same `CommandId` cannot perform the side effect twice.
+
+For dependency injection, register the executor and the local idempotency store:
+
+```csharp
+services.AddCommandIdempotency();
+services.AddCommandExecution(options =>
+{
+    options.Retry.Enabled = true;
+    options.Timeout.Timeout = TimeSpan.FromSeconds(15);
+});
+
+var executor = serviceProvider.GetRequiredService<ICommandExecutor>();
+```
+
+Local partitions use `System.Threading.RateLimiting`:
+
+```csharp
+var limiter = PartitionedCommandRateLimiter.CreateFixedWindow(
+    command => command.UserId ?? "anonymous",
+    permitLimit: 100,
+    window: TimeSpan.FromMinutes(1),
+    queueLimit: 20);
+
+services.AddCommandRateLimiter(limiter);
+```
+
+For a cluster-wide limit, `UseOrleansCommunication()` registers `OrleansCommandRateLimiter`. It maps command user, session,
+tenant, role, IP, resource, tags, and policy name into `ManagedCode.Orleans.RateLimiting`; that package owns the distributed
+grain algorithms and durable leases:
+
+```csharp
+siloBuilder.UseOrleansCommunication(options =>
+    options.PolicyName = static _ => "commands");
+
+siloBuilder.Services.AddFixedWindowRateLimiterOptions("tenant-commands", options =>
+{
+    options.PermitLimit = 1_000;
+    options.Window = TimeSpan.FromMinutes(1);
+    options.QueueLimit = 100;
+});
+siloBuilder.Services.AddOrleansRequestRateLimiting(options =>
+    options.AddTenant("tenant-commands", required: true));
+```
+
+Command execution emits OpenTelemetry-compatible `ActivitySource` and `Meter` signals automatically. Subscribe to
+`CommunicationTelemetry.SourceName` to collect total and per-attempt duration, retries, exhaustion, timeouts, queued/rejected
+rate limits, final failures, and correlation tags.
+
 ### Resilient HTTP Clients
 
-The extensions package also ships helpers that turn `HttpClient` calls directly into `Result` instances and optionally run
-them through Polly resilience pipelines:
+The extensions package turns HTTP responses into `Result` instances. Pass a command and execution runtime when the request
+should use the native retry, timeout, idempotency, rate-limit, and telemetry behaviors:
 
 ```csharp
 using ManagedCode.Communication.Extensions.Http;
-using Polly;
-using Polly.Retry;
 
-var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
-    .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
-    {
-        MaxRetryAttempts = 3,
-        Delay = TimeSpan.FromMilliseconds(200),
-        ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-            .HandleResult(response => !response.IsSuccessStatusCode)
-    })
-    .Build();
-
-var result = await httpClient.SendForResultAsync<OrderDto>(
-    () => new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}"),
-    pipeline);
+Result<OrderDto> result = await httpClient.SendForResultAsync<OrderDto, Command<OrderQuery>>(
+    command,
+    current => new HttpRequestMessage(HttpMethod.Get, $"/orders/{current.Value.OrderId}"),
+    execution,
+    cancellationToken);
 
 if (result.IsSuccess)
 {

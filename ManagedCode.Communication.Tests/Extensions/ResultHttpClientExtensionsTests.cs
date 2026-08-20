@@ -6,9 +6,9 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication;
+using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Extensions.Http;
-using Polly;
-using Polly.Retry;
 using Shouldly;
 using Xunit;
 
@@ -36,7 +36,7 @@ public class ResultHttpClientExtensionsTests
     }
 
     [Fact]
-    public async Task GetAsResultAsync_WithPipeline_SucceedsAfterRetry()
+    public async Task SendForResultAsync_WithCommandExecution_SucceedsAfterRetry()
     {
         var attempt = 0;
         using var client = new HttpClient(new StubHandler((_, _) =>
@@ -58,19 +58,10 @@ public class ResultHttpClientExtensionsTests
             });
         }));
 
-        var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
-            .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
-            {
-                MaxRetryAttempts = 2,
-                Delay = TimeSpan.Zero,
-                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                    .HandleResult(static response => !response.IsSuccessStatusCode)
-            })
-            .Build();
-
-        var result = await client.GetAsResultAsync<int>(
-            "https://example.com/api/retry",
-            pipeline);
+        var result = await client.SendForResultAsync<int, Command>(
+            Command.Create("http.get"),
+            static _ => new HttpRequestMessage(HttpMethod.Get, "https://example.com/api/retry"),
+            CreateRetryRuntime());
 
         attempt.ShouldBe(2);
         result.IsSuccess.ShouldBeTrue();
@@ -239,7 +230,7 @@ public class ResultHttpClientExtensionsTests
     }
 
     [Fact]
-    public async Task SendForResultAsync_WithRetryPipeline_RetriesUntilSuccess()
+    public async Task SendForResultAsync_WithNativeRetry_RetriesUntilSuccess()
     {
         var attempt = 0;
         using var client = new HttpClient(new StubHandler((_, _) =>
@@ -263,23 +254,26 @@ public class ResultHttpClientExtensionsTests
             return Task.FromResult(success);
         }));
 
-        var pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
-            .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
-            {
-                MaxRetryAttempts = 2,
-                Delay = TimeSpan.Zero,
-                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                    .HandleResult(static response => !response.IsSuccessStatusCode)
-            })
-            .Build();
-
-        var result = await client.SendForResultAsync<int>(
-            static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"),
-            pipeline);
+        var result = await client.SendForResultAsync<int, Command>(
+            Command.Create("http.get"),
+            static _ => new HttpRequestMessage(HttpMethod.Get, "https://example.com"),
+            CreateRetryRuntime());
 
         attempt.ShouldBe(2);
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(42);
+    }
+
+    private static CommandExecutionRuntime CreateRetryRuntime()
+    {
+        var options = new CommandExecutionOptions();
+        options.Retry.Enabled = true;
+        options.Retry.MaxRetries = 2;
+        options.Retry.Delay = TimeSpan.Zero;
+        options.Retry.UseJitter = false;
+        options.Timeout.Enabled = false;
+        options.Idempotency.Enabled = false;
+        return new CommandExecutionRuntime(options);
     }
 
     private sealed class StubHandler : HttpMessageHandler

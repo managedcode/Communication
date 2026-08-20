@@ -9,13 +9,12 @@
     <PropertyGroup>
         <Title>ManagedCode.Communication.Extensions</Title>
         <PackageId>ManagedCode.Communication.Extensions</PackageId>
-        <Description>Fluent extras for ManagedCode.Communication: railway-oriented composition (Bind, Map, Tap, Then, Ensure, Match, Compensate…) and HttpClient helpers that return Result with optional Polly resilience. No ASP.NET Core dependency — usable from console, worker, Blazor WASM and MAUI.</Description>
-        <PackageTags>managedcode;communication;result-pattern;railway-oriented;rop;polly</PackageTags>
+        <Description>Fluent extras for ManagedCode.Communication: railway-oriented composition (Bind, Map, Tap, Then, Ensure, Match, Compensate…) and HttpClient helpers that return Result. No ASP.NET Core dependency — usable from console, worker, Blazor WASM and MAUI.</Description>
+        <PackageTags>managedcode;communication;result-pattern;railway-oriented;rop;commands;retry;rate-limiting</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
-        <PackageReference Include="Polly" Version="8.7.0" />
     </ItemGroup>
 
 </Project>

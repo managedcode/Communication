@@ -101,8 +101,17 @@ public static class CommandIdempotencyExtensions
         }
         catch (Exception)
         {
-            // Mark as failed
-            await store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Failed, cancellationToken);
+            // A timeout or caller cancellation has already cancelled the operation token. Use a cleanup token so
+            // the claimed command does not remain InProgress forever and block every future duplicate.
+            try
+            {
+                await store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Failed, CancellationToken.None);
+            }
+            catch
+            {
+                // Preserve the original handler/cancellation exception. Store cleanup failure must not replace it.
+            }
+
             throw;
         }
     }

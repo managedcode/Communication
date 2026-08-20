@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Telemetry;
 using Microsoft.Extensions.Logging.Abstractions;
 using Shouldly;
@@ -185,5 +188,77 @@ public sealed class CommunicationTelemetryTests : IDisposable
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe(42);
         _activities.Single(a => a.DisplayName == "fine").Status.ShouldBe(ActivityStatusCode.Unset);
+    }
+
+    [Fact]
+    public async Task CommandExecution_EmitsCorrelationTagsAndRetryEvents()
+    {
+        var command = Command.Create("payment.capture");
+        command.CorrelationId = "correlation-a";
+        command.TraceId = "upstream-trace";
+        var options = new CommandExecutionOptions();
+        options.Timeout.Enabled = false;
+        options.Idempotency.Enabled = false;
+        options.Retry.Enabled = true;
+        options.Retry.MaxRetries = 1;
+        options.Retry.Delay = TimeSpan.Zero;
+        options.Retry.UseJitter = false;
+        var attempt = 0;
+
+        var result = await CommandExecutor.ExecuteResultAsync(
+            command,
+            (_, _) => Task.FromResult(++attempt == 1
+                ? Result<int>.Fail(Problem.Create(HttpStatusCode.ServiceUnavailable))
+                : Result<int>.Succeed(1)),
+            new CommandExecutionRuntime(options));
+
+        result.IsSuccess.ShouldBeTrue();
+        var activity = _activities.Single(a => a.DisplayName == "communication.command.execute");
+        activity.GetTagItem("command.type").ShouldBe("payment.capture");
+        activity.GetTagItem("command.correlation_id").ShouldBe("correlation-a");
+        activity.GetTagItem("command.trace_id").ShouldBe("upstream-trace");
+        activity.Events.Count(e => e.Name == "command.attempt").ShouldBe(2);
+        activity.Events.Count(e => e.Name == "command.retry").ShouldBe(1);
+        activity.Status.ShouldBe(ActivityStatusCode.Ok);
+    }
+
+    [Fact]
+    public async Task CommandExecution_IncrementsAttemptAndRetryMetrics()
+    {
+        var measurements = new Dictionary<string, long>(StringComparer.Ordinal);
+        using var meterListener = new MeterListener
+        {
+            InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Name == CommunicationTelemetry.SourceName &&
+                    instrument.Name is CommunicationTelemetry.CommandAttemptCounterName
+                        or CommunicationTelemetry.CommandRetryCounterName)
+                {
+                    listener.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        meterListener.SetMeasurementEventCallback<long>((instrument, value, _, _) =>
+            measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + value);
+        meterListener.Start();
+
+        var options = new CommandExecutionOptions();
+        options.Timeout.Enabled = false;
+        options.Idempotency.Enabled = false;
+        options.Retry.Enabled = true;
+        options.Retry.MaxRetries = 1;
+        options.Retry.Delay = TimeSpan.Zero;
+        options.Retry.UseJitter = false;
+        var attempt = 0;
+
+        await CommandExecutor.ExecuteResultAsync(
+            Command.Create("metric.command"),
+            (_, _) => Task.FromResult(++attempt == 1
+                ? Result.Fail(Problem.Create(HttpStatusCode.ServiceUnavailable))
+                : Result.Succeed()),
+            new CommandExecutionRuntime(options));
+
+        measurements[CommunicationTelemetry.CommandAttemptCounterName].ShouldBe(2);
+        measurements[CommunicationTelemetry.CommandRetryCounterName].ShouldBe(1);
     }
 }

@@ -22,6 +22,16 @@ always check all test are passed.
 - Keep one forward-only HTTP wire contract: `WithCommunicationResults()` emits a raw success payload or RFC 7807 failure, and `HttpClient.SendForResultAsync<T>()` consumes exactly that shape. Do not retain serialized `Result<T>` envelope compatibility.
 - For file, optional, or other non-JSON success bodies, use the `SendForResultAsync` success-projection overload so the library still owns transport and RFC 7807 failures; do not add application-specific failure parsers.
 - When one Minimal API route dynamically selects between a CQRS stream and another HTTP result, use `CqrsStreamHttpResults.ServerSentEvents(stream)`; do not return `object` or implement a second SSE writer in the application.
+- For execution reliability, build and maintain Communication's own execution framework; do not depend on Polly or any Polly package at runtime, through DI, or in tests.
+- Design resilience as native `ICommand` execution, integrating `Result`/`Problem`, idempotency, correlation/trace metadata, and existing diagnostics instead of exposing a standalone Polly-shaped subsystem.
+- The Communication execution model must emit OpenTelemetry-compatible traces and metrics by default, include an Orleans adapter, and include built-in rate limiting; prefer .NET `System.Threading.RateLimiting` for local partitions and use an Orleans-backed adapter when cluster-wide coordination is required.
+- Do not introduce a parallel `IRequest`/`Request<T>` execution envelope for resilience; `ICommand` is the operation contract, and HTTP or Orleans integrations adapt to the active command execution.
+- Keep clear reliability capability names such as `Retry`, `Timeout`, and `RateLimiter`; do not rename them merely to differ from Polly.
+- Avoid vague public resilience abstractions such as `ExecutionFeature` and `FailureClassifier`; expose capability-specific options and `ShouldRetry` decisions instead.
+- When implementing command reliability, use current Polly source as an algorithmic and test reference for concurrency, cancellation, time, backoff, telemetry, and disposal guarantees, but do not copy its public pipeline architecture or add a Polly dependency.
+- For `/plan` requests, perform research and produce the implementation plan without changing feature code, project references, packages, or tests.
+- Use `ManagedCode.Orleans.RateLimiting` as the distributed Orleans rate-limiting backend instead of duplicating its grain algorithms; Communication owns the `ICommand`, `Result`/`Problem`, telemetry, and adapter layer.
+- Command execution APIs must support handlers returning raw values/tasks by wrapping them into `Result`, and handlers already returning `Result`/`Result<T>` by preserving them unchanged; provide symmetric `Task` and `ValueTask` overloads.
 
 # Repository Guidelines
 

@@ -10,14 +10,17 @@
     <PropertyGroup>
         <Title>ManagedCode.Communication.Orleans</Title>
         <PackageId>ManagedCode.Communication.Orleans</PackageId>
-        <Description>Communication for .NET</Description>
-        <PackageTags>managedcode, Communication, Result</PackageTags>
+        <Description>Orleans serialization, filters, idempotency, and distributed command rate limiting for ManagedCode.Communication.</Description>
+        <PackageTags>managedcode;communication;result;orleans;commands;idempotency;distributed-rate-limiting</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.2.2" />
         <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.2.2" />
+        <PackageReference Include="Microsoft.Orleans.Server" Version="10.2.2" />
+        <PackageReference Include="Microsoft.Orleans.Persistence.Memory" Version="10.2.2" />
         <PackageReference Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.2.2" />
+        <PackageReference Include="ManagedCode.Orleans.RateLimiting.Server" Version="10.1.0" />
     </ItemGroup>
 
     <ItemGroup>
