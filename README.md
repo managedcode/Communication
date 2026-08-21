@@ -1765,12 +1765,21 @@ most derived registration wins.
 
 ## Testing
 
-The repository uses [TUnit](https://tunit.dev/) on Microsoft.Testing.Platform with [Shouldly](https://github.com/shouldly/shouldly) for assertions. Shared matchers such as `ShouldBeEquivalentTo` and `AssertProblem()` live in `ManagedCode.Communication.Tests/TestHelpers`, keeping tests fluent without FluentAssertions.
+The repository uses [TUnit](https://tunit.dev/) with [Microsoft.Testing.Platform](https://learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-intro) and [Shouldly](https://github.com/shouldly/shouldly) for assertions. The repository-level `global.json` selects Microsoft.Testing.Platform as the `dotnet test` runner.
 
-- Run the full suite: `dotnet test --project ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj`
-- Generate Cobertura coverage: `dotnet test --project ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj --coverage --coverage-output-format cobertura`
+Run the complete Release suite:
 
-The suite is 1 321 tests and runs in a few seconds. Line coverage: core ~80%, ASP.NET Core ~98%, Extensions ~79%, Orleans ~97%. Mirror the existing patterns when adding APIs — exercise both the success and the failure path, and drive the public surface rather than internal helpers.
+```shell
+dotnet test --solution ManagedCode.Communication.slnx --configuration Release --output Normal
+```
+
+Generate a Cobertura coverage report using the same collector and output format as CI:
+
+```shell
+dotnet test --solution ManagedCode.Communication.slnx --configuration Release --coverage --coverage-output coverage.cobertura.xml --coverage-output-format cobertura --output Normal
+```
+
+The report is written under `TestResults/coverage.cobertura.xml`. Shared matchers such as `ShouldBeEquivalentTo` and `AssertProblem()` live in `ManagedCode.Communication.Tests/TestHelpers`. When adding APIs, mirror the existing TUnit patterns, exercise both success and failure paths, and drive the public surface rather than internal helpers.
 
 ## Comparison
 
