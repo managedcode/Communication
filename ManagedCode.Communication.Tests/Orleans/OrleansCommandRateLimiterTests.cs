@@ -18,9 +18,14 @@ public sealed class OrleansCommandRateLimiterTests
         var options = new OrleansCommandRateLimiterOptions
         {
             PolicyName = static _ => "commands",
+            UserId = static command => command.UserId,
             TenantId = static _ => "tenant-a",
+            GroupId = static command => command.SessionId,
             Role = static _ => "operator",
-            Resource = static _ => "payments"
+            Resource = static _ => CommandExecutionTestConstants.PaymentsResource,
+            IpAddress = static command => command.Metadata?.IpAddress,
+            Metadata = static command => command.Metadata?.Tags
+                ?? new System.Collections.Generic.Dictionary<string, string>()
         };
         var limiter = new OrleansCommandRateLimiter(orchestrator, options);
         var command = Command.Create("payment.capture");

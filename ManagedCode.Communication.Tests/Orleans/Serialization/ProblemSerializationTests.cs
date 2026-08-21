@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
 using ManagedCode.Communication.Tests.Orleans.Grains;
 using ManagedCode.Communication.Tests.TestHelpers;
@@ -17,6 +18,25 @@ namespace ManagedCode.Communication.Tests.Orleans.Serialization;
 [NotInParallel(nameof(ProblemSerializationTests))]
 public class ProblemSerializationTests
 {
+    private const string ValidationFailedDetail = "Validation failed";
+    private const string SupportEmail = "support@example.com";
+    private const string ErrorCodeOne = "ERR001";
+    private const string ErrorCodeTwo = "ERR002";
+    private const string ErrorCodeThree = "ERR003";
+    private const string DeepValue = "deep value";
+    private const string TraceIdValue = "trace-xyz";
+
+    private static class CustomExtensionKeys
+    {
+        public const string CorrelationId = "correlationId";
+        public const string Timestamp = "timestamp";
+        public const string SupportContact = "supportContact";
+        public const string ErrorCodes = "errorCodes";
+        public const string Nested = "nested";
+        public const string LevelOne = "level1";
+        public const string LevelTwo = "level2";
+    }
+
     private readonly IGrainFactory _grainFactory;
 
     public ProblemSerializationTests(OrleansClusterFixture fixture)
@@ -37,10 +57,10 @@ public class ProblemSerializationTests
             "https://example.com/errors/payment-failed",
             "/api/payments/123");
 
-        problem.Extensions["traceId"] = "trace-xyz";
+        problem.Extensions[ProblemConstants.ExtensionKeys.TraceId] = TraceIdValue;
         problem.Extensions["accountBalance"] = 50.25m;
         problem.Extensions["requiredAmount"] = 100.00m;
-        problem.Extensions["errors"] = new Dictionary<string, List<string>>
+        problem.Extensions[ProblemConstants.ExtensionKeys.Errors] = new Dictionary<string, List<string>>
         {
             ["payment"] = new List<string> { "Insufficient funds", "Daily limit exceeded" },
             ["account"] = new List<string> { "Account on hold" }
@@ -63,11 +83,12 @@ public class ProblemSerializationTests
         echoed.Instance.ShouldBe(problem.Instance);
 
         echoed.Extensions.ShouldNotBeNull();
-        echoed.Extensions["traceId"].ShouldBe("trace-xyz");
+        echoed.Extensions[ProblemConstants.ExtensionKeys.TraceId].ShouldBe(TraceIdValue);
         echoed.Extensions["accountBalance"].ShouldBe(50.25m);
         echoed.Extensions["requiredAmount"].ShouldBe(100.00m);
 
-        var errors = echoed.Extensions["errors"] as Dictionary<string, List<string>>;
+        var errors = echoed.Extensions[ProblemConstants.ExtensionKeys.Errors]
+            as Dictionary<string, List<string>>;
         errors.ShouldNotBeNull();
         errors!["payment"].ShouldContain("Insufficient funds");
         errors["payment"].ShouldContain("Daily limit exceeded");
@@ -152,17 +173,17 @@ public class ProblemSerializationTests
         // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
 
-        var problem = Problem.FromStatusCode(HttpStatusCode.BadRequest, "Validation failed");
-        problem.Extensions["correlationId"] = Guid.NewGuid().ToString();
-        problem.Extensions["timestamp"] = DateTime.UtcNow;
-        problem.Extensions["retryAfter"] = 60;
-        problem.Extensions["supportContact"] = "support@example.com";
-        problem.Extensions["errorCodes"] = new[] { "ERR001", "ERR002", "ERR003" };
-        problem.Extensions["nested"] = new Dictionary<string, object>
+        var problem = Problem.FromStatusCode(HttpStatusCode.BadRequest, ValidationFailedDetail);
+        problem.Extensions[CustomExtensionKeys.CorrelationId] = Guid.NewGuid().ToString();
+        problem.Extensions[CustomExtensionKeys.Timestamp] = DateTime.UtcNow;
+        problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] = 60;
+        problem.Extensions[CustomExtensionKeys.SupportContact] = SupportEmail;
+        problem.Extensions[CustomExtensionKeys.ErrorCodes] = new[] { ErrorCodeOne, ErrorCodeTwo, ErrorCodeThree };
+        problem.Extensions[CustomExtensionKeys.Nested] = new Dictionary<string, object>
         {
-            ["level1"] = new Dictionary<string, object>
+            [CustomExtensionKeys.LevelOne] = new Dictionary<string, object>
             {
-                ["level2"] = "deep value"
+                [CustomExtensionKeys.LevelTwo] = DeepValue
             }
         };
 
@@ -174,20 +195,20 @@ public class ProblemSerializationTests
         echoed.Extensions.ShouldNotBeNull();
         echoed.Extensions.ShouldHaveCount(6);
 
-        echoed.Extensions["correlationId"].ShouldNotBeNull();
-        echoed.Extensions["timestamp"].ShouldNotBeNull();
-        echoed.Extensions["retryAfter"].ShouldBe(60);
-        echoed.Extensions["supportContact"].ShouldBe("support@example.com");
+        echoed.Extensions[CustomExtensionKeys.CorrelationId].ShouldNotBeNull();
+        echoed.Extensions[CustomExtensionKeys.Timestamp].ShouldNotBeNull();
+        echoed.Extensions[ProblemConstants.ExtensionKeys.RetryAfter].ShouldBe(60);
+        echoed.Extensions[CustomExtensionKeys.SupportContact].ShouldBe(SupportEmail);
 
-        var errorCodes = echoed.Extensions["errorCodes"] as string[];
+        var errorCodes = echoed.Extensions[CustomExtensionKeys.ErrorCodes] as string[];
         errorCodes.ShouldNotBeNull();
-        errorCodes.ShouldBeEquivalentTo(new[] { "ERR001", "ERR002", "ERR003" });
+        errorCodes.ShouldBeEquivalentTo(new[] { ErrorCodeOne, ErrorCodeTwo, ErrorCodeThree });
 
-        var nested = echoed.Extensions["nested"] as Dictionary<string, object>;
+        var nested = echoed.Extensions[CustomExtensionKeys.Nested] as Dictionary<string, object>;
         nested.ShouldNotBeNull();
-        var level1 = nested!["level1"] as Dictionary<string, object>;
+        var level1 = nested![CustomExtensionKeys.LevelOne] as Dictionary<string, object>;
         level1.ShouldNotBeNull();
-        level1!["level2"].ShouldBe("deep value");
+        level1![CustomExtensionKeys.LevelTwo].ShouldBe(DeepValue);
     }
 
     [Test]

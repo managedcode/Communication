@@ -297,10 +297,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.1.1" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.1.1" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.1.1" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.1.1" />
+<PackageReference Include="ManagedCode.Communication" Version="10.2.0" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.0" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.0" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.0" />
 ```
 
 ## Logging Configuration
@@ -357,8 +357,126 @@ you do not need to write manual `IResult` translations.
 
 ### Native Command Execution
 
-Reliability is part of `ICommand` execution rather than a separate request or pipeline abstraction. Configure the runtime
-once and execute either a raw-value handler or a handler that already returns `Result<T>`:
+Reliability is part of `ICommand` execution rather than a separate request or pipeline abstraction. The native executor owns
+retry, cooperative total/per-attempt timeout, atomic idempotency, circuit breaking, rate limiting, and telemetry. It accepts
+raw-value handlers and handlers that already return `Result`/`Result<T>`.
+
+#### Retry: the small setup
+
+For the common DI case, enable retry once and execute the command. `ExecuteValueAsync` wraps a raw value in `Result<T>`;
+`ExecuteResultAsync` preserves a handler's existing `Result<T>` without nesting it:
+
+```csharp
+services.AddCommandExecution(options =>
+{
+    options.Retry.Enabled = true;
+    options.Retry.MaxRetries = 3; // first attempt + at most 3 retries
+    options.Retry.Delay = TimeSpan.FromMilliseconds(200);
+    options.Retry.BackoffType = RetryBackoffType.Exponential;
+    options.Retry.UseJitter = true;
+});
+
+var executor = serviceProvider.GetRequiredService<ICommandExecutor>();
+var command = Command.From("catalog.refresh", new RefreshCatalog(sourceId));
+
+Result<Catalog> wrapped = await executor.ExecuteValueAsync(
+    command,
+    (current, token) => catalogService.RefreshAsync(current.Value, token),
+    cancellationToken);
+
+Result<Catalog> preserved = await executor.ExecuteResultAsync(
+    command,
+    (current, token) => catalogService.RefreshAsResultAsync(current.Value, token),
+    cancellationToken);
+```
+
+That is the complete API needed for ordinary retry. The static `CommandExecutor` and `Result<T>.ExecuteAsync` entry points are
+available when dependency injection is not used, and `Task`/`ValueTask`, value/no-value, and existing `Result` overloads are
+symmetric.
+
+#### How retry works
+
+`MaxRetries` counts retries after the initial call. For example, `MaxRetries = 3` means no more than four physical attempts.
+The executor stops immediately on success, a non-retryable failure, caller cancellation, total timeout, or exhausted budget.
+When retry is disabled, it does not invoke retry predicates or retry callbacks and does not add exhaustion metadata.
+
+The built-in policy retries these failures:
+
+| Failure source | Retried by default |
+| --- | --- |
+| Failed `Result` | HTTP-style status `408`, `429`, `500`, `502`, `503`, or `504` |
+| Exception | `TimeoutException`, `HttpRequestException`, or `IOException` |
+| Caller cancellation | Never |
+| Validation, conflict, authentication, and other permanent failures | Never |
+
+For every retry, the delay is selected in this order:
+
+1. A non-negative value returned by `Retry.DelayGenerator`.
+2. An authoritative HTTP or rate-limiter `Retry-After` value.
+3. The configured constant, linear, or exponential backoff.
+
+Built-in delays are capped by `MaxDelay`; jitter is applied before the final cap. A custom generated delay or authoritative
+hint is checked against `MaxRetryAfter`, and an authoritative value is never shortened. If it exceeds that safety maximum, the
+executor returns the current failure with `retryAfterExceedsMaximum = true` instead of retrying too early. Malformed hints fall
+back to normal backoff.
+
+`CommandMetadata.MaxRetries` can reduce the global budget for one command. `CommandMetadata.RetryCount` represents retries
+already consumed on an earlier queue or Orleans hop, so forwarding a command does not silently reset its budget. When the final
+retryable failure consumes the budget, the returned `Problem.Extensions` contains `retriesExhausted = true` and
+`retryAttempts`; `OnRetriesExhausted` is then notified.
+
+Use the command-aware hooks only when the defaults are not specific enough:
+
+```csharp
+services.AddCommandExecution(options =>
+{
+    options.Retry.Enabled = true;
+    options.Retry.MaxRetries = 5;
+    options.Retry.MaxDelay = TimeSpan.FromSeconds(10);
+    options.Retry.MaxRetryAfter = TimeSpan.FromMinutes(2);
+
+    // When supplied, this decision replaces the two built-in predicates.
+    options.Retry.ShouldRetryAsync = static (context, _) => ValueTask.FromResult(
+        context.Exception is HttpRequestException ||
+        context.Problem.StatusCode is 429 or 503 ||
+        context.Problem.ErrorCode == "provider_busy");
+
+    // Return null (or a negative value) to continue with Retry-After/built-in backoff.
+    options.Retry.DelayGenerator = static (context, _) =>
+        ValueTask.FromResult<TimeSpan?>(context.RetryNumber == 1
+            ? TimeSpan.Zero
+            : null);
+
+    options.Retry.OnRetry = (retry, _) =>
+    {
+        logger.LogWarning(
+            "Retry {RetryNumber} for {CommandType} after {Delay}",
+            retry.RetryNumber,
+            retry.Command.CommandType,
+            retry.Delay);
+        return ValueTask.CompletedTask;
+    };
+});
+```
+
+Observer callback failures are logged as infrastructure failures and never replace the handler outcome. Predicate or delay
+generator failures are configuration/infrastructure failures and are not treated as another transient handler failure.
+
+#### Composition and side-effect safety
+
+One idempotency owner holds the complete retry sequence. Each physical attempt then passes through its per-attempt timeout,
+circuit breaker, rate limiter, and handler. A per-attempt timeout can be retried inside the larger total timeout; the total
+timeout ends the whole sequence. Rate-limit permits are reacquired for every attempt, and lease-cleanup failures never rerun a
+handler which already returned success.
+
+Retry cannot by itself make a side effect safe. A provider may commit a payment or message and lose the response, leaving the
+caller with a retryable `500`/timeout. For side-effecting commands, propagate the command's idempotency key to the downstream
+provider or use an outbox/inbox transaction. The HTTP command helpers create a fresh `HttpRequestMessage` for every attempt,
+but the request factory must preserve the same business idempotency key.
+
+#### Composing all capabilities
+
+The same options object composes retry with timeout, circuit breaking, and idempotency when those capabilities are needed:
 
 ```csharp
 using ManagedCode.Communication.Commands;
@@ -368,7 +486,18 @@ var options = new CommandExecutionOptions();
 options.Retry.Enabled = true;
 options.Retry.MaxRetries = 3;
 options.Retry.Delay = TimeSpan.FromMilliseconds(200);
-options.Timeout.Timeout = TimeSpan.FromSeconds(15);
+options.Timeout.TotalTimeout = TimeSpan.FromSeconds(15);
+options.Timeout.AttemptTimeout = TimeSpan.FromSeconds(5);
+options.CircuitBreaker.Enabled = true;
+options.CircuitBreaker.MinimumThroughput = 20;
+options.CircuitBreaker.FailureRatio = 0.5;
+options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
+
+// Required when an idempotency store is present. Read scope from trusted authenticated
+// execution context, and fingerprint from the immutable business request payload.
+options.Idempotency.ScopeSelector = _ => currentTenant.Id;
+options.Idempotency.FingerprintSelector = current =>
+    Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(current.Value)));
 
 var execution = new CommandExecutionRuntime(options);
 var command = Command.From("payment.capture", new CapturePayment(paymentId));
@@ -390,10 +519,17 @@ Result<Payment> preserved = await Result<Payment>.ExecuteAsync(
     cancellationToken);
 ```
 
-`Task` and `ValueTask` overloads are available for handlers with and without values. Retry decisions are explicit through
-`Retry.ShouldRetry` and `Retry.ShouldRetryException`; caller cancellation is never retried. Timeout covers idempotency waits,
-retry delays, rate-limit queues, and handler execution. A final failed result is cached by the configured idempotency store,
-so the same `CommandId` cannot perform the side effect twice.
+Timeout is deliberately cooperative: it cancels the token supplied to the queue, retry delay, limiter, and handler. A handler
+that ignores or catches cancellation is awaited and may return a late normal result; abandoning it would let a side effect keep
+running after its permit or idempotency claim was released. Use `TotalTimeout` for the whole execution and `AttemptTimeout` for
+each physical attempt.
+
+Idempotency is a single atomic record containing scope, operation, request fingerprint, result contract, fenced owner, and
+terminal outcome. Claims are renewed while a handler is active. A cancellation, crash window, lost finalization response, or
+expired running claim becomes `Indeterminate` and is never automatically retried. Once the real outcome is established, an
+operator can call `TryResolveIndeterminateAsync`; call `TryResetIndeterminateAsync` only after establishing that retry is safe.
+For external side effects, propagate the same idempotency key to the downstream provider or use an outbox. No in-process
+library can promise exactly-once behavior across an uncoordinated external system and a process crash.
 
 For dependency injection, register the executor and the local idempotency store:
 
@@ -402,7 +538,9 @@ services.AddCommandIdempotency();
 services.AddCommandExecution(options =>
 {
     options.Retry.Enabled = true;
-    options.Timeout.Timeout = TimeSpan.FromSeconds(15);
+    options.Timeout.TotalTimeout = TimeSpan.FromSeconds(15);
+    options.Idempotency.ScopeSelector = _ => tenantContext.TenantId;
+    options.Idempotency.FingerprintSelector = command => requestHasher.Hash(command);
 });
 
 var executor = serviceProvider.GetRequiredService<ICommandExecutor>();
@@ -412,7 +550,7 @@ Local partitions use `System.Threading.RateLimiting`:
 
 ```csharp
 var limiter = PartitionedCommandRateLimiter.CreateFixedWindow(
-    command => command.UserId ?? "anonymous",
+    command => trustedTenantAccessor.TenantId,
     permitLimit: 100,
     window: TimeSpan.FromMinutes(1),
     queueLimit: 20);
@@ -420,13 +558,32 @@ var limiter = PartitionedCommandRateLimiter.CreateFixedWindow(
 services.AddCommandRateLimiter(limiter);
 ```
 
-For a cluster-wide limit, `UseOrleansCommunication()` registers `OrleansCommandRateLimiter`. It maps command user, session,
-tenant, role, IP, resource, tags, and policy name into `ManagedCode.Orleans.RateLimiting`; that package owns the distributed
-grain algorithms and durable leases:
+`CreateConcurrency`, `CreateSlidingWindow`, and `CreateTokenBucket` provide the other built-in local algorithms. Every factory
+also accepts a permit-count selector. Wrapping an application-owned `PartitionedRateLimiter<ICommand>` does not transfer
+ownership by default; factory-created limiters are owned and disposed by the adapter.
+
+`UseOrleansCommunication()` registers only serializers and grain-call filters. Enable Orleans-backed command idempotency and
+cluster-wide rate limiting explicitly with `UseOrleansCommandExecution()`. The silo must configure grain storage named
+`commandStore`; `ManagedCode.Orleans.RateLimiting` continues to own the distributed algorithms and durable leases. Identity,
+tenant, role, resource, IP, and metadata selectors default to `null`/empty so serialized command fields are not trusted as
+authorization context:
 
 ```csharp
-siloBuilder.UseOrleansCommunication(options =>
-    options.PolicyName = static _ => "commands");
+siloBuilder
+    .AddMemoryGrainStorage("commandStore") // choose a durable provider in production
+    .UseOrleansCommunication()
+    .UseOrleansCommandExecution(
+        execution =>
+        {
+            execution.Idempotency.ScopeSelector = _ => tenantContext.TenantId;
+            execution.Idempotency.FingerprintSelector = command => requestHasher.Hash(command);
+        },
+        limiter =>
+        {
+            limiter.PolicyName = static _ => "commands";
+            limiter.TenantId = _ => tenantContext.TenantId;
+            limiter.UserId = _ => tenantContext.UserId;
+        });
 
 siloBuilder.Services.AddFixedWindowRateLimiterOptions("tenant-commands", options =>
 {
@@ -439,8 +596,10 @@ siloBuilder.Services.AddOrleansRequestRateLimiting(options =>
 ```
 
 Command execution emits OpenTelemetry-compatible `ActivitySource` and `Meter` signals automatically. Subscribe to
-`CommunicationTelemetry.SourceName` to collect total and per-attempt duration, retries, exhaustion, timeouts, queued/rejected
-rate limits, final failures, and correlation tags.
+`CommunicationTelemetry.SourceName` to collect total/per-attempt duration, active executions/queues, retry and timeout events,
+idempotency hit/miss/wait/conflict/indeterminate/store-error events, circuit transitions/rejections, limiter queue/rejection/
+cleanup failures, and final outcomes. Valid serialized W3C trace/span identifiers become the remote parent context; actor IDs
+are not emitted as metric tags.
 
 ### Resilient HTTP Clients
 
@@ -589,7 +748,7 @@ var resultMessage = Result.Fail(problem).ToDisplayMessage(
     defaultMessage: "Please try again later");
 
 // Typed extension access
-if (problem.TryGetExtension("retryAfter", out int retryAfterSeconds))
+if (problem.TryGetExtension(ProblemConstants.ExtensionKeys.RetryAfter, out int retryAfterSeconds))
 {
     Console.WriteLine($"Retry after: {retryAfterSeconds}s");
 }
@@ -1182,86 +1341,36 @@ var typedCommand = PaginationCommand.Create(PaginationCommandType.ListCustomers)
 
 ### Idempotent Command Execution
 
-#### ASP.NET Core Idempotency
+Idempotency is available only through the native `ICommandExecutor`/`CommandExecutor` path described in
+[Native Command Execution](#native-command-execution). The former delegate-only idempotency, retry, timeout, batch, and
+status/result APIs were removed because they formed a second reliability subsystem and could not atomically bind a trusted
+scope, request fingerprint, owner fence, and terminal `Result`.
 
-```csharp
-// Register idempotency store
-builder.Services.AddSingleton<ICommandIdempotencyStore, InMemoryCommandIdempotencyStore>();
-// Or use Orleans-based store
-builder.Services.AddSingleton<ICommandIdempotencyStore, OrleansCommandIdempotencyStore>();
+`ICommandIdempotencyStore` is now a deliberately small atomic protocol: acquire, renew, complete, mark indeterminate, release,
+and explicit resolution/reset. A completed record preserves stored `null`/default values and validates the operation,
+fingerprint, and result contract before replay. `ICommandIdempotencyMaintenance` is separate because only stores with a real
+enumeration index can honestly offer completed-outcome cleanup/count operations; active and `Indeterminate` records can never
+be removed by maintenance because that could authorize a duplicate side effect. The Orleans store does not pretend that grain
+deactivation deletes durable state.
 
-// Service with idempotent operations
-public class PaymentService
-{
-    private readonly ICommandIdempotencyStore _idempotencyStore;
-    
-    public async Task<Result<Payment>> ProcessPaymentAsync(ProcessPaymentCommand command)
-    {
-        // Automatic idempotency - returns cached result if already executed
-        return await _idempotencyStore.ExecuteIdempotentAsync(
-            command.Id,
-            async () =>
-            {
-                // This code runs only once per command ID
-                var payment = await _paymentGateway.ChargeAsync(command.Amount);
-                await _repository.SavePaymentAsync(payment);
-                return Result<Payment>.Succeed(payment);
-            },
-            command.Metadata
-        );
-    }
-}
-```
+`CommandIdempotencyExtensions` was removed rather than renamed. Its methods implemented a second retry/timeout path and split
+status from result persistence, so keeping compatibility wrappers would preserve the unsafe semantics. Version 10 uses this
+forward-only mapping:
 
-#### Orleans-Based Idempotency
+| Removed API | Version 10 replacement |
+| --- | --- |
+| `ExecuteIdempotentAsync` | Register an `ICommandIdempotencyStore`, configure trusted scope/fingerprint, then call `ICommandExecutor` or `CommandExecutor`. |
+| `ExecuteIdempotentWithRetryAsync` | Enable `CommandExecutionOptions.Retry`; idempotency owns the complete retry sequence automatically. |
+| `ExecuteWithTimeoutAsync` | Configure `Timeout.TotalTimeout` and optional `Timeout.AttemptTimeout` on the same executor. |
+| `ExecuteBatchIdempotentAsync` | Execute one `ICommand` per item through the executor and apply an application-owned bounded concurrency policy. There is no unbounded batch shortcut. |
+| `TryGetCachedResultAsync` | Execute the same scoped command key; the atomic acquire operation either replays the typed outcome, waits for its owner, or fails closed. There is no racy cache-only read. |
 
-```csharp
-// Automatic idempotency with Orleans grains
-public class OrderGrain : Grain, IOrderGrain
-{
-    private readonly ICommandIdempotencyStore _idempotencyStore;
-    
-    public async Task<Result<Order>> CreateOrderAsync(CreateOrderCommand command)
-    {
-        // Uses ICommandIdempotencyGrain internally for distributed coordination
-        return await _idempotencyStore.ExecuteIdempotentAsync(
-            command.Id,
-            async () =>
-            {
-                // Guaranteed to execute only once across the cluster
-                var order = new Order { /* ... */ };
-                await SaveOrderAsync(order);
-                return Result<Order>.Succeed(order);
-            }
-        );
-    }
-}
-```
-
-### Command Execution Status
-
-```csharp
-public enum CommandExecutionStatus
-{
-    NotStarted,    // Command hasn't been processed
-    Processing,    // Currently being processed
-    Completed,     // Successfully completed
-    Failed,        // Processing failed
-    Expired        // Result expired from cache
-}
-
-// Check command status
-var status = await _idempotencyStore.GetCommandStatusAsync("command-id");
-if (status == CommandExecutionStatus.Completed)
-{
-    var result = await _idempotencyStore.GetCommandResultAsync<Order>("command-id");
-}
-```
+The store protocol is infrastructure-facing. Normal application code should not call `TryAcquireAsync` directly; use the
+executor so claim renewal, finalization, timeout, telemetry, and `Indeterminate` handling remain one operation.
 
 ### Command Correlation and Tracing Identifiers
 
 Commands implement `ICommand` and surface correlation, causation, trace, span, user, and session identifiers alongside optional metadata so every hop can attach observability context. The base `Command` and `Command<T>` types keep those properties on the
-root object, and serializers/Orleans surrogates round-trip them without custom plumbing.
 root object, and serializers/Orleans surrogates round-trip them without custom plumbing.
 
 #### Identifier lifecycle
@@ -1344,36 +1453,20 @@ ng correlation integrity when retry storms occur.
 
 ### Idempotency Architecture Overview
 
-#### Scope
-The shared idempotency helpers (`CommandIdempotencyExtensions`), default in-memory store, and test coverage work together to pro
-tect concurrency, caching, and retry behaviour across hosts.
+The storage key is a SHA-256 digest of trusted scope, command type, and external `CommandId`; the persisted record also binds the
+request fingerprint and concrete result contract. One unpredictable owner token plus a generation fence prevents a stale owner
+from completing a newer execution. Status and outcome are committed in one store operation, so a missing or mismatched terminal
+payload fails closed instead of silently returning `default`.
 
-#### Strengths
-- **Deterministic status transitions.** `ExecuteIdempotentAsync` only invokes the provided delegate after atomically claiming th
-e command, writes the result, and then flips the status to `Completed`, so retries either reuse cached output or wait for the in
--flight execution to finish.
-- **Batch reuse of cached outputs.** Batch helpers perform bulk status/result lookups and bypass execution for already completed
- commands, even when cached results are `null` or default values.
-- **Fine-grained locking in the memory store.** Per-command `SemaphoreSlim` instances eliminate global contention, and reference
- counting ensures locks are released once no callers use a key.
-- **Concurrency regression tests.** Dedicated unit tests confirm that concurrent callers share a single execution, failed primar
-y runs surface consistent exceptions, and the final status ends up in `Failed` when appropriate.
+The in-memory implementation uses a bounded stripe-lock array, so keys cannot race through ref-count removal and store disposal
+does not dispose semaphores beneath active waiters. Orleans performs every transition inside one grain call, physically clears
+released/expired terminal state, honors caller cancellation while awaiting grain calls, and leaves expired running claims as
+durable `Indeterminate` records. Global cleanup remains an optional `ICommandIdempotencyMaintenance` capability.
+That capability removes only old completed replay outcomes; resolving or resetting `Indeterminate` is always an explicit
+operator action.
 
-#### Risks & considerations
-- **Missing-result ambiguity.** If a store reports `Completed` but the result entry expired, the extensions currently return the
- default value. Stores that can distinguish “missing” from “stored default” should override `TryGetCachedResultAsync` to trigger
- a re-execution.
-- **Wait semantics rely on polling.** Adaptive polling keeps responsiveness reasonable, but distributed stores can swap in push-
-style notifications if tail latency becomes critical.
-- **Status retention policies.** The memory store’s cleanup removes status and result after a TTL; other implementations must pr
-ovide similar hygiene to avoid unbounded growth while keeping enough history for retries.
-
-#### Recommendations
-1. Document store-specific retention guarantees so callers can tune retry windows.
-2. Consider extending the store contract with a boolean flag (or sentinel wrapper) that differentiates cached `default` values f
-rom missing entries.
-3. Monitor lock-pool growth in long-lived applications and log keys that never release to diagnose misbehaving callers before me
-mory pressure builds up.
+Retention applies to known completed outcomes. It never silently turns an unknown side effect into permission to run again.
+`CommandMetadata.TimeToLiveSeconds` is a separate command-validity deadline checked before admission.
 
 ## Error Handling Patterns
 
@@ -1510,8 +1603,20 @@ grain boundary.
 5. **Build problems per failure, do not share them**: `Problem` is mutable — it has settable properties and an
    `Extensions` dictionary that `AddValidationError` writes into. A shared static instance can be mutated by any
    caller that touches it, poisoning every later use. Create one per failure, or use a factory method.
-6. **Prefer the `CancellationToken` overloads** of the idempotency helpers. `Func<Task<T>>` cannot observe
-   cancellation, so a timeout or a cancelled caller has to wait for the operation to finish on its own.
+6. **Observe the executor token in handlers.** Timeout is cooperative by design; ignoring the token means the executor must
+   await the handler so it does not release a permit or claim while a side effect is still running.
+
+### Command execution fast path
+
+`CommandExecutionRuntime` validates and snapshots its composed options once. Reading `runtime.Options` returns a detached
+copy, so later caller mutations cannot alter a live executor and the hot path does not repeat static option validation for
+every command. Successful executions do not allocate retry backoff state, and local rate-limiter leases reuse immutable empty
+metadata instead of allocating a dictionary when the limiter supplies no metadata.
+
+The native circuit breaker aggregates its rolling window into ten time buckets and keeps incremental totals. Failure-ratio
+updates are O(1), and memory per partition stays bounded instead of growing with request rate. Only the admitted half-open
+probe may close or reopen a half-open partition; late completions from commands admitted before the circuit opened are ignored
+for that transition.
 
 ### Serialization cost
 
@@ -1636,10 +1741,11 @@ couple of null checks. Registration turns signals *on*; it is never a preconditi
 
 | Call | Effect |
 | --- | --- |
-| `services.AddCommandIdempotency()` | In-memory store plus the background cleanup service. |
-| `services.AddCommandIdempotency<TStore>()` | Your own `ICommandIdempotencyStore`, with cleanup. |
-| `services.AddCommandIdempotencyStore<TStore>()` | Store only, no background service. |
-| `services.AddCommandIdempotencyWithManualCleanup<TStore>()` | Store plus cleanup you trigger yourself. |
+| `services.AddCommandExecution(options)` | Native command executor with composed, immutable option snapshots. |
+| `services.AddCommandIdempotency()` | Atomic in-memory store plus optional maintenance registration; no hosted service. |
+| `services.AddCommandIdempotency<TStore>()` | Custom atomic store; maintenance is registered only when implemented. |
+| `services.AddCommandRateLimiter(limiter)` | Application-selected local or distributed limiter adapter. |
+| ASP.NET Core `services.AddCommandIdempotency<TStore>(cleanup)` | Atomic store plus hosted cleanup of completed replay outcomes; requires `ICommandIdempotencyMaintenance`. |
 
 **ASP.NET Core** (`ManagedCode.Communication.AspNetCore`)
 
@@ -1662,6 +1768,8 @@ couple of null checks. Registration turns signals *on*; it is never a preconditi
 | --- | --- |
 | `siloBuilder.UseOrleansCommunication()` | Grain call filters and the serialization surrogates. |
 | `clientBuilder.UseOrleansCommunication()` | The client-side half of the same. |
+| `siloBuilder.UseOrleansCommandExecution(...)` | Explicit Orleans idempotency/rate-limiter adapter and native executor; requires `commandStore` grain storage. |
+| `clientBuilder.UseOrleansCommandExecution(...)` | Client-side Orleans command execution adapter. |
 
 **Observability** — see [Observability](#observability):
 

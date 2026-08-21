@@ -1,13 +1,17 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Commands.Execution;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Orleans.RateLimiting.Core.Interfaces;
 using ManagedCode.Orleans.RateLimiting.Core.Models;
 using ManagedCode.Orleans.RateLimiting.Core.Models.Holders;
 using ManagedCode.Orleans.RateLimiting.Core.Models.Orchestration;
+using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.Orleans.RateLimiting;
 
@@ -16,16 +20,23 @@ namespace ManagedCode.Communication.Orleans.RateLimiting;
 /// </summary>
 public sealed class OrleansCommandRateLimiter(
     IRateLimitRequestOrchestrator orchestrator,
-    OrleansCommandRateLimiterOptions options) : ICommandRateLimiter
+    OrleansCommandRateLimiterOptions options,
+    ILogger<OrleansCommandRateLimiter>? logger = null) : ICommandRateLimiter, IAsyncDisposable
 {
+    private readonly ConcurrentDictionary<long, Task> _cancelledAcquisitionCleanups = new();
+    private readonly OrleansCommandRateLimiterOptions _options =
+        OrleansCommandRateLimiterOptions.CreateSnapshot(options);
+    private long _cleanupId;
+
     /// <inheritdoc />
     public async ValueTask<CommandRateLimitLease> AcquireAsync(
         ICommand command,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(_options.CancellationCleanupTimeout, TimeSpan.Zero);
 
-        var context = CreateContext(command, options);
+        var context = CreateContext(command, _options);
         var holder = await orchestrator.CreateLimiterGroupAsync(context, cancellationToken).ConfigureAwait(false);
         var acquireTask = holder.AcquireAsync();
         var wasQueued = !acquireTask.IsCompletedSuccessfully;
@@ -37,12 +48,22 @@ public sealed class OrleansCommandRateLimiter(
         }
         catch (OperationCanceledException)
         {
-            _ = DisposeAfterAcquireAsync(acquireTask, holder);
+            TrackCancelledAcquisitionCleanup(acquireTask, holder);
             throw;
         }
-        catch
+        catch (Exception)
         {
-            await holder.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await holder.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception cleanupFailure)
+            {
+                logger?.LogWarning(
+                    cleanupFailure,
+                    OrleansCommandExecutionConstants.DisposeHolderAfterAcquireFailureLog);
+            }
+
             throw;
         }
 
@@ -61,11 +82,11 @@ public sealed class OrleansCommandRateLimiter(
 
         if (lease.RetryAfter > TimeSpan.Zero)
         {
-            metadata["retryAfter"] = lease.RetryAfter;
+            metadata[ProblemConstants.ExtensionKeys.RetryAfter] = lease.RetryAfter;
         }
 
         var problem = Problem.Create(
-            "Command rate limit exceeded",
+            ProblemConstants.CommandExecutionTitles.CommandRateLimitExceeded,
             lease.Reason,
             HttpStatusCode.TooManyRequests);
         foreach (var pair in metadata)
@@ -78,6 +99,25 @@ public sealed class OrleansCommandRateLimiter(
         return CommandRateLimitLease.Rejected(problem, wasQueued, metadata);
     }
 
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        var cleanups = _cancelledAcquisitionCleanups.Values.ToArray();
+        if (cleanups.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await Task.WhenAll(cleanups).ConfigureAwait(false);
+        }
+        catch (Exception caught)
+        {
+            logger?.LogWarning(caught, OrleansCommandExecutionConstants.CancellationCleanupShutdownFailureLog);
+        }
+    }
+
     private static RateLimitRequestContext CreateContext(
         ICommand command,
         OrleansCommandRateLimiterOptions options)
@@ -85,45 +125,103 @@ public sealed class OrleansCommandRateLimiter(
         return new RateLimitRequestContext
         {
             OperationName = command.CommandType,
-            UserId = command.UserId,
+            UserId = options.UserId(command),
             GroupId = options.GroupId(command),
             TenantId = options.TenantId(command),
             Role = options.Role(command),
-            IpAddress = command.Metadata?.IpAddress,
+            IpAddress = options.IpAddress(command),
             Resource = options.Resource(command),
             PolicyName = options.PolicyName(command),
-            Metadata = command.Metadata?.Tags is { } tags
-                ? new Dictionary<string, string>(tags, StringComparer.Ordinal)
-                : new Dictionary<string, string>(StringComparer.Ordinal)
+            Metadata = new Dictionary<string, string>(options.Metadata(command), StringComparer.Ordinal)
         };
+    }
+
+    private void TrackCancelledAcquisitionCleanup(
+        Task<OrleansRateLimitLease?> acquireTask,
+        GroupLimiterHolder holder)
+    {
+        var id = Interlocked.Increment(ref _cleanupId);
+        var cleanup = DisposeAfterAcquireAsync(acquireTask, holder, _options.CancellationCleanupTimeout, logger);
+        _cancelledAcquisitionCleanups[id] = cleanup;
+        _ = cleanup.ContinueWith(
+            (completedCleanup, state) =>
+            {
+                _ = completedCleanup.Exception;
+                var tuple = ((ConcurrentDictionary<long, Task> Registry, long Id))state!;
+                tuple.Registry.TryRemove(tuple.Id, out _);
+            },
+            (_cancelledAcquisitionCleanups, id),
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private static async Task DisposeAfterAcquireAsync(
         Task<OrleansRateLimitLease?> acquireTask,
-        GroupLimiterHolder holder)
+        GroupLimiterHolder holder,
+        TimeSpan cleanupTimeout,
+        ILogger? logger)
     {
         try
         {
-            var lease = await acquireTask.ConfigureAwait(false);
+            var lease = await acquireTask.WaitAsync(cleanupTimeout).ConfigureAwait(false);
             if (lease is not null)
             {
                 await lease.DisposeAsync().ConfigureAwait(false);
             }
         }
-        catch
+        catch (TimeoutException caught)
         {
-            // The original execution has already observed cancellation. Cleanup is best effort.
+            logger?.LogWarning(
+                caught,
+                OrleansCommandExecutionConstants.CancellationCleanupTimeoutLog,
+                cleanupTimeout);
+            ObserveAndDisposeLateLease(acquireTask, logger);
+        }
+        catch (Exception caught)
+        {
+            logger?.LogWarning(caught, OrleansCommandExecutionConstants.CancellationCleanupFailureLog);
         }
         finally
         {
             try
             {
-                await holder.DisposeAsync().ConfigureAwait(false);
+                await holder.DisposeAsync().AsTask().WaitAsync(cleanupTimeout).ConfigureAwait(false);
             }
-            catch
+            catch (Exception caught)
             {
-                // Cleanup is best effort after the original caller has already observed cancellation.
+                logger?.LogWarning(caught, OrleansCommandExecutionConstants.DisposeHolderAfterCancellationFailureLog);
             }
         }
+    }
+
+    private static void ObserveAndDisposeLateLease(
+        Task<OrleansRateLimitLease?> acquireTask,
+        ILogger? logger)
+    {
+        _ = acquireTask.ContinueWith(
+            static async (completed, state) =>
+            {
+                var cleanupLogger = (ILogger?)state;
+                try
+                {
+                    if (completed.Status == TaskStatus.RanToCompletion && completed.Result is { } lease)
+                    {
+                        await lease.DisposeAsync().ConfigureAwait(false);
+                    }
+                    else if (completed.Exception is { } exception)
+                    {
+                        cleanupLogger?.LogWarning(exception, OrleansCommandExecutionConstants.LateAcquisitionFailureLog);
+                    }
+                }
+                catch (Exception caught)
+                {
+                    cleanupLogger?.LogWarning(caught, OrleansCommandExecutionConstants.DisposeLateLeaseFailureLog);
+                }
+            },
+            logger,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default).Unwrap();
     }
 }

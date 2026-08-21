@@ -1,7 +1,10 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Commands;
-using ManagedCode.Communication.Tests.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Shouldly;
@@ -91,5 +94,40 @@ public class CommandIdempotencyServiceCollectionExtensionsTests
         provider.GetServices<IHostedService>()
             .OfType<CommandCleanupBackgroundService>()
             .ShouldBeEmpty();
+    }
+
+    private sealed class TestCommandIdempotencyStore : ICommandIdempotencyStore, ICommandIdempotencyMaintenance
+    {
+        public Task<CommandIdempotencyAcquireResult<T>> TryAcquireAsync<T>(
+            CommandIdempotencyDescriptor descriptor,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> TryCompleteAsync<T>(
+            CommandIdempotencyClaim claim,
+            T outcome,
+            TimeSpan retention,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> TryRenewAsync(
+            CommandIdempotencyClaim claim,
+            TimeSpan lease,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> TryMarkIndeterminateAsync(
+            CommandIdempotencyClaim claim,
+            Problem problem,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> TryReleaseAsync(
+            CommandIdempotencyClaim claim,
+            CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<int> CleanupCompletedCommandsAsync(
+            TimeSpan maxAge,
+            CancellationToken cancellationToken = default) => Task.FromResult(0);
+
+        public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new Dictionary<CommandExecutionStatus, int>());
     }
 }

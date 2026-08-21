@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ManagedCode.Communication.Constants;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
@@ -116,7 +117,7 @@ public class ProblemExceptionTests
         // Arrange
         var problem = Problem.Create("type", "title", 400, "detail");
         problem.Extensions["customKey"] = "customValue";
-        problem.Extensions["retryAfter"] = 60;
+        problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] = 60;
 
         // Act
         var exception = new ProblemException(problem);
@@ -124,8 +125,13 @@ public class ProblemExceptionTests
         // Assert
         exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.customKey").ShouldBeTrue();
         exception.Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.customKey"].ShouldBe("customValue");
-        exception.Data.Contains($"{nameof(Problem)}.{nameof(problem.Extensions)}.retryAfter").ShouldBeTrue();
-        exception.Data[$"{nameof(Problem)}.{nameof(problem.Extensions)}.retryAfter"].ShouldBe(60);
+        var retryAfterKey = string.Join(
+            '.',
+            nameof(Problem),
+            nameof(problem.Extensions),
+            ProblemConstants.ExtensionKeys.RetryAfter);
+        exception.Data.Contains(retryAfterKey).ShouldBeTrue();
+        exception.Data[retryAfterKey].ShouldBe(60);
     }
 
     [Test]

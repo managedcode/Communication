@@ -113,6 +113,12 @@ public static class CommunicationJsonNames
     /// <summary>W3C span identifier.</summary>
     public const string SpanId = "spanId";
 
+    /// <summary>W3C trace-state header value.</summary>
+    public const string TraceState = "traceState";
+
+    /// <summary>Whether the propagated W3C trace was recorded.</summary>
+    public const string TraceRecorded = "traceRecorded";
+
     /// <summary>Who issued the command.</summary>
     public const string UserId = "userId";
 

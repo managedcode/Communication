@@ -180,6 +180,56 @@ public static class ProblemConstants
         /// Key for the SignalR hub type name.
         /// </summary>
         public const string HubType = "hubType";
+
+        /// <summary>
+        /// Key for a server- or dependency-provided retry delay.
+        /// </summary>
+        public const string RetryAfter = "retryAfter";
+
+        /// <summary>
+        /// Key indicating that an authoritative retry delay exceeded the configured maximum.
+        /// </summary>
+        public const string RetryAfterExceedsMaximum = "retryAfterExceedsMaximum";
+
+        /// <summary>
+        /// Key for the number of retry attempts performed.
+        /// </summary>
+        public const string RetryAttempts = "retryAttempts";
+
+        /// <summary>
+        /// Key indicating that command execution exhausted its retry budget.
+        /// </summary>
+        public const string RetriesExhausted = "retriesExhausted";
+
+        /// <summary>
+        /// Key for the timeout duration in milliseconds.
+        /// </summary>
+        public const string TimeoutMilliseconds = "timeoutMilliseconds";
+
+        /// <summary>
+        /// Key for the command timeout kind.
+        /// </summary>
+        public const string TimeoutKind = "timeoutKind";
+
+        /// <summary>
+        /// Key for the UTC instant at which a command expired.
+        /// </summary>
+        public const string ExpiredAtUtc = "expiredAtUtc";
+
+        /// <summary>
+        /// Key for a physical command-attempt number.
+        /// </summary>
+        public const string Attempt = "attempt";
+
+        /// <summary>
+        /// Key for a circuit-breaker state.
+        /// </summary>
+        public const string CircuitState = "circuitState";
+
+        /// <summary>
+        /// Key for a circuit-breaker partition.
+        /// </summary>
+        public const string CircuitPartition = "circuitPartition";
     }
 
     /// <summary>
@@ -191,5 +241,128 @@ public static class ProblemConstants
         /// General field name for validation errors that don't belong to a specific field.
         /// </summary>
         public const string General = "_general";
+    }
+
+    /// <summary>
+    /// Stable titles emitted by command execution and its adapters.
+    /// </summary>
+    internal static class CommandExecutionTitles
+    {
+        public const string InvalidCommandIdentifier = "Invalid command identifier";
+        public const string CommandTimedOut = "Command timed out";
+        public const string CommandExecutionInfrastructureFailure = "Command execution infrastructure failure";
+        public const string InvalidCommandLifetime = "Invalid command lifetime";
+        public const string CommandExpired = "Command expired";
+        public const string CorruptIdempotencyOutcome = "Corrupt idempotency outcome";
+        public const string IdempotencyConflict = "Idempotency conflict";
+        public const string IdempotencyKeyConflict = "Idempotency key conflict";
+        public const string InvalidIdempotencyState = "Invalid idempotency state";
+        public const string InvalidIdempotencyResponse = "Invalid idempotency response";
+        public const string IdempotencyOwnershipLost = "Idempotency ownership lost";
+        public const string IndeterminateCommandOutcome = "Indeterminate command outcome";
+        public const string IdempotencyClaimRenewalFailed = "Idempotency claim renewal failed";
+        public const string IdempotencyReleaseFailure = "Idempotency release failure";
+        public const string MissingIdempotencyScope = "Missing idempotency scope";
+        public const string MissingIdempotencyFingerprint = "Missing idempotency fingerprint";
+        public const string InvalidIdempotencyConfiguration = "Invalid idempotency configuration";
+        public const string CommandAttemptTimedOut = "Command attempt timed out";
+        public const string CommandCircuitIsOpen = "Command circuit is open";
+        public const string CommandAttemptCancelled = "Command attempt cancelled";
+        public const string CommandRateLimitExceeded = "Command rate limit exceeded";
+        public const string CommandRateLimitCleanupFailure = "Command rate-limit cleanup failure";
+        public const string CommandRateLimitCallbackFailure = "Command rate-limit callback failure";
+        public const string CommandTimeoutCallbackFailure = "Command timeout callback failure";
+        public const string CommandRetryCallbackFailure = "Command retry callback failure";
+        public const string CommandCircuitBreakerCallbackFailure = "Command circuit-breaker callback failure";
+    }
+
+    /// <summary>
+    /// Stable details emitted by command execution and its adapters.
+    /// </summary>
+    internal static class CommandExecutionMessages
+    {
+        public const string IdempotencyRequiresCommandId =
+            "Idempotent command execution requires a non-empty CommandId.";
+
+        public const string InfrastructureFailure =
+            "A command execution infrastructure component failed. Inspect correlated server diagnostics.";
+
+        public const string InvalidTimeToLive =
+            "Command metadata TimeToLiveSeconds must be greater than zero when supplied.";
+
+        public const string UnsupportedTimeToLiveRange =
+            "The command timestamp and time-to-live exceed the supported UTC timestamp range.";
+
+        public const string CommandExpired =
+            "The command exceeded its declared time-to-live before execution began.";
+
+        public const string IdempotencyKeyConflict =
+            "The idempotency key is already associated with a different operation, request, or result contract.";
+
+        public const string MissingCachedOutcome =
+            "The idempotency record is terminal but its cached outcome is missing.";
+
+        public const string CachedOutcomeContractMismatch =
+            "The cached outcome does not match the declared result contract.";
+
+        public const string UnsafeIdempotencyConflict =
+            "The command cannot be executed safely with the supplied idempotency key.";
+
+        public const string InvalidStoreAcquisition =
+            "The idempotency store returned an invalid acquisition response.";
+
+        public const string InvalidOrleansAcquisition =
+            "The Orleans idempotency grain returned an invalid acquisition response.";
+
+        public const string UnsupportedIdempotencyStateFormat =
+            "The idempotency record is in unsupported state {0}.";
+
+        public const string IdempotencyOwnershipLost =
+            "The command finished, but its fenced idempotency claim was no longer valid.";
+
+        public const string CancelledIndeterminateOutcome =
+            "Execution was cancelled after the business handler started; the side-effect outcome is unknown.";
+
+        public const string InfrastructureIndeterminateOutcome =
+            "Execution infrastructure failed after ownership was acquired; the side-effect outcome may be unknown.";
+
+        public const string RenewalRejected =
+            "The idempotency store rejected renewal of the active fenced claim.";
+
+        public const string RenewalFailed =
+            "The active claim could not be renewed, so execution was cancelled to prevent an unfenced side effect.";
+
+        public const string ClaimReleaseFailed =
+            "The unstarted command claim could not be released.";
+
+        public const string MissingScope =
+            "Configure Idempotency.ScopeSelector from trusted authenticated execution context.";
+
+        public const string MissingFingerprint =
+            "Configure Idempotency.FingerprintSelector from the immutable business request payload.";
+
+        public const string InvalidScopeOrFingerprint =
+            "The configured idempotency scope and fingerprint must be non-empty.";
+
+        public const string RateLimitExceeded =
+            "The command could not acquire a rate-limit permit.";
+
+        public const string RateLimitCleanupFailed =
+            "The command outcome was preserved, but its rate-limit lease could not be released cleanly.";
+
+        public const string TimeoutCallbackFailed =
+            "The timeout outcome was preserved, but its callback failed.";
+
+        public const string CircuitCallbackFailed =
+            "The circuit transition was preserved, but its callback failed.";
+
+        public const string PreviousExecutionIndeterminate =
+            "The previous execution may have performed its side effect, but no terminal outcome was persisted.";
+
+        public const string UnsupportedIndeterminateResolution =
+            "This idempotency store does not support explicit indeterminate-state resolution.";
+
+        public const string UnsupportedIndeterminateReset =
+            "This idempotency store does not support explicit indeterminate-state reset.";
     }
 }

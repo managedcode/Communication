@@ -6,6 +6,7 @@ using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Commands.Extensions;
 using ManagedCode.Communication.Commands.Stores;
+using ManagedCode.Communication.Constants;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -173,7 +174,7 @@ public sealed class CommandExecutionTests
         var runtime = CreateRuntime(options =>
         {
             options.Timeout.Enabled = true;
-            options.Timeout.Timeout = TimeSpan.FromMilliseconds(20);
+            options.Timeout.TotalTimeout = TimeSpan.FromMilliseconds(20);
         });
 
         var result = await CommandExecutor.ExecuteAsync(
@@ -215,7 +216,7 @@ public sealed class CommandExecutionTests
     }
 
     [Test]
-    public async Task ExecuteAsync_AfterTimedOutIdempotentAttempt_CanClaimCommandAgain()
+    public async Task ExecuteAsync_AfterTimedOutHandlerStarts_BlocksAutomaticDuplicateAsIndeterminate()
     {
         using var cache = new MemoryCache(new MemoryCacheOptions());
         using var store = new MemoryCacheCommandIdempotencyStore(
@@ -225,26 +226,30 @@ public sealed class CommandExecutionTests
             options =>
             {
                 options.Timeout.Enabled = true;
-                options.Timeout.Timeout = TimeSpan.FromMilliseconds(20);
+                options.Timeout.TotalTimeout = TimeSpan.FromMilliseconds(20);
             },
             store);
         var command = Command.Create("email.send");
+        var handlerInvocations = 0;
 
         var timedOut = await CommandExecutor.ExecuteAsync(
             command,
-            static async (_, token) =>
+            async (_, token) =>
             {
+                Interlocked.Increment(ref handlerInvocations);
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 return 1;
             },
             runtime);
-        var succeeded = await CommandExecutor.ExecuteAsync(
+        var duplicate = await CommandExecutor.ExecuteAsync(
             command,
-            static (_, _) => Task.FromResult(2),
+            (_, _) => Task.FromResult(Interlocked.Increment(ref handlerInvocations)),
             runtime);
 
         timedOut.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.RequestTimeout);
-        succeeded.Value.ShouldBe(2);
+        duplicate.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.Conflict);
+        duplicate.Problem.Title.ShouldBe(ProblemConstants.CommandExecutionTitles.IndeterminateCommandOutcome);
+        handlerInvocations.ShouldBe(1);
     }
 
     [Test]
@@ -367,8 +372,8 @@ public sealed class CommandExecutionTests
 
         exhausted.ShouldNotBeNull();
         exhausted!.Attempt.ShouldBe(2);
-        result.Problem!.Extensions["retryAttempts"].ShouldBe(2);
-        result.Problem.Extensions["retriesExhausted"].ShouldBe(true);
+        result.Problem!.Extensions[ProblemConstants.ExtensionKeys.RetryAttempts].ShouldBe(2);
+        result.Problem.Extensions[ProblemConstants.ExtensionKeys.RetriesExhausted].ShouldBe(true);
     }
 
     private static CommandExecutionRuntime CreateRuntime(
@@ -380,6 +385,8 @@ public sealed class CommandExecutionTests
         options.Timeout.Enabled = false;
         options.Retry.Delay = TimeSpan.Zero;
         options.Retry.UseJitter = false;
+        options.Idempotency.ScopeSelector = static _ => CommandExecutionTestConstants.TestsScope;
+        options.Idempotency.FingerprintSelector = static _ => CommandExecutionTestConstants.RequestV1;
         configure?.Invoke(options);
         return new CommandExecutionRuntime(options, idempotencyStore, rateLimiter);
     }

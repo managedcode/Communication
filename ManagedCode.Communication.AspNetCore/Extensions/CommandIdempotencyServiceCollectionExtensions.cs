@@ -1,7 +1,7 @@
 using System;
-using Microsoft.Extensions.DependencyInjection;
-using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.Commands;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
@@ -10,24 +10,29 @@ namespace ManagedCode.Communication.AspNetCore.Extensions;
 /// </summary>
 public static class CommandIdempotencyServiceCollectionExtensions
 {
+    private const string MaintenanceStoreRequiredMessage =
+        "Automatic cleanup requires a store that implements ICommandIdempotencyMaintenance.";
+
     /// <summary>
     /// Adds command idempotency with automatic cleanup
     /// </summary>
     public static IServiceCollection AddCommandIdempotency<TStore>(
         this IServiceCollection services,
         Action<CommandCleanupOptions>? configureCleanup = null)
-        where TStore : class, ICommandIdempotencyStore
+        where TStore : class, ICommandIdempotencyStore, ICommandIdempotencyMaintenance
     {
-        services.AddSingleton<ICommandIdempotencyStore, TStore>();
-        
+        services.AddSingleton<TStore>();
+        services.AddSingleton<ICommandIdempotencyStore>(serviceProvider => serviceProvider.GetRequiredService<TStore>());
+        services.AddSingleton<ICommandIdempotencyMaintenance>(serviceProvider => serviceProvider.GetRequiredService<TStore>());
+
         // Configure cleanup options
         var cleanupOptions = new CommandCleanupOptions();
         configureCleanup?.Invoke(cleanupOptions);
         services.AddSingleton(cleanupOptions);
-        
+
         // Add background cleanup service
         services.AddHostedService<CommandCleanupBackgroundService>();
-        
+
         return services;
     }
 
@@ -39,16 +44,24 @@ public static class CommandIdempotencyServiceCollectionExtensions
         ICommandIdempotencyStore store,
         Action<CommandCleanupOptions>? configureCleanup = null)
     {
+        if (store is not ICommandIdempotencyMaintenance maintenance)
+        {
+            throw new ArgumentException(
+                MaintenanceStoreRequiredMessage,
+                nameof(store));
+        }
+
         services.AddSingleton(store);
-        
+        services.AddSingleton(maintenance);
+
         // Configure cleanup options
         var cleanupOptions = new CommandCleanupOptions();
         configureCleanup?.Invoke(cleanupOptions);
         services.AddSingleton(cleanupOptions);
-        
+
         // Add background cleanup service
         services.AddHostedService<CommandCleanupBackgroundService>();
-        
+
         return services;
     }
 
@@ -69,11 +82,13 @@ public static class CommandIdempotencyServiceCollectionExtensions
     public static IServiceCollection AddCommandIdempotencyWithManualCleanup<TStore>(
         this IServiceCollection services,
         CommandCleanupOptions cleanupOptions)
-        where TStore : class, ICommandIdempotencyStore
+        where TStore : class, ICommandIdempotencyStore, ICommandIdempotencyMaintenance
     {
-        services.AddSingleton<ICommandIdempotencyStore, TStore>();
+        services.AddSingleton<TStore>();
+        services.AddSingleton<ICommandIdempotencyStore>(serviceProvider => serviceProvider.GetRequiredService<TStore>());
+        services.AddSingleton<ICommandIdempotencyMaintenance>(serviceProvider => serviceProvider.GetRequiredService<TStore>());
         services.AddSingleton(cleanupOptions);
-        
+
         // Manual cleanup - no background service
         return services;
     }

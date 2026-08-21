@@ -81,6 +81,16 @@ public class CommandMetadata
     public string? SpanId { get; set; }
 
     /// <summary>
+    ///     W3C <c>tracestate</c> propagated with <see cref="TraceId" /> and <see cref="SpanId" />.
+    /// </summary>
+    [JsonPropertyName(CommunicationJsonNames.TraceState)]
+    public string? TraceState { get; set; }
+
+    /// <summary>Whether the propagated W3C parent requested recording.</summary>
+    [JsonPropertyName(CommunicationJsonNames.TraceRecorded)]
+    public bool TraceRecorded { get; set; }
+
+    /// <summary>
     ///     Relative execution priority. Defaults to <c>Normal</c>.
     /// </summary>
     [JsonPropertyName(CommunicationJsonNames.Priority)]

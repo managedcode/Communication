@@ -8,6 +8,8 @@ namespace ManagedCode.Communication.Commands.Execution;
 /// </summary>
 public sealed class CommandExecutionRuntime
 {
+    private readonly CommandExecutionOptions _optionsSnapshot;
+
     /// <summary>
     ///     Creates a command execution runtime.
     /// </summary>
@@ -16,23 +18,34 @@ public sealed class CommandExecutionRuntime
         ICommandIdempotencyStore? idempotencyStore = null,
         ICommandRateLimiter? rateLimiter = null,
         TimeProvider? timeProvider = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        ICommandCircuitBreaker? circuitBreaker = null)
     {
-        Options = options ?? new CommandExecutionOptions();
+        var optionsSnapshot = CommandExecutionOptions.CreateSnapshot(options ?? new CommandExecutionOptions());
+        optionsSnapshot.Validate();
+        _optionsSnapshot = optionsSnapshot;
         IdempotencyStore = idempotencyStore;
         RateLimiter = rateLimiter;
         TimeProvider = timeProvider ?? TimeProvider.System;
         Logger = logger;
+        CircuitBreaker = circuitBreaker ?? (_optionsSnapshot.CircuitBreaker.Enabled
+            ? new PartitionedCommandCircuitBreaker(_optionsSnapshot.CircuitBreaker, TimeProvider)
+            : null);
     }
 
-    /// <summary>Execution options.</summary>
-    public CommandExecutionOptions Options { get; }
+    /// <summary>A detached copy of the validated execution options.</summary>
+    public CommandExecutionOptions Options => CommandExecutionOptions.CreateSnapshot(_optionsSnapshot);
+
+    internal CommandExecutionOptions OptionsSnapshot => _optionsSnapshot;
 
     /// <summary>Optional idempotency backend.</summary>
     public ICommandIdempotencyStore? IdempotencyStore { get; }
 
     /// <summary>Optional local or distributed rate limiter.</summary>
     public ICommandRateLimiter? RateLimiter { get; }
+
+    /// <summary>Optional stateful circuit breaker shared by command executions.</summary>
+    public ICommandCircuitBreaker? CircuitBreaker { get; }
 
     /// <summary>Clock used by timeout, retry, and telemetry logic.</summary>
     public TimeProvider TimeProvider { get; }

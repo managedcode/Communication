@@ -19,6 +19,63 @@ namespace ManagedCode.Communication.Telemetry;
 public static class CommunicationDiagnostics
 {
     /// <summary>
+    ///     Logs a transient command-attempt exception and keeps the original stack trace without incrementing the
+    ///     final-result failure counter.
+    /// </summary>
+    public static void ReportAttemptFailure(
+        ILogger? logger,
+        ICommand command,
+        Problem problem,
+        Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(problem);
+        ArgumentNullException.ThrowIfNull(exception);
+        CommunicationTelemetry.RecordAttemptFailure(command, problem, exception);
+        if (logger is not null)
+        {
+            ProblemLoggerCenter.LogProblemWithException(
+                logger,
+                exception,
+                problem.Title,
+                problem.StatusCode,
+                problem.Detail);
+        }
+    }
+
+    /// <summary>Logs an infrastructure exception while leaving final execution failure counting to its caller.</summary>
+    public static void ReportInfrastructureFailure(
+        ILogger? logger,
+        Problem problem,
+        Exception exception,
+        string phase = CommunicationTelemetry.ExecutionPhase)
+    {
+        ArgumentNullException.ThrowIfNull(problem);
+        ArgumentNullException.ThrowIfNull(exception);
+        CommunicationTelemetry.RecordInfrastructureFailure(problem, exception, phase);
+        if (logger is not null)
+        {
+            ProblemLoggerCenter.LogProblemWithException(
+                logger,
+                exception,
+                problem.Title,
+                problem.StatusCode,
+                problem.Detail);
+        }
+    }
+
+    /// <summary>Logs a non-exception infrastructure failure outside the final-result failure counter.</summary>
+    public static void ReportInfrastructureFailure(ILogger? logger, Problem problem, string phase)
+    {
+        ArgumentNullException.ThrowIfNull(problem);
+        CommunicationTelemetry.RecordInfrastructureFailure(problem, phase);
+        if (logger is not null)
+        {
+            ProblemLoggerCenter.LogProblem(logger, problem.Title, problem.StatusCode, problem.Detail);
+        }
+    }
+
+    /// <summary>
     ///     Logs the problem and records it on the current activity.
     /// </summary>
     /// <param name="logger">Where to log. Pass <c>null</c> to record telemetry only.</param>

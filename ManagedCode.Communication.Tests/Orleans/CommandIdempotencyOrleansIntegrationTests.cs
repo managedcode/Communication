@@ -1,195 +1,100 @@
 using System;
-using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Commands;
-using ManagedCode.Communication.Orleans.Grains;
+using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Orleans.Stores;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
-using Orleans;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Orleans;
 
 [ClassDataSource<OrleansClusterFixture>(Shared = SharedType.PerClass)]
 [NotInParallel(nameof(CommandIdempotencyOrleansIntegrationTests))]
-public class CommandIdempotencyOrleansIntegrationTests
+public sealed class CommandIdempotencyOrleansIntegrationTests
 {
-    private readonly IGrainFactory _grainFactory;
     private readonly OrleansCommandIdempotencyStore _store;
 
     public CommandIdempotencyOrleansIntegrationTests(OrleansClusterFixture fixture)
     {
-        _grainFactory = fixture.Cluster.GrainFactory;
-        _store = new OrleansCommandIdempotencyStore(_grainFactory);
+        _store = new OrleansCommandIdempotencyStore(fixture.Cluster.GrainFactory);
     }
 
     [Test]
-    public async Task Grain_StartAndCompleteLifecycle_ResetsForRetry()
+    public async Task AtomicStore_CompletesAndReplaysOutcome()
     {
-        var commandId = Guid.NewGuid().ToString();
-        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(commandId);
+        var descriptor = CreateDescriptor(string.Format(
+            CommandExecutionTestConstants.CompleteKeyFormat,
+            Guid.CreateVersion7()));
+        var acquired = await _store.TryAcquireAsync<Result<int>>(descriptor);
 
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.NotFound);
+        (await _store.TryCompleteAsync(acquired.Claim!, Result<int>.Succeed(17), TimeSpan.FromMinutes(1)))
+            .ShouldBeTrue();
+        var replay = await _store.TryAcquireAsync<Result<int>>(descriptor);
 
-        (await grain.TryStartProcessingAsync()).ShouldBeTrue();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Processing);
-
-        (await grain.TryStartProcessingAsync()).ShouldBeFalse();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Processing);
-
-        var initialResult = await grain.TryGetResultAsync();
-        initialResult.success.ShouldBeFalse();
-        initialResult.result.ShouldBeNull();
-
-        await grain.MarkCompletedAsync("done");
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Completed);
-
-        var completedResult = await grain.TryGetResultAsync();
-        completedResult.success.ShouldBeTrue();
-        completedResult.result.ShouldBe("done");
-
-        (await grain.TryStartProcessingAsync()).ShouldBeFalse();
-
-        await grain.MarkFailedAsync("retry-allowed-reset");
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Failed);
-
-        (await grain.TryStartProcessingAsync()).ShouldBeTrue();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Processing);
-
-        await grain.MarkFailedAsync("failure");
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Failed);
-
-        var finalAfterFail = await grain.TryGetResultAsync();
-        finalAfterFail.success.ShouldBeFalse();
-
-        await grain.ClearAsync();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.NotFound);
+        replay.State.ShouldBe(CommandIdempotencyAcquireState.Completed);
+        replay.HasOutcome.ShouldBeTrue();
+        replay.Outcome!.Value.ShouldBe(17);
     }
 
     [Test]
-    public async Task Grain_TrySetStatusAsync_TransitionsBetweenStatuses()
+    public async Task AtomicStore_ExpiredClaimBecomesIndeterminateAndCannotBeReclaimedAutomatically()
     {
-        var grain = _grainFactory.GetGrain<ICommandIdempotencyGrain>(Guid.NewGuid().ToString());
+        var descriptor = CreateDescriptor(
+            string.Format(CommandExecutionTestConstants.ExpiredKeyFormat, Guid.CreateVersion7()),
+            claimLease: TimeSpan.FromMilliseconds(500));
+        var stale = await _store.TryAcquireAsync<Result<int>>(descriptor);
+        await Task.Delay(700);
 
-        var startedFromNotFound = await grain.TrySetStatusAsync(CommandExecutionStatus.NotFound, CommandExecutionStatus.InProgress);
-        startedFromNotFound.ShouldBeTrue();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Processing);
+        var next = await _store.TryAcquireAsync<Result<int>>(descriptor);
 
-        var completedFromWrongExpected = await grain.TrySetStatusAsync(CommandExecutionStatus.NotFound, CommandExecutionStatus.Completed);
-        completedFromWrongExpected.ShouldBeFalse();
-
-        var failedFromProcessing = await grain.TrySetStatusAsync(CommandExecutionStatus.Processing, CommandExecutionStatus.Failed);
-        failedFromProcessing.ShouldBeTrue();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Failed);
-
-        var completedFromFailed = await grain.TrySetStatusAsync(CommandExecutionStatus.Failed, CommandExecutionStatus.Completed);
-        completedFromFailed.ShouldBeTrue();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.Completed);
-
-        var resetToNotStarted = await grain.TrySetStatusAsync(CommandExecutionStatus.Completed, CommandExecutionStatus.NotStarted);
-        resetToNotStarted.ShouldBeTrue();
-        (await grain.GetStatusAsync()).ShouldBe(CommandExecutionStatus.NotStarted);
+        next.State.ShouldBe(CommandIdempotencyAcquireState.Indeterminate);
+        (await _store.TryCompleteAsync(stale.Claim!, Result<int>.Succeed(1), TimeSpan.FromMinutes(1)))
+            .ShouldBeFalse();
+        (await _store.TryResetIndeterminateAsync(descriptor)).ShouldBeTrue();
+        (await _store.TryAcquireAsync<Result<int>>(descriptor)).State.ShouldBe(CommandIdempotencyAcquireState.Acquired);
     }
 
     [Test]
-    public async Task Store_BasicLifecycle_CoversCoreMethodsAndBatchReadPaths()
+    public void Store_DoesNotPretendToSupportGlobalMaintenance()
     {
-        var inProgressCommand = Guid.NewGuid().ToString();
-
-        (await _store.GetCommandStatusAsync(inProgressCommand)).ShouldBe(CommandExecutionStatus.NotFound);
-        await _store.SetCommandStatusAsync(inProgressCommand, CommandExecutionStatus.Processing);
-        (await _store.GetCommandStatusAsync(inProgressCommand)).ShouldBe(CommandExecutionStatus.Processing);
-
-        await _store.SetCommandStatusAsync(inProgressCommand, CommandExecutionStatus.InProgress);
-        (await _store.GetCommandStatusAsync(inProgressCommand)).ShouldBe(CommandExecutionStatus.Processing);
-
-        var setToFailed = await _store.TrySetCommandStatusAsync(
-            inProgressCommand,
-            CommandExecutionStatus.Processing,
-            CommandExecutionStatus.Failed);
-        setToFailed.ShouldBeTrue();
-        (await _store.GetCommandStatusAsync(inProgressCommand)).ShouldBe(CommandExecutionStatus.Failed);
-
-        var (previousStatus, wasSet) = await _store.GetAndSetStatusAsync(inProgressCommand, CommandExecutionStatus.Completed);
-        previousStatus.ShouldBe(CommandExecutionStatus.Failed);
-        wasSet.ShouldBeTrue();
-        (await _store.GetCommandStatusAsync(inProgressCommand)).ShouldBe(CommandExecutionStatus.Completed);
-
-        await _store.SetCommandStatusAsync(inProgressCommand, CommandExecutionStatus.NotStarted);
-        (await _store.GetCommandStatusAsync(inProgressCommand)).ShouldBe(CommandExecutionStatus.Completed);
-
-        await _store.SetCommandStatusAsync(inProgressCommand, CommandExecutionStatus.NotFound);
-        (await _store.GetCommandStatusAsync(inProgressCommand)).ShouldBe(CommandExecutionStatus.Completed);
-
-        await _store.SetCommandResultAsync(inProgressCommand, "value-1");
-        (await _store.GetCommandResultAsync<string>(inProgressCommand)).ShouldBe("value-1");
-
-        var completedCommand = Guid.NewGuid().ToString();
-        await _store.SetCommandResultAsync(completedCommand, 99);
-        (await _store.GetCommandStatusAsync(completedCommand)).ShouldBe(CommandExecutionStatus.Completed);
-        (await _store.GetCommandResultAsync<int>(completedCommand)).ShouldBe(99);
-
-        var commandWithoutResult = Guid.NewGuid().ToString();
-        await _store.SetCommandStatusAsync(commandWithoutResult, CommandExecutionStatus.Completed);
-        (await _store.GetCommandStatusAsync(commandWithoutResult)).ShouldBe(CommandExecutionStatus.Completed);
-        (await _store.GetCommandResultAsync<string>(commandWithoutResult)).ShouldBeNull();
+        ((object)_store is ICommandIdempotencyMaintenance).ShouldBeFalse();
     }
 
     [Test]
-    public async Task Store_BatchHelpers_ReturnExpectedMaps()
+    public async Task CommandExecutor_WithRealOrleansStore_ReplaysWithoutRepeatingHandler()
     {
-        var command1 = Guid.NewGuid().ToString();
-        var command2 = Guid.NewGuid().ToString();
-        var command3 = Guid.NewGuid().ToString();
+        var options = new CommandExecutionOptions();
+        options.Timeout.Enabled = false;
+        options.Retry.Enabled = false;
+        options.Idempotency.ScopeSelector = static _ => CommandExecutionTestConstants.TenantA;
+        options.Idempotency.FingerprintSelector = static _ => CommandExecutionTestConstants.RequestV1;
+        var runtime = new CommandExecutionRuntime(options, _store);
+        var command = Command.Create(CommandExecutionTestConstants.OrdersCreate, Guid.CreateVersion7());
+        var calls = 0;
 
-        await _store.SetCommandStatusAsync(command1, CommandExecutionStatus.Processing);
-        await _store.SetCommandStatusAsync(command2, CommandExecutionStatus.Failed);
+        var first = await CommandExecutor.ExecuteAsync(
+            command,
+            (_, _) => Task.FromResult(Interlocked.Increment(ref calls)),
+            runtime);
+        var replay = await CommandExecutor.ExecuteAsync(
+            command,
+            (_, _) => Task.FromResult(Interlocked.Increment(ref calls)),
+            runtime);
 
-        var statuses = await _store.GetMultipleStatusAsync(new[] { command1, command2, command3 });
-        statuses.Count.ShouldBe(3);
-        statuses[command1].ShouldBe(CommandExecutionStatus.Processing);
-        statuses[command2].ShouldBe(CommandExecutionStatus.Failed);
-        statuses[command3].ShouldBe(CommandExecutionStatus.NotFound);
-
-        await _store.SetCommandResultAsync(command1, "first");
-        await _store.SetCommandStatusAsync(command2, CommandExecutionStatus.Completed);
-
-        var results = await _store.GetMultipleResultsAsync<string>(new[] { command1, command2, command3 });
-        results.Count.ShouldBe(3);
-        results[command1].ShouldBe("first");
-        results[command2].ShouldBeNull();
-        results[command3].ShouldBeNull();
+        first.Value.ShouldBe(1);
+        replay.Value.ShouldBe(1);
+        calls.ShouldBe(1);
     }
 
-    [Test]
-    public async Task Store_ResultReads_CoverTypeMismatchAndFailureFallback()
-    {
-        var commandId = Guid.NewGuid().ToString();
-
-        await _store.SetCommandResultAsync(commandId, "stored-result");
-        (await _store.GetCommandResultAsync<string>(commandId)).ShouldBe("stored-result");
-
-        // Asking for the wrong type yields the default rather than throwing.
-        (await _store.GetCommandResultAsync<Uri>(commandId)).ShouldBeNull();
-
-        await _store.SetCommandStatusAsync(commandId, CommandExecutionStatus.Failed);
-        (await _store.GetCommandStatusAsync(commandId)).ShouldBe(CommandExecutionStatus.Failed);
-        (await _store.GetCommandResultAsync<string>(commandId)).ShouldBeNull();
-
-        await _store.RemoveCommandAsync(commandId);
-        (await _store.GetCommandStatusAsync(commandId)).ShouldBe(CommandExecutionStatus.NotFound);
-    }
-
-    [Test]
-    public async Task Store_NoOpCleanupAndCounts_ReturnDefaults()
-    {
-        var expiry = await _store.CleanupExpiredCommandsAsync(TimeSpan.FromMinutes(10));
-        expiry.ShouldBe(0);
-
-        var byStatus = await _store.CleanupCommandsByStatusAsync(CommandExecutionStatus.Completed, TimeSpan.FromMinutes(10));
-        byStatus.ShouldBe(0);
-
-        var counts = await _store.GetCommandCountByStatusAsync();
-        counts.ShouldBeEmpty();
-    }
+    private static CommandIdempotencyDescriptor CreateDescriptor(
+        string key,
+        TimeSpan? claimLease = null) =>
+        new(
+            key,
+            CommandExecutionTestConstants.OrdersCreate,
+            CommandExecutionTestConstants.PayloadV1,
+            typeof(Result<int>).FullName!,
+            claimLease ?? TimeSpan.FromMinutes(1),
+            TimeSpan.FromMinutes(1));
 }

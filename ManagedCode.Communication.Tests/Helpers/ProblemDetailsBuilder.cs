@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ManagedCode.Communication.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.Tests.Helpers;
@@ -51,7 +52,7 @@ public static class ProblemDetailsBuilder
             errorDict[field] = new List<string>(messages);
         }
 
-        problemDetails.Extensions["errors"] = errorDict;
+        problemDetails.Extensions[ProblemConstants.ExtensionKeys.Errors] = errorDict;
         return problemDetails;
     }
 

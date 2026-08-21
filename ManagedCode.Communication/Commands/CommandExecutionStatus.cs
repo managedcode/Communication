@@ -28,5 +28,11 @@ public enum CommandExecutionStatus
     /// <summary>
     ///     The command failed; it may be claimed again by a retry.
     /// </summary>
-    Failed
+    Failed,
+
+    /// <summary>
+    ///     The previous owner may have performed the side effect, but no trustworthy terminal outcome is available.
+    ///     This state is not automatically reclaimable.
+    /// </summary>
+    Indeterminate
 }

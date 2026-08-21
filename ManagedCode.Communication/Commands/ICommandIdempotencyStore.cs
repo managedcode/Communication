@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication.Commands;
 
@@ -10,63 +10,59 @@ namespace ManagedCode.Communication.Commands;
 /// </summary>
 public interface ICommandIdempotencyStore
 {
-    // Basic operations
     /// <summary>
-    ///     Reads the current status of a command.
+    ///     Atomically returns a terminal outcome, reports an existing owner, or claims execution for the caller.
     /// </summary>
-    Task<CommandExecutionStatus> GetCommandStatusAsync(string commandId, CancellationToken cancellationToken = default);
-    /// <summary>
-    ///     Writes the status of a command.
-    /// </summary>
-    Task SetCommandStatusAsync(string commandId, CommandExecutionStatus status, CancellationToken cancellationToken = default);
-    /// <summary>
-    ///     Reads the cached result of a completed command.
-    /// </summary>
-    Task<T?> GetCommandResultAsync<T>(string commandId, CancellationToken cancellationToken = default);
-    /// <summary>
-    ///     Caches the result of a completed command.
-    /// </summary>
-    Task SetCommandResultAsync<T>(string commandId, T result, CancellationToken cancellationToken = default);
-    /// <summary>
-    ///     Forgets a command entirely, status and result.
-    /// </summary>
-    Task RemoveCommandAsync(string commandId, CancellationToken cancellationToken = default);
-
-    // Atomic operations to prevent race conditions
-    /// <summary>
-    /// Atomically sets command status only if current status matches expected value
-    /// </summary>
-    Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default);
+    Task<CommandIdempotencyAcquireResult<T>> TryAcquireAsync<T>(
+        CommandIdempotencyDescriptor descriptor,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Atomically gets status and sets to new value if condition matches
+    ///     Atomically persists a terminal outcome only when the supplied fenced claim still owns the execution.
     /// </summary>
-    Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default);
+    Task<bool> TryCompleteAsync<T>(
+        CommandIdempotencyClaim claim,
+        T outcome,
+        TimeSpan retention,
+        CancellationToken cancellationToken = default);
 
-    // Batch operations for better performance
-    /// <summary>
-    /// Get multiple command statuses in a single operation
-    /// </summary>
-    Task<Dictionary<string, CommandExecutionStatus>> GetMultipleStatusAsync(IEnumerable<string> commandIds, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Get multiple command results in a single operation
-    /// </summary>
-    Task<Dictionary<string, T?>> GetMultipleResultsAsync<T>(IEnumerable<string> commandIds, CancellationToken cancellationToken = default);
-
-    // Cleanup operations to prevent memory leaks
-    /// <summary>
-    /// Remove all commands older than specified age
-    /// </summary>
-    Task<int> CleanupExpiredCommandsAsync(TimeSpan maxAge, CancellationToken cancellationToken = default);
+    /// <summary>Extends the active claim lease when the supplied fence still owns the execution.</summary>
+    Task<bool> TryRenewAsync(
+        CommandIdempotencyClaim claim,
+        TimeSpan lease,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Remove commands with specific status older than specified age
+    ///     Atomically records that the side-effect outcome is unknown, preventing automatic duplicate execution.
     /// </summary>
-    Task<int> CleanupCommandsByStatusAsync(CommandExecutionStatus status, TimeSpan maxAge, CancellationToken cancellationToken = default);
+    Task<bool> TryMarkIndeterminateAsync(
+        CommandIdempotencyClaim claim,
+        Problem problem,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get count of commands by status for monitoring
+    ///     Releases a claim only when no business handler was invoked and the supplied fence still owns it.
     /// </summary>
-    Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(CancellationToken cancellationToken = default);
+    Task<bool> TryReleaseAsync(
+        CommandIdempotencyClaim claim,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Explicitly resolves an indeterminate record with a known terminal outcome.</summary>
+    Task<bool> TryResolveIndeterminateAsync<T>(
+        CommandIdempotencyDescriptor descriptor,
+        T outcome,
+        TimeSpan retention,
+        CancellationToken cancellationToken = default) =>
+        Task.FromException<bool>(new NotSupportedException(
+            ProblemConstants.CommandExecutionMessages.UnsupportedIndeterminateResolution));
+
+    /// <summary>
+    ///     Explicitly abandons an indeterminate record after an operator has established that retry is safe.
+    /// </summary>
+    Task<bool> TryResetIndeterminateAsync(
+        CommandIdempotencyDescriptor descriptor,
+        CancellationToken cancellationToken = default) =>
+        Task.FromException<bool>(new NotSupportedException(
+            ProblemConstants.CommandExecutionMessages.UnsupportedIndeterminateReset));
+
 }

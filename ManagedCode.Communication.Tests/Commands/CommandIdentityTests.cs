@@ -55,15 +55,15 @@ public class CommandIdentityTests
     [Test]
     public void GeneratedIdentitiesCarryTheCurrentTimestamp()
     {
-        var before = DateTimeOffset.UtcNow.AddSeconds(-5);
+        var before = DateTime.UtcNow.AddSeconds(-5);
 
         var bytes = Command.Create("X").CommandId.ToByteArray(bigEndian: true);
         var milliseconds = ((long)bytes[0] << 40) | ((long)bytes[1] << 32) | ((long)bytes[2] << 24) |
                            ((long)bytes[3] << 16) | ((long)bytes[4] << 8) | bytes[5];
-        var timestamp = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds);
+        var timestamp = DateTime.UnixEpoch.AddMilliseconds(milliseconds);
 
         timestamp.ShouldBeGreaterThan(before);
-        timestamp.ShouldBeLessThan(DateTimeOffset.UtcNow.AddSeconds(5));
+        timestamp.ShouldBeLessThan(DateTime.UtcNow.AddSeconds(5));
     }
 
     [Test]

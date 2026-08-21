@@ -2,361 +2,453 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication.Commands.Stores;
 
-/// <summary>
-/// Memory cache-based implementation of command idempotency store.
-/// Suitable for single-instance applications and development environments.
-/// </summary>
-public class MemoryCacheCommandIdempotencyStore : ICommandIdempotencyStore, IDisposable
+/// <summary>Atomic, fenced idempotency storage for one application process.</summary>
+public sealed class MemoryCacheCommandIdempotencyStore :
+    ICommandIdempotencyStore,
+    ICommandIdempotencyMaintenance,
+    IDisposable
 {
-    private readonly IMemoryCache _memoryCache;
+    private const int CommandLockStripeCount = 257;
+    private readonly SemaphoreSlim[] _commandLocks;
+    private readonly ConcurrentDictionary<string, TimestampIndexEntry> _commandTimestamps = new(StringComparer.Ordinal);
     private readonly ILogger<MemoryCacheCommandIdempotencyStore> _logger;
-    private readonly ConcurrentDictionary<string, DateTime> _commandTimestamps;
-    private bool _disposed;
+    private readonly IMemoryCache _memoryCache;
+    private int _disposed;
 
-    /// <summary>
-    ///     Creates the store over an <c>IMemoryCache</c>.
-    /// </summary>
+    /// <summary>Creates a single-process idempotency store over <see cref="IMemoryCache" />.</summary>
     public MemoryCacheCommandIdempotencyStore(
-        IMemoryCache memoryCache, 
+        IMemoryCache memoryCache,
         ILogger<MemoryCacheCommandIdempotencyStore> logger)
     {
         _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _commandTimestamps = new ConcurrentDictionary<string, DateTime>();
+        _commandLocks = Enumerable.Range(0, CommandLockStripeCount)
+            .Select(static _ => new SemaphoreSlim(1, 1))
+            .ToArray();
     }
 
-    /// <summary>
-    ///     Reads the current status of a command.
-    /// </summary>
-    public Task<CommandExecutionStatus> GetCommandStatusAsync(string commandId, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<CommandIdempotencyAcquireResult<T>> TryAcquireAsync<T>(
+        CommandIdempotencyDescriptor descriptor,
+        CancellationToken cancellationToken = default)
     {
-        var statusKey = GetStatusKey(commandId);
-        var status = _memoryCache.Get<CommandExecutionStatus?>(statusKey) ?? CommandExecutionStatus.NotFound;
-        return Task.FromResult(status);
-    }
+        ArgumentNullException.ThrowIfNull(descriptor);
+        descriptor.Validate();
+        using var scope = await AcquireLockAsync(descriptor.StorageKey, cancellationToken).ConfigureAwait(false);
+        var now = DateTime.UtcNow;
+        var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(descriptor.StorageKey));
 
-    /// <summary>
-    ///     Writes the status of a command and refreshes its entry in the cleanup index.
-    /// </summary>
-    public Task SetCommandStatusAsync(string commandId, CommandExecutionStatus status, CancellationToken cancellationToken = default)
-    {
-        var statusKey = GetStatusKey(commandId);
-        var options = CreateEntryOptions();
-
-        // Without this callback _commandTimestamps would keep one entry per command id forever: the cache
-        // entries expire on their own, but nothing would ever prune the shadow index that tracks them, so the
-        // store would grow without bound in any process that does not run the optional cleanup service.
-        options.RegisterPostEvictionCallback(static (_, _, _, state) =>
+        if (state is { Status: AtomicCommandStatus.Running } && state.ExpiresAtUtc <= now)
         {
-            if (state is TimestampIndexEviction eviction)
-            {
-                eviction.Index.TryRemove(eviction.CommandId, out _);
-            }
-        }, new TimestampIndexEviction(_commandTimestamps, commandId));
-
-        _memoryCache.Set(statusKey, status, options);
-        _commandTimestamps[commandId] = DateTime.UtcNow;
-
-        return Task.CompletedTask;
-    }
-
-    private static MemoryCacheEntryOptions CreateEntryOptions()
-    {
-        return new MemoryCacheEntryOptions
+            state.Status = AtomicCommandStatus.Indeterminate;
+            state.HasOutcome = false;
+            state.Outcome = null;
+            state.Problem = CreateExpiredClaimProblem();
+            state.UpdatedAtUtc = now;
+            state.ExpiresAtUtc = DateTime.MaxValue;
+            SetAtomicState(descriptor.StorageKey, state);
+        }
+        else if (state is not null && state.ExpiresAtUtc <= now)
         {
-            SlidingExpiration = TimeSpan.FromHours(24), // Keep for 24 hours
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7) // Hard limit 7 days
+            RemoveAtomicState(descriptor.StorageKey);
+            state = null;
+        }
+
+        if (state is null)
+        {
+            var claim = new CommandIdempotencyClaim(
+                descriptor.StorageKey,
+                descriptor.Operation,
+                descriptor.Fingerprint,
+                descriptor.ResultContract,
+                Guid.CreateVersion7(),
+                1);
+            SetAtomicState(descriptor.StorageKey, AtomicCommandState.Running(claim, now.Add(descriptor.ClaimLease)));
+            return CommandIdempotencyAcquireResult<T>.Acquired(claim);
+        }
+
+        if (!state.Matches(descriptor.Operation, descriptor.Fingerprint, descriptor.ResultContract))
+        {
+            return CommandIdempotencyAcquireResult<T>.Conflict(Problem.Create(
+                ProblemConstants.CommandExecutionTitles.IdempotencyKeyConflict,
+                ProblemConstants.CommandExecutionMessages.IdempotencyKeyConflict,
+                HttpStatusCode.Conflict));
+        }
+
+        return state.Status switch
+        {
+            AtomicCommandStatus.Running => CommandIdempotencyAcquireResult<T>.Running(),
+            AtomicCommandStatus.Indeterminate => CommandIdempotencyAcquireResult<T>.Indeterminate(
+                state.Problem ?? CreateExpiredClaimProblem()),
+            AtomicCommandStatus.Completed when !state.HasOutcome => CommandIdempotencyAcquireResult<T>.Corrupt(
+                Problem.Create(
+                    ProblemConstants.CommandExecutionTitles.CorruptIdempotencyOutcome,
+                    ProblemConstants.CommandExecutionMessages.MissingCachedOutcome,
+                    HttpStatusCode.InternalServerError)),
+            AtomicCommandStatus.Completed when state.Outcome is null => CommandIdempotencyAcquireResult<T>.Completed(default),
+            AtomicCommandStatus.Completed when state.Outcome is T outcome => CommandIdempotencyAcquireResult<T>.Completed(outcome),
+            _ => CommandIdempotencyAcquireResult<T>.Corrupt(Problem.Create(
+                ProblemConstants.CommandExecutionTitles.CorruptIdempotencyOutcome,
+                ProblemConstants.CommandExecutionMessages.CachedOutcomeContractMismatch,
+                HttpStatusCode.InternalServerError))
         };
     }
 
-    private sealed record TimestampIndexEviction(ConcurrentDictionary<string, DateTime> Index, string CommandId);
-
-    /// <summary>
-    ///     Reads the cached result of a completed command.
-    /// </summary>
-    public Task<T?> GetCommandResultAsync<T>(string commandId, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<bool> TryCompleteAsync<T>(
+        CommandIdempotencyClaim claim,
+        T outcome,
+        TimeSpan retention,
+        CancellationToken cancellationToken = default)
     {
-        var resultKey = GetResultKey(commandId);
-        var result = _memoryCache.Get<T>(resultKey);
-        return Task.FromResult(result);
-    }
-
-    /// <summary>
-    ///     Caches the result of a completed command.
-    /// </summary>
-    public Task SetCommandResultAsync<T>(string commandId, T result, CancellationToken cancellationToken = default)
-    {
-        var resultKey = GetResultKey(commandId);
-
-        _memoryCache.Set(resultKey, result, CreateEntryOptions());
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    ///     Forgets a command entirely, status and result.
-    /// </summary>
-    public Task RemoveCommandAsync(string commandId, CancellationToken cancellationToken = default)
-    {
-        var statusKey = GetStatusKey(commandId);
-        var resultKey = GetResultKey(commandId);
-        
-        _memoryCache.Remove(statusKey);
-        _memoryCache.Remove(resultKey);
-        _commandTimestamps.TryRemove(commandId, out _);
-        
-        return Task.CompletedTask;
-    }
-
-    private readonly ConcurrentDictionary<string, CommandLock> _commandLocks = new();
-
-    private async Task<LockScope> AcquireLockAsync(string commandId, CancellationToken cancellationToken)
-    {
-        var commandLock = _commandLocks.GetOrAdd(commandId, static _ => new CommandLock());
-        Interlocked.Increment(ref commandLock.RefCount);
-
-        try
+        ArgumentNullException.ThrowIfNull(claim);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retention, TimeSpan.Zero);
+        using var scope = await AcquireLockAsync(claim.StorageKey, cancellationToken).ConfigureAwait(false);
+        var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(claim.StorageKey));
+        if (!OwnsClaim(state, claim))
         {
-            await commandLock.Semaphore.WaitAsync(cancellationToken);
-            return new LockScope(this, commandId, commandLock);
-        }
-        catch
-        {
-            ReleaseLockReference(commandId, commandLock);
-            throw;
-        }
-    }
-
-    private void ReleaseLockReference(string commandId, CommandLock commandLock)
-    {
-        if (Interlocked.Decrement(ref commandLock.RefCount) == 0)
-        {
-            _commandLocks.TryRemove(new KeyValuePair<string, CommandLock>(commandId, commandLock));
-            commandLock.Semaphore.Dispose();
-        }
-    }
-
-    /// <summary>
-    ///     Moves a command between statuses only if it is currently in the expected one, holding a per-command lock.
-    /// </summary>
-    public async Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
-    {
-        using var scope = await AcquireLockAsync(commandId, cancellationToken);
-
-        var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(GetStatusKey(commandId)) ?? CommandExecutionStatus.NotFound;
-
-        if (currentStatus == expectedStatus)
-        {
-            await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
-            return true;
+            return false;
         }
 
-        return false;
+        var now = DateTime.UtcNow;
+        state!.Status = AtomicCommandStatus.Completed;
+        state.HasOutcome = true;
+        state.Outcome = outcome;
+        state.Problem = null;
+        state.UpdatedAtUtc = now;
+        state.ExpiresAtUtc = now.Add(retention);
+        SetAtomicState(claim.StorageKey, state);
+        return true;
     }
 
-    /// <summary>
-    ///     Reads the current status and writes a new one under a per-command lock.
-    /// </summary>
-    public async Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<bool> TryRenewAsync(
+        CommandIdempotencyClaim claim,
+        TimeSpan lease,
+        CancellationToken cancellationToken = default)
     {
-        using var scope = await AcquireLockAsync(commandId, cancellationToken);
-
-        var statusKey = GetStatusKey(commandId);
-        var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(statusKey) ?? CommandExecutionStatus.NotFound;
-
-        // Set new status
-        await SetCommandStatusAsync(commandId, newStatus, cancellationToken);
-
-        return (currentStatus, true);
-    }
-
-    // Batch operations
-    /// <summary>
-    ///     Reads the status of several commands.
-    /// </summary>
-    public Task<Dictionary<string, CommandExecutionStatus>> GetMultipleStatusAsync(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
-    {
-        var result = new Dictionary<string, CommandExecutionStatus>();
-        
-        foreach (var commandId in commandIds)
+        ArgumentNullException.ThrowIfNull(claim);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lease, TimeSpan.Zero);
+        using var scope = await AcquireLockAsync(claim.StorageKey, cancellationToken).ConfigureAwait(false);
+        var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(claim.StorageKey));
+        if (!OwnsClaim(state, claim))
         {
-            var statusKey = GetStatusKey(commandId);
-            var status = _memoryCache.Get<CommandExecutionStatus?>(statusKey) ?? CommandExecutionStatus.NotFound;
-            result[commandId] = status;
+            return false;
         }
-        
-        return Task.FromResult(result);
+
+        var now = DateTime.UtcNow;
+        state!.UpdatedAtUtc = now;
+        state.ExpiresAtUtc = now.Add(lease);
+        SetAtomicState(claim.StorageKey, state);
+        return true;
     }
 
-    /// <summary>
-    ///     Reads the cached results of several commands.
-    /// </summary>
-    public Task<Dictionary<string, T?>> GetMultipleResultsAsync<T>(IEnumerable<string> commandIds, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<bool> TryMarkIndeterminateAsync(
+        CommandIdempotencyClaim claim,
+        Problem problem,
+        CancellationToken cancellationToken = default)
     {
-        var result = new Dictionary<string, T?>();
-        
-        foreach (var commandId in commandIds)
+        ArgumentNullException.ThrowIfNull(claim);
+        ArgumentNullException.ThrowIfNull(problem);
+        using var scope = await AcquireLockAsync(claim.StorageKey, cancellationToken).ConfigureAwait(false);
+        var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(claim.StorageKey));
+        if (!OwnsClaim(state, claim))
         {
-            var resultKey = GetResultKey(commandId);
-            var value = _memoryCache.Get<T>(resultKey);
-            result[commandId] = value;
+            return false;
         }
-        
-        return Task.FromResult(result);
+
+        var now = DateTime.UtcNow;
+        state!.Status = AtomicCommandStatus.Indeterminate;
+        state.HasOutcome = false;
+        state.Outcome = null;
+        state.Problem = problem;
+        state.UpdatedAtUtc = now;
+        state.ExpiresAtUtc = DateTime.MaxValue;
+        SetAtomicState(claim.StorageKey, state);
+        return true;
     }
 
-    // Cleanup operations
-    /// <summary>
-    ///     Removes commands older than the given age.
-    /// </summary>
-    public Task<int> CleanupExpiredCommandsAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<bool> TryReleaseAsync(
+        CommandIdempotencyClaim claim,
+        CancellationToken cancellationToken = default)
     {
-        var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
-        var expiredCommands = _commandTimestamps
-            .Where(kvp => kvp.Value < cutoffTime)
-            .Select(kvp => kvp.Key)
+        ArgumentNullException.ThrowIfNull(claim);
+        using var scope = await AcquireLockAsync(claim.StorageKey, cancellationToken).ConfigureAwait(false);
+        var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(claim.StorageKey));
+        if (!OwnsClaim(state, claim))
+        {
+            return false;
+        }
+
+        RemoveAtomicState(claim.StorageKey);
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TryResolveIndeterminateAsync<T>(
+        CommandIdempotencyDescriptor descriptor,
+        T outcome,
+        TimeSpan retention,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        descriptor.Validate();
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retention, TimeSpan.Zero);
+        using var scope = await AcquireLockAsync(descriptor.StorageKey, cancellationToken).ConfigureAwait(false);
+        var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(descriptor.StorageKey));
+        if (state is not { Status: AtomicCommandStatus.Indeterminate }
+            || !state.Matches(descriptor.Operation, descriptor.Fingerprint, descriptor.ResultContract))
+        {
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        state.Status = AtomicCommandStatus.Completed;
+        state.HasOutcome = true;
+        state.Outcome = outcome;
+        state.Problem = null;
+        state.UpdatedAtUtc = now;
+        state.ExpiresAtUtc = now.Add(retention);
+        SetAtomicState(descriptor.StorageKey, state);
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> TryResetIndeterminateAsync(
+        CommandIdempotencyDescriptor descriptor,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+        descriptor.Validate();
+        using var scope = await AcquireLockAsync(descriptor.StorageKey, cancellationToken).ConfigureAwait(false);
+        var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(descriptor.StorageKey));
+        if (state is not { Status: AtomicCommandStatus.Indeterminate }
+            || !state.Matches(descriptor.Operation, descriptor.Fingerprint, descriptor.ResultContract))
+        {
+            return false;
+        }
+
+        RemoveAtomicState(descriptor.StorageKey);
+        return true;
+    }
+
+    /// <inheritdoc />
+    public async Task<int> CleanupCompletedCommandsAsync(
+        TimeSpan maxAge,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxAge, TimeSpan.Zero);
+        var cutoff = DateTime.UtcNow.Subtract(maxAge);
+        var candidates = _commandTimestamps
+            .Where(pair => pair.Value.UpdatedAtUtc < cutoff)
+            .Select(pair => pair.Key)
             .ToList();
-
-        var cleanedCount = 0;
-        foreach (var commandId in expiredCommands)
+        var cleaned = 0;
+        foreach (var key in candidates)
         {
-            _memoryCache.Remove(GetStatusKey(commandId));
-            _memoryCache.Remove(GetResultKey(commandId));
-            _commandTimestamps.TryRemove(commandId, out _);
-            cleanedCount++;
-        }
-
-        if (cleanedCount > 0)
-        {
-            LoggerCenter.LogCommandCleanupExpired(_logger, cleanedCount, maxAge);
-        }
-
-        return Task.FromResult(cleanedCount);
-    }
-
-    /// <summary>
-    ///     Removes commands in the given status that are older than the given age.
-    /// </summary>
-    public Task<int> CleanupCommandsByStatusAsync(CommandExecutionStatus status, TimeSpan maxAge, CancellationToken cancellationToken = default)
-    {
-        var cutoffTime = DateTime.UtcNow.Subtract(maxAge);
-        var cleanedCount = 0;
-
-        var commandsToCheck = _commandTimestamps
-            .Where(kvp => kvp.Value < cutoffTime)
-            .Select(kvp => kvp.Key)
-            .ToList();
-
-        foreach (var commandId in commandsToCheck)
-        {
-            var statusKey = GetStatusKey(commandId);
-            var currentStatus = _memoryCache.Get<CommandExecutionStatus?>(statusKey);
-            
-            if (currentStatus == status)
+            using var scope = await AcquireLockAsync(key, cancellationToken).ConfigureAwait(false);
+            if (!_commandTimestamps.TryGetValue(key, out var indexEntry)
+                || indexEntry.UpdatedAtUtc >= cutoff)
             {
-                _memoryCache.Remove(statusKey);
-                _memoryCache.Remove(GetResultKey(commandId));
-                _commandTimestamps.TryRemove(commandId, out _);
-                cleanedCount++;
+                continue;
+            }
+
+            var state = _memoryCache.Get<AtomicCommandState>(GetAtomicKey(key));
+            if (state is { Status: AtomicCommandStatus.Completed })
+            {
+                RemoveAtomicState(key);
+                cleaned++;
             }
         }
 
-        if (cleanedCount > 0)
+        if (cleaned > 0)
         {
-            LoggerCenter.LogCommandCleanupByStatus(_logger, cleanedCount, status, maxAge);
+            LoggerCenter.LogCommandCleanupByStatus(_logger, cleaned, CommandExecutionStatus.Completed, maxAge);
         }
 
-        return Task.FromResult(cleanedCount);
+        return cleaned;
     }
 
-    /// <summary>
-    ///     Counts tracked commands by status.
-    /// </summary>
-    public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(
+        CancellationToken cancellationToken = default)
     {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         var counts = new Dictionary<CommandExecutionStatus, int>();
-        
-        foreach (var commandId in _commandTimestamps.Keys.ToList())
+        foreach (var key in _commandTimestamps.Keys)
         {
-            var statusKey = GetStatusKey(commandId);
-            var status = _memoryCache.Get<CommandExecutionStatus?>(statusKey);
-            
-            if (status.HasValue)
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_memoryCache.Get<AtomicCommandState>(GetAtomicKey(key)) is { } state)
             {
-                counts[status.Value] = counts.GetValueOrDefault(status.Value, 0) + 1;
+                var status = ToExecutionStatus(state.Status);
+                counts[status] = counts.GetValueOrDefault(status) + 1;
             }
         }
-        
+
         return Task.FromResult(counts);
     }
 
-    private static string GetStatusKey(string commandId) => $"cmd_status_{commandId}";
-    private static string GetResultKey(string commandId) => $"cmd_result_{commandId}";
-
-    /// <summary>
-    ///     Releases the per-command locks and clears the cleanup index.
-    /// </summary>
+    /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed)
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
         }
 
-        _disposed = true;
         _commandTimestamps.Clear();
+        // Active holders may still unwind during host shutdown. Disposing the bounded stripe semaphores here would
+        // turn that normal path into ObjectDisposedException and could split one key across two live locks.
+    }
 
-        // Semaphores are only removed once their last holder releases them; anything still registered at
-        // dispose time would otherwise leak its wait handle.
-        foreach (var entry in _commandLocks)
+    private async Task<LockScope> AcquireLockAsync(string key, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        var commandLock = GetCommandLock(key);
+        await commandLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (Volatile.Read(ref _disposed) != 0)
         {
-            if (_commandLocks.TryRemove(entry))
+            commandLock.Release();
+            throw new ObjectDisposedException(nameof(MemoryCacheCommandIdempotencyStore));
+        }
+
+        return new LockScope(commandLock);
+    }
+
+    private SemaphoreSlim GetCommandLock(string key)
+    {
+        var hash = StringComparer.Ordinal.GetHashCode(key) & int.MaxValue;
+        return _commandLocks[hash % _commandLocks.Length];
+    }
+
+    private void SetAtomicState(string key, AtomicCommandState state)
+    {
+        var options = new MemoryCacheEntryOptions();
+        if (state.Status == AtomicCommandStatus.Completed)
+        {
+            var remaining = state.ExpiresAtUtc - DateTime.UtcNow;
+            if (remaining <= TimeSpan.Zero)
             {
-                entry.Value.Semaphore.Dispose();
+                remaining = TimeSpan.FromMilliseconds(1);
             }
+
+            options.AbsoluteExpirationRelativeToNow = remaining;
         }
-    }
 
-    private sealed class CommandLock
-    {
-        public SemaphoreSlim Semaphore { get; } = new(1, 1);
-        public int RefCount;
-    }
-
-    private sealed class LockScope : IDisposable
-    {
-        private readonly MemoryCacheCommandIdempotencyStore _store;
-        private readonly string _commandId;
-        private readonly CommandLock _commandLock;
-        private bool _disposed;
-
-        public LockScope(MemoryCacheCommandIdempotencyStore store, string commandId, CommandLock commandLock)
+        var indexEntry = new TimestampIndexEntry(_commandTimestamps, key, state.UpdatedAtUtc);
+        _commandTimestamps[key] = indexEntry;
+        options.RegisterPostEvictionCallback(static (_, _, _, callbackState) =>
         {
-            _store = store;
-            _commandId = commandId;
-            _commandLock = commandLock;
-        }
+            if (callbackState is TimestampIndexEntry entry)
+            {
+                ((ICollection<KeyValuePair<string, TimestampIndexEntry>>)entry.Index).Remove(
+                    new KeyValuePair<string, TimestampIndexEntry>(entry.Key, entry));
+            }
+        }, indexEntry);
+        _memoryCache.Set(GetAtomicKey(key), state, options);
+    }
 
-        /// <summary>
-        ///     Releases the per-command locks and clears the cleanup index.
-        /// </summary>
+    private void RemoveAtomicState(string key)
+    {
+        _memoryCache.Remove(GetAtomicKey(key));
+        _commandTimestamps.TryRemove(key, out _);
+    }
+
+    private static bool OwnsClaim(AtomicCommandState? state, CommandIdempotencyClaim claim) =>
+        state is { Status: AtomicCommandStatus.Running }
+        && state.ExpiresAtUtc > DateTime.UtcNow
+        && state.OwnerToken == claim.OwnerToken
+        && state.Generation == claim.Generation
+        && state.Matches(claim.Operation, claim.Fingerprint, claim.ResultContract);
+
+    private static Problem CreateExpiredClaimProblem() => Problem.Create(
+        ProblemConstants.CommandExecutionTitles.IndeterminateCommandOutcome,
+        ProblemConstants.CommandExecutionMessages.PreviousExecutionIndeterminate,
+        HttpStatusCode.Conflict);
+
+    private static CommandExecutionStatus ToExecutionStatus(AtomicCommandStatus status) => status switch
+    {
+        AtomicCommandStatus.Running => CommandExecutionStatus.InProgress,
+        AtomicCommandStatus.Completed => CommandExecutionStatus.Completed,
+        AtomicCommandStatus.Indeterminate => CommandExecutionStatus.Indeterminate,
+        _ => CommandExecutionStatus.NotFound
+    };
+
+    private const string AtomicKeyPrefix = "cmd_atomic_";
+
+    private static string GetAtomicKey(string key) => AtomicKeyPrefix + key;
+
+    private enum AtomicCommandStatus
+    {
+        Running,
+        Completed,
+        Indeterminate
+    }
+
+    private sealed class AtomicCommandState
+    {
+        public required string Operation { get; init; }
+        public required string Fingerprint { get; init; }
+        public required string ResultContract { get; init; }
+        public required Guid OwnerToken { get; init; }
+        public required long Generation { get; init; }
+        public required AtomicCommandStatus Status { get; set; }
+        public bool HasOutcome { get; set; }
+        public object? Outcome { get; set; }
+        public Problem? Problem { get; set; }
+        public required DateTime UpdatedAtUtc { get; set; }
+        public required DateTime ExpiresAtUtc { get; set; }
+
+        public bool Matches(string operation, string fingerprint, string resultContract) =>
+            string.Equals(Operation, operation, StringComparison.Ordinal)
+            && string.Equals(Fingerprint, fingerprint, StringComparison.Ordinal)
+            && string.Equals(ResultContract, resultContract, StringComparison.Ordinal);
+
+        public static AtomicCommandState Running(CommandIdempotencyClaim claim, DateTime expiresAtUtc) => new()
+        {
+            Operation = claim.Operation,
+            Fingerprint = claim.Fingerprint,
+            ResultContract = claim.ResultContract,
+            OwnerToken = claim.OwnerToken,
+            Generation = claim.Generation,
+            Status = AtomicCommandStatus.Running,
+            UpdatedAtUtc = DateTime.UtcNow,
+            ExpiresAtUtc = expiresAtUtc
+        };
+    }
+
+    private sealed class TimestampIndexEntry(
+        ConcurrentDictionary<string, TimestampIndexEntry> index,
+        string key,
+        DateTime updatedAtUtc)
+    {
+        public ConcurrentDictionary<string, TimestampIndexEntry> Index { get; } = index;
+        public string Key { get; } = key;
+        public DateTime UpdatedAtUtc { get; } = updatedAtUtc;
+    }
+
+    private sealed class LockScope(SemaphoreSlim commandLock) : IDisposable
+    {
+        private int _disposed;
+
         public void Dispose()
         {
-            if (_disposed)
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
             {
-                return;
+                commandLock.Release();
             }
-
-            _commandLock.Semaphore.Release();
-            _store.ReleaseLockReference(_commandId, _commandLock);
-            _disposed = true;
         }
     }
 }

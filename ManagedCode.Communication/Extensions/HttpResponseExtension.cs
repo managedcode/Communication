@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Logging;
 using ManagedCode.Communication.Telemetry;
 
@@ -127,6 +128,7 @@ public static class HttpResponseExtension
                 {
                     // The HTTP response is authoritative if a proxy or remote producer supplied a mismatching status member.
                     problem.StatusCode = (int)responseMessage.StatusCode;
+                    PromoteRetryAfter(responseMessage, problem);
                     return problem;
                 }
             }
@@ -140,7 +142,26 @@ public static class HttpResponseExtension
             }
         }
 
-        return Problem.Create(content, content, responseMessage.StatusCode);
+        var fallbackProblem = Problem.Create(content, content, responseMessage.StatusCode);
+        PromoteRetryAfter(responseMessage, fallbackProblem);
+        return fallbackProblem;
+    }
+
+    private static void PromoteRetryAfter(HttpResponseMessage responseMessage, Problem problem)
+    {
+        var retryAfter = responseMessage.Headers.RetryAfter;
+        if (retryAfter?.Delta is { } delta && delta >= TimeSpan.Zero)
+        {
+            problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] = delta;
+            return;
+        }
+
+        if (retryAfter?.Date is { } date)
+        {
+            var remaining = date.UtcDateTime - DateTime.UtcNow;
+            problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] =
+                remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        }
     }
 
     private static bool LooksLikeJsonProblem(HttpResponseMessage responseMessage, string content)

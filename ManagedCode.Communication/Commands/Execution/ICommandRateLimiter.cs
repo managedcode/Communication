@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,7 +59,7 @@ public sealed class CommandRateLimitLease : IAsyncDisposable
             true,
             wasQueued,
             null,
-            metadata ?? EmptyMetadata.Instance,
+            metadata ?? EmptyMetadata,
             disposeAsync);
     }
 
@@ -73,7 +74,7 @@ public sealed class CommandRateLimitLease : IAsyncDisposable
             false,
             wasQueued,
             problem,
-            metadata ?? EmptyMetadata.Instance,
+            metadata ?? EmptyMetadata,
             null);
     }
 
@@ -88,8 +89,6 @@ public sealed class CommandRateLimitLease : IAsyncDisposable
         return _disposeAsync?.Invoke() ?? ValueTask.CompletedTask;
     }
 
-    private sealed class EmptyMetadata : Dictionary<string, object?>
-    {
-        public static EmptyMetadata Instance { get; } = new();
-    }
+    private static IReadOnlyDictionary<string, object?> EmptyMetadata { get; } =
+        FrozenDictionary<string, object?>.Empty;
 }

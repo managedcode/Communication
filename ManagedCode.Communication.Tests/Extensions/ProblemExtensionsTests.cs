@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ManagedCode.Communication.AspNetCore;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.Helpers;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Microsoft.AspNetCore.Mvc;
@@ -9,12 +10,14 @@ namespace ManagedCode.Communication.Tests.Extensions;
 
 public class ProblemExtensionsTests
 {
+    private const string TraceIdValue = "12345";
+
     [Test]
     public void ToProblemDetails_ShouldConvertProblemToProblemDetails()
     {
         // Arrange
         var problem = Problem.Create("Bad Request", "Invalid input", 400, "https://httpstatuses.io/400", "/api/users");
-        problem.Extensions["traceId"] = "12345";
+        problem.Extensions[ProblemConstants.ExtensionKeys.TraceId] = TraceIdValue;
         problem.Extensions["timestamp"] = "2024-01-01T00:00:00Z";
 
         // Act
@@ -27,8 +30,8 @@ public class ProblemExtensionsTests
         problemDetails.Status.ShouldBe(400);
         problemDetails.Detail.ShouldBe("Invalid input");
         problemDetails.Instance.ShouldBe("/api/users");
-        problemDetails.Extensions.ShouldContainKey("traceId");
-        problemDetails.Extensions["traceId"].ShouldBe("12345");
+        problemDetails.Extensions.ShouldContainKey(ProblemConstants.ExtensionKeys.TraceId);
+        problemDetails.Extensions[ProblemConstants.ExtensionKeys.TraceId].ShouldBe(TraceIdValue);
         problemDetails.Extensions.ShouldContainKey("timestamp");
         problemDetails.Extensions["timestamp"].ShouldBe("2024-01-01T00:00:00Z");
     }
@@ -280,7 +283,8 @@ public class ProblemExtensionsTests
 
         // Assert
         result.Problem!.Extensions.ShouldContainKey("errors");
-        var errors = result.Problem.Extensions["errors"] as Dictionary<string, List<string>>;
+        var errors = result.Problem.Extensions[ProblemConstants.ExtensionKeys.Errors]
+            as Dictionary<string, List<string>>;
         errors.ShouldNotBeNull();
         errors!["email"].ShouldContain("Invalid format");
         errors["email"].ShouldContain("Already exists");

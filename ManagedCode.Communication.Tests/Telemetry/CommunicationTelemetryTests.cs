@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -144,8 +145,16 @@ public sealed class CommunicationTelemetryTests : IDisposable
         });
         meterListener.Start();
 
-        CommunicationTelemetry.RecordFailure(Problem.Create("a", "d", 500));
-        CommunicationTelemetry.RecordFailure(Problem.Create("b", "d", 404));
+        CommunicationTelemetry.RecordFailure(Problem.Create(
+            CommandExecutionTestConstants.TelemetryTitleA,
+            CommandExecutionTestConstants.TelemetryDetail,
+            500,
+            CommandExecutionTestConstants.TelemetryTypeA));
+        CommunicationTelemetry.RecordFailure(Problem.Create(
+            CommandExecutionTestConstants.TelemetryTitleB,
+            CommandExecutionTestConstants.TelemetryDetail,
+            404,
+            CommandExecutionTestConstants.TelemetryTypeB));
 
         meterListener.RecordObservableInstruments();
         measurements.Count.ShouldBe(2);
@@ -240,6 +249,80 @@ public sealed class CommunicationTelemetryTests : IDisposable
     }
 
     [Test]
+    public async Task CommandExecution_WithSerializedW3CParent_ContinuesRemoteTrace()
+    {
+        var command = Command.Create(CommandExecutionTestConstants.TraceContinue);
+        command.TraceId = CommandExecutionTestConstants.TraceId;
+        command.SpanId = CommandExecutionTestConstants.SpanId;
+        command.Metadata = new CommandMetadata
+        {
+            TraceRecorded = true,
+            TraceState = CommandExecutionTestConstants.TraceState
+        };
+        var options = new CommandExecutionOptions();
+        options.Timeout.Enabled = false;
+        options.Idempotency.Enabled = false;
+        var previous = Activity.Current;
+        Activity.Current = null;
+        try
+        {
+            await CommandExecutor.ExecuteResultAsync(
+                command,
+                static (_, _) => Task.FromResult(Result.Succeed()),
+                new CommandExecutionRuntime(options));
+        }
+        finally
+        {
+            Activity.Current = previous;
+        }
+
+        var activity = _activities.Single(item =>
+            item.DisplayName == CommunicationTelemetry.CommandExecutionActivityName
+            && Equals(
+                item.GetTagItem(CommunicationTelemetry.CommandIdTag),
+                command.CommandId.ToString(CommandExecutionTestConstants.CommandIdFormat)));
+        activity.TraceId.ToHexString().ShouldBe(command.TraceId);
+        activity.ParentSpanId.ToHexString().ShouldBe(command.SpanId);
+        activity.ParentId.ShouldNotBeNull();
+    }
+
+    [Test]
+    public async Task CommandExecution_ThrownAttempt_CountsFinalFailureExactlyOnce()
+    {
+        var measurements = new Dictionary<string, long>(StringComparer.Ordinal);
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, current) =>
+            {
+                if (instrument.Meter.Name == CommunicationTelemetry.SourceName
+                    && instrument.Name is CommunicationTelemetry.FailureCounterName
+                        or CommunicationTelemetry.CommandAttemptFailureCounterName
+                        or CommunicationTelemetry.ExceptionCounterName)
+                {
+                    current.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, _, _) =>
+            measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + value);
+        listener.Start();
+        var options = new CommandExecutionOptions();
+        options.Timeout.Enabled = false;
+        options.Idempotency.Enabled = false;
+        options.Retry.Enabled = false;
+
+        var result = await CommandExecutor.ExecuteAsync(
+            Command.Create(CommandExecutionTestConstants.MetricException),
+            static (_, _) => Task.FromException<int>(new IOException(CommandExecutionTestConstants.NetworkFailure)),
+            new CommandExecutionRuntime(options));
+
+        result.IsFailed.ShouldBeTrue();
+        measurements[CommunicationTelemetry.FailureCounterName].ShouldBe(1);
+        measurements[CommunicationTelemetry.CommandAttemptFailureCounterName].ShouldBe(1);
+        measurements[CommunicationTelemetry.ExceptionCounterName].ShouldBe(1);
+    }
+
+    [Test]
     public async Task CommandExecution_IncrementsAttemptAndRetryMetrics()
     {
         var measurements = new Dictionary<string, long>(StringComparer.Ordinal);
@@ -257,7 +340,7 @@ public sealed class CommunicationTelemetryTests : IDisposable
         };
         meterListener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
         {
-            if (HasTag(tags, "command.type", "metric.command"))
+            if (HasTag(tags, CommunicationTelemetry.CommandOperationTag, typeof(Command).FullName!))
             {
                 measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + value;
             }

@@ -11,25 +11,17 @@ namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 public class CommandCleanupExtensionsTests
 {
     [Test]
-    public async Task AutoCleanupAsync_UsesDefaultAgesAndAggregatesResults()
+    public async Task AutoCleanupAsync_CleansOnlyCompletedOutcomes()
     {
         var store = new TrackingCommandIdempotencyStore
         {
-            CompletedCleanupResult = 2,
-            FailedCleanupResult = 3,
-            InProgressCleanupResult = 4
+            CompletedCleanupResult = 2
         };
 
         var result = await CommandCleanupExtensions.AutoCleanupAsync(store);
 
-        result.ShouldBe(9);
-        store.CleanupCalls.Count.ShouldBe(3);
-        store.CleanupCalls[0].Status.ShouldBe(CommandExecutionStatus.Completed);
-        store.CleanupCalls[0].MaxAge.ShouldBe(TimeSpan.FromHours(24));
-        store.CleanupCalls[1].Status.ShouldBe(CommandExecutionStatus.Failed);
-        store.CleanupCalls[1].MaxAge.ShouldBe(TimeSpan.FromHours(1));
-        store.CleanupCalls[2].Status.ShouldBe(CommandExecutionStatus.InProgress);
-        store.CleanupCalls[2].MaxAge.ShouldBe(TimeSpan.FromMinutes(30));
+        result.ShouldBe(2);
+        store.CleanupCalls.ShouldBe([TimeSpan.FromHours(24)]);
     }
 
     [Test]
@@ -76,94 +68,37 @@ public class CommandCleanupExtensionsTests
         metrics.FailureRate.ShouldBe(0);
     }
 
-    private sealed class TrackingCommandIdempotencyStore : ICommandIdempotencyStore
+    private sealed class TrackingCommandIdempotencyStore : ICommandIdempotencyStore, ICommandIdempotencyMaintenance
     {
-        private readonly Dictionary<string, CommandExecutionStatus> _statuses = new();
+        public Task<CommandIdempotencyAcquireResult<T>> TryAcquireAsync<T>(CommandIdempotencyDescriptor descriptor, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
 
-        public readonly List<(CommandExecutionStatus Status, TimeSpan MaxAge)> CleanupCalls = new();
+        public Task<bool> TryCompleteAsync<T>(CommandIdempotencyClaim claim, T outcome, TimeSpan retention, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> TryRenewAsync(CommandIdempotencyClaim claim, TimeSpan lease, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> TryMarkIndeterminateAsync(CommandIdempotencyClaim claim, Problem problem, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> TryReleaseAsync(CommandIdempotencyClaim claim, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public readonly List<TimeSpan> CleanupCalls = new();
         public Dictionary<CommandExecutionStatus, int> HealthMetrics { get; set; } = new();
         public int CompletedCleanupResult { get; init; }
-        public int FailedCleanupResult { get; init; }
-        public int InProgressCleanupResult { get; init; }
 
-        public Task<CommandExecutionStatus> GetCommandStatusAsync(string commandId, CancellationToken cancellationToken = default)
-            => Task.FromResult(_statuses.GetValueOrDefault(commandId, CommandExecutionStatus.NotFound));
-
-        public Task SetCommandStatusAsync(string commandId, CommandExecutionStatus status, CancellationToken cancellationToken = default)
-        {
-            _statuses[commandId] = status;
-            return Task.CompletedTask;
-        }
-
-        public Task<T?> GetCommandResultAsync<T>(string commandId, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task SetCommandResultAsync<T>(string commandId, T result, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task RemoveCommandAsync(string commandId, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<bool> TrySetCommandStatusAsync(
-            string commandId,
-            CommandExecutionStatus expectedStatus,
-            CommandExecutionStatus newStatus,
-            CancellationToken cancellationToken = default)
-        {
-            var current = _statuses.GetValueOrDefault(commandId, CommandExecutionStatus.NotFound);
-
-            if (current == expectedStatus)
-            {
-                _statuses[commandId] = newStatus;
-                return Task.FromResult(true);
-            }
-
-            return Task.FromResult(false);
-        }
-
-        public Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(
-            string commandId,
-            CommandExecutionStatus newStatus,
-            CancellationToken cancellationToken = default)
-        {
-            var current = _statuses.GetValueOrDefault(commandId, CommandExecutionStatus.NotFound);
-            _statuses[commandId] = newStatus;
-            return Task.FromResult((current, true));
-        }
-
-        public Task<Dictionary<string, CommandExecutionStatus>> GetMultipleStatusAsync(
-            IEnumerable<string> commandIds,
-            CancellationToken cancellationToken = default)
-            => Task.FromResult(new Dictionary<string, CommandExecutionStatus>());
-
-        public Task<Dictionary<string, T?>> GetMultipleResultsAsync<T>(
-            IEnumerable<string> commandIds,
-            CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<int> CleanupExpiredCommandsAsync(TimeSpan maxAge, CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
-
-        public Task<int> CleanupCommandsByStatusAsync(
-            CommandExecutionStatus status,
+        public Task<int> CleanupCompletedCommandsAsync(
             TimeSpan maxAge,
             CancellationToken cancellationToken = default)
         {
-            CleanupCalls.Add((status, maxAge));
-
-            return status switch
-            {
-                CommandExecutionStatus.Completed => Task.FromResult(CompletedCleanupResult),
-                CommandExecutionStatus.Failed => Task.FromResult(FailedCleanupResult),
-                CommandExecutionStatus.InProgress => Task.FromResult(InProgressCleanupResult),
-                _ => Task.FromResult(0)
-            };
+            CleanupCalls.Add(maxAge);
+            return Task.FromResult(CompletedCleanupResult);
         }
 
         public Task<Dictionary<CommandExecutionStatus, int>> GetCommandCountByStatusAsync(
             CancellationToken cancellationToken = default)
             => Task.FromResult(HealthMetrics);
-
-        public void Dispose() { }
     }
 }

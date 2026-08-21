@@ -504,7 +504,9 @@ public class ProblemTests
 
         // Act
         var hasErrorCode = problem.TryGetExtension(ProblemConstants.ExtensionKeys.ErrorCode, out string? errorCode);
-        var hasRetryAfter = problem.TryGetExtension("retryAfter", out int retryAfter);
+        var hasRetryAfter = problem.TryGetExtension(
+            ProblemConstants.ExtensionKeys.RetryAfter,
+            out int retryAfter);
         var hasEnumCode = problem.TryGetExtension(ProblemConstants.ExtensionKeys.ErrorCode, out TestError enumCode);
 
         // Assert
@@ -523,7 +525,7 @@ public class ProblemTests
         var problem = Problem.Create("Error", "Missing extension", 500);
 
         // Act
-        var retryAfter = problem.GetExtensionOrDefault("retryAfter", 15);
+        var retryAfter = problem.GetExtensionOrDefault(ProblemConstants.ExtensionKeys.RetryAfter, 15);
 
         // Assert
         retryAfter.ShouldBe(15);
@@ -534,10 +536,13 @@ public class ProblemTests
     {
         // Arrange
         var problem = Problem.Create("Error", "Type mismatch", 500);
-        problem.Extensions["retryAfter"] = "not-a-number";
+        problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] =
+            CommandExecutionTestConstants.MalformedNumericValue;
 
         // Act
-        var hasRetryAfter = problem.TryGetExtension("retryAfter", out int retryAfter);
+        var hasRetryAfter = problem.TryGetExtension(
+            ProblemConstants.ExtensionKeys.RetryAfter,
+            out int retryAfter);
 
         // Assert
         hasRetryAfter.ShouldBeFalse();

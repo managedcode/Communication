@@ -1,4 +1,5 @@
 using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,8 @@ namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class ControllerExtensionsTests
 {
+    private const string InvalidStateErrorCode = "INVALID_STATE";
+
     [Test]
     public void ToActionResult_WithSuccessResult_ReturnsOkObjectResult()
     {
@@ -150,7 +153,7 @@ public class ControllerExtensionsTests
     {
         // Arrange
         var problem = Problem.Create("Business Error", "Invalid operation for current state", 422);
-        problem.Extensions["errorCode"] = "INVALID_STATE";
+        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorCode] = InvalidStateErrorCode;
         problem.Extensions["timestamp"] = "2024-01-01";
 
         var result = Result<object>.Fail(problem);

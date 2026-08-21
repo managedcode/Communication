@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using ManagedCode.Communication.CollectionResultT;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
 
@@ -368,14 +369,14 @@ public class CollectionResultTests
     {
         // Arrange
         var problem = Problem.Create("Too Many Requests", "Rate limit exceeded", 429, "https://httpstatuses.io/429");
-        problem.Extensions["retryAfter"] = 60;
+        problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] = 60;
         var result = CollectionResult<string>.Fail(problem);
 
         // Act & Assert
         var exception = Should.Throw<ProblemException>(() => result.ThrowIfFail());
 
         exception.Problem.ShouldBe(problem);
-        exception.Problem.Extensions["retryAfter"].ShouldBe(60);
+        exception.Problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter].ShouldBe(60);
     }
 
     [Test]

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
 
@@ -6,6 +7,8 @@ namespace ManagedCode.Communication.Tests.Serialization;
 
 public class ProblemJsonConverterTests
 {
+    private const string InvalidTransitionErrorCode = "INVALID_TRANSITION";
+
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -59,7 +62,7 @@ public class ProblemJsonConverterTests
     {
         // Arrange
         var originalProblem = Problem.Create("Business Error", "Invalid state transition", 409);
-        originalProblem.Extensions["errorCode"] = "INVALID_TRANSITION";
+        originalProblem.Extensions[ProblemConstants.ExtensionKeys.ErrorCode] = InvalidTransitionErrorCode;
         originalProblem.Extensions["timestamp"] = "2024-01-01T10:00:00Z";
         originalProblem.Extensions["userId"] = 12345;
 
@@ -75,7 +78,7 @@ public class ProblemJsonConverterTests
         deserializedProblem.Detail.ShouldBe(originalProblem.Detail);
 
         deserializedProblem.Extensions.ShouldHaveCount(3);
-        deserializedProblem.Extensions.ShouldContainKey("errorCode");
+        deserializedProblem.Extensions.ShouldContainKey(ProblemConstants.ExtensionKeys.ErrorCode);
         deserializedProblem.Extensions.ShouldContainKey("timestamp");
         deserializedProblem.Extensions.ShouldContainKey("userId");
     }

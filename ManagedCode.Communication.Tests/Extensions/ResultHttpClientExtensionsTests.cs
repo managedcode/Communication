@@ -263,6 +263,57 @@ public class ResultHttpClientExtensionsTests
         result.Value.ShouldBe(42);
     }
 
+    [Test]
+    public async Task SendForResultAsync_WithRetryAfterHeader_UsesAuthoritativeServerDelay()
+    {
+        var attempt = 0;
+        var observedDelay = TimeSpan.Zero;
+        var retryAfter = TimeSpan.FromMilliseconds(15);
+        using var client = new HttpClient(new StubHandler((_, _) =>
+        {
+            if (Interlocked.Increment(ref attempt) == 1)
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+                {
+                    Content = new StringContent(
+                        CommandExecutionTestConstants.BusyProblemJson,
+                        Encoding.UTF8,
+                        CommandExecutionTestConstants.ProblemJsonMediaType)
+                };
+                response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(retryAfter);
+                return Task.FromResult(response);
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    CommandExecutionTestConstants.JsonValue,
+                    Encoding.UTF8,
+                    CommandExecutionTestConstants.JsonMediaType)
+            });
+        }));
+        var options = new CommandExecutionOptions();
+        options.Timeout.Enabled = false;
+        options.Idempotency.Enabled = false;
+        options.Retry.Enabled = true;
+        options.Retry.MaxRetries = 1;
+        options.Retry.Delay = TimeSpan.FromSeconds(1);
+        options.Retry.UseJitter = false;
+        options.Retry.OnRetry = (retryEvent, _) =>
+        {
+            observedDelay = retryEvent.Delay;
+            return ValueTask.CompletedTask;
+        };
+
+        var result = await client.SendForResultAsync<int, Command>(
+            Command.Create(CommandExecutionTestConstants.HttpRetryAfter),
+            static _ => new HttpRequestMessage(HttpMethod.Get, CommandExecutionTestConstants.ExampleUrl),
+            new CommandExecutionRuntime(options));
+
+        result.Value.ShouldBe(42);
+        observedDelay.ShouldBe(retryAfter);
+    }
+
     private static CommandExecutionRuntime CreateRetryRuntime()
     {
         var options = new CommandExecutionOptions();

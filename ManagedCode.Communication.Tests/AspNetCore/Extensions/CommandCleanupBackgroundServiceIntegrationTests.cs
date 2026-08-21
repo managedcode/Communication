@@ -30,8 +30,8 @@ public class CommandCleanupBackgroundServiceIntegrationTests
         await store.WaitForHealthMetricsAsync();
 
         store.CleanupCalls.ShouldContainKey(CommandExecutionStatus.Completed);
-        store.CleanupCalls.ShouldContainKey(CommandExecutionStatus.Failed);
-        store.CleanupCalls.ShouldContainKey(CommandExecutionStatus.InProgress);
+        store.CleanupCalls.ShouldNotContainKey(CommandExecutionStatus.Failed);
+        store.CleanupCalls.ShouldNotContainKey(CommandExecutionStatus.InProgress);
         store.HealthMetricsQueries.ShouldBeGreaterThan(0);
 
         await app.StopAsync();
@@ -62,6 +62,7 @@ public class CommandCleanupBackgroundServiceIntegrationTests
         builder.WebHost.UseTestServer();
 
         builder.Services.AddSingleton<ICommandIdempotencyStore>(store);
+        builder.Services.AddSingleton<ICommandIdempotencyMaintenance>(store);
 
         var options = new CommandCleanupOptions();
         configureCleanup(options);
@@ -75,8 +76,23 @@ public class CommandCleanupBackgroundServiceIntegrationTests
         return app;
     }
 
-    private sealed class TrackingCleanupStore : ICommandIdempotencyStore
+    private sealed class TrackingCleanupStore : ICommandIdempotencyStore, ICommandIdempotencyMaintenance
     {
+        public Task<CommandIdempotencyAcquireResult<T>> TryAcquireAsync<T>(CommandIdempotencyDescriptor descriptor, System.Threading.CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> TryCompleteAsync<T>(CommandIdempotencyClaim claim, T outcome, TimeSpan retention, System.Threading.CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> TryRenewAsync(CommandIdempotencyClaim claim, TimeSpan lease, System.Threading.CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> TryMarkIndeterminateAsync(CommandIdempotencyClaim claim, Problem problem, System.Threading.CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> TryReleaseAsync(CommandIdempotencyClaim claim, System.Threading.CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
         private readonly bool _throwOnFirstCompletedCleanup;
         private readonly object _sync = new();
         private bool _completed;
@@ -94,11 +110,9 @@ public class CommandCleanupBackgroundServiceIntegrationTests
         public int CleanupFailures { get; private set; }
         public int HealthMetricsQueries { get; private set; }
 
-        public Task<int> CleanupExpiredCommandsAsync(System.TimeSpan maxAge, System.Threading.CancellationToken cancellationToken = default)
-            => Task.FromResult(0);
-
-        public Task<int> CleanupCommandsByStatusAsync(CommandExecutionStatus status, System.TimeSpan maxAge, System.Threading.CancellationToken cancellationToken = default)
+        public Task<int> CleanupCompletedCommandsAsync(System.TimeSpan maxAge, System.Threading.CancellationToken cancellationToken = default)
         {
+            const CommandExecutionStatus status = CommandExecutionStatus.Completed;
             lock (_sync)
             {
                 if (!CleanupCalls.TryGetValue(status, out var count))
@@ -109,7 +123,7 @@ public class CommandCleanupBackgroundServiceIntegrationTests
                 count++;
                 CleanupCalls[status] = count;
 
-                if (status == CommandExecutionStatus.Completed && !_completed)
+                if (!_completed)
                 {
                     if (_throwOnFirstCompletedCleanup)
                     {
@@ -124,8 +138,7 @@ public class CommandCleanupBackgroundServiceIntegrationTests
                     }
                 }
 
-                if (status == CommandExecutionStatus.Completed &&
-                    (CleanupCalls.TryGetValue(CommandExecutionStatus.Completed, out var completed) ? completed : 0) >= 2)
+                if ((CleanupCalls.TryGetValue(CommandExecutionStatus.Completed, out var completed) ? completed : 0) >= 2)
                 {
                     _cleanupCycle = 1;
                     _secondIterationTcs.TrySetResult(_cleanupCycle);
@@ -149,33 +162,6 @@ public class CommandCleanupBackgroundServiceIntegrationTests
             });
         }
 
-        public Task<(CommandExecutionStatus currentStatus, bool wasSet)> GetAndSetStatusAsync(string commandId, CommandExecutionStatus newStatus, System.Threading.CancellationToken cancellationToken = default)
-            => Task.FromResult<(CommandExecutionStatus, bool)>((CommandExecutionStatus.NotFound, true));
-
-        public Task<CommandExecutionStatus> GetCommandStatusAsync(string commandId, System.Threading.CancellationToken cancellationToken = default)
-            => Task.FromResult(CommandExecutionStatus.NotFound);
-
-        public Task SetCommandStatusAsync(string commandId, CommandExecutionStatus status, System.Threading.CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<T?> GetCommandResultAsync<T>(string commandId, System.Threading.CancellationToken cancellationToken = default)
-            => Task.FromResult<T?>(default);
-
-        public Task SetCommandResultAsync<T>(string commandId, T result, System.Threading.CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task RemoveCommandAsync(string commandId, System.Threading.CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
-
-        public Task<bool> TrySetCommandStatusAsync(string commandId, CommandExecutionStatus expectedStatus, CommandExecutionStatus newStatus, System.Threading.CancellationToken cancellationToken = default)
-            => Task.FromResult(false);
-
-        public Task<Dictionary<string, CommandExecutionStatus>> GetMultipleStatusAsync(IEnumerable<string> commandIds, System.Threading.CancellationToken cancellationToken = default)
-            => Task.FromResult(new Dictionary<string, CommandExecutionStatus>());
-
-        public Task<Dictionary<string, T?>> GetMultipleResultsAsync<T>(IEnumerable<string> commandIds, System.Threading.CancellationToken cancellationToken = default)
-            => Task.FromResult(new Dictionary<string, T?>());
-
         public async Task WaitForCleanupCyclesAsync(int requiredCompletedCycles)
         {
             if (requiredCompletedCycles <= 1)
@@ -190,10 +176,6 @@ public class CommandCleanupBackgroundServiceIntegrationTests
         public async Task WaitForHealthMetricsAsync()
         {
             await _healthMetricsTcs.Task.WaitAsync(System.TimeSpan.FromSeconds(3));
-        }
-
-        public void Dispose()
-        {
         }
     }
 }
