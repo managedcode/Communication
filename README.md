@@ -297,10 +297,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.2.0" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.0" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.0" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.0" />
+<PackageReference Include="ManagedCode.Communication" Version="10.2.1" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.1" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.1" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.1" />
 ```
 
 ## Logging Configuration
@@ -635,6 +635,31 @@ Connection failures and client-side timeouts become failed results with `503` an
 still propagates `OperationCanceledException`.
 Endpoint-filter success responses map to `200 OK`/`204 No Content` while failures become RFC 7807 problem details. Native `Microsoft.AspNetCore.Http.IResult`
 responses pass through unchanged, so you can mix and match traditional Minimal API patterns with ManagedCode.Communication results.
+
+For transparent `IHttpClientFactory` integration, add the Communication handler to a named or typed client. It uses the same
+native command executor, returns the final raw `HttpResponseMessage`, honors `Retry-After`, and partitions circuit state by
+request authority:
+
+```csharp
+services.AddHttpClient<CatalogClient>()
+    .AddCommunicationResilienceHandler(options =>
+    {
+        options.Execution.Retry.MaxRetries = 3;
+        options.Execution.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(1);
+    });
+```
+
+Automatic replay defaults to content-free `GET`, `HEAD`, `OPTIONS`, and `TRACE` requests. Unsafe methods and every request with
+content pass through exactly once; use the command plus request-factory overload above when replaying a body is explicitly safe.
+Shared defaults can be replaced or disabled for one client without depending on another resilience library:
+
+```csharp
+services.ConfigureHttpClientDefaults(client =>
+    client.AddCommunicationResilienceHandler());
+
+services.AddHttpClient<MetadataClient>()
+    .RemoveCommunicationResilienceHandler();
+```
 
 ### Console Application Setup
 

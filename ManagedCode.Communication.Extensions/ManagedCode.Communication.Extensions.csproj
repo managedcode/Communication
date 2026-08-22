@@ -9,12 +9,13 @@
     <PropertyGroup>
         <Title>ManagedCode.Communication.Extensions</Title>
         <PackageId>ManagedCode.Communication.Extensions</PackageId>
-        <Description>Fluent extras for ManagedCode.Communication: railway-oriented composition (Bind, Map, Tap, Then, Ensure, Match, Compensate…) and HttpClient helpers that return Result. No ASP.NET Core dependency — usable from console, worker, Blazor WASM and MAUI.</Description>
+        <Description>Fluent extras for ManagedCode.Communication: railway-oriented composition, HttpClient Result helpers, and native command resilience for IHttpClientFactory. No ASP.NET Core dependency.</Description>
         <PackageTags>managedcode;communication;result-pattern;railway-oriented;rop;commands;retry;rate-limiting</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\ManagedCode.Communication\ManagedCode.Communication.csproj" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11" />
     </ItemGroup>
 
 </Project>
