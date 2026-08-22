@@ -90,7 +90,7 @@ public partial struct Result<T>
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result<T>> From(Func<ValueTask<T>> valueTask)
+    public static async ValueTask<Result<T>> From(Func<ValueTask<T>> valueTask)
     {
         return await valueTask.ToResultAsync().ConfigureAwait(false);
     }
@@ -98,7 +98,7 @@ public partial struct Result<T>
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result<T>> From(Func<ValueTask<Result<T>>> valueTask)
+    public static async ValueTask<Result<T>> From(Func<ValueTask<Result<T>>> valueTask)
     {
         return await valueTask.ToResultAsync().ConfigureAwait(false);
     }

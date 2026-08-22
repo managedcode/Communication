@@ -76,6 +76,26 @@ public partial struct Result
     public static Result FailNotFound(string? detail = null) => ResultFactoryBridge<Result>.FailNotFound(detail);
 
     /// <summary>
+    ///     Creates a 400 failure for a required value that was null.
+    /// </summary>
+    public static Result FailNull(string? detail = null) => ResultFactoryBridge<Result>.FailNull(detail);
+
+    /// <summary>
+    ///     Creates a 400 failure for an invalid argument.
+    /// </summary>
+    public static Result FailArgument(string? detail = null) => ResultFactoryBridge<Result>.FailArgument(detail);
+
+    /// <summary>
+    ///     Creates a 400 failure for an argument outside its allowed range.
+    /// </summary>
+    public static Result FailOutOfRange(string? detail = null) => ResultFactoryBridge<Result>.FailOutOfRange(detail);
+
+    /// <summary>
+    ///     Creates a 409 failure for an operation that conflicts with the current state.
+    /// </summary>
+    public static Result FailInvalidState(string? detail = null) => ResultFactoryBridge<Result>.FailInvalidState(detail);
+
+    /// <summary>
     ///     Creates a failure identified by an enum error code, stored in the problem's <c>errorCode</c> extension.
     /// </summary>
     public static Result Fail<TEnum>(TEnum errorCode) where TEnum : Enum => ResultFactoryBridge<Result>.Fail(errorCode);

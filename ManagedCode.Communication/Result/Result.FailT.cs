@@ -69,4 +69,36 @@ public partial struct Result
     {
         return ResultFactoryBridge<Result<T>>.FailNotFound(detail);
     }
+
+    /// <summary>
+    ///     Creates a typed 400 failure for a required value that was null.
+    /// </summary>
+    public static Result<T> FailNull<T>(string? detail = null)
+    {
+        return ResultFactoryBridge<Result<T>>.FailNull(detail);
+    }
+
+    /// <summary>
+    ///     Creates a typed 400 failure for an invalid argument.
+    /// </summary>
+    public static Result<T> FailArgument<T>(string? detail = null)
+    {
+        return ResultFactoryBridge<Result<T>>.FailArgument(detail);
+    }
+
+    /// <summary>
+    ///     Creates a typed 400 failure for an argument outside its allowed range.
+    /// </summary>
+    public static Result<T> FailOutOfRange<T>(string? detail = null)
+    {
+        return ResultFactoryBridge<Result<T>>.FailOutOfRange(detail);
+    }
+
+    /// <summary>
+    ///     Creates a typed 409 failure for an operation that conflicts with the current state.
+    /// </summary>
+    public static Result<T> FailInvalidState<T>(string? detail = null)
+    {
+        return ResultFactoryBridge<Result<T>>.FailInvalidState(detail);
+    }
 }

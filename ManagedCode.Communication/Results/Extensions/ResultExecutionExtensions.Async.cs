@@ -85,7 +85,7 @@ public static partial class ResultExecutionExtensions
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result> ToResultAsync(this Func<ValueTask> taskFactory)
+    public static async ValueTask<Result> ToResultAsync(this Func<ValueTask> taskFactory)
     {
         try
         {

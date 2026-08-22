@@ -58,6 +58,22 @@ public static class ProblemConstants
         ///     Title used by the generic fallback problem, when nothing more specific is known.
         /// </summary>
         public const string Error = "Error";
+        /// <summary>
+        ///     Title for a required value that was null.
+        /// </summary>
+        public const string NullValue = "Null Value";
+        /// <summary>
+        ///     Title for an invalid argument.
+        /// </summary>
+        public const string InvalidArgument = "Invalid Argument";
+        /// <summary>
+        ///     Title for an argument outside its allowed range.
+        /// </summary>
+        public const string ArgumentOutOfRange = "Argument Out of Range";
+        /// <summary>
+        ///     Title for an operation that conflicts with the current state.
+        /// </summary>
+        public const string InvalidState = "Invalid State";
     }
 
     /// <summary>
@@ -93,6 +109,37 @@ public static class ProblemConstants
         ///     Detail used when a value is rejected without a more specific reason.
         /// </summary>
         public const string InvalidMessage = "Invalid";
+        /// <summary>
+        ///     Detail for a required value that was null.
+        /// </summary>
+        public const string NullValue = "A required value was null.";
+        /// <summary>
+        ///     Detail for an invalid argument.
+        /// </summary>
+        public const string InvalidArgument = "An argument was invalid.";
+        /// <summary>
+        ///     Detail for an argument outside its allowed range.
+        /// </summary>
+        public const string ArgumentOutOfRange = "An argument was outside its allowed range.";
+        /// <summary>
+        ///     Detail for an operation that conflicts with the current state.
+        /// </summary>
+        public const string InvalidState = "The operation is not valid for the current state.";
+    }
+
+    /// <summary>
+    /// Stable machine-readable codes for primitive failures.
+    /// </summary>
+    public static class ErrorCodes
+    {
+        /// <summary>Error code for a required value that was null.</summary>
+        public const string Null = "null";
+        /// <summary>Error code for an invalid argument.</summary>
+        public const string InvalidArgument = "invalid_argument";
+        /// <summary>Error code for an argument outside its allowed range.</summary>
+        public const string ArgumentOutOfRange = "argument_out_of_range";
+        /// <summary>Error code for an operation that conflicts with the current state.</summary>
+        public const string InvalidState = "invalid_state";
     }
 
     /// <summary>

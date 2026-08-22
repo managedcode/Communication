@@ -12,7 +12,7 @@ public static class CommandExecutorExtensions
 {
     /// <summary>Executes a Task handler without a value.</summary>
     [OverloadResolutionPriority(1)]
-    public static ValueTask<Result> ExecuteAsync<TCommand>(
+    public static Task<Result> ExecuteAsync<TCommand>(
         this ICommandExecutor executor,
         TCommand command,
         Func<TCommand, CancellationToken, Task> handler,
@@ -28,7 +28,7 @@ public static class CommandExecutorExtensions
                 await handler(command, token).ConfigureAwait(false);
                 return Result.Succeed();
             },
-            cancellationToken);
+            cancellationToken).AsTask();
     }
 
     /// <summary>Executes a ValueTask handler without a value.</summary>
@@ -53,7 +53,7 @@ public static class CommandExecutorExtensions
 
     /// <summary>Executes a raw Task value handler.</summary>
     [OverloadResolutionPriority(1)]
-    public static ValueTask<Result<TValue>> ExecuteValueAsync<TCommand, TValue>(
+    public static Task<Result<TValue>> ExecuteValueAsync<TCommand, TValue>(
         this ICommandExecutor executor,
         TCommand command,
         Func<TCommand, CancellationToken, Task<TValue>> handler,
@@ -65,7 +65,7 @@ public static class CommandExecutorExtensions
         return executor.ExecuteAsync(
             command,
             async (_, token) => Result<TValue>.Succeed(await handler(command, token).ConfigureAwait(false)),
-            cancellationToken);
+            cancellationToken).AsTask();
     }
 
     /// <summary>Executes a raw ValueTask value handler.</summary>
@@ -86,7 +86,7 @@ public static class CommandExecutorExtensions
 
     /// <summary>Executes a Task result handler without changing its result.</summary>
     [OverloadResolutionPriority(1)]
-    public static ValueTask<Result> ExecuteResultAsync<TCommand>(
+    public static Task<Result> ExecuteResultAsync<TCommand>(
         this ICommandExecutor executor,
         TCommand command,
         Func<TCommand, CancellationToken, Task<Result>> handler,
@@ -98,7 +98,7 @@ public static class CommandExecutorExtensions
         return executor.ExecuteAsync(
             command,
             (_, token) => new ValueTask<Result>(handler(command, token)),
-            cancellationToken);
+            cancellationToken).AsTask();
     }
 
     /// <summary>Executes a ValueTask result handler without changing its result.</summary>
@@ -119,7 +119,7 @@ public static class CommandExecutorExtensions
 
     /// <summary>Executes a Task result handler without changing its result.</summary>
     [OverloadResolutionPriority(1)]
-    public static ValueTask<Result<TValue>> ExecuteResultAsync<TCommand, TValue>(
+    public static Task<Result<TValue>> ExecuteResultAsync<TCommand, TValue>(
         this ICommandExecutor executor,
         TCommand command,
         Func<TCommand, CancellationToken, Task<Result<TValue>>> handler,
@@ -131,7 +131,7 @@ public static class CommandExecutorExtensions
         return executor.ExecuteAsync(
             command,
             (_, token) => new ValueTask<Result<TValue>>(handler(command, token)),
-            cancellationToken);
+            cancellationToken).AsTask();
     }
 
     /// <summary>Executes a ValueTask result handler without changing its result.</summary>

@@ -124,6 +124,30 @@ internal static class ResultFactoryBridge
             (int)HttpStatusCode.NotFound));
     }
 
+    public static TSelf FailNull<TSelf>(string? detail = null)
+        where TSelf : struct, IResultFactory<TSelf>
+    {
+        return TSelf.Fail(Problem.Null(detail));
+    }
+
+    public static TSelf FailArgument<TSelf>(string? detail = null)
+        where TSelf : struct, IResultFactory<TSelf>
+    {
+        return TSelf.Fail(Problem.Argument(detail));
+    }
+
+    public static TSelf FailOutOfRange<TSelf>(string? detail = null)
+        where TSelf : struct, IResultFactory<TSelf>
+    {
+        return TSelf.Fail(Problem.OutOfRange(detail));
+    }
+
+    public static TSelf FailInvalidState<TSelf>(string? detail = null)
+        where TSelf : struct, IResultFactory<TSelf>
+    {
+        return TSelf.Fail(Problem.InvalidState(detail));
+    }
+
     public static TSelf FailValidation<TSelf>(params (string field, string message)[] errors)
         where TSelf : struct, IResultFactory<TSelf>
     {
@@ -264,6 +288,26 @@ internal static class ResultFactoryBridge<TSelf>
     public static TSelf FailNotFound(string? detail = null)
     {
         return ResultFactoryBridge.FailNotFound<TSelf>(detail);
+    }
+
+    public static TSelf FailNull(string? detail = null)
+    {
+        return ResultFactoryBridge.FailNull<TSelf>(detail);
+    }
+
+    public static TSelf FailArgument(string? detail = null)
+    {
+        return ResultFactoryBridge.FailArgument<TSelf>(detail);
+    }
+
+    public static TSelf FailOutOfRange(string? detail = null)
+    {
+        return ResultFactoryBridge.FailOutOfRange<TSelf>(detail);
+    }
+
+    public static TSelf FailInvalidState(string? detail = null)
+    {
+        return ResultFactoryBridge.FailInvalidState<TSelf>(detail);
     }
 
     public static TSelf FailValidation(params (string field, string message)[] errors)

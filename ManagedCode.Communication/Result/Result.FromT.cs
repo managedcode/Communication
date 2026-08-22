@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -69,6 +70,7 @@ public partial struct Result
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async Task<Result<T>> From<T>(Func<Task<T>> task, CancellationToken cancellationToken = default)
     {
         try
@@ -84,6 +86,7 @@ public partial struct Result
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
+    [OverloadResolutionPriority(2)]
     public static async Task<Result<T>> From<T>(Func<Task<Result<T>>> task, CancellationToken cancellationToken = default)
     {
         try
@@ -129,7 +132,8 @@ public partial struct Result
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result<T>> From<T>(Func<ValueTask<T>> valueTask)
+    [OverloadResolutionPriority(1)]
+    public static async ValueTask<Result<T>> From<T>(Func<ValueTask<T>> valueTask)
     {
         try
         {
@@ -144,7 +148,8 @@ public partial struct Result
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result<T>> From<T>(Func<ValueTask<Result<T>>> valueTask)
+    [OverloadResolutionPriority(2)]
+    public static async ValueTask<Result<T>> From<T>(Func<ValueTask<Result<T>>> valueTask)
     {
         try
         {

@@ -83,7 +83,7 @@ public static partial class CollectionResultExecutionExtensions
     /// </summary>
     public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this ValueTask<T[]> valueTask)
     {
-        return await ExecuteAsync(valueTask.AsTask(), CollectionResult<T>.Succeed).ConfigureAwait(false);
+        return await ExecuteAsync(valueTask, CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -91,7 +91,7 @@ public static partial class CollectionResultExecutionExtensions
     /// </summary>
     public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this ValueTask<IEnumerable<T>> valueTask)
     {
-        return await ExecuteAsync(valueTask.AsTask(), CollectionResult<T>.Succeed).ConfigureAwait(false);
+        return await ExecuteAsync(valueTask, CollectionResult<T>.Succeed).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -112,11 +112,11 @@ public static partial class CollectionResultExecutionExtensions
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<T[]>> valueTaskFactory)
+    public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<T[]>> valueTaskFactory)
     {
         try
         {
-            return await ExecuteAsync(valueTaskFactory().AsTask(), CollectionResult<T>.Succeed).ConfigureAwait(false);
+            return await ExecuteAsync(valueTaskFactory(), CollectionResult<T>.Succeed).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -127,7 +127,7 @@ public static partial class CollectionResultExecutionExtensions
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<IEnumerable<T>>> valueTaskFactory, [CallerLineNumber] int lineNumber = 0,
+    public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<IEnumerable<T>>> valueTaskFactory, [CallerLineNumber] int lineNumber = 0,
         [CallerMemberName] string caller = null!, [CallerFilePath] string path = null!)
     {
         try
@@ -146,7 +146,7 @@ public static partial class CollectionResultExecutionExtensions
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<CollectionResult<T>>> valueTaskFactory)
+    public static async ValueTask<CollectionResult<T>> ToCollectionResultAsync<T>(this Func<ValueTask<CollectionResult<T>>> valueTaskFactory)
     {
         try
         {
@@ -163,6 +163,21 @@ public static partial class CollectionResultExecutionExtensions
         try
         {
             var value = await task.ConfigureAwait(false);
+            return projector(value);
+        }
+        catch (Exception exception)
+        {
+            return CollectionResult<T>.Fail(exception);
+        }
+    }
+
+    private static async ValueTask<CollectionResult<T>> ExecuteAsync<T, TValue>(
+        ValueTask<TValue> valueTask,
+        Func<TValue, CollectionResult<T>> projector)
+    {
+        try
+        {
+            var value = await valueTask.ConfigureAwait(false);
             return projector(value);
         }
         catch (Exception exception)

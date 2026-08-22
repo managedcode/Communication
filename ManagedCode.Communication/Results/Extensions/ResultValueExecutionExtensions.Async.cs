@@ -102,7 +102,7 @@ public static partial class ResultValueExecutionExtensions
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result<T>> ToResultAsync<T>(this Func<ValueTask<T>> valueTaskFactory)
+    public static async ValueTask<Result<T>> ToResultAsync<T>(this Func<ValueTask<T>> valueTaskFactory)
     {
         try
         {
@@ -117,7 +117,7 @@ public static partial class ResultValueExecutionExtensions
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result<T>> ToResultAsync<T>(this Func<ValueTask<Result<T>>> valueTaskFactory)
+    public static async ValueTask<Result<T>> ToResultAsync<T>(this Func<ValueTask<Result<T>>> valueTaskFactory)
     {
         try
         {

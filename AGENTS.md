@@ -33,6 +33,7 @@ always check all test are passed.
 - For `/plan` requests, perform research and produce the implementation plan without changing feature code, project references, packages, or tests.
 - Use `ManagedCode.Orleans.RateLimiting` as the distributed Orleans rate-limiting backend instead of duplicating its grain algorithms; Communication owns the `ICommand`, `Result`/`Problem`, telemetry, and adapter layer.
 - Command execution APIs must support handlers returning raw values/tasks by wrapping them into `Result`, and handlers already returning `Result`/`Result<T>` by preserving them unchanged; provide symmetric `Task` and `ValueTask` overloads.
+- Async result APIs must preserve the caller's async shape: a `Task` input or handler returns `Task`, while a `ValueTask` input or handler returns `ValueTask`; keep this symmetric across `Result`, collection-result, conversion, and command-execution helpers.
 - Do not introduce inline string literals in implementation or test code; declare every string value as a named constant under its canonical owner and reuse an existing owner constant before adding a new one.
 
 # Repository Guidelines

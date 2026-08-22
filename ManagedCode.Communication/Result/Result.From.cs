@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Results.Extensions;
@@ -50,6 +51,7 @@ public partial struct Result
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async Task<Result> From(Func<Task> task, CancellationToken cancellationToken = default)
     {
         return await task.ToResultAsync(cancellationToken).ConfigureAwait(false);
@@ -66,7 +68,8 @@ public partial struct Result
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<Result> From(Func<ValueTask> valueTask)
+    [OverloadResolutionPriority(1)]
+    public static async ValueTask<Result> From(Func<ValueTask> valueTask)
     {
         return await valueTask.ToResultAsync().ConfigureAwait(false);
     }

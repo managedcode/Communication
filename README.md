@@ -236,6 +236,8 @@ Complete set of functional combinators for composing operations:
 Pre-defined error categories with appropriate HTTP status codes:
 
 - Validation errors (400 Bad Request)
+- Primitive null, argument, and range failures (400 Bad Request)
+- Invalid state (409 Conflict)
 - Not Found (404)
 - Unauthorized (401)
 - Forbidden (403)
@@ -297,10 +299,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.2.1" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.1" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.1" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.1" />
+<PackageReference Include="ManagedCode.Communication" Version="10.2.2" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.2" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.2" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.2" />
 ```
 
 ## Logging Configuration
@@ -392,7 +394,8 @@ Result<Catalog> preserved = await executor.ExecuteResultAsync(
 
 That is the complete API needed for ordinary retry. The static `CommandExecutor` and `Result<T>.ExecuteAsync` entry points are
 available when dependency injection is not used, and `Task`/`ValueTask`, value/no-value, and existing `Result` overloads are
-symmetric.
+symmetric. The return type preserves the handler shape: `Task` handlers return `Task<Result…>`, while `ValueTask` handlers
+return `ValueTask<Result…>`.
 
 #### How retry works
 
@@ -722,6 +725,49 @@ public class Problem
     public Dictionary<string, object> Extensions { get; set; }
 }
 ```
+
+### Primitive Failures
+
+Expected input and state failures do not need a custom enum or a hand-built `Problem`. The primitive factories provide
+stable RFC 7807 status codes, titles, default details, and machine-readable `errorCode` values:
+
+```csharp
+Result missingCustomer = Result.FailNull("Customer is required.");
+Result invalidPage = Result.FailArgument("Page must be an integer.");
+Result invalidPageSize = Result.FailOutOfRange("Page size must be between 1 and 100.");
+Result<Order> alreadyShipped = Result<Order>.FailInvalidState("The order has already shipped.");
+
+Problem missingValue = Problem.Null();                 // 400, errorCode: null
+Problem invalidArgument = Problem.Argument();          // 400, errorCode: invalid_argument
+Problem outsideRange = Problem.OutOfRange();           // 400, errorCode: argument_out_of_range
+Problem invalidState = Problem.InvalidState();         // 409, errorCode: invalid_state
+```
+
+The same `FailNull`, `FailArgument`, `FailOutOfRange`, and `FailInvalidState` factories are available on `Result`,
+`Result<T>`, the typed `Result.Fail…<T>()` facade, and `CollectionResult<T>`.
+
+Use these when null or invalid input is an expected operation outcome. Continue using
+`ArgumentNullException.ThrowIfNull` for a violated API contract such as a null delegate, serializer, builder, or runtime:
+that is a caller programming error, and the successful `ThrowIfNull` path does not allocate an exception.
+
+### Task and ValueTask Symmetry
+
+Async factories preserve the shape they receive. This applies to `Result.From`, `Result<T>.From`,
+`ToResultAsync`, collection-result factories and conversions, and command-executor handlers:
+
+```csharp
+Func<Task<Customer>> taskFactory = LoadCustomerAsync;
+Task<Result<Customer>> taskResult = Result.From(taskFactory);
+
+Func<ValueTask<Customer>> valueTaskFactory = LoadCachedCustomerAsync;
+ValueTask<Result<Customer>> valueTaskResult = Result.From(valueTaskFactory);
+
+Task<Result<Order>> taskExecution = executor.ExecuteValueAsync(command, taskHandler);
+ValueTask<Result<Order>> valueTaskExecution = executor.ExecuteValueAsync(command, valueTaskHandler);
+```
+
+Choose `ValueTask` when the operation frequently completes synchronously and is consumed once. Keep `Task` for naturally
+asynchronous operations or when callers need task combinators, repeated awaits, or a stored reusable handle.
 
 ### Display Message Helpers
 
@@ -1158,8 +1204,8 @@ whose grain interfaces mention an unserializable type refuses to boot.
 
 ## Railway-Oriented Programming
 
-Every operator has a `Task<Result<T>>` receiver and accepts an ordinary synchronous delegate, so an async chain
-never has to be broken by an `await` and a temporary variable just because one step happens not to be async.
+Async operators accept both `Task<Result<T>>` and `ValueTask<Result<T>>` receivers and preserve that receiver shape, so a
+chain never has to be broken by an `await`, a temporary variable, or a forced `.AsTask()` allocation.
 
 
 > **Package:** `ManagedCode.Communication.Extensions`, namespace `ManagedCode.Communication.Extensions`.
@@ -1196,8 +1242,9 @@ is carried to the end. The exceptions are the ones that exist to handle failure 
 | `Finally` | Run an action on both branches, like a `finally` block. |
 | `ToResult` | Lift a nullable value into a `Result`, failing when it is null. |
 
-Every operator has an `…Async` form that accepts a `Task<Result>` / `Task<Result<T>>` receiver, so an
-asynchronous pipeline never has to be interrupted by an `await` and a temporary variable:
+Every asynchronous operator accepts a `Task<Result>` / `Task<Result<T>>` receiver, and the allocation-conscious lane accepts
+`ValueTask<Result>` / `ValueTask<Result<T>>` with `ValueTask` continuations. Each lane returns the same async shape it receives,
+so an asynchronous pipeline never has to be interrupted by an `await` and a temporary variable:
 
 ```csharp
 var result = await LoadUserAsync(id)
@@ -1207,6 +1254,16 @@ var result = await LoadUserAsync(id)
     .MapAsync(cart => cart.Total)
     .CompensateAsync(problem => RecoverAsync(problem))
     .MatchAsync(total => Results.Ok(total), problem => Results.Problem(problem.Detail));
+```
+
+A `ValueTask` pipeline stays a `ValueTask` end to end:
+
+```csharp
+ValueTask<Result<Receipt>> receipt = cachedOrder
+    .AsValueTask()
+    .EnsureAsync(order => ValueTask.FromResult(order.CanCheckout), Problem.InvalidState())
+    .DoAsync(order => audit.RecordAsync(order.Id))
+    .BindAsync(order => checkout.ExecuteAsync(order));
 ```
 
 Aggregation lives on `Result` itself in the core package, so it needs no extra reference:
@@ -1625,10 +1682,12 @@ grain boundary.
 2. **Avoid boxing**: Use generic methods to prevent boxing of value types
 3. **Chain operations**: Use railway-oriented programming to avoid intermediate variables
 4. **Async properly**: Use `ConfigureAwait(false)` in library code
-5. **Build problems per failure, do not share them**: `Problem` is mutable — it has settable properties and an
+5. **Preserve the async shape**: factories and command helpers return `Task<Result…>` for `Task` inputs and
+   `ValueTask<Result…>` for `ValueTask` inputs, avoiding a forced `Task` allocation on synchronously completed hot paths
+6. **Build problems per failure, do not share them**: `Problem` is mutable — it has settable properties and an
    `Extensions` dictionary that `AddValidationError` writes into. A shared static instance can be mutated by any
    caller that touches it, poisoning every later use. Create one per failure, or use a factory method.
-6. **Observe the executor token in handlers.** Timeout is cooperative by design; ignoring the token means the executor must
+7. **Observe the executor token in handlers.** Timeout is cooperative by design; ignoring the token means the executor must
    await the handler so it does not release a permit or claim while a side effect is still running.
 
 ### Command execution fast path

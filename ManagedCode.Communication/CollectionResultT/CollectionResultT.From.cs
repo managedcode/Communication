@@ -129,7 +129,7 @@ public partial struct CollectionResult<T>
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<CollectionResult<T>> From(Func<ValueTask<T[]>> valueTask)
+    public static async ValueTask<CollectionResult<T>> From(Func<ValueTask<T[]>> valueTask)
     {
         return await valueTask.ToCollectionResultAsync().ConfigureAwait(false);
     }
@@ -137,7 +137,7 @@ public partial struct CollectionResult<T>
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<CollectionResult<T>> From(Func<ValueTask<IEnumerable<T>>> valueTask, [CallerLineNumber] int lineNumber = 0,
+    public static async ValueTask<CollectionResult<T>> From(Func<ValueTask<IEnumerable<T>>> valueTask, [CallerLineNumber] int lineNumber = 0,
         [CallerMemberName] string caller = null!, [CallerFilePath] string path = null!)
     {
         return await valueTask.ToCollectionResultAsync(lineNumber, caller, path).ConfigureAwait(false);
@@ -146,8 +146,8 @@ public partial struct CollectionResult<T>
     /// <summary>
     ///     Invokes and awaits the factory, turning a thrown exception into a failure.
     /// </summary>
-    public static async Task<CollectionResult<T>> From(Func<ValueTask<CollectionResult<T>>> valueTask)
+    public static async ValueTask<CollectionResult<T>> From(Func<ValueTask<CollectionResult<T>>> valueTask)
     {
         return await valueTask.ToCollectionResultAsync().ConfigureAwait(false);
-}
+    }
 }
