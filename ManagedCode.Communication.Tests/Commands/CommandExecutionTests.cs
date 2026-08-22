@@ -226,21 +226,25 @@ public sealed class CommandExecutionTests
             options =>
             {
                 options.Timeout.Enabled = true;
-                options.Timeout.TotalTimeout = TimeSpan.FromMilliseconds(20);
+                options.Timeout.TotalTimeout = TimeSpan.FromSeconds(1);
             },
             store);
         var command = Command.Create("email.send");
         var handlerInvocations = 0;
+        var handlerStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        var timedOut = await CommandExecutor.ExecuteAsync(
+        var timedOutTask = CommandExecutor.ExecuteAsync(
             command,
             async (_, token) =>
             {
                 Interlocked.Increment(ref handlerInvocations);
+                handlerStarted.SetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
                 return 1;
             },
             runtime);
+        await handlerStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var timedOut = await timedOutTask.WaitAsync(TimeSpan.FromSeconds(5));
         var duplicate = await CommandExecutor.ExecuteAsync(
             command,
             (_, _) => Task.FromResult(Interlocked.Increment(ref handlerInvocations)),
