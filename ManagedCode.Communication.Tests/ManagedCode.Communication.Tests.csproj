@@ -14,7 +14,7 @@
         <PackageReference Include="Microsoft.Orleans.TestingHost" Version="10.2.2" />
         <PackageReference Include="ManagedCode.Orleans.RateLimiting.Core" Version="10.1.0" />
         <PackageReference Include="Shouldly" Version="4.3.0" />
-        <PackageReference Include="TUnit" Version="1.65.51" />
+        <PackageReference Include="TUnit" Version="1.65.68" />
         <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.10.0" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
         <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" />
