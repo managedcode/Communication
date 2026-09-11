@@ -31,6 +31,10 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
         TotalItems = totalItems;
         TotalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalItems / pageSize) : 0;
         Problem = problem;
+        if (!isSuccess && problem is not null)
+        {
+            Telemetry.CommunicationDiagnostics.ReportCreatedFailure(problem);
+        }
     }
 
     internal static CollectionResult<T> CreateSuccess(T[]? collection, int pageNumber, int pageSize, int totalItems)

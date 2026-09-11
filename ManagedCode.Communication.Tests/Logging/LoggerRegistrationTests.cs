@@ -36,7 +36,7 @@ public sealed class LoggerRegistrationTests
         CommunicationDiagnostics.ReportFailure(logger, Problem.Create("payment_declined", "card refused", 402));
 
         var entry = sink.Entries.ShouldHaveSingleItem();
-        entry.Level.ShouldBe(LogLevel.Error);
+        entry.Level.ShouldBe(LogLevel.Warning);
         entry.Message.ShouldContain("payment_declined");
         entry.Message.ShouldContain("card refused");
         entry.Message.ShouldContain("402");

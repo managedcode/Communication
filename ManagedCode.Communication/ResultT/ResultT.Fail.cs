@@ -43,7 +43,7 @@ public partial struct Result<T>
     }
 
     /// <summary>
-    ///     Creates a failure from an exception. Only its type name and message are kept — pass the exception to telemetry separately if you need the stack trace.
+    ///     Creates a failure from an exception. Records the exception and stack trace immediately, without retaining the exception in the result.
     /// </summary>
     public static Result<T> Fail(Exception exception) => ResultFactoryBridge<Result<T>>.Fail(exception);
 

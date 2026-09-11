@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <IsPackable>true</IsPackable>
-        <DebugType>embedded</DebugType>
+        <DebugType>portable</DebugType>
     </PropertyGroup>
 
     <!--NuGet-->

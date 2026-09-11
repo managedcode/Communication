@@ -51,13 +51,13 @@ internal static class ResultFactoryBridge
     public static TSelf Fail<TSelf>(Exception exception)
         where TSelf : struct, IResultFactory<TSelf>
     {
-        return TSelf.Fail(Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
+        return TSelf.Fail(IResultFactory<TSelf>.CreateExceptionProblem(exception, (int)HttpStatusCode.InternalServerError));
     }
 
     public static TSelf Fail<TSelf>(Exception exception, HttpStatusCode status)
         where TSelf : struct, IResultFactory<TSelf>
     {
-        return TSelf.Fail(Problem.Create(exception, (int)status));
+        return TSelf.Fail(IResultFactory<TSelf>.CreateExceptionProblem(exception, (int)status));
     }
 
     public static TSelf Fail<TSelf, TEnum>(TEnum errorCode)

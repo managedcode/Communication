@@ -299,10 +299,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.2.2" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.2" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.2" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.2" />
+<PackageReference Include="ManagedCode.Communication" Version="10.2.3" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.3" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.3" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.3" />
 ```
 
 ## Logging Configuration
@@ -1808,8 +1808,8 @@ Every part of the library works with **no registration at all** — no container
 a console app or a unit test.
 
 If you never call `CommunicationLogger.Configure`, logging falls back to an internal factory that writes nowhere
-and throws nothing. If you never subscribe to `CommunicationTelemetry.SourceName`, recording a failure is a
-couple of null checks. Registration turns signals *on*; it is never a precondition for correctness.
+and exports nothing. Result failure factories emit diagnostics automatically; providers and exporters decide
+which signals are collected. Registration is never a precondition for Result correctness.
 
 ### What each entry point does
 
@@ -1889,8 +1889,8 @@ Drop any line you do not need — none of them are load-bearing for the rest.
 ### OpenTelemetry
 
 Failures are reported through `System.Diagnostics.ActivitySource` and `System.Diagnostics.Metrics.Meter`, both of
-which ship with .NET — the library takes **no dependency on the OpenTelemetry SDK**. Subscribe to the source and
-the signals appear; subscribe to nothing and recording costs a couple of null checks.
+which ship with .NET. The **core package has no OpenTelemetry SDK dependency**; the optional
+`ManagedCode.Communication.Extensions` package references the SDK for registration helpers.
 
 ```csharp
 builder.Services.AddOpenTelemetry()
@@ -1898,16 +1898,78 @@ builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics => metrics.AddMeter(CommunicationTelemetry.SourceName));
 ```
 
+### Automatic failures and Aspire registration
+
+Install `ManagedCode.Communication.Extensions` and call this in the application's startup or in the shared
+ServiceDefaults method called by each service:
+
+```csharp
+using ManagedCode.Communication.Extensions.Telemetry;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.AddServiceDefaults();              // existing Aspire logging and OTLP exporters
+builder.AddCommunicationTelemetry();       // Communication traces, metrics and host logger
+```
+
+The extension returns the same builder, supports workers and web applications, and can be called repeatedly.
+It subscribes to all Communication instruments, including command retry, timeout, rate-limiter, and execution
+metrics. It connects automatic failure logging to the host's `ILoggerFactory` when the host starts.
+Configure it **in each service process**: registering it only in AppHost does not subscribe to child services.
+See [Aspire telemetry](https://aspire.dev/fundamentals/telemetry/) and
+[OpenTelemetry .NET instrumentation](https://opentelemetry.io/docs/languages/dotnet/instrumentation/).
+
+For an existing OpenTelemetry configuration, use either the combined extension or the individual subscriptions:
+
+```csharp
+builder.Services.AddOpenTelemetry().WithCommunication();
+
+// Alternatively, when configuring providers separately:
+builder.Services.AddOpenTelemetry()
+    .WithTracing(tracing => tracing.AddCommunicationInstrumentation())
+    .WithMetrics(metrics => metrics.AddCommunicationInstrumentation());
+```
+
+The individual provider extensions only register their signal; configure logging separately using
+`CommunicationLogger.Configure(...)` or the existing ASP.NET Core registration. Outside Aspire, configure
+`builder.Logging.AddOpenTelemetry(...)` and your log/trace/metric exporters as usual. These helpers do not
+choose an exporter, endpoint, sampling policy, or metric export interval for the application.
+
+```csharp
+return Result<Order>.FailNotFound("Order does not exist");
+// Automatically logs the problem and emits a communication.result.failure error span.
+
+// Inside a catch block, the original exception and stack trace are included automatically:
+return Result<Order>.Fail(exception);
+```
+
+This applies to `Result`, `Result<T>`, and `CollectionResult<T>` failure factories. Failures without an exception log at
+Warning with their title, status, and detail (validation failures identify the fields). Failures with an
+exception log at Error with the original exception and stack trace. Wrapping the same `Problem` object again (including conversions between
+result types) does not repeat automatic diagnostics. A new Problem represents a new occurrence. Successful
+factories, reading a result, and `default(Result)` do not emit failure diagnostics.
+
+Automatic failure spans are children of the current activity, or roots if there is none. They mark the failure
+span as Error while leaving the parent's status intact: a caller can recover, or a command retry can succeed.
+`communication.result.created.failures` counts these distinct factory failures, including failures later
+recovered by retries. The existing `communication.result.failures` continues counting explicitly reported
+boundaries and final failed command executions; retry attempts do not inflate that final-outcome counter.
+`Report` and `Track` remain explicit boundary reporting APIs and may add a boundary log/span annotation in
+addition to the automatic creation signal.
+
 | Signal | Name | Notes |
 | --- | --- | --- |
 | Traces | `ManagedCode.Communication` | Failed operations set the span status to `Error` and tag it with `error.type`, `problem.type`, `problem.title`, `problem.status`, `problem.error_code`. |
-| Metric | `communication.result.failures` | Counter of failed results, tagged by `error.type` and `problem.status`. |
+| Metric | `communication.result.created.failures` | Automatic factory failures, once per Problem object, including recovered attempts. |
+| Metric | `communication.result.failures` | Explicitly reported failures and final failed command executions, tagged by `error.type` and `problem.status`. |
 | Metric | `communication.exceptions` | Counter of exceptions converted into a `Problem`. |
 
 ### Recording the real error
 
-A `Problem` built from an exception keeps only the exception's type name and message — **the stack trace and any
-inner exceptions are gone**. Pass the exception itself so it reaches the trace as a proper exception event:
+The `Fail(exception)` overloads immediately write the original exception and stack trace to the log and trace,
+then return a plain Problem. Neither Result nor Problem stores the exception reference. The `Try`/`From`
+helpers follow the same path when a delegate throws, including Task and ValueTask operations.
+`Problem.Create(exception)` alone only builds data; if you use it directly, report the exception at the catch
+site before returning the failed result:
 
 ```csharp
 catch (Exception exception)
@@ -1936,7 +1998,16 @@ var order = await CommunicationDiagnostics.TrackAsync("orders.place",
 while the exception still reaches the log and the trace.
 
 Static, source-generated logging lives in `LoggerCenter` (general) and `ProblemLoggerCenter` (failures), so
-logging a failure allocates nothing when the level is disabled.
+the generated log call avoids formatting when its level is disabled. Automatic failure tracking still maintains
+weakly keyed deduplication state for each Problem; it does not retain Problems globally.
+
+### Debug symbols and internal implementation
+
+Packages use portable PDBs and the existing `.snupkg` symbol package instead of embedding PDBs inside runtime
+DLLs. Untracked source embedding is disabled. These packaging settings affect debugging and package size;
+they do not enable traces, logs, metrics, or an exporter. Public `CommunicationTelemetry.SourceName`, metric
+names, and registration extensions are available to consumers; internal tags and implementation helpers stay
+internal. No access to internal members is needed in ServiceDefaults.
 
 ### Mapping exceptions to status codes
 

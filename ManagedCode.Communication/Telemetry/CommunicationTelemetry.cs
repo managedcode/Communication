@@ -14,7 +14,7 @@ namespace ManagedCode.Communication.Telemetry;
 ///         Built on <see cref="System.Diagnostics.ActivitySource" /> and <see cref="System.Diagnostics.Metrics.Meter" />,
 ///         which ship with .NET. The library therefore takes no dependency on the OpenTelemetry SDK: an application
 ///         that uses OpenTelemetry subscribes to <see cref="SourceName" /> and the signals appear, and an application
-///         that does not pays nothing — with no listener attached, recording is a couple of null checks.
+///         that does not attach providers exports no telemetry.
 ///     </para>
 ///     <para>
 ///         Wire it up with:
@@ -35,6 +35,11 @@ public static class CommunicationTelemetry
 
     /// <summary>Counter of failed results, tagged by error type and status code.</summary>
     public const string FailureCounterName = "communication.result.failures";
+
+    /// <summary>Counter of distinct problems first wrapped in a failed result, including retry attempts.</summary>
+    public const string CreatedFailureCounterName = "communication.result.created.failures";
+
+    internal const string CreatedFailureActivityName = "communication.result.failure";
 
     /// <summary>Counter of exceptions converted into a <see cref="Problem" />.</summary>
     public const string ExceptionCounterName = "communication.exceptions";
@@ -152,6 +157,8 @@ public static class CommunicationTelemetry
         unit: FailureUnit,
         description: FailureCounterDescription);
 
+    private static readonly Counter<long> CreatedFailureCounter = MeterInstance.CreateCounter<long>(CreatedFailureCounterName, FailureUnit);
+
     private static readonly Counter<long> ExceptionCounter = MeterInstance.CreateCounter<long>(
         ExceptionCounterName,
         unit: ExceptionUnit,
@@ -239,8 +246,7 @@ public static class CommunicationTelemetry
     /// <param name="problem">The failure to record.</param>
     /// <param name="exception">
     ///     The exception the problem came from, when there was one. Supplying it attaches the real type, message and
-    ///     stack trace to the span — a <see cref="Problem" /> alone keeps only the type name and the message, so
-    ///     without this the original stack trace never reaches your traces.
+    ///     stack trace to this reporting boundary, independently of automatic failure creation.
     /// </param>
     /// <param name="activity">Span to annotate; defaults to <see cref="Activity.Current" />.</param>
     public static void RecordFailure(Problem? problem, Exception? exception = null, Activity? activity = null)
@@ -260,7 +266,18 @@ public static class CommunicationTelemetry
             ExceptionCounter.Add(1, BuildTags(exception.GetType().FullName ?? errorType, statusCode));
         }
 
-        var target = activity ?? Activity.Current;
+        AnnotateFailure(problem, exception, activity ?? Activity.Current);
+    }
+
+    internal static void RecordCreatedFailure(Problem problem, Exception? exception, Activity? activity)
+    {
+        CreatedFailureCounter.Add(1, BuildTags(ResolveErrorType(problem, exception), problem.StatusCode));
+        AnnotateFailure(problem, exception, activity);
+    }
+
+    private static void AnnotateFailure(Problem? problem, Exception? exception, Activity? target)
+    {
+        var errorType = ResolveErrorType(problem, exception);
         if (target is null)
         {
             return;
@@ -284,7 +301,7 @@ public static class CommunicationTelemetry
         if (exception is not null)
         {
             // Carries type, message and stack trace as an exception event, which is what makes a trace
-            // actionable; the Problem on its own has already discarded the stack.
+            // actionable without adding exception objects to the wire payload.
             target.AddException(exception);
         }
     }

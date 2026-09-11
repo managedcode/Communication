@@ -44,7 +44,7 @@ public partial interface IResultFactory<TSelf>
     /// </summary>
     static virtual TSelf Fail(Exception exception)
     {
-        return TSelf.Fail(Problem.Create(exception, (int)HttpStatusCode.InternalServerError));
+        return TSelf.Fail(CreateExceptionProblem(exception, (int)HttpStatusCode.InternalServerError));
     }
 
     /// <summary>
@@ -52,7 +52,14 @@ public partial interface IResultFactory<TSelf>
     /// </summary>
     static virtual TSelf Fail(Exception exception, HttpStatusCode status)
     {
-        return TSelf.Fail(Problem.Create(exception, (int)status));
+        return TSelf.Fail(CreateExceptionProblem(exception, (int)status));
+    }
+
+    internal static Problem CreateExceptionProblem(Exception exception, int status)
+    {
+        var problem = Problem.Create(exception, status);
+        Telemetry.CommunicationDiagnostics.ReportCreatedFailure(problem, exception);
+        return problem;
     }
 
     /// <summary>

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.Logging;
@@ -14,10 +16,31 @@ namespace ManagedCode.Communication.Telemetry;
 /// <remarks>
 ///     Reporting a failure normally means doing two things that are easy to get out of step: writing a log entry
 ///     and marking the span. These helpers do both, and take the originating <see cref="Exception" /> so the stack
-///     trace survives — a <see cref="Problem" /> built from an exception keeps only its type name and message.
+///     trace survives at an explicit reporting boundary as well as at automatic failure creation.
 /// </remarks>
 public static class CommunicationDiagnostics
 {
+    private const string ValidationFieldSeparator = ", ";
+    private static readonly ConditionalWeakTable<Problem, CreatedFailureState> CreatedFailures = new();
+
+    internal static void ReportCreatedFailure(Problem problem, Exception? exception = null)
+    {
+        var state = CreatedFailures.GetValue(problem, static _ => new CreatedFailureState());
+        if (Interlocked.Exchange(ref state.Reported, 1) != 0)
+        {
+            return;
+        }
+
+        using var activity = CommunicationTelemetry.StartActivity(CommunicationTelemetry.CreatedFailureActivityName);
+        CommunicationTelemetry.RecordCreatedFailure(problem, exception, activity);
+        LogFailure(CommunicationLogger.GetLogger(), problem, exception);
+    }
+
+    private sealed class CreatedFailureState
+    {
+        internal int Reported;
+    }
+
     /// <summary>
     ///     Logs a transient command-attempt exception and keeps the original stack trace without incrementing the
     ///     final-result failure counter.
@@ -90,12 +113,17 @@ public static class CommunicationDiagnostics
 
         CommunicationTelemetry.RecordFailure(problem, exception);
 
+        LogFailure(logger, problem, exception);
+    }
+
+    private static void LogFailure(ILogger? logger, Problem? problem, Exception? exception)
+    {
         if (logger is null)
         {
             return;
         }
 
-        if (problem is not null && TryDescribeValidation(problem, out var fieldCount, out var fields))
+        if (exception is null && problem is not null && TryDescribeValidation(problem, out var fieldCount, out var fields))
         {
             ProblemLoggerCenter.LogValidationProblem(logger, fieldCount, fields);
             return;
@@ -209,7 +237,7 @@ public static class CommunicationDiagnostics
         }
 
         fieldCount = errors.Count;
-        fields = string.Join(", ", errors.Keys);
+        fields = string.Join(ValidationFieldSeparator, errors.Keys);
         return true;
     }
 }

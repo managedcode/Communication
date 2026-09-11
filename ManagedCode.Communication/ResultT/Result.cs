@@ -26,12 +26,16 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
         IsSuccess = isSuccess;
         Value = value;
         Problem = problem;
+        if (!isSuccess && problem is not null)
+        {
+            Telemetry.CommunicationDiagnostics.ReportCreatedFailure(problem);
+        }
     }
 
     /// <summary>
     ///     Initializes a new instance of the Result struct with an exception.
     /// </summary>
-    private Result(Exception exception) : this(false, default, Problem.Create(exception))
+    private Result(Exception exception) : this(false, default, IResultFactory<Result<T>>.CreateExceptionProblem(exception, (int)HttpStatusCode.InternalServerError))
     {
 
     }

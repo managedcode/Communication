@@ -9,6 +9,8 @@ If I tell you to remember something, you do the same, update
 
 
 ## Rules to follow
+- For failure logging, use Warning with failure details when there is no exception, and Error with the original stack trace when an exception is supplied.
+- For automatic Result failure telemetry, record the error and original exception immediately in the failure/catch path; never retain an exception reference in Result or Problem for later diagnostics.
 always check all test are passed.
 - Use TUnit with Microsoft.Testing.Platform for all .NET tests; do not add or retain xUnit packages, attributes, fixtures, configuration, or documentation.
 - Prefer static interface members for result/command factories to centralize shared overloads and avoid duplication across result-like types.

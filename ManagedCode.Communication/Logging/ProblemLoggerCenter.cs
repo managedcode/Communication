@@ -14,13 +14,15 @@ namespace ManagedCode.Communication.Logging;
 /// </remarks>
 public static partial class ProblemLoggerCenter
 {
+    private const string ProblemMessage = "Operation failed: {ProblemTitle} ({StatusCode}) — {ProblemDetail}";
+
     /// <summary>
-    ///     Logs a failure that has no originating exception.
+    ///     Logs a failure without an originating exception at Warning level.
     /// </summary>
     [LoggerMessage(
         EventId = 8001,
-        Level = LogLevel.Error,
-        Message = "Operation failed: {ProblemTitle} ({StatusCode}) — {ProblemDetail}")]
+        Level = LogLevel.Warning,
+        Message = ProblemMessage)]
     public static partial void LogProblem(
         ILogger logger,
         string? problemTitle,

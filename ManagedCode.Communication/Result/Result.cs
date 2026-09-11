@@ -24,6 +24,10 @@ public partial struct Result : IResult, IResultFactory<Result>
     {
         IsSuccess = isSuccess;
         Problem = problem;
+        if (!isSuccess && problem is not null)
+        {
+            Telemetry.CommunicationDiagnostics.ReportCreatedFailure(problem);
+        }
     }
 
     /// <summary>
