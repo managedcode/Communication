@@ -52,6 +52,8 @@ internal static class CqrsStreamNormalizer
                     break;
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (!moved)
                 {
                     break;

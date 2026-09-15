@@ -2192,3 +2192,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - RFC 7807 Problem Details for HTTP APIs
 - Built for seamless integration with Microsoft Orleans
 - Optimized for ASP.NET Core applications
+
+### Cancellation at stream completion
+
+`await stream.ToResultAsync(cancellationToken)` throws `OperationCanceledException` when the caller
+cancels while the source finishes, including sources that end normally without a terminal chunk.
+Cancellation is not converted into an incomplete-stream failure; callers can retain resumable state.

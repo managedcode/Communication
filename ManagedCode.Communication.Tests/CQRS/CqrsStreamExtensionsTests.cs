@@ -328,6 +328,21 @@ public class CqrsStreamExtensionsTests
     }
 
     [Test]
+    public async Task CancellationAtNormalStreamCompletionPropagates()
+    {
+        using var cancellation = new CancellationTokenSource();
+        await Should.ThrowAsync<OperationCanceledException>(async () =>
+            await Completing(cancellation).ToResultAsync(cancellation.Token));
+
+        static async IAsyncEnumerable<Chunk> Completing(CancellationTokenSource cancellation)
+        {
+            yield return CqrsTestStreams.Started();
+            await cancellation.CancelAsync();
+            yield break;
+        }
+    }
+
+    [Test]
     public async Task NullArgumentsAreRejected()
     {
         Should.Throw<ArgumentNullException>(() =>
