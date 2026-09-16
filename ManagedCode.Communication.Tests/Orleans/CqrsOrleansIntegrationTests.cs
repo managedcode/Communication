@@ -29,6 +29,15 @@ public class CqrsOrleansIntegrationTests
     }
 
     [Test]
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task StreamConsumptionPreservesGrainScheduler(bool collectOutcome)
+    {
+        var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());
+        (await grain.DrainOnGrainSchedulerAsync(collectOutcome)).ShouldBeTrue();
+    }
+
+    [Test]
     public async Task ACompletedChunkRoundTripsThroughAGrain()
     {
         var grain = _grainFactory.GetGrain<ICqrsProbeGrain>(Guid.NewGuid());

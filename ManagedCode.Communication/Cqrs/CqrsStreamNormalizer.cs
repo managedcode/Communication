@@ -19,6 +19,7 @@ internal static class CqrsStreamNormalizer
         bool ensureTerminalChunk,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        // Enumeration and disposal must retain the caller scheduler, including Orleans grain identity.
         var enumerator = source.GetAsyncEnumerator(cancellationToken);
         var sequence = 0L;
         var sawTerminal = false;
@@ -32,7 +33,7 @@ internal static class CqrsStreamNormalizer
 
                 try
                 {
-                    moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    moved = await enumerator.MoveNextAsync().ConfigureAwait(true);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -75,7 +76,7 @@ internal static class CqrsStreamNormalizer
         }
         finally
         {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
+            await enumerator.DisposeAsync().ConfigureAwait(true);
         }
 
         if (faultChunk is not null)

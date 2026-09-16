@@ -22,4 +22,6 @@ public interface ICqrsProbeGrain : IGrainWithGuidKey
         CqrsStreamChunk<OrleansProgress, OrleansReport> chunk);
 
     IAsyncEnumerable<CqrsStreamChunk<OrleansProgress, OrleansReport>> StreamAsync();
+
+    Task<bool> DrainOnGrainSchedulerAsync(bool collectOutcome);
 }

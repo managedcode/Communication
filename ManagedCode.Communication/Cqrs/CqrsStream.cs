@@ -63,7 +63,7 @@ public static class CqrsStream
         ArgumentNullException.ThrowIfNull(handler);
 
         return CreateCore<TProgress, TResult>(
-            async writer => Result<TResult>.Succeed(await handler(writer).ConfigureAwait(false)),
+            async writer => Result<TResult>.Succeed(await handler(writer).ConfigureAwait(true)),
             cancellationToken);
     }
 
@@ -124,7 +124,7 @@ public static class CqrsStream
 
                 try
                 {
-                    if (!await channel.Reader.WaitToReadAsync(token).ConfigureAwait(false))
+                    if (!await channel.Reader.WaitToReadAsync(token).ConfigureAwait(true))
                     {
                         break;
                     }
@@ -144,8 +144,8 @@ public static class CqrsStream
         }
         finally
         {
-            await streamCancellation.CancelAsync().ConfigureAwait(false);
-            await producer.ConfigureAwait(false);
+            await streamCancellation.CancelAsync().ConfigureAwait(true);
+            await producer.ConfigureAwait(true);
         }
     }
 
@@ -160,13 +160,13 @@ public static class CqrsStream
 
         try
         {
-            var final = await handler(writer).ConfigureAwait(false);
+            var final = await handler(writer).ConfigureAwait(true);
 
             var terminal = final.IsSuccess
                 ? CqrsStreamChunk<TProgress, TResult>.Completed(final, sequence: writer.NextSequence())
                 : CqrsStreamChunk<TProgress, TResult>.Failed(final, sequence: writer.NextSequence());
 
-            await channel.Writer.WriteAsync(terminal, cancellationToken).ConfigureAwait(false);
+            await channel.Writer.WriteAsync(terminal, cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
@@ -179,7 +179,7 @@ public static class CqrsStream
                 await channel.Writer.WriteAsync(
                         CqrsStreamChunk<TProgress, TResult>.FromException(exception, sequence: writer.NextSequence()),
                         cancellationToken)
-                    .ConfigureAwait(false);
+                    .ConfigureAwait(true);
             }
             catch (OperationCanceledException)
             {

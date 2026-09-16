@@ -194,7 +194,7 @@ public static class CqrsStreamExtensions
 
         var guarded = Guarded(stream, cancellationToken);
 
-        await foreach (var chunk in guarded.WithCancellation(cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in guarded.WithCancellation(cancellationToken).ConfigureAwait(true))
         {
             chunks.Add(chunk);
 
@@ -239,7 +239,7 @@ public static class CqrsStreamExtensions
 
         var chunks = new List<CqrsStreamChunk<TProgress, TResult>>();
 
-        await foreach (var chunk in stream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in stream.WithCancellation(cancellationToken).ConfigureAwait(true))
         {
             chunks.Add(chunk);
         }
@@ -288,7 +288,7 @@ public static class CqrsStreamExtensions
 
         var guarded = Guarded(stream, cancellationToken);
 
-        await foreach (var chunk in guarded.WithCancellation(cancellationToken).ConfigureAwait(false))
+        await foreach (var chunk in guarded.WithCancellation(cancellationToken).ConfigureAwait(true))
         {
             if ((onProgress is not null || onProgressAsync is not null) && chunk.TryGetProgress(out var payload))
             {
@@ -296,7 +296,7 @@ public static class CqrsStreamExtensions
 
                 if (onProgressAsync is not null)
                 {
-                    await onProgressAsync(payload, cancellationToken).ConfigureAwait(false);
+                    await onProgressAsync(payload, cancellationToken).ConfigureAwait(true);
                 }
             }
 

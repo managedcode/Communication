@@ -2198,3 +2198,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 `await stream.ToResultAsync(cancellationToken)` throws `OperationCanceledException` when the caller
 cancels while the source finishes, including sources that end normally without a terminal chunk.
 Cancellation is not converted into an incomplete-stream failure; callers can retain resumable state.
+
+### CQRS streams inside Orleans grains
+
+CQRS stream creation, normalization, `ToResultAsync`, and `ToOutcomeAsync` preserve the caller's scheduler and synchronization context. This keeps subsequent stream reads, disposal, and progress callbacks on the Orleans grain scheduler, preserving the calling grain identity across batches.
+
+```csharp
+var result = await otherGrain.StreamAsync().ToResultAsync(
+    async (progress, cancellationToken) =>
+    {
+        // Runs on this grain's scheduler; grain-owned state remains safe to update.
+        await SaveProgressAsync(progress, cancellationToken);
+    });
+```
