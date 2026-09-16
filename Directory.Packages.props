@@ -1,0 +1,29 @@
+<Project>
+    <PropertyGroup>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+        <PackageVersion Include="DotNet.ReproducibleBuilds" Version="2.0.5" />
+        <PackageVersion Include="ManagedCode.Orleans.RateLimiting.Core" Version="10.2.0" />
+        <PackageVersion Include="ManagedCode.Orleans.RateLimiting.Server" Version="10.2.0" />
+        <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Orleans.Persistence.Memory" Version="10.3.1" />
+        <PackageVersion Include="Microsoft.Orleans.Runtime" Version="10.3.1" />
+        <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
+        <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.3.1" />
+        <PackageVersion Include="Microsoft.Orleans.Server" Version="10.3.1" />
+        <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.3.1" />
+        <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+        <PackageVersion Include="Shouldly" Version="4.3.0" />
+        <PackageVersion Include="System.Threading.RateLimiting" Version="10.0.12" />
+        <PackageVersion Include="TUnit" Version="1.68.0" />
+    </ItemGroup>
+</Project>

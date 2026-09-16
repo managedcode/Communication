@@ -299,10 +299,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.2.3" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.3" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.3" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.3" />
+<PackageReference Include="ManagedCode.Communication" Version="10.2.5" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.5" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.5" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.5" />
 ```
 
 ## Logging Configuration
