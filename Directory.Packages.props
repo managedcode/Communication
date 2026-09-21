@@ -24,6 +24,6 @@
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
         <PackageVersion Include="Shouldly" Version="4.3.0" />
         <PackageVersion Include="System.Threading.RateLimiting" Version="10.0.12" />
-        <PackageVersion Include="TUnit" Version="1.68.0" />
+        <PackageVersion Include="TUnit" Version="1.68.17" />
     </ItemGroup>
 </Project>
