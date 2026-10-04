@@ -31,8 +31,7 @@ public static class CommunicationDiagnostics
             return;
         }
 
-        using var activity = CommunicationTelemetry.StartActivity(CommunicationTelemetry.CreatedFailureActivityName);
-        CommunicationTelemetry.RecordCreatedFailure(problem, exception, activity);
+        CommunicationTelemetry.RecordCreatedFailure(problem, exception, Activity.Current);
         LogFailure(CommunicationLogger.GetLogger(), problem, exception);
     }
 
@@ -55,15 +54,7 @@ public static class CommunicationDiagnostics
         ArgumentNullException.ThrowIfNull(problem);
         ArgumentNullException.ThrowIfNull(exception);
         CommunicationTelemetry.RecordAttemptFailure(command, problem, exception);
-        if (logger is not null)
-        {
-            ProblemLoggerCenter.LogProblemWithException(
-                logger,
-                exception,
-                problem.Title,
-                problem.StatusCode,
-                problem.Detail);
-        }
+        LogFailure(logger, problem, exception);
     }
 
     /// <summary>Logs an infrastructure exception while leaving final execution failure counting to its caller.</summary>
@@ -76,15 +67,7 @@ public static class CommunicationDiagnostics
         ArgumentNullException.ThrowIfNull(problem);
         ArgumentNullException.ThrowIfNull(exception);
         CommunicationTelemetry.RecordInfrastructureFailure(problem, exception, phase);
-        if (logger is not null)
-        {
-            ProblemLoggerCenter.LogProblemWithException(
-                logger,
-                exception,
-                problem.Title,
-                problem.StatusCode,
-                problem.Detail);
-        }
+        LogFailure(logger, problem, exception);
     }
 
     /// <summary>Logs a non-exception infrastructure failure outside the final-result failure counter.</summary>
@@ -92,10 +75,7 @@ public static class CommunicationDiagnostics
     {
         ArgumentNullException.ThrowIfNull(problem);
         CommunicationTelemetry.RecordInfrastructureFailure(problem, phase);
-        if (logger is not null)
-        {
-            ProblemLoggerCenter.LogProblem(logger, problem.Title, problem.StatusCode, problem.Detail);
-        }
+        LogFailure(logger, problem, null);
     }
 
     /// <summary>
@@ -125,18 +105,19 @@ public static class CommunicationDiagnostics
 
         if (exception is null && problem is not null && TryDescribeValidation(problem, out var fieldCount, out var fields))
         {
-            ProblemLoggerCenter.LogValidationProblem(logger, fieldCount, fields);
+            ProblemLoggerCenter.LogValidationFailure(
+                logger, fieldCount, fields, problem.Title, problem.StatusCode, problem.Detail, problem.ErrorCode);
             return;
         }
 
         if (exception is not null)
         {
-            ProblemLoggerCenter.LogProblemWithException(
-                logger, exception, problem?.Title, problem?.StatusCode ?? 0, problem?.Detail);
+            ProblemLoggerCenter.LogExceptionFailure(
+                logger, exception, problem?.Title, problem?.StatusCode ?? 0, problem?.Detail, problem?.ErrorCode);
             return;
         }
 
-        ProblemLoggerCenter.LogProblem(logger, problem!.Title, problem.StatusCode, problem.Detail);
+        ProblemLoggerCenter.LogProblemFailure(logger, problem!.Title, problem.StatusCode, problem.Detail, problem.ErrorCode);
     }
 
     /// <summary>

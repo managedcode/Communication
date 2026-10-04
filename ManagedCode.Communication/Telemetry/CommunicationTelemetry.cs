@@ -39,7 +39,7 @@ public static class CommunicationTelemetry
     /// <summary>Counter of distinct problems first wrapped in a failed result, including retry attempts.</summary>
     public const string CreatedFailureCounterName = "communication.result.created.failures";
 
-    internal const string CreatedFailureActivityName = "communication.result.failure";
+    internal const string CreatedFailureEventName = "communication.result.failure";
 
     /// <summary>Counter of exceptions converted into a <see cref="Problem" />.</summary>
     public const string ExceptionCounterName = "communication.exceptions";
@@ -111,6 +111,7 @@ public static class CommunicationTelemetry
     internal const string ErrorTypeTag = "error.type";
     internal const string ProblemTypeTag = "problem.type";
     internal const string ProblemTitleTag = "problem.title";
+    internal const string ProblemDetailTag = "problem.detail";
     internal const string ProblemStatusTag = "problem.status";
     internal const string ProblemErrorCodeTag = "problem.error_code";
     internal const string InfrastructurePhaseTag = "infrastructure.phase";
@@ -271,8 +272,30 @@ public static class CommunicationTelemetry
 
     internal static void RecordCreatedFailure(Problem problem, Exception? exception, Activity? activity)
     {
-        CreatedFailureCounter.Add(1, BuildTags(ResolveErrorType(problem, exception), problem.StatusCode));
-        AnnotateFailure(problem, exception, activity);
+        var errorType = ResolveErrorType(problem, exception);
+        CreatedFailureCounter.Add(1, BuildTags(errorType, problem.StatusCode));
+        if (activity is null)
+        {
+            return;
+        }
+
+        // A failed Result may be handled or retried. Record its cause on the real operation without
+        // creating a synthetic dependency or deciding that operation's final status/response code.
+        activity.AddEvent(new ActivityEvent(
+            CreatedFailureEventName,
+            tags: new ActivityTagsCollection
+            {
+                { ErrorTypeTag, errorType },
+                { ProblemTypeTag, problem.Type },
+                { ProblemTitleTag, problem.Title },
+                { ProblemDetailTag, problem.Detail },
+                { ProblemStatusTag, problem.StatusCode },
+                { ProblemErrorCodeTag, problem.ErrorCode }
+            }));
+        if (exception is not null)
+        {
+            activity.AddException(exception);
+        }
     }
 
     private static void AnnotateFailure(Problem? problem, Exception? exception, Activity? target)

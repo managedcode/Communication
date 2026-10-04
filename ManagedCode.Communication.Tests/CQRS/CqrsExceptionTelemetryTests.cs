@@ -19,6 +19,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 [NotInParallel]
 public sealed class CqrsExceptionTelemetryTests
 {
+    private const string OperationName = "cqrs-native-operation";
     private const string FailureDetail = "cqrs telemetry exception detail";
     private const string ExceptionEventName = "exception";
     private const string ExceptionStackTraceTag = "exception.stacktrace";
@@ -37,7 +38,7 @@ public sealed class CqrsExceptionTelemetryTests
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = activity =>
             {
-                if (activity.OperationName == CommunicationTelemetry.CreatedFailureActivityName)
+                if (activity.OperationName == OperationName)
                 {
                     activities.Add(activity);
                 }
@@ -65,17 +66,22 @@ public sealed class CqrsExceptionTelemetryTests
             await host.StartAsync(startTimeout.Token).ConfigureAwait(false);
         }
 
+        using var producerActivity = CommunicationTelemetry.StartActivity(OperationName);
+        producerActivity.ShouldNotBeNull();
         var producerException = new CqrsTelemetryException(FailureDetail);
         var producerChunks = await CollectAsync(CqrsStream.Create<ProgressUpdate, FinalResult>(
                 _ => ThrowProducerExceptionAsync(producerException)))
             .ConfigureAwait(false);
         producerChunks.Count.ShouldBe(1);
         var producerFailure = AssertSingleFailure(producerChunks, sequence: 1);
+        producerActivity.Stop();
         AssertTelemetry(logs, activities, producerException, nameof(ThrowProducerExceptionAsync));
         AssertNoExceptionSerialized(producerFailure, producerException);
 
         logs.Clear();
         activities.Clear();
+        using var normalizerActivity = CommunicationTelemetry.StartActivity(OperationName);
+        normalizerActivity.ShouldNotBeNull();
         var normalizerException = new CqrsTelemetryException(FailureDetail);
         var normalizedChunks = await CollectAsync(CqrsStreamNormalizer.NormalizeAsync(
                 ThrowAfterStartedAsync(normalizerException),
@@ -85,6 +91,7 @@ public sealed class CqrsExceptionTelemetryTests
         normalizedChunks.Count.ShouldBe(2);
         normalizedChunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Started);
         var normalizedFailure = AssertSingleFailure(normalizedChunks, sequence: 2);
+        normalizerActivity.Stop();
         AssertTelemetry(logs, activities, normalizerException, nameof(ThrowAfterStartedAsync));
         AssertNoExceptionSerialized(normalizedFailure, normalizerException);
 
@@ -115,10 +122,12 @@ public sealed class CqrsExceptionTelemetryTests
         matchingLogs[0].Level.ShouldBe(LogLevel.Error);
 
         var matchingActivities = activities
-            .Where(activity => Equals(activity.GetTagItem(CommunicationTelemetry.ErrorTypeTag), failure.GetType().Name))
+            .Where(activity => activity.Events.Any(item => item.Name == CommunicationTelemetry.CreatedFailureEventName))
             .ToArray();
         matchingActivities.Length.ShouldBe(1);
-        matchingActivities[0].GetTagItem(CommunicationTelemetry.ProblemErrorCodeTag).ShouldBe(failure.GetType().FullName);
+        matchingActivities[0].Status.ShouldBe(ActivityStatusCode.Unset);
+        matchingActivities[0].Events.Single(item => item.Name == CommunicationTelemetry.CreatedFailureEventName).Tags
+            .Single(tag => tag.Key == CommunicationTelemetry.ProblemErrorCodeTag).Value.ShouldBe(failure.GetType().FullName);
         var exceptionEvent = matchingActivities[0].Events.Single(item => item.Name == ExceptionEventName);
         var stackTrace = exceptionEvent.Tags.Single(tag => tag.Key == ExceptionStackTraceTag).Value?.ToString();
         stackTrace.ShouldNotBeNullOrWhiteSpace();

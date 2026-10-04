@@ -15,6 +15,9 @@ namespace ManagedCode.Communication.Logging;
 public static partial class ProblemLoggerCenter
 {
     private const string ProblemMessage = "Operation failed: {ProblemTitle} ({StatusCode}) — {ProblemDetail}";
+    private const string FailureMessage = "Operation failed: {ProblemTitle} ({StatusCode}) — {ProblemDetail}; ErrorCode: {ErrorCode}";
+    private const string ExceptionFailureMessage = "Operation failed with an exception: {ProblemTitle} ({StatusCode}) — {ProblemDetail}; ErrorCode: {ErrorCode}";
+    private const string ValidationFailureMessage = "Validation failed for {FieldCount} field(s): {Fields}; {ProblemTitle} ({StatusCode}) — {ProblemDetail}; ErrorCode: {ErrorCode}";
 
     /// <summary>
     ///     Logs a failure without an originating exception at Warning level.
@@ -67,4 +70,17 @@ public static partial class ProblemLoggerCenter
         Exception exception,
         int statusCode,
         string operation);
+
+    [LoggerMessage(EventId = 8005, Level = LogLevel.Warning, Message = FailureMessage)]
+    internal static partial void LogProblemFailure(
+        ILogger logger, string? problemTitle, int statusCode, string? problemDetail, string? errorCode);
+
+    [LoggerMessage(EventId = 8006, Level = LogLevel.Error, Message = ExceptionFailureMessage)]
+    internal static partial void LogExceptionFailure(
+        ILogger logger, Exception exception, string? problemTitle, int statusCode, string? problemDetail, string? errorCode);
+
+    [LoggerMessage(EventId = 8007, Level = LogLevel.Warning, Message = ValidationFailureMessage)]
+    internal static partial void LogValidationFailure(
+        ILogger logger, int fieldCount, string fields, string? problemTitle, int statusCode, string? problemDetail, string? errorCode);
+
 }

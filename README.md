@@ -1964,20 +1964,38 @@ choose an exporter, endpoint, sampling policy, or metric export interval for the
 
 ```csharp
 return Result<Order>.FailNotFound("Order does not exist");
-// Automatically logs the problem and emits a communication.result.failure error span.
+// Logs the problem and adds a communication.result.failure event to the current operation.
 
 // Inside a catch block, the original exception and stack trace are included automatically:
 return Result<Order>.Fail(exception);
 ```
 
 This applies to `Result`, `Result<T>`, and `CollectionResult<T>` failure factories. Failures without an exception log at
-Warning with their title, status, and detail (validation failures identify the fields). Failures with an
+Warning with structured `ProblemTitle`, `StatusCode`, `ProblemDetail`, and `ErrorCode` properties
+(validation failures also identify the fields). Failures with an
 exception log at Error with the original exception and stack trace. Wrapping the same `Problem` object again (including conversions between
 result types) does not repeat automatic diagnostics. A new Problem represents a new occurrence. Successful
 factories, reading a result, and `default(Result)` do not emit failure diagnostics.
 
-Automatic failure spans are children of the current activity, or roots if there is none. They mark the failure
-span as Error while leaving the parent's status intact: a caller can recover, or a command retry can succeed.
+Automatic failures add a `communication.result.failure` event to the existing activity, including activities
+created by ASP.NET Core, HTTP clients, Orleans, or another library. The event carries `error.type`,
+`problem.type`, `problem.title`, `problem.detail`, `problem.status`, and `problem.error_code`; originating
+exceptions add an `exception` event with their original type, message, and stack trace. No synthetic dependency
+or root trace is created. The operation's status and native HTTP response code remain unchanged: a caller can
+recover, or a command retry can succeed. Without an active activity, the failure still logs and counts.
+
+For example, an OAuth failure can retain both its HTTP status and its provider/domain machine code:
+
+```csharp
+var problem = Problem.Create("Bad Request", "OAuth refresh token is invalid or expired.", 400);
+problem.ErrorCode = "invalid_grant";
+return Result<Token>.Fail(problem);
+```
+
+The current operation receives an event with `problem.status = 400` and `problem.error_code = invalid_grant`.
+The warning exposes `StatusCode = 400` and `ErrorCode = invalid_grant` without requiring logging scopes.
+The HTTP instrumentation records the response actually sent by the endpoint; an internal handled failure
+cannot overwrite that response or produce an unrelated `InProc: communication.result.failure` dependency.
 `communication.result.created.failures` counts these distinct factory failures, including failures later
 recovered by retries. The existing `communication.result.failures` continues counting explicitly reported
 boundaries and final failed command executions; retry attempts do not inflate that final-outcome counter.
@@ -1986,7 +2004,8 @@ addition to the automatic creation signal.
 
 | Signal | Name | Notes |
 | --- | --- | --- |
-| Traces | `ManagedCode.Communication` | Failed operations set the span status to `Error` and tag it with `error.type`, `problem.type`, `problem.title`, `problem.status`, `problem.error_code`. |
+| Trace event | `communication.result.failure` | Automatic factory failures attach exact Problem fields and exception events to the current operation, preserving its status and native response code. |
+| Traces | `ManagedCode.Communication` | Explicitly reported and final failed operations set the span status to `Error` and tag it with `error.type`, `problem.type`, `problem.title`, `problem.status`, `problem.error_code`. |
 | Metric | `communication.result.created.failures` | Automatic factory failures, once per Problem object, including recovered attempts. |
 | Metric | `communication.result.failures` | Explicitly reported failures and final failed command executions, tagged by `error.type` and `problem.status`. |
 | Metric | `communication.exceptions` | Counter of exceptions converted into a `Problem`. |
