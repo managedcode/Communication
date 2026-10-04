@@ -187,7 +187,7 @@ failures your callers are expected to handle.
 - A long-running command is an `IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>` — typed progress, typed
   answer, one terminal chunk guaranteed.
 - Travels over Server-Sent Events out of the box, so any client can read it without a client library.
-- A handler that throws, or ends early, still produces a terminal `Failed` chunk instead of a dead connection.
+- A handler that throws a nonfatal exception, or ends early, still produces a terminal `Failed` chunk instead of a dead connection. Fatal runtime exceptions propagate and are never converted into recoverable results.
 - The same contract over SignalR, Orleans or gRPC — `CqrsStream.Normalize` on the server, and nothing at all on
   the client: `ToResultAsync` applies the guarantees itself.
 - `ToResultAsync(onProgress)` drains a stream to its answer, so callers never write the loop — and the result
@@ -968,8 +968,9 @@ transport's to handle — it flows into the host's normal exception handling.
 
 ### Writing a handler
 
-`CqrsStream.Create` numbers the chunks, guarantees the terminal chunk, and turns a thrown exception into a
-`Failed` chunk:
+`CqrsStream.Create` numbers the chunks, guarantees the terminal chunk, and turns a nonfatal thrown exception into a
+`Failed` chunk. Fatal runtime exceptions (`OutOfMemoryException`, `StackOverflowException`, and
+`AccessViolationException`) propagate through enumeration so they cannot be mistaken for a completed recovery path:
 
 ```csharp
 app.MapGet("/import", (CancellationToken cancellationToken) =>
