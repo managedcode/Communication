@@ -172,7 +172,7 @@ public static class CqrsStream
         {
             // Consumer went away (or cancelled): nothing left to report, just close the channel below.
         }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not (OutOfMemoryException or StackOverflowException or AccessViolationException))
         {
             try
             {

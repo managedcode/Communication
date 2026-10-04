@@ -44,7 +44,7 @@ internal static class CqrsStreamNormalizer
                     ExceptionDispatchInfo.Capture(passthrough.Inner).Throw();
                     throw; // Unreachable; keeps the compiler happy about `moved`.
                 }
-                catch (Exception exception)
+                catch (Exception exception) when (exception is not (OutOfMemoryException or StackOverflowException or AccessViolationException))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     faultChunk = CqrsStreamChunk<TProgress, TResult>.FromException(
