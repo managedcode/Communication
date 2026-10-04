@@ -1136,7 +1136,34 @@ var options = new CqrsStreamClientOptions
 {
     MalformedChunkBehavior = CqrsMalformedChunkBehavior.Skip  // default: EmitFailedChunk; also: Throw
 };
+
+// Choose finite limits for an operation with a known response budget.
+var boundedOptions = new CqrsStreamClientOptions
+{
+    MaximumFrameBytes = 8 * 1024 * 1024,
+    MaximumFailureBodyBytes = 32 * 1024,
+    MaximumStreamBytes = 128L * 1024 * 1024
+};
+
+await foreach (var chunk in http.GetForCqrsStreamAsync<ImportProgress, ImportReport>(
+                   "/import",
+                   boundedOptions))
+{
+    // Consume each bounded chunk here.
+}
 ```
+
+The client defaults to a 16 MiB physical-frame limit and a 64 KiB non-success-body limit. The hard ceilings are
+64 MiB and 1 MiB. `MaximumStreamBytes` is optional and unset by default so generic long-running streams remain
+compatible; when set, it counts the complete successful response body, including comments and delimiters. Invalid
+or oversized frames and bodies produce stable terminal transport failures. A bounded valid RFC 7807 response keeps
+its problem fields; plain-text, invalid or oversized failure bodies expose only the HTTP status and a safe detail,
+never the raw response body.
+
+Failures produced by `CqrsStream.Create`, `CqrsStream.Normalize`, or
+`CqrsStreamChunk<TProgress, TResult>.FromException(exception)` report the original exception immediately through
+the native failure diagnostics. Error logs and traces retain its throw-site stack; the public chunk, `Result` and
+`Problem` do not retain or serialize an exception object or stack trace. Existing problem fields are preserved.
 
 Two namespaces cover the feature: `ManagedCode.Communication.CQRS` for the contract, the authoring helper and
 the client reader, and `ManagedCode.Communication.AspNetCore.Extensions` for the server transport. The first

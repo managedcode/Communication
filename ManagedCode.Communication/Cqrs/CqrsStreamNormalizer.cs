@@ -46,6 +46,7 @@ internal static class CqrsStreamNormalizer
                 }
                 catch (Exception exception)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     faultChunk = CqrsStreamChunk<TProgress, TResult>.FromException(
                         exception,
                         "The command stream faulted before reaching a terminal chunk.",
@@ -78,6 +79,8 @@ internal static class CqrsStreamNormalizer
         {
             await enumerator.DisposeAsync().ConfigureAwait(true);
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (faultChunk is not null)
         {

@@ -9,7 +9,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
-using ManagedCode.Communication.Constants;
+using ManagedCode.Communication.Logging;
+using ManagedCode.Communication.Telemetry;
 
 namespace ManagedCode.Communication.CQRS;
 
@@ -45,6 +46,7 @@ public static class CqrsHttpClientExtensions
         ArgumentNullException.ThrowIfNull(requestFactory);
 
         var effectiveOptions = options ?? CqrsStreamClientOptions.Default;
+        effectiveOptions.Validate();
 
         return CqrsStreamNormalizer.NormalizeAsync(
             ReadCqrsStreamAsync<TProgress, TResult>(client, requestFactory, effectiveOptions, cancellationToken),
@@ -242,16 +244,42 @@ public static class CqrsHttpClientExtensions
         var chunkTypeInfo = (JsonTypeInfo<CqrsStreamChunk<TProgress, TResult>>)jsonOptions
             .GetTypeInfo(typeof(CqrsStreamChunk<TProgress, TResult>));
 
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using var sourceStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using var stream = new CqrsResponseByteLimitStream(sourceStream, options);
 
         // Deserialize straight from each frame's UTF-8 bytes. Reading frames as strings first would allocate one
         // string per frame purely to hand it to the serializer — a third of this path's total allocation. The
         // parser delegate cannot yield or throw usefully, so it reports the decode outcome as a value and the
         // policy below acts on it.
-        var parser = SseParser.Create(stream, (eventType, data) => DecodeFrame(eventType, data, chunkTypeInfo));
-
-        await foreach (var item in parser.EnumerateAsync(cancellationToken).ConfigureAwait(false))
+        var parser = SseParser.Create(stream, (_, data) => DecodeFrame(data, chunkTypeInfo));
+        await using var enumerator = parser.EnumerateAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
+        while (true)
         {
+            CqrsResponseLimitKind? limitFailure = null;
+            var hasItem = false;
+            try
+            {
+                hasItem = await enumerator.MoveNextAsync().ConfigureAwait(false);
+            }
+            catch (CqrsResponseLimitExceededException exception)
+            {
+                limitFailure = exception.Kind;
+                CommunicationDiagnostics.ReportFailure(CommunicationLogger.GetLogger(), null, exception);
+            }
+
+            if (limitFailure is { } kind)
+            {
+                var problem = CqrsStreamProblems.LimitExceeded(kind);
+                yield return CqrsStreamChunk<TProgress, TResult>.Failed(problem, problem.Detail!);
+                yield break;
+            }
+
+            if (!hasItem)
+            {
+                yield break;
+            }
+
+            var item = enumerator.Current;
             var (chunk, decodeError, isKeepAlive) = item.Data;
 
             // Keep-alive and heartbeat frames carry no payload; they are not protocol errors.
@@ -273,12 +301,12 @@ public static class CqrsHttpClientExtensions
 
                 case CqrsMalformedChunkBehavior.Throw:
                     // Wrapped so stream normalization lets the caller's opt-in exception through untouched.
-                    throw new CqrsStreamPassthroughException(new JsonException(decodeError));
+                    throw new CqrsStreamPassthroughException(new JsonException(CqrsStreamProblems.MalformedDetail));
 
                 default:
                     yield return CqrsStreamChunk<TProgress, TResult>.Failed(
-                        CqrsStreamProblems.Malformed(decodeError),
-                        "The server sent a frame that could not be decoded.");
+                        CqrsStreamProblems.Malformed(),
+                        CqrsStreamProblems.MalformedDetail);
 
                     yield break;
             }
@@ -299,7 +327,6 @@ public static class CqrsHttpClientExtensions
         bool IsKeepAlive);
 
     private static FrameDecode<TProgress, TResult> DecodeFrame<TProgress, TResult>(
-        string eventType,
         ReadOnlySpan<byte> data,
         JsonTypeInfo<CqrsStreamChunk<TProgress, TResult>> chunkTypeInfo)
     {
@@ -313,14 +340,15 @@ public static class CqrsHttpClientExtensions
             var chunk = JsonSerializer.Deserialize(data, chunkTypeInfo);
 
             return chunk is null
-                ? new FrameDecode<TProgress, TResult>(null, $"Frame '{eventType}' decoded to a null CQRS stream chunk.", false)
+                ? new FrameDecode<TProgress, TResult>(null, CqrsStreamProblems.MalformedDetail, false)
                 : new FrameDecode<TProgress, TResult>(chunk, null, false);
         }
         catch (JsonException exception)
         {
+            CommunicationDiagnostics.ReportFailure(CommunicationLogger.GetLogger(), null, exception);
             return new FrameDecode<TProgress, TResult>(
                 null,
-                $"Frame '{eventType}' is not a valid CQRS stream chunk: {exception.Message}",
+                CqrsStreamProblems.MalformedDetail,
                 false);
         }
     }
@@ -337,65 +365,7 @@ public static class CqrsHttpClientExtensions
         CqrsStreamClientOptions options,
         CancellationToken cancellationToken)
     {
-        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-
-        var problem = ParseProblemFromResponse(response, responseBody, options.ResolveJsonOptions())
-                      ?? Problem.Create(
-                          response.StatusCode,
-                          string.IsNullOrWhiteSpace(responseBody)
-                              ? "Request returned " + response.StatusCode
-                              : responseBody);
-
-        return CqrsStreamChunk<TProgress, TResult>.Failed(
-            problem,
-            "Request returned a non-success status code.");
-    }
-
-    private static Problem? ParseProblemFromResponse(
-        HttpResponseMessage response,
-        string responseBody,
-        JsonSerializerOptions jsonOptions)
-    {
-        if (string.IsNullOrWhiteSpace(responseBody))
-        {
-            return null;
-        }
-
-        Problem? parsedProblem;
-        try
-        {
-            parsedProblem = JsonSerializer.Deserialize<Problem>(responseBody, jsonOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
-        catch (NotSupportedException)
-        {
-            return null;
-        }
-
-        if (parsedProblem is null)
-        {
-            return null;
-        }
-
-        if (parsedProblem.StatusCode == 0)
-        {
-            parsedProblem.StatusCode = (int)response.StatusCode;
-        }
-
-        if (string.IsNullOrWhiteSpace(parsedProblem.Title))
-        {
-            parsedProblem.Title = response.ReasonPhrase ?? response.StatusCode.ToString();
-        }
-
-        if (string.IsNullOrWhiteSpace(parsedProblem.Type) ||
-            string.Equals(parsedProblem.Type, ProblemConstants.Types.AboutBlank, StringComparison.Ordinal))
-        {
-            parsedProblem.Type = response.StatusCode.ToString();
-        }
-
-        return parsedProblem;
+        var problem = await CqrsFailureBodyReader.ReadAsync(response, options, cancellationToken).ConfigureAwait(false);
+        return CqrsStreamChunk<TProgress, TResult>.Failed(problem, problem.Detail!);
     }
 }

@@ -345,7 +345,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     {
         ArgumentNullException.ThrowIfNull(exception);
 
-        return Failed(Problem.Create(exception), message, sequence: sequence);
+        return Failed(Result<TResult>.Fail(exception), message, sequence: sequence);
     }
 
     /// <summary>

@@ -173,7 +173,7 @@ public class CqrsHttpClientTests
         chunks.Count.ShouldBe(1);
         chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
         chunks[0].Problem!.StatusCode.ShouldBe(502);
-        chunks[0].Problem!.Detail.ShouldBe("upstream exploded");
+        chunks[0].Problem!.Detail.ShouldBe(CqrsStreamProblems.NonSuccessDetail);
     }
 
     [Test]
@@ -185,12 +185,11 @@ public class CqrsHttpClientTests
         var chunks = await CollectAsync(client.GetForCqrsStreamAsync<ProgressUpdate, FinalResult>("https://example.com/cqrs"));
 
         chunks[0].Problem!.StatusCode.ShouldBe(404);
-        chunks[0].Problem!.Detail.ShouldNotBeNull();
-        chunks[0].Problem!.Detail!.ShouldContain("Request returned");
+        chunks[0].Problem!.Detail.ShouldBe(CqrsStreamProblems.NonSuccessDetail);
     }
 
     [Test]
-    public async Task LiteralNullErrorBody_FallsBackToTheRawBody()
+    public async Task LiteralNullErrorBody_UsesTheSafeStatusOnlyDetail()
     {
         using var client = Client(StubHttpMessageHandler.RespondingWith(
             HttpStatusCode.InternalServerError, "null", "application/problem+json"));
@@ -198,7 +197,7 @@ public class CqrsHttpClientTests
         var chunks = await CollectAsync(client.GetForCqrsStreamAsync<ProgressUpdate, FinalResult>("https://example.com/cqrs"));
 
         chunks[0].Problem!.StatusCode.ShouldBe(500);
-        chunks[0].Problem!.Detail.ShouldBe("null");
+        chunks[0].Problem!.Detail.ShouldBe(CqrsStreamProblems.NonSuccessDetail);
     }
 
     [Test]
@@ -228,6 +227,7 @@ public class CqrsHttpClientTests
         chunks.Count.ShouldBe(1);
         chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
         chunks[0].Problem!.Title.ShouldBe(CqrsStreamProblems.MalformedChunk);
+        chunks[0].Problem!.Detail.ShouldBe(CqrsStreamProblems.MalformedDetail);
     }
 
     [Test]
@@ -277,10 +277,11 @@ public class CqrsHttpClientTests
     {
         using var client = Client(StubHttpMessageHandler.RespondingWithRawSse("data: {invalid\n\n"));
 
-        await Should.ThrowAsync<JsonException>(async () =>
+        var exception = await Should.ThrowAsync<JsonException>(async () =>
             await CollectAsync(client.GetForCqrsStreamAsync<ProgressUpdate, FinalResult>(
                 "https://example.com/cqrs",
                 new CqrsStreamClientOptions { MalformedChunkBehavior = CqrsMalformedChunkBehavior.Throw })));
+        exception.Message.ShouldBe(CqrsStreamProblems.MalformedDetail);
     }
 
     [Test]

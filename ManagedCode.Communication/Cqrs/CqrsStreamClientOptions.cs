@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json;
 
 namespace ManagedCode.Communication.CQRS;
@@ -29,20 +30,42 @@ public enum CqrsMalformedChunkBehavior
 /// </summary>
 public sealed record CqrsStreamClientOptions
 {
+    /// <summary>Default maximum UTF8 bytes in one physical SSE frame.</summary>
+    public const int DefaultMaximumFrameBytes = 16 * 1024 * 1024;
+
+    /// <summary>Largest supported maximum UTF8 bytes in one physical SSE frame.</summary>
+    public const int MaximumFrameBytesLimit = 64 * 1024 * 1024;
+
+    /// <summary>Default maximum UTF8 bytes in a non-success HTTP body.</summary>
+    public const int DefaultMaximumFailureBodyBytes = 64 * 1024;
+
+    /// <summary>Largest supported maximum UTF8 bytes in a non-success HTTP body.</summary>
+    public const int MaximumFailureBodyBytesLimit = 1024 * 1024;
+
     /// <summary>
-    ///     Shared defaults: web-style JSON, malformed frames become a terminal failure, and the stream is guaranteed
-    ///     to end on a terminal chunk.
+    ///     Shared defaults: web-style JSON, finite frame and failure-body limits, malformed frames become a terminal
+    ///     failure, and the stream is guaranteed to end on a terminal chunk.
     /// </summary>
     public static CqrsStreamClientOptions Default { get; } = new();
+
+    /// <summary>Maximum UTF8 wire bytes in one physical SSE frame, including its ending delimiter.</summary>
+    public int MaximumFrameBytes { get; init; } = DefaultMaximumFrameBytes;
+
+    /// <summary>Maximum UTF8 response-body bytes inspected for a non-success HTTP response.</summary>
+    public int MaximumFailureBodyBytes { get; init; } = DefaultMaximumFailureBodyBytes;
+
+    /// <summary>
+    ///     Optional maximum number of UTF8 bytes in the successful HTTP response body. It counts frames, heartbeat
+    ///     comments and delimiters and remains unset by default for long-running streams.
+    /// </summary>
+    public long? MaximumStreamBytes { get; init; }
 
     /// <summary>
     ///     JSON options used to decode chunk payloads. Defaults to <see cref="JsonSerializerDefaults.Web" />.
     /// </summary>
     public JsonSerializerOptions? JsonSerializerOptions { get; init; }
 
-    /// <summary>
-    ///     How to react to a frame that cannot be decoded.
-    /// </summary>
+    /// <summary>How to react to a bounded frame that cannot be decoded.</summary>
     public CqrsMalformedChunkBehavior MalformedChunkBehavior { get; init; } = CqrsMalformedChunkBehavior.EmitFailedChunk;
 
     /// <summary>
@@ -55,6 +78,29 @@ public sealed record CqrsStreamClientOptions
     ///     Fill in <see cref="CqrsStreamChunk{TProgress,TResult}.Sequence" /> for chunks that arrive without one.
     /// </summary>
     public bool AssignSequenceNumbers { get; init; } = true;
+
+    internal void Validate()
+    {
+        if (MaximumFrameBytes is <= 0 or > MaximumFrameBytesLimit)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumFrameBytes));
+        }
+
+        if (MaximumFailureBodyBytes is <= 0 or > MaximumFailureBodyBytesLimit)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumFailureBodyBytes));
+        }
+
+        if (MaximumStreamBytes is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaximumStreamBytes));
+        }
+
+        if (!Enum.IsDefined(MalformedChunkBehavior))
+        {
+            throw new ArgumentOutOfRangeException(nameof(MalformedChunkBehavior));
+        }
+    }
 
     internal JsonSerializerOptions ResolveJsonOptions()
     {
