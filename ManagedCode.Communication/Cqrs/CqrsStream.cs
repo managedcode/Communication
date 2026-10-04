@@ -12,8 +12,9 @@ namespace ManagedCode.Communication.CQRS;
 /// </summary>
 /// <remarks>
 ///     <c>Create</c> is the recommended way to write a handler: it assigns sequence numbers,
-///     guarantees exactly one terminal chunk, and turns an unhandled exception into a
-///     <see cref="CqrsStreamChunkKind.Failed" /> chunk — none of which a hand-written iterator does for free.
+///     guarantees exactly one terminal chunk, and turns an unhandled nonfatal exception into a
+///     <see cref="CqrsStreamChunkKind.Failed" /> chunk. Fatal exceptions, including those inside native aggregates,
+///     propagate — none of which a hand-written iterator does for free.
 /// </remarks>
 public static class CqrsStream
 {
@@ -39,8 +40,8 @@ public static class CqrsStream
     /// </example>
     /// <param name="handler">
     ///     Command body. Report progress through the writer and return the terminal outcome. A returned failed
-    ///     <see cref="Result{TResult}" /> becomes a <see cref="CqrsStreamChunkKind.Failed" /> chunk; a thrown exception
-    ///     becomes one too.
+    ///     <see cref="Result{TResult}" /> becomes a <see cref="CqrsStreamChunkKind.Failed" /> chunk; a thrown nonfatal
+    ///     exception becomes one too, while fatal runtime failures propagate.
     /// </param>
     /// <param name="cancellationToken">Cancelled when the consumer disconnects.</param>
     public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> Create<TProgress, TResult>(
@@ -53,8 +54,8 @@ public static class CqrsStream
     }
 
     /// <summary>
-    ///     Builds a command stream from a push-style handler returning a bare payload. Any thrown exception becomes a
-    ///     <see cref="CqrsStreamChunkKind.Failed" /> chunk.
+    ///     Builds a command stream from a push-style handler returning a bare payload. Any thrown nonfatal exception becomes a
+    ///     <see cref="CqrsStreamChunkKind.Failed" /> chunk; fatal runtime failures propagate.
     /// </summary>
     public static IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>> Create<TProgress, TResult>(
         Func<ICqrsStreamWriter<TProgress, TResult>, ValueTask<TResult>> handler,
@@ -69,8 +70,9 @@ public static class CqrsStream
 
     /// <summary>
     ///     Applies the CQRS stream guarantees to an existing chunk stream: null chunks are dropped, missing
-    ///     sequence numbers are filled in, an enumeration fault becomes a terminal
-    ///     <see cref="CqrsStreamChunkKind.Failed" /> chunk, and the stream is guaranteed to end on a terminal chunk.
+    ///     sequence numbers are filled in, a nonfatal enumeration fault becomes a terminal
+    ///     <see cref="CqrsStreamChunkKind.Failed" /> chunk; fatal runtime failures, including those inside native
+    ///     aggregates, propagate, and the stream is guaranteed to end on a terminal chunk.
     /// </summary>
     /// <remarks>
     ///     The ASP.NET Core Server-Sent Events transport applies this automatically. Use it directly for any other
@@ -172,7 +174,7 @@ public static class CqrsStream
         {
             // Consumer went away (or cancelled): nothing left to report, just close the channel below.
         }
-        catch (Exception exception) when (exception is not (OutOfMemoryException or StackOverflowException or AccessViolationException))
+        catch (Exception exception) when (CqrsRuntimeFailures.FindFatal(exception) is null)
         {
             try
             {

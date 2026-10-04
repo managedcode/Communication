@@ -8,8 +8,9 @@ namespace ManagedCode.Communication.CQRS;
 
 /// <summary>
 ///     Shared stream hygiene applied identically on the producing (server) and consuming (client) side:
-///     drop null chunks, assign monotonic sequence numbers, turn enumeration faults into a terminal
-///     <see cref="CqrsStreamChunkKind.Failed" /> chunk, and guarantee the stream ends on a terminal chunk.
+///     drop null chunks, assign monotonic sequence numbers, turn nonfatal enumeration faults into a terminal
+///     <see cref="CqrsStreamChunkKind.Failed" /> chunk; fatal runtime failures, including those inside native
+///     aggregates, propagate, and guarantee the stream ends on a terminal chunk.
 /// </summary>
 internal static class CqrsStreamNormalizer
 {
@@ -44,7 +45,7 @@ internal static class CqrsStreamNormalizer
                     ExceptionDispatchInfo.Capture(passthrough.Inner).Throw();
                     throw; // Unreachable; keeps the compiler happy about `moved`.
                 }
-                catch (Exception exception) when (exception is not (OutOfMemoryException or StackOverflowException or AccessViolationException))
+                catch (Exception exception) when (CqrsRuntimeFailures.FindFatal(exception) is null)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     faultChunk = CqrsStreamChunk<TProgress, TResult>.FromException(

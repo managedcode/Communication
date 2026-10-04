@@ -8,13 +8,13 @@ Status: Accepted
 
 ## Decision
 
-The producer and normalizer must propagate `OutOfMemoryException`, `StackOverflowException`, and `AccessViolationException` instead of converting them through `FromException`. Preserve conversion for ordinary exceptions, caller cancellation behavior, native channel capacity and backpressure, and source-enumerator disposal.
+The producer and normalizer must propagate direct `OutOfMemoryException`, `StackOverflowException`, and `AccessViolationException`, and must propagate a native `AggregateException` unchanged when its flattened inner exceptions contain one of those fatal types. Never convert these failures through `FromException`. Preserve conversion for ordinary exceptions and aggregates without fatal inner exceptions, caller cancellation behavior, native channel capacity and backpressure, and source-enumerator disposal.
 
 ## Implementation contract
 
-1. Change only the exception-conversion boundaries in `ManagedCode.Communication/CQRS/CqrsStream.cs` and `ManagedCode.Communication/CQRS/CqrsStreamNormalizer.cs`.
-2. Add TUnit tests in `ManagedCode.Communication.Tests/CQRS/CqrsFatalExceptionTests.cs` using preconstructed sentinel instances for all three fatal types. Assert reference identity on propagation, no failed chunk, and disposal after a fatal source enumeration fault. Keep existing ordinary-exception, cancellation, and telemetry tests unchanged.
-3. Update the `CQRSStreaming` requirement and README wording so only nonfatal exceptions are described as converted to failed chunks.
+1. Add the shared public `ManagedCode.Communication.CQRS.CqrsRuntimeFailures.FindFatal(Exception?)` helper. It returns a direct fatal exception unchanged, or the first fatal inner exception from `AggregateException.Flatten().InnerExceptions`; it returns null for ordinary exceptions. The direct nonfatal path must not flatten or allocate. Use this helper only in the existing exception-conversion filters in `CqrsStream.cs` and `CqrsStreamNormalizer.cs`; preserve the original direct/aggregate exception propagation.
+2. Add TUnit tests in `ManagedCode.Communication.Tests/CQRS/CqrsFatalExceptionTests.cs` using preconstructed sentinel instances for all three fatal types, direct aggregates and nested aggregates including a deep aggregate. Exercise both actual `Create` and `Normalize`; assert original exception identity, no failed chunk/handler invocation, and source disposal. Keep ordinary aggregate and cancellation controls unchanged.
+3. Update the `CQRSStreaming` requirement, XML documentation and README wording so only nonfatal exceptions and aggregates without fatal inner exceptions are described as converted to failed chunks.
 4. Verify the focused cases, then run the owning repository's full restore, Release build, format verification, and full TUnit suite. Package release follows the repository's canonical `release.yml` workflow.
 
 ## Compatibility and delivery
