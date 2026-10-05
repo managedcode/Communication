@@ -299,10 +299,10 @@ dotnet add package ManagedCode.Communication.Orleans
 ### PackageReference
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.2.5" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.5" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.5" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.5" />
+<PackageReference Include="ManagedCode.Communication" Version="10.2.12" />
+<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.12" />
+<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.12" />
+<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.12" />
 ```
 
 ## Logging Configuration
@@ -564,6 +564,24 @@ services.AddCommandRateLimiter(limiter);
 `CreateConcurrency`, `CreateSlidingWindow`, and `CreateTokenBucket` provide the other built-in local algorithms. Every factory
 also accepts a permit-count selector. Wrapping an application-owned `PartitionedRateLimiter<ICommand>` does not transfer
 ownership by default; factory-created limiters are owned and disposed by the adapter.
+
+Native Orleans JSON grain storage also preserves `Result` and `Result<T>` success flags, typed values (including
+failure payloads), and `Problem` details. `UseOrleansCommunication()` and `UseOrleansCommandExecution()` register the
+adapter automatically. A standalone storage reader or migration host can register it without starting a silo:
+
+```csharp
+services.AddCommunicationOrleansJsonStorage();
+var nativeSerializer = serviceProvider.GetRequiredService<OrleansJsonSerializer>();
+var storageSerializer = new JsonGrainStorageSerializer(nativeSerializer);
+var restored = storageSerializer.Deserialize<Result<int>>(
+    storageSerializer.Serialize(Result<int>.Succeed(0)));
+// restored.IsSuccess is true and restored.Value is 0.
+```
+
+The reader accepts existing native PascalCase result records and their native `Problem` shape. A legacy explicit `IsFailed: true`
+is accepted when default-value suppression omitted `IsSuccess: false`; missing, non-boolean or contradictory outcome
+flags are rejected rather than inventing an operation outcome. Typed payloads retain
+the native Orleans serializer and its type allow-list. Deploy the adapter to every host that reads this JSON state.
 
 `UseOrleansCommunication()` registers only serializers and grain-call filters. Enable Orleans-backed command idempotency and
 cluster-wide rate limiting explicitly with `UseOrleansCommandExecution()`. The silo must configure grain storage named
