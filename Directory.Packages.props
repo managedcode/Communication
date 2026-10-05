@@ -19,7 +19,7 @@
         <PackageVersion Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
         <PackageVersion Include="Microsoft.Orleans.Serialization.Abstractions" Version="10.3.1" />
         <PackageVersion Include="Microsoft.Orleans.Server" Version="10.3.1" />
-        <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.3.1" />
+        <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.4.0" />
         <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.0" />
         <PackageVersion Include="Shouldly" Version="4.3.0" />
