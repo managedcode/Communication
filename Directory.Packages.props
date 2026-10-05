@@ -6,8 +6,8 @@
     <ItemGroup>
         <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
         <PackageVersion Include="DotNet.ReproducibleBuilds" Version="2.0.5" />
-        <PackageVersion Include="ManagedCode.Orleans.RateLimiting.Core" Version="10.2.0" />
-        <PackageVersion Include="ManagedCode.Orleans.RateLimiting.Server" Version="10.2.0" />
+        <PackageVersion Include="ManagedCode.Orleans.RateLimiting.Core" Version="10.4.1" />
+        <PackageVersion Include="ManagedCode.Orleans.RateLimiting.Server" Version="10.4.1" />
         <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.12" />
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
         <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.12" />
@@ -21,9 +21,9 @@
         <PackageVersion Include="Microsoft.Orleans.Server" Version="10.4.0" />
         <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="10.4.0" />
         <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.2" />
-        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.0" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
         <PackageVersion Include="Shouldly" Version="4.3.0" />
         <PackageVersion Include="System.Threading.RateLimiting" Version="10.0.12" />
-        <PackageVersion Include="TUnit" Version="1.68.17" />
+        <PackageVersion Include="TUnit" Version="1.72.16" />
     </ItemGroup>
 </Project>
