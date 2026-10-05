@@ -118,6 +118,8 @@ public static class CqrsStream
         var writer = new CqrsStreamWriter<TProgress, TResult>(channel.Writer, token);
         var producer = ProduceAsync(handler, writer, channel, token);
 
+        Exception? iterationFailure = null;
+
         try
         {
             while (true)
@@ -140,14 +142,19 @@ public static class CqrsStream
                 {
                     break;
                 }
+                catch (Exception error)
+                {
+                    iterationFailure = error;
+                    break;
+                }
 
                 yield return chunk;
             }
         }
         finally
         {
-            await streamCancellation.CancelAsync().ConfigureAwait(true);
-            await producer.ConfigureAwait(true);
+            await CqrsStreamProducerSettlement.SettleAsync(streamCancellation, producer, iterationFailure)
+                .ConfigureAwait(true);
         }
     }
 

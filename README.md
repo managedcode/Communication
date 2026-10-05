@@ -992,6 +992,13 @@ app.MapGet("/import", (CancellationToken cancellationToken) =>
 Returning a failed `Result<TResult>` reports a business failure; throwing reports an unexpected one. Both arrive
 as a terminal `Failed` chunk, so the consumer has a single code path for "it did not work".
 
+Early consumer disposal cancels the stream and waits for its original producer to finish,
+including the handler's `finally` blocks. If a registered cancellation callback throws,
+the producer is still joined before disposal reports that exception. Distinct iteration,
+cancellation and producer failures retain their original exception instances; fatal runtime
+failures keep their priority. For example, breaking after a `Started` chunk does not permit
+the handler to continue using a resource after the enumerator's `DisposeAsync` completes.
+
 You can hand-write the iterator instead when you want full control:
 
 ```csharp
