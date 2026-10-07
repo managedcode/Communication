@@ -1,8 +1,11 @@
 using System;
 using System.Linq;
+using System.Text.Json;
 using ManagedCode.Communication.Orleans.Converters;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Serialization;
 using Orleans.Serialization;
+using Orleans.Serialization.Configuration;
 
 namespace ManagedCode.Communication.Orleans.Extensions;
 
@@ -13,8 +16,14 @@ public static class OrleansJsonStorageExtensions
     public static IServiceCollection AddCommunicationOrleansJsonStorage(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+        services.Configure<TypeManifestOptions>(options => options.AddAllowedType(typeof(JsonElement)));
         services.Configure<OrleansJsonSerializerOptions>(options =>
         {
+            if (options.JsonSerializerSettings.ContractResolver is not CommunicationJsonElementContractResolver)
+            {
+                options.JsonSerializerSettings.ContractResolver = new CommunicationJsonElementContractResolver(
+                    options.JsonSerializerSettings.ContractResolver ?? new DefaultContractResolver());
+            }
             if (!options.JsonSerializerSettings.Converters.OfType<CommunicationResultJsonConverter>().Any())
             {
                 options.JsonSerializerSettings.Converters.Insert(0, new CommunicationResultJsonConverter());

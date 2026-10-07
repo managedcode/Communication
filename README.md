@@ -583,6 +583,20 @@ is accepted when default-value suppression omitted `IsSuccess: false`; missing, 
 flags are rejected rather than inventing an operation outcome. Typed payloads retain
 the native Orleans serializer and its type allow-list. Deploy the adapter to every host that reads this JSON state.
 
+The registration also preserves typed `System.Text.Json.JsonElement` values in native Newtonsoft storage,
+including elements boxed as `object` in dictionaries and Result payloads. It uses the configured
+Newtonsoft type metadata plus a JSON payload reconstructed by System.Text.Json; other types keep
+the configured contract resolver. Missing or malformed stored JSON fails closed. Previously stored
+Undefined elements cannot recover their lost content. Register the adapter on every reader and writer.
+
+```csharp
+using var document = JsonDocument.Parse("{\"count\":3}");
+var result = Result<object>.Succeed(document.RootElement.Clone());
+var restored = serializer.Deserialize<Result<object>>(serializer.Serialize(result));
+var count = ((JsonElement)restored.Value!).GetProperty("count").GetInt32(); // 3
+```
+
+
 `UseOrleansCommunication()` registers only serializers and grain-call filters. Enable Orleans-backed command idempotency and
 cluster-wide rate limiting explicitly with `UseOrleansCommandExecution()`. The silo must configure grain storage named
 `commandStore`; `ManagedCode.Orleans.RateLimiting` continues to own the distributed algorithms and durable leases. Identity,
