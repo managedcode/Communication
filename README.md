@@ -1,381 +1,419 @@
 # ManagedCode.Communication
 
-**Make failure part of the signature.** A method returns `Result<T>` — either it worked, or it carries a
-`Problem` (RFC 7807) explaining why not. No invisible second return path, one error shape from the domain layer
-to the HTTP response, and railway operators to chain it all without a pyramid of `try`/`catch`.
-
-And when a command is too slow to answer in one call, [**CQRS Streaming**](#cqrs-streaming) reports its progress
-as a typed stream that is guaranteed to tell you how it ended.
-
-Built for .NET 10, with ASP.NET Core, SignalR and Orleans integration in the box.
+`Result<T>` makes an operation's success or failure explicit. Failures carry an RFC 7807 `Problem`;
+long-running operations report typed progress through CQRS streams. The library also provides railway
+composition, reliable command execution, and ASP.NET Core, SignalR, and Orleans adapters for .NET 10.
 
 [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 
-## Overview
+## Contents
 
-### Failure is part of the signature
-
-A method that can fail says so in its return type, and every failure is the same shape — an RFC 7807 `Problem`.
-
-```csharp
-public async Task<Result<Order>> PlaceOrderAsync(Cart cart)
-{
-    // A plain Result widens to Result<Order>, so a guard clause never repeats the type parameter.
-    if (cart.IsEmpty)
-        return Result.FailValidation(("cart", "is empty"));
-
-    Result<Payment> payment = await ChargeAsync(cart.Total);
-
-    // A Problem widens too, so an upstream failure is passed along without being rewrapped.
-    if (payment.IsFailed)
-        return payment.Problem!;
-
-    Order order = await CreateOrderAsync(cart);
-    return Result.Succeed(order);
-}
-```
-
-The success has three equivalent spellings — take whichever reads best:
-
-```csharp
-return Result.Succeed(order);          // T is inferred
-return Result<Order>.Succeed(order);   // spelled out
-return order;                          // a bare value widens to a success
-```
-
-Only *failures* widen from the non-generic side. A `Result` carries no value, so converting a **successful**
-`Result` to `Result<Order>` would have to invent one — it yields a failure instead. Build a success from its
-value, never from a valueless `Result`.
-
-### Compose instead of nesting
-
-Every operator runs only on success and passes a failure straight through, so the happy path reads top to
-bottom with no `try`/`catch` and no null checks in between. Sync or async, the chain never has to be broken by
-an `await`.
-
-```csharp
-var receipt = await LoadCartAsync(cartId)
-    .EnsureAsync(cart => !cart.IsEmpty, Problem.Validation(("cart", "is empty")))
-    .BindAsync(cart => ChargeAsync(cart.Total))
-    .Map(payment => payment.Receipt)
-    .TapAsync(receipt => logger.Issued(receipt))
-    .CompensateAsync(problem => RetryOnce(problem));
-```
-
-### Long-running commands are streams, not polling
-
-A command too slow to answer in one call reports typed progress and a typed answer, and is guaranteed to tell
-you how it ended. Server-Sent Events on the wire; the same contract over SignalR, Orleans or gRPC.
-
-```csharp
-// server
-app.MapGet("/import", (CancellationToken ct) =>
-        CqrsStream.Create<ImportProgress, ImportReport>(async writer =>
-        {
-            for (var i = 1; i <= 10; i++)
-                await writer.ProgressAsync(new ImportProgress(i * 10));
-
-            return Result<ImportReport>.Succeed(new ImportReport(10));
-        }, ct))
-    .WithCommunicationCqrsResults();
-```
-
-The client never writes the loop. Progress arrives through a callback, the answer comes back from the method,
-and nothing blocks:
-
-```csharp
-Result<ImportReport> report = await http
-    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
-    .ToResultAsync(progress => Console.WriteLine($"{progress.Percent}%"));
-```
-
-A stream that breaks, or ends without saying how it went, comes back as an ordinary failed `Result` — so it
-joins the same railway as everything else:
-
-```csharp
-var imported = await http
-    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
-    .ToResultAsync(progress => logger.Progress(progress.Percent))
-    .Map(report => report.Imported)
-    .CompensateAsync(problem => Result<int>.Succeed(0));
-```
-
-### It maps itself to HTTP
-
-Return a `Result<T>` from an action and the filter turns it into a `200` or an RFC 7807 problem response. No
-plumbing in the controller, and the status code comes from the `Problem` rather than from a guess.
-
-```csharp
-[HttpGet("{id}")]
-public Task<Result<Order>> Get(string id) => _orders.FindAsync(id);
-```
-
-### Why this rather than the alternatives
-
-| | What you would otherwise write |
-| --- | --- |
-| Throwing for expected failures | A `try`/`catch` at every layer, and a reviewer who cannot tell from a signature what might come out of it. |
-| A hand-rolled `Result` type | The type is the easy part. The railway operators, RFC 7807 mapping, ASP.NET Core and Orleans integration, and the JSON contract are not. |
-| Polling a status endpoint | A jobs table, a status enum, an expiry policy, and a client loop that is always either too slow or too chatty. |
-| Raw WebSocket or SignalR messages | Your own envelope, your own "it's finished" signal, your own error frame — and both ends agreeing on all three. |
-
-It is also small where it matters: `Result` and `Result<T>` are structs, so a success allocates nothing, and the
-serialization path is hand-written rather than reflective — see [Performance](#performance).
-
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Why a Result type?](#why-a-result-type)
-- [Key Features](#key-features)
 - [Installation](#installation)
-- [Logging Configuration](#logging-configuration)
-- [Core Concepts](#core-concepts)
-- [Quick Start](#quick-start)
-- [CQRS Streaming](#cqrs-streaming)
-- [Railway-Oriented Programming](#railway-oriented-programming)
-- [Command Pattern and Idempotency](#command-pattern-and-idempotency)
-  - [Command Correlation and Tracing Identifiers](#command-correlation-and-tracing-identifiers)
-  - [Idempotency Architecture Overview](#idempotency-architecture-overview)
-- [Error Handling Patterns](#error-handling-patterns)
-- [Integration Guides](#integration-guides)
-- [Performance](#performance)
-- [Registration Reference](#registration-reference)
-- [Observability](#observability)
-- [Behaviour Notes](#behaviour-notes)
-- [Comparison](#comparison)
-- [Best Practices](#best-practices)
-
-## Why a Result type?
-
-An exception is an invisible second return path. Nothing in `Task<Order> PlaceOrderAsync(Cart cart)` tells you it
-can fail with `PaymentDeclinedException`, so callers guard against what they happen to remember. `Task<Result<Order>>`
-says it up front, and the compiler carries that fact everywhere the value goes.
-
-What you get:
-
-- **Failures are in the signature.** A reviewer sees which calls can fail without reading their implementations.
-- **One error shape end to end.** Every failure is a `Problem` (RFC 7807), so a domain rule, a validation error and
-  a crashed dependency all serialize the same way and map to the same HTTP response.
-- **Composition instead of nesting.** Railway operators chain the happy path and short-circuit on the first
-  failure, replacing pyramids of `try`/`catch`.
-- **Cheap success.** `Result` and `Result<T>` are structs; a successful call allocates nothing. Exceptions are only
-  costly when thrown — the point here is the clarity, and not paying stack-capture cost for *expected* failures
-  like "not found" or "invalid input".
-- **Straightforward tests.** Assert on a returned value rather than on which exception escaped.
-
-What it does **not** give you: the compiler will not force you to inspect a `Result`. C# has no enforcement for
-that, and this library ships no analyzer. Ignoring a returned `Result` compiles cleanly — treat that the way you
-treat any ignored return value.
-
-Exceptions are still the right tool for genuinely exceptional, unrecoverable conditions. Results are for the
-failures your callers are expected to handle.
-
-## Key Features
-
-### 🎯 Core Result Types
-
-- **`Result`**: Represents success/failure without a value
-- **`Result<T>`**: Represents success with value `T` or failure
-- **`CollectionResult<T>`**: Represents collections with built-in pagination
-- **`Problem`**: RFC 7807 compliant error details
-
-### 📡 CQRS Streaming
-
-- A long-running command is an `IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>` — typed progress, typed
-  answer, one terminal chunk guaranteed.
-- Travels over Server-Sent Events out of the box, so any client can read it without a client library.
-- A handler that throws a nonfatal exception, or ends early, still produces a terminal `Failed` chunk instead of a dead connection. Fatal runtime exceptions propagate and are never converted into recoverable results, including when wrapped by native aggregate failures.
-- The same contract over SignalR, Orleans or gRPC — `CqrsStream.Normalize` on the server, and nothing at all on
-  the client: `ToResultAsync` applies the guarantees itself.
-- `ToResultAsync(onProgress)` drains a stream to its answer, so callers never write the loop — and the result
-  feeds straight into the railway.
-- See [CQRS Streaming](#cqrs-streaming).
-
-### ⚙️ Static Factory Abstractions
-
-- Leverage C# static interface members to centralize factory overloads for every result, command, and collection type.
-- `IResultFactory<T>` and `ICommandFactory<T>` deliver a consistent surface while bridge helpers remove repetitive boilerplate.
-- Extending the library now only requires implementing the minimal `Succeed`/`Fail` contract—the shared helpers provide the rest.
-
-### 🧭 Pagination Utilities
-
-- `PaginationRequest` encapsulates skip/take semantics, built-in normalization, and clamping helpers.
-- `PaginationOptions` lets you define default, minimum, and maximum page sizes for a bounded API surface.
-- `PaginationCommand` captures pagination intent as a first-class command with generated overloads for skip/take, page numbers, and enum command types.
-- `CollectionResult<T>.Succeed(..., PaginationRequest request, int totalItems)` keeps result metadata aligned with pagination commands.
-
-### 🚂 Railway-Oriented Programming
-
-Complete set of functional combinators for composing operations:
-
-- `Map`: Transform success values
-- `Bind` / `Then`: Chain Result-returning operations
-- `Tap` / `Do`: Execute side effects
-- `Match`: Pattern matching on success/failure
-- `Compensate`: Recovery from failures
-- `Merge` / `Combine`: Aggregate multiple results
-
-### 🌐 Framework Integration
-
-- **ASP.NET Core**: Automatic HTTP response mapping
-- **SignalR**: Hub filters for real-time error handling
-- **Microsoft Orleans**: Grain call filters and surrogates
-- **Command Pattern**: Built-in command infrastructure with idempotency
-
-### 🔍 Observability Built In
-
-- Source-generated `LoggerCenter` APIs provide zero-allocation logging across ASP.NET Core filters, SignalR hubs, and command stores.
-- Call sites automatically check log levels, so you only pay for the logs you emit.
-- Extend logging with additional `[LoggerMessage]` partials to keep high-volume paths allocation free.
-
-### 🛡️ Error Types
-
-Pre-defined error categories with appropriate HTTP status codes:
-
-- Validation errors (400 Bad Request)
-- Primitive null, argument, and range failures (400 Bad Request)
-- Invalid state (409 Conflict)
-- Not Found (404)
-- Unauthorized (401)
-- Forbidden (403)
-- Internal Server Error (500)
-- Custom enum-based errors
+- [Quick start](#quick-start)
+- [Results and problems](#results-and-problems)
+- [Collections and pagination](#collections-and-pagination)
+- [Railway composition](#railway-composition)
+- [HTTP integration](#http-integration)
+- [Commands and identity](#commands-and-identity)
+- [Reliable command execution](#reliable-command-execution)
+- [CQRS streaming](#cqrs-streaming)
+- [Orleans integration](#orleans-integration)
+- [Serialization](#serialization)
+- [Logging and telemetry](#logging-and-telemetry)
+- [Registration reference](#registration-reference)
+- [Development and testing](#development-and-testing)
 
 ## Installation
 
-### Which package do I need?
+Choose the package for the boundary you need. All packages target .NET 10 and use the same release version.
 
-| Package | Contains | Depends on ASP.NET Core? |
+| Package | Public API | Dependencies within this library |
 | --- | --- | --- |
-| `ManagedCode.Communication` | `Result`, `Problem`, commands, native retry/timeout/idempotency/rate limiting, telemetry, and the CQRS streaming contract | no |
-| `ManagedCode.Communication.Extensions` | Railway composition (`Bind`, `Map`, `Tap`, `Then`, `Ensure`, `Match`, `Compensate`…) and `HttpClient` → `Result` helpers | no |
-| `ManagedCode.Communication.AspNetCore` | MVC filters, Minimal API filter, SignalR, DI wiring, and the CQRS Server-Sent Events transport | yes |
-| `ManagedCode.Communication.Orleans` | Orleans grain filters, serialization, idempotency, and the `ManagedCode.Orleans.RateLimiting` command adapter | no (Orleans) |
+| `ManagedCode.Communication` | Results, problems, collections, commands, execution, CQRS contracts and HTTP stream client, diagnostics | None |
+| `ManagedCode.Communication.Extensions` | Railway operators, HTTP result clients, `IHttpClientFactory` resilience, OpenTelemetry registration helpers | Core |
+| `ManagedCode.Communication.AspNetCore` | Minimal API and MVC filters, SignalR filter, SSE transport, host logging setup | Core and Extensions |
+| `ManagedCode.Communication.Orleans` | Native serialization surrogates, grain-call filters, Orleans idempotency and distributed limiter adapters | Core and AspNetCore |
 
-The two "no" packages work anywhere .NET runs — console, worker, Blazor WebAssembly, MAUI. The CQRS streaming
-contract and its client live in the base package on purpose: both ends of a stream need the same chunk type, and
-it costs nothing to carry (`System.Net.ServerSentEvents`, `System.Net.Http.Json` and `System.Threading.Channels`
-all ship in the .NET runtime, so the base package still has no extra NuGet dependency).
+Core and Extensions do not depend on ASP.NET Core. Orleans currently brings the AspNetCore package transitively.
+The core package uses Microsoft.Extensions caching/logging and System.Threading.RateLimiting; it does not
+require the OpenTelemetry SDK. Extensions adds the OpenTelemetry hosting and HTTP client registration helpers.
 
-`ManagedCode.Communication.AspNetCore` pulls in `.Extensions` transitively, so a web application only needs that
-one reference.
+For a web application:
 
-
-### Package Manager Console
-
-```powershell
-# Core library
-Install-Package ManagedCode.Communication
-
-# ASP.NET Core integration
-Install-Package ManagedCode.Communication.AspNetCore
-
-# Minimal API extensions
-Install-Package ManagedCode.Communication.Extensions
-
-# Orleans integration
-Install-Package ManagedCode.Communication.Orleans
+```shell
+dotnet add package ManagedCode.Communication.AspNetCore --version 10.3.4
 ```
 
-### .NET CLI
+For a worker, console, or browser client using railway operators:
 
-```bash
-# Core library
-dotnet add package ManagedCode.Communication
-
-# ASP.NET Core integration
-dotnet add package ManagedCode.Communication.AspNetCore
-
-# Minimal API extensions
-dotnet add package ManagedCode.Communication.Extensions
-
-# Orleans integration
-dotnet add package ManagedCode.Communication.Orleans
+```shell
+dotnet add package ManagedCode.Communication.Extensions --version 10.3.4
 ```
 
-### PackageReference
+For Orleans:
+
+```shell
+dotnet add package ManagedCode.Communication.Orleans --version 10.3.4
+```
+
+A core-only application can reference `ManagedCode.Communication` directly. Equivalent project reference:
 
 ```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.2.12" />
-<PackageReference Include="ManagedCode.Communication.AspNetCore" Version="10.2.12" />
-<PackageReference Include="ManagedCode.Communication.Extensions" Version="10.2.12" />
-<PackageReference Include="ManagedCode.Communication.Orleans" Version="10.2.12" />
+<PackageReference Include="ManagedCode.Communication" Version="10.3.4" />
 ```
 
-## Logging Configuration
+## Quick start
 
-The library includes integrated logging for error scenarios. Configure logging to capture detailed error information:
-
-### ASP.NET Core Setup
+Results and problems work without dependency injection or logging registration:
 
 ```csharp
-var builder = WebApplication.CreateBuilder(args);
+using ManagedCode.Communication;
 
-// Add your logging configuration
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
+static Result<int> Divide(int dividend, int divisor)
+{
+    if (divisor == 0)
+        return Result.FailValidation(("divisor", "Must not be zero."));
 
-// Register other services
-builder.Services.AddControllers();
+    return Result<int>.Succeed(dividend / divisor);
+}
 
-// Configure Communication library - this enables automatic error logging
-builder.Services.ConfigureCommunication();
-
-var app = builder.Build();
+var result = Divide(12, 3);
+if (result.IsSuccess)
+    Console.WriteLine(result.Value);
+else
+    Console.WriteLine(result.Problem.Detail);
 ```
 
-### Minimal API Result Mapping
+Use results for expected failures that callers can handle. Inspect the returned result: C# does not require
+you to handle it. Exceptions remain available for exceptional conditions; adapters can convert them into a
+failed result at a chosen boundary.
 
-Add the optional `ManagedCode.Communication.Extensions` package to bridge Minimal API endpoints with the Result pattern. The
-package provides the `ResultEndpointFilter` and a fluent helper `WithCommunicationResults` that wraps the endpoint builder and
-returns `IResult` instances automatically:
+## Results and problems
+
+### Result types and factories
+
+| Type | Carries |
+| --- | --- |
+| `Result` | Success or a failure without a success value |
+| `Result<T>` | Success value of type `T`, or a failure |
+| `CollectionResult<T>` | Collection plus optional pagination metadata, or a failure |
+| `Problem` | `Type`, `Title`, `StatusCode`, `Detail`, `Instance`, and extension fields |
 
 ```csharp
+Result saved = Result.Succeed();
+Result<int> count = Result.Succeed(42);
+Result<int> explicitCount = Result<int>.Succeed(42);
+Result<int> implicitCount = 42;
+
+Result missing = Result.FailNotFound("Order does not exist.");
+Result<int> typedMissing = missing;
+Result<int> unavailable = Problem.Create("Unavailable", "Try again later.", 503);
+```
+
+A failed untyped `Result` or a `Problem` can become a typed failure. A successful untyped `Result` has no
+value to supply to `Result<T>`; converting it to a typed result produces a failure. Create typed successes
+from their actual values.
+
+`Result` and `Result<T>` are structs. Their state is fixed after construction, but referenced payloads and
+`Problem` objects remain mutable. Avoid changing a shared problem after returning or publishing it.
+`default(Result)` is not a successful result; use a factory to state the intended outcome.
+
+The static factory interfaces (`IResultFactory<T>`, `IResultValueFactory<,>`, `ICommandFactory<T>`, and
+`ICommandValueFactory<,>`) support the shared factory surface. Custom implementations should reuse these
+contracts rather than duplicate every factory overload.
+
+### Failure helpers
+
+```csharp
+var validation = Result.FailValidation(
+    ("email", "Email is required."),
+    ("name", "Name is required."));
+
+var conflict = Result.FailInvalidState("Order is already paid.");
+var unauthorized = Result.FailUnauthorized();
+var forbidden = Result.FailForbidden();
+var missing = Result.FailNotFound("Order does not exist.");
+var serverFailure = Result.Fail("Order could not be saved", "The database is unavailable.");
+```
+
+Primitive helpers cover nulls, invalid arguments, and range failures. Validation and argument failures use
+`400`, invalid state uses `409`, not found uses `404`, unauthorized uses `401`, forbidden uses `403`, and a
+general server failure uses `500`. Use `Problem.Create(...)` when the domain needs a specific status or
+machine-readable code:
+
+```csharp
+var problem = Problem.Create("Payment declined", "Use another payment method.", 422);
+problem.ErrorCode = "payment_declined";
+problem.Extensions["provider"] = "payments";
+return Result<Receipt>.Fail(problem);
+```
+
+`Fail(exception)` and exception-catching `From`/`Try` helpers report the original exception immediately and
+return problem data. They do not retain an exception or its stack trace inside the result. See
+[Logging and telemetry](#logging-and-telemetry).
+
+### Display messages
+
+Use `ToDisplayMessage` to choose an application message by error code, with a default message when needed:
+
+```csharp
+using ManagedCode.Communication.Results.Extensions;
+
+var messages = new Dictionary<string, string>
+{
+    ["payment_declined"] = "Please choose another payment method."
+};
+var message = result.ToDisplayMessage(messages, defaultMessage: "The operation could not be completed.");
+```
+
+Resolver delegates, dictionaries, key-value sequences, and tuple mappings are supported. Keep user-facing
+messages separate from operational details that may contain information unsuitable for a public response.
+
+## Collections and pagination
+
+`PaginationRequest` stores `Skip`/`Take` and provides normalization, page conversion, clamping, and slicing.
+`PaginationCommand` carries the request through the command contract.
+
+```csharp
+using ManagedCode.Communication.CollectionResultT;
+using ManagedCode.Communication.Commands;
+
+var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 100);
+var request = PaginationRequest.FromPage(pageNumber: 2, pageSize: 25, options);
+
+var products = await repository.ReadAsync(request.Skip, request.Take, cancellationToken);
+var total = await repository.CountAsync(cancellationToken);
+return CollectionResult<Product>.Succeed(products, request, total, options);
+```
+
+Supply the total number of items, not the number in the current page. Prefer normalized bounds before
+reading data; `PaginationRequest.Create(skip, take, options)` normalizes incoming skip/take values, while
+`ToSlice(totalItems, options)` returns the bounded offset and length for an in-memory collection.
+
+## Railway composition
+
+Install Extensions and import `ManagedCode.Communication.Extensions`:
+
+```csharp
+using ManagedCode.Communication;
+using ManagedCode.Communication.Extensions;
+
+var receipt = await LoadCartAsync(cartId)
+    .EnsureAsync(cart => !cart.IsEmpty, Problem.Validation(("cart", "Must contain an item.")))
+    .BindAsync(cart => ChargeAsync(cart.Total))
+    .Map(payment => payment.Receipt)
+    .TapAsync(receipt => logger.LogInformation("Issued {ReceiptId}", receipt.Id));
+```
+
+Success-path operators skip their work when the incoming result failed and preserve its problem. Recovery
+operators run on failure. `Task` and `ValueTask` receivers preserve their async shape, including result,
+collection, conversion, and execution helpers.
+
+| Operator | Purpose |
+| --- | --- |
+| `Map` / `MapAsync` | Transform a successful value |
+| `Bind` / `Then` | Run a step returning another result |
+| `Tap` / `Do` | Run a side effect while preserving the result |
+| `Ensure` | Turn a failed predicate into a problem |
+| `Match` | Project success and failure into a chosen output |
+| `Compensate` | Recover using the incoming problem |
+| `Else` | Supply an alternative on failure |
+| `Finally` | Run after either outcome |
+
+`Map` accepts a synchronous mapper even on an async receiver; `MapAsync` accepts an asynchronous mapper.
+The async variants support matching `Task` and `ValueTask` delegates.
+
+### Aggregating results
+
+Aggregation lives on `Result` in Core and needs no Extensions reference:
+
+```csharp
+var validation = Result.MergeAll(ValidateEmail(email), ValidateName(name));
+var orders = Result.CombineAll(LoadOrder(firstId), LoadOrder(secondId));
+```
+
+| Factory | Behavior |
+| --- | --- |
+| `Merge` | Return the first failure, or success when every input succeeds |
+| `MergeAll` | Aggregate every failure |
+| `Combine` | Collect success values, or return the first failure |
+| `CombineAll` | Collect success values, or aggregate every failure |
+
+When every failure is validation-related, the aggregate merges validation fields. Mixed failures retain the
+original problems under `Problem.Extensions["errors"]` rather than disguising them as validation failures.
+
+## HTTP integration
+
+### Minimal API
+
+`WithCommunicationResults()` belongs to AspNetCore, in the `MinimalApi` namespace. Apply it to an endpoint
+or a group:
+
+```csharp
+using ManagedCode.Communication;
+using ManagedCode.Communication.AspNetCore.Extensions;
+using ManagedCode.Communication.AspNetCore.MinimalApi;
+
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.ConfigureCommunication();
-
+builder.Services.AddCommunicationAspNetCore(); // connect failure logging to the host
 var app = builder.Build();
 
-// Apply the filter to a single endpoint
-app.MapGet("/orders/{id}", async (Guid id, IOrderService orders) =>
-        await orders.GetAsync(id))
-   .WithCommunicationResults();
+app.MapGet("/orders/{id}", async (Guid id, IOrderService orders) => await orders.FindAsync(id))
+    .WithCommunicationResults();
 
-// Or apply it to a group so every route inherits the conversion
 app.MapGroup("/orders")
-   .WithCommunicationResults()
-   .MapPost(string.Empty, async (CreateOrder command, IOrderService orders) =>
-        await orders.CreateAsync(command));
+    .WithCommunicationResults()
+    .MapPost(string.Empty, async (CreateOrder request, IOrderService orders) =>
+        await orders.CreateAsync(request));
 
 app.Run();
 ```
 
-Handlers can return any `Result` or `Result<T>` instance and the filter will reuse the existing ASP.NET Core converters so
-you do not need to write manual `IResult` translations.
+The HTTP wire contract is a raw success payload or an RFC 7807 problem, not a serialized `Result<T>` envelope.
+Minimal API successes map to `200 OK` with a value or `204 No Content` without one; failures use the problem's
+status and fields. Native `Microsoft.AspNetCore.Http.IResult` responses pass through unchanged.
 
-### Native Command Execution
-
-Reliability is part of `ICommand` execution rather than a separate request or pipeline abstraction. The native executor owns
-retry, cooperative total/per-attempt timeout, atomic idempotency, circuit breaking, rate limiting, and telemetry. It accepts
-raw-value handlers and handlers that already return `Result`/`Result<T>`.
-
-#### Retry: the small setup
-
-For the common DI case, enable retry once and execute the command. `ExecuteValueAsync` wraps a raw value in `Result<T>`;
-`ExecuteResultAsync` preserves a handler's existing `Result<T>` without nesting it:
+### MVC controllers
 
 ```csharp
+using ManagedCode.Communication.AspNetCore.Extensions;
+
+builder.Services.AddControllers();
+builder.Services.AddCommunication(); // host logging plus MVC filters
+app.MapControllers();
+```
+
+A controller can return `Result` or `Result<T>` directly. The filters convert results, model-validation
+failures, and exceptions at the MVC boundary. To register only the filters, use
+`AddControllers(options => options.AddCommunicationFilters())` or `services.AddCommunicationFilters()`;
+choose one registration path.
+
+`UseCommunication()` currently adds no middleware. It is not needed for these filters or Minimal API result
+mapping. These registrations also do not install a global exception handler for arbitrary application code.
+
+### HTTP result clients
+
+The Extensions package reads the same raw-payload/RFC 7807 wire contract:
+
+```csharp
+using ManagedCode.Communication.Extensions.Http;
+
+Result<OrderDto> order = await httpClient.SendForResultAsync<OrderDto>(
+    () => new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}"),
+    cancellationToken);
+```
+
+Use the success-projection overload for files, empty/optional bodies, or another non-JSON response:
+
+```csharp
+var invoice = await httpClient.SendForResultAsync(
+    () => new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}/invoice"),
+    static async (response, token) => await response.Content.ReadAsByteArrayAsync(token),
+    cancellationToken);
+```
+
+The library still handles transport failures and RFC 7807 failures. Serialized result envelopes are rejected.
+Plain-text remote errors remain supported. Connection failures produce `503` and client-side timeouts
+produce `504`; explicit caller cancellation propagates `OperationCanceledException`.
+
+For command-aware reliability, supply the command, a fresh-request factory, and an execution runtime:
+
+```csharp
+var response = await httpClient.SendForResultAsync<OrderDto, Command<OrderQuery>>(
+    command,
+    current => new HttpRequestMessage(HttpMethod.Get, $"/orders/{current.Value!.OrderId}"),
+    execution,
+    cancellationToken);
+```
+
+The factory must create a new message for each attempt and preserve the same business idempotency key.
+
+### IHttpClientFactory resilience
+
+```csharp
+using ManagedCode.Communication.Extensions.Http;
+
+services.AddHttpClient<CatalogClient>()
+    .AddCommunicationResilienceHandler(options =>
+    {
+        options.Execution.Retry.MaxRetries = 3;
+        options.Execution.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(1);
+    });
+```
+
+This handler uses native command execution and returns the final `HttpResponseMessage`. It honors
+`Retry-After` and partitions circuit state by request authority. Automatic replay is limited to content-free
+`GET`, `HEAD`, `OPTIONS`, and `TRACE`. Unsafe methods and requests with content pass through once; use an
+explicit command/request-factory overload when the application has established that replay is safe.
+
+`ConfigureHttpClientDefaults(client => client.AddCommunicationResilienceHandler())` sets shared defaults.
+`RemoveCommunicationResilienceHandler()` disables this handler for an individual client.
+
+### SignalR
+
+```csharp
+using ManagedCode.Communication.AspNetCore.Extensions;
+
+builder.Services.AddSignalR(options => options.AddCommunicationHubFilter());
+```
+
+The filter reports and converts exceptions for Result-returning hub methods. Streaming hub methods use
+the CQRS stream contract described below.
+
+## Commands and identity
+
+`Command` and `Command<T>` implement `ICommand`. They carry the operation identity, logical command type,
+UTC timestamp, optional correlation/causation identifiers, user/session identifiers, and metadata.
+
+```csharp
+using ManagedCode.Communication.Commands;
+
+var command = Command.From("order.place", new PlaceOrder(cartId))
+    .WithCorrelationId(correlationId)
+    .WithCausationId(parentCommandId)
+    .WithUserId(userId)
+    .WithSessionId(sessionId)
+    .WithMetadata(metadata => metadata.Priority = CommandPriority.High);
+```
+
+Factories generate a UUIDv7 `CommandId` and UTC timestamp. Supply the optional trailing `commandId` only
+when preserving an externally supplied idempotency key or replaying an existing message. Keep that identity
+stable across retries; a newly created command is a new operation.
+
+```csharp
+var replayed = Command<PlaceOrder>.From(payload, idempotencyKey);
+```
+
+Correlation, causation, trace, span, user, and session identifiers remain unset until the caller assigns them.
+Use `WithTraceId` and `WithSpanId` to propagate an existing W3C activity context. `CommandMetadata` also
+contains retry budget, timeout, priority, trace metadata, tags, and application extension fields.
+
+Serialized actor identifiers are data, not proof of authority. Authorization, idempotency scopes, and limiter
+identity selectors must read trusted application context.
+
+## Reliable command execution
+
+The native executor composes retry, cooperative timeouts, idempotency, circuit breaking, rate limiting, and
+diagnostics around `ICommand`. It has no separate request envelope or external resilience-library dependency.
+
+### Register and execute
+
+```csharp
+using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Commands.Execution;
+using ManagedCode.Communication.Commands.Extensions;
+
 services.AddCommandExecution(options =>
 {
     options.Retry.Enabled = true;
-    options.Retry.MaxRetries = 3; // first attempt + at most 3 retries
+    options.Retry.MaxRetries = 3;
     options.Retry.Delay = TimeSpan.FromMilliseconds(200);
     options.Retry.BackoffType = RetryBackoffType.Exponential;
     options.Retry.UseJitter = true;
+    options.Timeout.TotalTimeout = TimeSpan.FromSeconds(15);
+    options.Timeout.AttemptTimeout = TimeSpan.FromSeconds(5);
 });
 
 var executor = serviceProvider.GetRequiredService<ICommandExecutor>();
@@ -383,173 +421,96 @@ var command = Command.From("catalog.refresh", new RefreshCatalog(sourceId));
 
 Result<Catalog> wrapped = await executor.ExecuteValueAsync(
     command,
-    (current, token) => catalogService.RefreshAsync(current.Value, token),
+    (current, token) => catalogService.RefreshAsync(current.Value!, token),
     cancellationToken);
 
 Result<Catalog> preserved = await executor.ExecuteResultAsync(
     command,
-    (current, token) => catalogService.RefreshAsResultAsync(current.Value, token),
+    (current, token) => catalogService.RefreshAsResultAsync(current.Value!, token),
     cancellationToken);
 ```
 
-That is the complete API needed for ordinary retry. The static `CommandExecutor` and `Result<T>.ExecuteAsync` entry points are
-available when dependency injection is not used, and `Task`/`ValueTask`, value/no-value, and existing `Result` overloads are
-symmetric. The return type preserves the handler shape: `Task` handlers return `Task<Result…>`, while `ValueTask` handlers
-return `ValueTask<Result…>`.
+`ExecuteValueAsync` wraps raw values; `ExecuteResultAsync` preserves an existing result without nesting.
+Task handlers produce Task results and ValueTask handlers produce ValueTask results. No-value handlers are
+also supported. Without DI, use `CommandExecutionRuntime` with static `CommandExecutor.ExecuteAsync` or
+`Result<T>.ExecuteAsync` entry points.
 
-#### How retry works
+### Retry decisions and delays
 
-`MaxRetries` counts retries after the initial call. For example, `MaxRetries = 3` means no more than four physical attempts.
-The executor stops immediately on success, a non-retryable failure, caller cancellation, total timeout, or exhausted budget.
-When retry is disabled, it does not invoke retry predicates or retry callbacks and does not add exhaustion metadata.
+`MaxRetries` counts retries after the first attempt: `3` allows up to four physical attempts. Execution stops
+on success, a permanent failure, cancellation, total timeout, or exhausted budget.
 
-The built-in policy retries these failures:
-
-| Failure source | Retried by default |
+| Source | Default retry decision |
 | --- | --- |
-| Failed `Result` | HTTP-style status `408`, `429`, `500`, `502`, `503`, or `504` |
+| Failed result | Status `408`, `429`, `500`, `502`, `503`, or `504` |
 | Exception | `TimeoutException`, `HttpRequestException`, or `IOException` |
-| Caller cancellation | Never |
-| Validation, conflict, authentication, and other permanent failures | Never |
+| Caller cancellation | Never retry |
+| Other failures | Do not retry unless an application predicate selects them |
 
-For every retry, the delay is selected in this order:
+Delay selection uses `DelayGenerator` first, then an authoritative HTTP/rate-limiter `Retry-After`, then
+constant, linear, or exponential backoff. `MaxDelay` caps built-in backoff after jitter. Custom/hinted delays
+are checked against `MaxRetryAfter`; a hint above that limit returns the current failure with
+`retryAfterExceedsMaximum = true` instead of retrying before the hinted time.
 
-1. A non-negative value returned by `Retry.DelayGenerator`.
-2. An authoritative HTTP or rate-limiter `Retry-After` value.
-3. The configured constant, linear, or exponential backoff.
+`ShouldRetry` and `ShouldRetryException` customize the default decisions. `ShouldRetryAsync` replaces both
+with a command-aware decision. `OnRetry` and `OnRetriesExhausted` observe retries; observer errors are logged
+without replacing the handler's outcome. Predicate or delay-generator errors are infrastructure failures.
 
-Built-in delays are capped by `MaxDelay`; jitter is applied before the final cap. A custom generated delay or authoritative
-hint is checked against `MaxRetryAfter`, and an authoritative value is never shortened. If it exceeds that safety maximum, the
-executor returns the current failure with `retryAfterExceedsMaximum = true` instead of retrying too early. Malformed hints fall
-back to normal backoff.
+`CommandMetadata.MaxRetries` can lower the global budget. `RetryCount` carries retries consumed on previous
+hops. Exhausted retryable failures expose `retriesExhausted` and `retryAttempts` in `Problem.Extensions`.
+Disabling retry also disables its predicates, callbacks, and exhaustion metadata.
 
-`CommandMetadata.MaxRetries` can reduce the global budget for one command. `CommandMetadata.RetryCount` represents retries
-already consumed on an earlier queue or Orleans hop, so forwarding a command does not silently reset its budget. When the final
-retryable failure consumes the budget, the returned `Problem.Extensions` contains `retriesExhausted = true` and
-`retryAttempts`; `OnRetriesExhausted` is then notified.
+### Timeout and circuit breaker
 
-Use the command-aware hooks only when the defaults are not specific enough:
+Total timeout covers the whole execution; attempt timeout covers one physical attempt. Cancellation is
+cooperative: handlers receive a cancellation token and are awaited even if they ignore it. This prevents a
+still-running side effect from outliving its limiter permit or idempotency claim. A late handler completion
+can therefore return a normal outcome after the timeout requested cancellation.
 
 ```csharp
 services.AddCommandExecution(options =>
 {
-    options.Retry.Enabled = true;
-    options.Retry.MaxRetries = 5;
-    options.Retry.MaxDelay = TimeSpan.FromSeconds(10);
-    options.Retry.MaxRetryAfter = TimeSpan.FromMinutes(2);
-
-    // When supplied, this decision replaces the two built-in predicates.
-    options.Retry.ShouldRetryAsync = static (context, _) => ValueTask.FromResult(
-        context.Exception is HttpRequestException ||
-        context.Problem.StatusCode is 429 or 503 ||
-        context.Problem.ErrorCode == "provider_busy");
-
-    // Return null (or a negative value) to continue with Retry-After/built-in backoff.
-    options.Retry.DelayGenerator = static (context, _) =>
-        ValueTask.FromResult<TimeSpan?>(context.RetryNumber == 1
-            ? TimeSpan.Zero
-            : null);
-
-    options.Retry.OnRetry = (retry, _) =>
-    {
-        logger.LogWarning(
-            "Retry {RetryNumber} for {CommandType} after {Delay}",
-            retry.RetryNumber,
-            retry.Command.CommandType,
-            retry.Delay);
-        return ValueTask.CompletedTask;
-    };
+    options.CircuitBreaker.Enabled = true;
+    options.CircuitBreaker.MinimumThroughput = 20;
+    options.CircuitBreaker.FailureRatio = 0.5;
+    options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
+    options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
 });
 ```
 
-Observer callback failures are logged as infrastructure failures and never replace the handler outcome. Predicate or delay
-generator failures are configuration/infrastructure failures and are not treated as another transient handler failure.
+Use the circuit breaker's partition selector and failure predicates to match the dependency being protected.
+A single idempotency owner holds the retry sequence; each attempt then passes through timeout, circuit
+breaker, limiter, and handler. Limiter permits are reacquired for each attempt.
 
-#### Composition and side-effect safety
+### Idempotency ownership and recovery
 
-One idempotency owner holds the complete retry sequence. Each physical attempt then passes through its per-attempt timeout,
-circuit breaker, rate limiter, and handler. A per-attempt timeout can be retried inside the larger total timeout; the total
-timeout ends the whole sequence. Rate-limit permits are reacquired for every attempt, and lease-cleanup failures never rerun a
-handler which already returned success.
-
-Retry cannot by itself make a side effect safe. A provider may commit a payment or message and lose the response, leaving the
-caller with a retryable `500`/timeout. For side-effecting commands, propagate the command's idempotency key to the downstream
-provider or use an outbox/inbox transaction. The HTTP command helpers create a fresh `HttpRequestMessage` for every attempt,
-but the request factory must preserve the same business idempotency key.
-
-#### Composing all capabilities
-
-The same options object composes retry with timeout, circuit breaking, and idempotency when those capabilities are needed:
+Register a store and provide trusted scope and immutable-request fingerprint selectors:
 
 ```csharp
-using ManagedCode.Communication.Commands;
-using ManagedCode.Communication.Commands.Execution;
-
-var options = new CommandExecutionOptions();
-options.Retry.Enabled = true;
-options.Retry.MaxRetries = 3;
-options.Retry.Delay = TimeSpan.FromMilliseconds(200);
-options.Timeout.TotalTimeout = TimeSpan.FromSeconds(15);
-options.Timeout.AttemptTimeout = TimeSpan.FromSeconds(5);
-options.CircuitBreaker.Enabled = true;
-options.CircuitBreaker.MinimumThroughput = 20;
-options.CircuitBreaker.FailureRatio = 0.5;
-options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
-
-// Required when an idempotency store is present. Read scope from trusted authenticated
-// execution context, and fingerprint from the immutable business request payload.
-options.Idempotency.ScopeSelector = _ => currentTenant.Id;
-options.Idempotency.FingerprintSelector = current =>
-    Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(current.Value)));
-
-var execution = new CommandExecutionRuntime(options);
-var command = Command.From("payment.capture", new CapturePayment(paymentId));
-
-// A raw Task<Payment> is wrapped into Result<Payment>.
-Result<Payment> payment = await CommandExecutor.ExecuteAsync(
-    command,
-    (current, cancellationToken) =>
-        paymentHandler.HandleAsync(current, cancellationToken),
-    execution,
-    cancellationToken);
-
-// An existing Result<Payment> is preserved, not wrapped as Result<Result<Payment>>.
-Result<Payment> preserved = await Result<Payment>.ExecuteAsync(
-    command,
-    (current, cancellationToken) =>
-        resultPaymentHandler.HandleAsync(current, cancellationToken),
-    execution,
-    cancellationToken);
-```
-
-Timeout is deliberately cooperative: it cancels the token supplied to the queue, retry delay, limiter, and handler. A handler
-that ignores or catches cancellation is awaited and may return a late normal result; abandoning it would let a side effect keep
-running after its permit or idempotency claim was released. Use `TotalTimeout` for the whole execution and `AttemptTimeout` for
-each physical attempt.
-
-Idempotency is a single atomic record containing scope, operation, request fingerprint, result contract, fenced owner, and
-terminal outcome. Claims are renewed while a handler is active. A cancellation, crash window, lost finalization response, or
-expired running claim becomes `Indeterminate` and is never automatically retried. Once the real outcome is established, an
-operator can call `TryResolveIndeterminateAsync`; call `TryResetIndeterminateAsync` only after establishing that retry is safe.
-For external side effects, propagate the same idempotency key to the downstream provider or use an outbox. No in-process
-library can promise exactly-once behavior across an uncoordinated external system and a process crash.
-
-For dependency injection, register the executor and the local idempotency store:
-
-```csharp
-services.AddCommandIdempotency();
+services.AddCommandIdempotency(); // process-local memory store
 services.AddCommandExecution(options =>
 {
-    options.Retry.Enabled = true;
-    options.Timeout.TotalTimeout = TimeSpan.FromSeconds(15);
     options.Idempotency.ScopeSelector = _ => tenantContext.TenantId;
     options.Idempotency.FingerprintSelector = command => requestHasher.Hash(command);
 });
-
-var executor = serviceProvider.GetRequiredService<ICommandExecutor>();
 ```
 
-Local partitions use `System.Threading.RateLimiting`:
+A custom `ICommandIdempotencyStore` can be registered with `AddCommandIdempotency<TStore>()`. The atomic
+record includes scope, operation identity, fingerprint, result contract, fenced owner, and terminal outcome.
+Running claims are renewed while the handler is active; matching duplicate operations can reuse the outcome.
+
+Cancellation, a crash window, a lost finalization response, or an expired running claim can leave an
+`Indeterminate` outcome. The executor does not automatically repeat it. After independently establishing the
+real outcome, call `TryResolveIndeterminateAsync`; reset with `TryResetIndeterminateAsync` only when replay
+is known to be safe.
+
+For external effects, propagate the same business idempotency key to the provider or coordinate an outbox/inbox.
+Retry and a local store cannot guarantee exactly-once effects across an uncoordinated external system.
+
+Core registration adds no cleanup hosted service. Stores implementing `ICommandIdempotencyMaintenance`
+can be maintained by the application. AspNetCore provides a hosted cleanup overload for such stores.
+
+### Local rate limiting
 
 ```csharp
 var limiter = PartitionedCommandRateLimiter.CreateFixedWindow(
@@ -561,34 +522,196 @@ var limiter = PartitionedCommandRateLimiter.CreateFixedWindow(
 services.AddCommandRateLimiter(limiter);
 ```
 
-`CreateConcurrency`, `CreateSlidingWindow`, and `CreateTokenBucket` provide the other built-in local algorithms. Every factory
-also accepts a permit-count selector. Wrapping an application-owned `PartitionedRateLimiter<ICommand>` does not transfer
-ownership by default; factory-created limiters are owned and disposed by the adapter.
+`CreateConcurrency`, `CreateSlidingWindow`, and `CreateTokenBucket` provide the other local algorithms.
+Factories support a permit-count selector. Factory-created limiters are owned/disposed by the adapter;
+wrapping an application-owned `PartitionedRateLimiter<ICommand>` does not transfer ownership by default.
+Lease cleanup failures do not rerun a handler that already succeeded. Distributed limiting uses the Orleans
+adapter in [Orleans integration](#orleans-integration).
 
-Orleans grain calls and persisted state use the native Communication surrogates for
-Result, Result<T>, commands, collections, and Problem. Communication does not configure JSON
-grain storage or install JSON converters. The application owns its storage provider and serializer:
+## CQRS streaming
 
-~~~csharp
-var storageSerializer = new OrleansGrainStorageSerializer(
-    serviceProvider.GetRequiredService<Orleans.Serialization.Serializer>());
-var restored = storageSerializer.Deserialize<Result<int>>(
-    storageSerializer.Serialize(Result<int>.Succeed(0)));
-// restored.IsSuccess is true and restored.Value is 0.
-~~~
+A stream is `IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>`. The contract contains optional progress
+and one terminal result; the HTTP transport renders it as Server-Sent Events.
 
-Native storage preserves successful default values, failure payloads, and typed Problem details
-through the published Orleans surrogates.
+| Kind | Payload | Meaning |
+| --- | --- | --- |
+| `Started` | Optional `ProgressResult` | Execution has started |
+| `Progress` | `ProgressResult` | An intermediate update |
+| `Completed` | Successful `Final` | Terminal success |
+| `Failed` | Failed `Final` containing a problem | Terminal failure |
 
-`UseOrleansCommunication()` registers only serializers and grain-call filters. Enable Orleans-backed command idempotency and
-cluster-wide rate limiting explicitly with `UseOrleansCommandExecution()`. The silo must configure grain storage named
-`commandStore`; `ManagedCode.Orleans.RateLimiting` continues to own the distributed algorithms and durable leases. Identity,
-tenant, role, resource, IP, and metadata selectors default to `null`/empty so serialized command fields are not trusted as
-authorization context:
+`Sequence`, `EventId`, and `Message` carry ordering and presentation data. SSE event names are `cqrs-started`,
+`cqrs-progress`, `cqrs-completed`, and `cqrs-failed`; `Kind` is written as a string in the JSON payload.
+
+### Write and serve a stream
 
 ```csharp
+using ManagedCode.Communication;
+using ManagedCode.Communication.CQRS;
+using ManagedCode.Communication.AspNetCore.Extensions;
+
+builder.Services.AddCommunicationCqrs();
+
+app.MapGet("/import", (CancellationToken cancellationToken) =>
+        CqrsStream.Create<ImportProgress, ImportReport>(async writer =>
+        {
+            await writer.StartedAsync(new ImportProgress(0));
+            for (var i = 1; i <= 10; i++)
+            {
+                await DoWorkAsync(writer.CancellationToken);
+                await writer.ProgressAsync(new ImportProgress(i * 10));
+            }
+
+            return Result<ImportReport>.Succeed(new ImportReport(10));
+        }, cancellationToken))
+    .WithCommunicationCqrsResults();
+```
+
+`CqrsStream.Create` numbers chunks and converts the handler's returned result into a terminal chunk.
+It converts nonfatal producer exceptions into failures. Fatal runtime exceptions propagate, including when
+nested in an `AggregateException`. Original exceptions are reported immediately; public chunks contain
+problem data rather than exception objects or stack traces.
+
+For a handwritten iterator, use the `Started`, `Progress`, `Completed`, and `Failed` chunk factories, then
+`CqrsStream.Normalize` when publishing through a transport that does not normalize automatically. The SSE
+adapter normalizes by default: missing terminal results become `CqrsStreamProblems.IncompleteStream`, and
+nonfatal enumeration failures become failed chunks. An exception before a handler returns its stream belongs
+to the host's ordinary exception handling.
+
+Early consumer disposal cancels and joins the producer, including its `finally` blocks, before disposal
+completes. Cancellation callback failures do not skip that join. Handlers must cooperate with cancellation
+to allow disposal to complete promptly.
+
+### Read progress and the result
+
+The HTTP stream client lives in Core and requires no ASP.NET Core reference:
+
+```csharp
+using ManagedCode.Communication.CQRS;
+
+Result<ImportReport> report = await httpClient
+    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
+    .ToResultAsync(progress => Console.WriteLine($"{progress.Percent}%"), cancellationToken);
+```
+
+Use the two-parameter callback for awaited work, so an async lambda cannot bind to an `Action<TProgress>`:
+
+```csharp
+var report = await stream.ToResultAsync(async (progress, token) =>
+    await SaveProgressAsync(progress, token), cancellationToken);
+```
+
+The callback finishes before the next chunk is read. `ToResultAsync` handles terminal failures, interrupted
+transports, and streams that end without a terminal chunk. Explicit caller cancellation propagates
+`OperationCanceledException`, including cancellation while an incomplete source is finishing.
+
+| API | Retains |
+| --- | --- |
+| `ToResultAsync([onProgress])` | Terminal result, with optional live progress callback |
+| `ToOutcomeAsync()` | Result, progress values, and all chunks |
+| `AsCqrsStream()` | A normalized stream for continued chunk-by-chunk enumeration |
+| `ToChunkListAsync()` | Exactly the received chunks; enumeration faults still propagate |
+| `chunks.ToStreamResult()` | Interprets an already collected sequence as its final result |
+
+`ToOutcomeAsync` collects the stream in memory; choose `ToResultAsync` for long streams when history is not
+needed. The returned `Task<Result<TResult>>` can continue through async railway operators.
+
+### Server options and mixed responses
+
+`AddCommunicationCqrs` registers shared server options and the MVC stream filter.
+`AddControllers(options => options.AddCommunicationCqrsFilters())` adds the MVC filter directly instead.
+Minimal API endpoints use `WithCommunicationCqrsResults`, with optional per-endpoint options:
+
+```csharp
+using ManagedCode.Communication.AspNetCore;
+
+app.MapGet("/import", Handler)
+    .WithCommunicationCqrsResults(new CqrsStreamServerOptions
+    {
+        AssignSequenceNumbers = true,
+        EnsureTerminalChunk = true
+    });
+```
+
+Both options default to `true`. When a handler dynamically chooses a stream or another HTTP response, keep
+its return type as `Microsoft.AspNetCore.Http.IResult` and use the library-owned transport:
+
+```csharp
+return CqrsStreamHttpResults.ServerSentEvents(updates);
+```
+
+Sequence IDs support an application's replay protocol. Communication does not persist streams, retain a
+replay history, or automatically resume from `Last-Event-ID`; durable execution/reconnection belongs to the
+application.
+
+### Client bounds and malformed input
+
+```csharp
+var options = new CqrsStreamClientOptions
+{
+    MaximumFrameBytes = 8 * 1024 * 1024,
+    MaximumFailureBodyBytes = 32 * 1024,
+    MaximumStreamBytes = 128L * 1024 * 1024,
+    MalformedChunkBehavior = CqrsMalformedChunkBehavior.EmitFailedChunk
+};
+```
+
+Defaults are a 16 MiB physical-frame limit and 64 KiB non-success-body limit; hard ceilings are 64 MiB and
+1 MiB respectively. `MaximumStreamBytes` is optional and counts the entire successful body, including SSE
+comments and delimiters. Configure an operation-appropriate total budget for bounded workloads.
+
+Malformed-chunk handling supports `EmitFailedChunk` (default), `Skip`, or `Throw`. Bounds violations produce
+stable transport failures. Valid bounded RFC 7807 failures retain their fields; invalid, oversized, or
+plain-text failure bodies expose status and a safe detail without copying the raw body into the result.
+
+### SignalR and Orleans streams
+
+All stream helpers accept `IAsyncEnumerable`, so the same reader works with SignalR, Orleans, or another
+transport implementing that contract:
+
+```csharp
+var report = await hubConnection
+    .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import", cancellationToken)
+    .ToResultAsync(progress => Console.WriteLine(progress.Percent), cancellationToken);
+```
+
+A SignalR server can return `CqrsStream.Normalize(ImportAsync(token), cancellationToken: token)`.
+A stream produced by `Create` already supplies the contract. `ToResultAsync`, `ToOutcomeAsync`, and
+`AsCqrsStream` also normalize incoming streams; fatal runtime failures and caller cancellation retain their
+exception semantics.
+
+CQRS creation, normalization, enumeration, disposal, and progress callbacks preserve the caller's scheduler
+and synchronization context. Inside an Orleans grain, awaited progress callbacks therefore remain on that
+grain's scheduler:
+
+```csharp
+var report = await otherGrain.StreamAsync().ToResultAsync(
+    async (progress, token) => await SaveProgressAsync(progress, token));
+```
+
+## Orleans integration
+
+```csharp
+using ManagedCode.Communication.Orleans.Extensions;
+
+siloBuilder.UseOrleansCommunication();
+clientBuilder.UseOrleansCommunication();
+```
+
+These methods add incoming/outgoing grain-call filters and limiter options. Communication's native typed
+surrogates are registered through Orleans-generated metadata. This setup does not enable command execution,
+choose a grain storage serializer, or install JSON grain-storage converters.
+
+### Distributed command execution
+
+Enable the execution adapter explicitly and configure named `commandStore` grain storage on the silo:
+
+```csharp
+using ManagedCode.Communication.Orleans.Extensions;
+using ManagedCode.Orleans.RateLimiting.Core.Extensions;
+
 siloBuilder
-    .AddMemoryGrainStorage("commandStore") // choose a durable provider in production
+    .AddMemoryGrainStorage("commandStore") // use a durable provider for production recovery
     .UseOrleansCommunication()
     .UseOrleansCommandExecution(
         execution =>
@@ -613,1670 +736,244 @@ siloBuilder.Services.AddOrleansRequestRateLimiting(options =>
     options.AddTenant("tenant-commands", required: true));
 ```
 
-Command execution emits OpenTelemetry-compatible `ActivitySource` and `Meter` signals automatically. Subscribe to
-`CommunicationTelemetry.SourceName` to collect total/per-attempt duration, active executions/queues, retry and timeout events,
-idempotency hit/miss/wait/conflict/indeterminate/store-error events, circuit transitions/rejections, limiter queue/rejection/
-cleanup failures, and final outcomes. Valid serialized W3C trace/span identifiers become the remote parent context; actor IDs
-are not emitted as metric tags.
+A client using the distributed executor calls `clientBuilder.UseOrleansCommandExecution(...)` as well.
+`ManagedCode.Orleans.RateLimiting` owns distributed algorithms and durable leases; Communication owns the
+`ICommand`/result adapter, execution orchestration, and diagnostics. User, tenant, role, resource, IP, and
+metadata selectors default to unset values; supply selectors from trusted execution context.
 
-### Resilient HTTP Clients
+## Serialization
 
-The extensions package turns HTTP responses into `Result` instances. Pass a command and execution runtime when the request
-should use the native retry, timeout, idempotency, rate-limit, and telemetry behaviors:
+### Native Orleans serialization
 
-```csharp
-using ManagedCode.Communication.Extensions.Http;
+`ManagedCode.Communication.Orleans` uses Orleans-generated serialization with typed surrogates for results,
+problems, commands, pagination, collections, and CQRS chunks. Stable field IDs preserve success flags, typed
+values (including failure payloads), problem fields, and command metadata.
 
-Result<OrderDto> result = await httpClient.SendForResultAsync<OrderDto, Command<OrderQuery>>(
-    command,
-    current => new HttpRequestMessage(HttpMethod.Get, $"/orders/{current.Value.OrderId}"),
-    execution,
-    cancellationToken);
-
-if (result.IsSuccess)
-{
-    // access result.Value without manually reading the HTTP payload
-}
-
-// Keep the same transport and RFC 7807 handling for a non-JSON success body.
-var download = await httpClient.SendForResultAsync(
-    () => new HttpRequestMessage(HttpMethod.Get, $"/orders/{orderId}/invoice"),
-    static async (response, cancellationToken) =>
-        await response.Content.ReadAsByteArrayAsync(cancellationToken));
-```
-
-The helpers use the existing `HttpResponseMessage` converters. A successful response carries the raw JSON payload
-emitted by `WithCommunicationResults()`; serialized `Result<T>` envelopes are rejected. Non-success RFC 7807 responses
-are deserialized back into `Problem`, preserving `type`, `title`, `detail`, `instance`, and extension members. Plain-text
-error bodies remain supported when the remote endpoint does not implement RFC 7807.
-Connection failures and client-side timeouts become failed results with `503` and `504`; explicit caller cancellation
-still propagates `OperationCanceledException`.
-Endpoint-filter success responses map to `200 OK`/`204 No Content` while failures become RFC 7807 problem details. Native `Microsoft.AspNetCore.Http.IResult`
-responses pass through unchanged, so you can mix and match traditional Minimal API patterns with ManagedCode.Communication results.
-
-For transparent `IHttpClientFactory` integration, add the Communication handler to a named or typed client. It uses the same
-native command executor, returns the final raw `HttpResponseMessage`, honors `Retry-After`, and partitions circuit state by
-request authority:
+Your application payloads crossing grain boundaries need their own generated serializers:
 
 ```csharp
-services.AddHttpClient<CatalogClient>()
-    .AddCommunicationResilienceHandler(options =>
-    {
-        options.Execution.Retry.MaxRetries = 3;
-        options.Execution.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(1);
-    });
-```
+using Orleans;
+using ManagedCode.Communication.CQRS;
 
-Automatic replay defaults to content-free `GET`, `HEAD`, `OPTIONS`, and `TRACE` requests. Unsafe methods and every request with
-content pass through exactly once; use the command plus request-factory overload above when replaying a body is explicitly safe.
-Shared defaults can be replaced or disabled for one client without depending on another resilience library:
+[GenerateSerializer]
+public sealed record ImportProgress([property: Id(0)] int Percent);
 
-```csharp
-services.ConfigureHttpClientDefaults(client =>
-    client.AddCommunicationResilienceHandler());
+[GenerateSerializer]
+public sealed record ImportReport([property: Id(0)] int Imported);
 
-services.AddHttpClient<MetadataClient>()
-    .RemoveCommunicationResilienceHandler();
-```
-
-### Console Application Setup
-
-```csharp
-var services = new ServiceCollection();
-
-// Add logging
-services.AddLogging(builder => 
-{
-    builder.AddConsole()
-           .SetMinimumLevel(LogLevel.Information);
-});
-
-// Configure Communication library
-services.ConfigureCommunication();
-
-var serviceProvider = services.BuildServiceProvider();
-```
-
-The library automatically logs errors in Result factory methods (`From`, `Try`, etc.) with detailed context including file names, line numbers, and method names for easier debugging.
-
-## Core Concepts
-
-### Result Type
-
-The `Result` type represents an operation that can either succeed or fail:
-
-```csharp
-public struct Result
-{
-    public bool IsSuccess { get; }
-    public Problem? Problem { get; }
-}
-```
-
-### Result Type with Value
-
-The generic `Result<T>` includes a value on success:
-
-```csharp
-public struct Result<T>
-{
-    public bool IsSuccess { get; }
-    public T? Value { get; }
-    public Problem? Problem { get; }
-}
-```
-
-### Problem Type
-
-Implements RFC 7807 Problem Details for HTTP APIs:
-
-```csharp
-public class Problem
-{
-    public string Type { get; set; }
-    public string Title { get; set; }
-    public int StatusCode { get; set; }
-    public string Detail { get; set; }
-    public Dictionary<string, object> Extensions { get; set; }
-}
-```
-
-### Primitive Failures
-
-Expected input and state failures do not need a custom enum or a hand-built `Problem`. The primitive factories provide
-stable RFC 7807 status codes, titles, default details, and machine-readable `errorCode` values:
-
-```csharp
-Result missingCustomer = Result.FailNull("Customer is required.");
-Result invalidPage = Result.FailArgument("Page must be an integer.");
-Result invalidPageSize = Result.FailOutOfRange("Page size must be between 1 and 100.");
-Result<Order> alreadyShipped = Result<Order>.FailInvalidState("The order has already shipped.");
-
-Problem missingValue = Problem.Null();                 // 400, errorCode: null
-Problem invalidArgument = Problem.Argument();          // 400, errorCode: invalid_argument
-Problem outsideRange = Problem.OutOfRange();           // 400, errorCode: argument_out_of_range
-Problem invalidState = Problem.InvalidState();         // 409, errorCode: invalid_state
-```
-
-The same `FailNull`, `FailArgument`, `FailOutOfRange`, and `FailInvalidState` factories are available on `Result`,
-`Result<T>`, the typed `Result.Fail…<T>()` facade, and `CollectionResult<T>`.
-
-Use these when null or invalid input is an expected operation outcome. Continue using
-`ArgumentNullException.ThrowIfNull` for a violated API contract such as a null delegate, serializer, builder, or runtime:
-that is a caller programming error, and the successful `ThrowIfNull` path does not allocate an exception.
-
-### Task and ValueTask Symmetry
-
-Async factories preserve the shape they receive. This applies to `Result.From`, `Result<T>.From`,
-`ToResultAsync`, collection-result factories and conversions, and command-executor handlers:
-
-```csharp
-Func<Task<Customer>> taskFactory = LoadCustomerAsync;
-Task<Result<Customer>> taskResult = Result.From(taskFactory);
-
-Func<ValueTask<Customer>> valueTaskFactory = LoadCachedCustomerAsync;
-ValueTask<Result<Customer>> valueTaskResult = Result.From(valueTaskFactory);
-
-Task<Result<Order>> taskExecution = executor.ExecuteValueAsync(command, taskHandler);
-ValueTask<Result<Order>> valueTaskExecution = executor.ExecuteValueAsync(command, valueTaskHandler);
-```
-
-Choose `ValueTask` when the operation frequently completes synchronously and is consumed once. Keep `Task` for naturally
-asynchronous operations or when callers need task combinators, repeated awaits, or a stored reusable handle.
-
-### Display Message Helpers
-
-Use built-in helpers to convert technical `Problem` payloads into UI-friendly messages:
-
-```csharp
-var problem = Problem.Create("RegistrationUnavailable", "Service is temporarily unavailable", 503);
-problem.ErrorCode = "RegistrationUnavailable";
-
-// Default message resolution chain:
-// ErrorCode mapper -> Detail -> Title -> defaultMessage -> "An error occurred"
-var message = problem.ToDisplayMessage(defaultMessage: "Please try again later");
-
-var registrationMessages = new Dictionary<string, string>
-{
-    ["RegistrationUnavailable"] = "Registration is currently unavailable.",
-    ["RegistrationBlocked"] = "Registration is temporarily blocked.",
-    ["RegistrationInviteRequired"] = "Registration requires an invitation code."
-};
-
-// 1) Dictionary overload
-var byDictionary = problem.ToDisplayMessage(
-    registrationMessages,
-    defaultMessage: "Please try again later");
-
-// 2) Tuple mappings overload
-var byTuples = problem.ToDisplayMessage(
-    "Please try again later",
-    ("RegistrationUnavailable", "Registration is currently unavailable."),
-    ("RegistrationBlocked", "Registration is temporarily blocked."),
-    ("RegistrationInviteRequired", "Registration requires an invitation code."));
-
-// 3) Delegate overload
-static string? ResolveRegistrationMessage(string code) => code switch
-{
-    "RegistrationUnavailable" => "Registration is currently unavailable.",
-    "RegistrationBlocked" => "Registration is temporarily blocked.",
-    "RegistrationInviteRequired" => "Registration requires an invitation code.",
-    _ => null
-};
-
-var byDelegate = problem.ToDisplayMessage(
-    ResolveRegistrationMessage,
-    defaultMessage: "Please try again later");
-
-// The same overloads are available for Result, Result<T> and CollectionResult<T>
-var resultMessage = Result.Fail(problem).ToDisplayMessage(
-    registrationMessages,
-    defaultMessage: "Please try again later");
-
-// Typed extension access
-if (problem.TryGetExtension(ProblemConstants.ExtensionKeys.RetryAfter, out int retryAfterSeconds))
-{
-    Console.WriteLine($"Retry after: {retryAfterSeconds}s");
-}
-```
-
-## Quick Start
-
-### Basic Usage
-
-```csharp
-using ManagedCode.Communication;
-
-// Creating Results
-var success = Result.Succeed();
-var failure = Result.Fail("Operation failed");
-
-// Results with values
-var userResult = Result<User>.Succeed(new User { Id = 1, Name = "John" });
-var notFound = Result<User>.FailNotFound("User not found");
-
-// Validation errors
-var invalid = Result.FailValidation(
-    ("email", "Email is required"),
-    ("age", "Age must be positive")
-);
-
-// From something that throws — no try/catch of your own
-Result<int> parsed = Result.Try(() => int.Parse(input));
-Result written = await Result.TryAsync(() => File.WriteAllTextAsync(path, text));
-
-// The exception becomes the Problem, with 500 by default; pass a status to override it.
-Result<int> asBadRequest = Result.Try(() => int.Parse(input), HttpStatusCode.BadRequest);
-```
-
-`Result.Try` and `Result.TryAsync` run the delegate, return its value on success, and turn a thrown exception
-into a failure — `Result.Fail(ex)` is there for when you are already inside a `catch`.
-
-### Checking Result State
-
-```csharp
-if (result.IsSuccess)
-{
-    // Handle success
-}
-
-if (result.IsFailed)
-{
-    // Handle failure
-}
-
-if (result.IsInvalid)
-{
-    // Handle validation errors
-}
-
-// Pattern matching
-result.Match(
-    onSuccess: () => Console.WriteLine("Success!"),
-    onFailure: problem => Console.WriteLine($"Failed: {problem.Detail}")
-);
-```
-
-## CQRS Streaming
-
-Some commands do not finish quickly. An import, a report, a bulk migration — the caller needs to know that it
-started, roughly where it got to, and how it ended. The usual answers are all unsatisfying: poll a status
-endpoint, invent a jobs table, or push raw WebSocket frames and hand-roll the protocol at both ends.
-
-This models the whole thing as one typed stream:
-
-```csharp
-IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>>
-```
-
-Two type parameters: what progress looks like, and what the answer looks like. The stream emits any number of
-progress chunks and ends with **exactly one** terminal chunk — completed or failed, never silence.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Client
-    participant Transport as SSE transport
-    participant Handler
-
-    Client->>Transport: GET /import
-    Handler->>Transport: Started
-    Transport-->>Client: event: started
-    Handler->>Transport: Progress 30%
-    Transport-->>Client: event: progress
-    Handler->>Transport: Progress 70%
-    Transport-->>Client: event: progress
-    Handler->>Transport: Completed (ImportReport)
-    Transport-->>Client: event: completed
-
-    Note over Transport,Client: If the handler throws, or ends without a terminal chunk,<br/>the transport sends a terminal Failed chunk anyway.
-```
-
-Over HTTP it travels as Server-Sent Events, so a browser, `curl` or any non-.NET client can read it with no
-client library at all. The same stream works over SignalR, Orleans or gRPC without changing the handler.
-
-### Why not just poll, or use raw WebSockets?
-
-| | What you end up writing |
-| --- | --- |
-| Polling a status endpoint | A jobs table, a status enum, an expiry policy, and a client loop that is always either too slow or too chatty. |
-| Raw WebSockets / SignalR messages | Your own message envelope, your own "it's finished" signal, your own error frame — and both ends have to agree on all three. |
-| **This** | A typed stream. The envelope, the terminal guarantee and the error frame are the contract. |
-
-### The chunk contract
-
-A chunk is one of four kinds, and the transport guarantees the shape of the sequence:
-
-```mermaid
-flowchart LR
-    Open([stream opens]) --> S["Started<br/><small>optional, at most one</small>"]
-    S --> P["Progress<br/><small>any number, including none</small>"]
-    P -- more work --> P
-    P --> T{{"exactly one<br/>terminal chunk"}}
-    T --> C["Completed<br/><small>carries the result</small>"]
-    T --> F["Failed<br/><small>carries a Problem</small>"]
-    C --> Close([stream closes])
-    F --> Close
-
-    style C stroke-width:2px
-    style F stroke-width:2px
-```
-
-- `Started` — optional, announces that execution began.
-- `Progress` — optional, any number of in-flight updates.
-- `Completed` — terminal success; the payload is in `Final`.
-- `Failed` — terminal failure; a `Problem` says what went wrong.
-
-What the transport guarantees on **both** ends:
-
-- **Every stream ends on a terminal chunk.** A handler that returns without one gets a `Failed` chunk carrying
-  `CqrsStreamProblems.IncompleteStream` appended, rather than the stream just stopping.
-- **An unhandled exception becomes a terminal `Failed` chunk** with a `Problem` built from it, instead of
-  tearing down the connection mid-response.
-- **Every chunk is numbered.** `Sequence` is filled in when a handler omits it and is written to the SSE `id:`
-  field, so consumers can restore ordering and resume with `Last-Event-ID`.
-- **`Kind` travels as a string**, so adding enum members never renumbers existing ones across independently
-  deployed clients and servers.
-
-An exception thrown *before* the handler returns its stream never produced a stream, so it is not the
-transport's to handle — it flows into the host's normal exception handling.
-
-### Writing a handler
-
-`CqrsStream.Create` numbers the chunks, guarantees the terminal chunk, and turns a nonfatal thrown exception into a
-`Failed` chunk. Fatal runtime exceptions (`OutOfMemoryException`, `StackOverflowException`, and
-`AccessViolationException`) propagate through enumeration, including when nested in `AggregateException`, so they cannot be mistaken for a completed recovery path:
-
-```csharp
-app.MapGet("/import", (CancellationToken cancellationToken) =>
-        CqrsStream.Create<ImportProgress, ImportReport>(async writer =>
-        {
-            await writer.StartedAsync(new ImportProgress(0));
-
-            for (var i = 1; i <= 10; i++)
-            {
-                await DoWorkAsync(writer.CancellationToken);
-                await writer.ProgressAsync(new ImportProgress(i * 10));
-            }
-
-            return Result<ImportReport>.Succeed(new ImportReport(10));
-        }, cancellationToken))
-    .WithCommunicationCqrsResults();
-```
-
-Returning a failed `Result<TResult>` reports a business failure; throwing reports an unexpected one. Both arrive
-as a terminal `Failed` chunk, so the consumer has a single code path for "it did not work".
-
-Early consumer disposal cancels the stream and waits for its original producer to finish,
-including the handler's `finally` blocks. If a registered cancellation callback throws,
-the producer is still joined before disposal reports that exception. Distinct iteration,
-cancellation and producer failures retain their original exception instances; fatal runtime
-failures keep their priority. For example, breaking after a `Started` chunk does not permit
-the handler to continue using a resource after the enumerator's `DisposeAsync` completes.
-
-You can hand-write the iterator instead when you want full control:
-
-```csharp
-static async IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync()
-{
-    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Started(new ImportProgress(0));
-    await Task.Delay(100);
-    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Progress(new ImportProgress(50));
-    yield return CqrsStreamChunk<ImportProgress, ImportReport>.Completed(new ImportReport(10));
-}
-```
-
-### Reading a stream
-
-```csharp
-await foreach (var chunk in client.GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import"))
-{
-    if (chunk.TryGetProgress(out var progress))
-        Console.WriteLine($"{progress.Percent}%");
-    else if (chunk.TryGetResult(out var report))
-        Console.WriteLine($"imported {report.Imported}");
-    else if (chunk.TryGetProblem(out var problem))
-        Console.WriteLine($"failed: {problem.Title} — {problem.Detail}");
-}
-```
-
-The reader does not throw for transport problems. A non-success status code, a dropped connection and an
-undecodable frame all arrive as a terminal `Failed` chunk, so that loop covers every outcome. Only cancellation
-propagates, as an `OperationCanceledException`.
-
-### Consuming a stream without writing the loop
-
-`await foreach` is the right tool when you genuinely want to react chunk by chunk. Most callers do not — they
-want the answer, and maybe a progress callback on the way. Draining by hand means a loop, a list, a branch per
-chunk kind, and a decision about what a stream that simply stops means.
-
-`ToResultAsync` is that loop, written once:
-
-```csharp
-Result<ImportReport> report = await grain.StreamAsync().ToResultAsync();
-```
-
-The terminal chunk becomes the result. A stream that ends **without** one fails with
-`CqrsStreamProblems.IncompleteStream` rather than reporting a success the command never claimed, and one that
-faults mid-flight fails with a `Problem` built from the exception. Only cancellation propagates.
-
-**With progress.** Pass a callback and it fires as each update arrives — the answer still comes back from the
-method:
-
-```csharp
-var report = await client
-    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
-    .ToResultAsync(progress => hub.Clients.All.SendAsync("progress", progress.Percent));
-```
-
-The callback also comes in an awaited form, which takes the cancellation token as its second parameter:
-
-```csharp
-var report = await stream.ToResultAsync(async (progress, token) =>
-    await hub.Clients.All.SendAsync("progress", progress.Percent, token));
-```
-
-Nothing here blocks, and the awaited callback finishes before the next chunk is pulled — a slow handler applies
-back-pressure instead of letting chunks pile up behind it. (The token parameter is also what stops an async
-lambda from binding to the `Action<TProgress>` overload and having its task silently dropped.)
-
-**When you want the whole picture.** `ToOutcomeAsync` keeps the result, every progress payload, and every chunk:
-
-```csharp
-var outcome = await grain.StreamAsync().ToOutcomeAsync();
-
-outcome.Chunks.Count.ShouldBe(3);
-outcome.Progress.Select(p => p.Percent).ShouldBe([30, 70]);
-outcome.Value!.Status.ShouldBe("done");
-```
-
-An outcome converts to its `Result<TResult>` implicitly, so it can be returned wherever a result is expected.
-
-| | Keeps | Use when |
-| --- | --- | --- |
-| `ToResultAsync()` | the terminal chunk only | you want the answer |
-| `ToResultAsync(onProgress)` | the terminal chunk only | you want the answer and live progress |
-| `ToOutcomeAsync()` | result, progress, chunks | tests, audit logs, replaying what happened |
-| `ToChunkListAsync()` | every chunk | you will interpret them yourself |
-| `chunks.ToStreamResult()` | — | you already have the chunks in hand |
-
-When one Minimal API handler must choose at runtime between a CQRS stream and another HTTP response, keep the
-handler typed as `IResult` and use the same library-owned SSE transport explicitly:
-
-```csharp
-return CqrsStreamHttpResults.ServerSentEvents(updates);
-```
-
-This uses the same normalization, event names, sequence ids, and terminal-chunk guarantees as
-`WithCommunicationCqrsResults()`; do not add a second SSE writer in application code.
-
-The name says what comes back: the `To…Async` methods return the answer, `AsCqrsStream` returns a stream.
-
-`ToResultAsync` and `ToOutcomeAsync` apply the stream guarantees themselves, so they work on a raw SignalR,
-Orleans or gRPC stream with nothing in front of them — a transport that faults comes back as a failed `Result`,
-not an exception. `AsCqrsStream()` is for when you want to keep iterating chunk by chunk with those same
-guarantees; `ToChunkListAsync()` is the deliberate exception that hands back exactly what arrived, faults
-included. See [Other transports](#other-transports).
-
-### Streams and the railway
-
-`ToResultAsync` returns `Task<Result<TResult>>`, which is exactly what the async railway operators take. A
-stream is therefore just the start of a chain — no `await`, no temporary variable, no `if` in between:
-
-```csharp
-var imported = await client
-    .GetForCqrsStreamAsync<ImportProgress, ImportReport>("/import")
-    .ToResultAsync(progress => logger.Progress(progress.Percent))
-    .EnsureAsync(report => report.Imported > 0, Problem.Validation(("import", "produced nothing")))
-    .Map(report => report.Imported)
-    .TapAsync(count => metrics.Imported(count))
-    .CompensateAsync(problem => problem.StatusCode == 409
-        ? Result<int>.Succeed(0)          // already imported by someone else — not an error here
-        : Result<int>.Fail(problem));
-```
-
-Every step runs only on success; a failure anywhere — including the stream breaking, or ending without saying
-how it went — skips the rest and arrives at `CompensateAsync` as an ordinary `Problem`.
-
-
-### Registration
-
-```csharp
-builder.Services.AddCommunicationCqrs();                                    // minimal API
-builder.Services.AddControllers(o => o.AddCommunicationCqrsFilters());      // MVC controllers
-```
-
-Both default to numbering chunks and guaranteeing a terminal chunk. To change that:
-
-```csharp
-// server, globally or per endpoint
-builder.Services.AddCommunicationCqrs(o => o.EnsureTerminalChunk = false);
-app.MapGet("/import", Handler)
-   .WithCommunicationCqrsResults(new CqrsStreamServerOptions { EnsureTerminalChunk = false });
-
-// client
-var options = new CqrsStreamClientOptions
-{
-    MalformedChunkBehavior = CqrsMalformedChunkBehavior.Skip  // default: EmitFailedChunk; also: Throw
-};
-
-// Choose finite limits for an operation with a known response budget.
-var boundedOptions = new CqrsStreamClientOptions
-{
-    MaximumFrameBytes = 8 * 1024 * 1024,
-    MaximumFailureBodyBytes = 32 * 1024,
-    MaximumStreamBytes = 128L * 1024 * 1024
-};
-
-await foreach (var chunk in http.GetForCqrsStreamAsync<ImportProgress, ImportReport>(
-                   "/import",
-                   boundedOptions))
-{
-    // Consume each bounded chunk here.
-}
-```
-
-The client defaults to a 16 MiB physical-frame limit and a 64 KiB non-success-body limit. The hard ceilings are
-64 MiB and 1 MiB. `MaximumStreamBytes` is optional and unset by default so generic long-running streams remain
-compatible; when set, it counts the complete successful response body, including comments and delimiters. Invalid
-or oversized frames and bodies produce stable terminal transport failures. A bounded valid RFC 7807 response keeps
-its problem fields; plain-text, invalid or oversized failure bodies expose only the HTTP status and a safe detail,
-never the raw response body.
-
-Failures produced by `CqrsStream.Create`, `CqrsStream.Normalize`, or
-`CqrsStreamChunk<TProgress, TResult>.FromException(exception)` report the original exception immediately through
-the native failure diagnostics. Error logs and traces retain its throw-site stack; the public chunk, `Result` and
-`Problem` do not retain or serialize an exception object or stack trace. Existing problem fields are preserved.
-
-Two namespaces cover the feature: `ManagedCode.Communication.CQRS` for the contract, the authoring helper and
-the client reader, and `ManagedCode.Communication.AspNetCore.Extensions` for the server transport. The first
-lives in the base package, so a console app, a worker or a Blazor WebAssembly client can consume a stream
-without referencing ASP.NET Core.
-
-### Other transports
-
-The guarantees come from `CqrsStream.Normalize`, which the SSE transport calls for you. Any other transport gets
-the same contract by calling it directly.
-
-```csharp
-public class ImportHub : Hub
-{
-    public IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> Import(CancellationToken token)
-        => CqrsStream.Normalize(ImportAsync(token), cancellationToken: token);
-}
-```
-
-Skipping `Normalize` is what makes the difference: a hub method that throws mid-stream faults the connection and
-the client sees a `HubException` instead of a terminal chunk it can inspect. A `CqrsStream.Create` stream already
-carries the guarantees and needs no `Normalize`.
-
-**On the client there is nothing extra to remember** — a SignalR stream reads exactly like the HTTP one, in a
-single call:
-
-```csharp
-var report = await hub
-    .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import", cancellationToken)
-    .ToResultAsync(progress => Console.WriteLine($"{progress.Percent}%"), cancellationToken);
-```
-
-`ToResultAsync` applies the guarantees itself, so this holds even when the server does **not** normalize: a hub
-method that throws part-way through, or a connection that simply drops, comes back as a failed `Result` carrying
-a `Problem` rather than a `HubException` thrown out of your `await`.
-
-When you want to keep iterating chunk by chunk instead of draining to a result, `AsCqrsStream()` applies the same
-guarantees and hands the chunks back:
-
-```csharp
-await foreach (var chunk in hub
-    .StreamAsync<CqrsStreamChunk<ImportProgress, ImportReport>>("Import", cancellationToken)
-    .AsCqrsStream())
-{
-}
-```
-
-Both take an `IAsyncEnumerable<>` rather than a `HubConnection` on purpose. SignalR, Orleans and gRPC all surface
-a stream as one, so a single method covers them all and this package takes a dependency on none of them.
-
-**Orleans.** `ManagedCode.Communication.Orleans` registers a serialization surrogate for `CqrsStreamChunk<,>`,
-so chunks can cross a grain boundary:
-
-```csharp
 public interface IImportGrain : IGrainWithStringKey
 {
     IAsyncEnumerable<CqrsStreamChunk<ImportProgress, ImportReport>> ImportAsync();
 }
 ```
 
-Your own progress and result payloads still need `[GenerateSerializer]` with `[Id(n)]` members, as with any type
-crossing a grain boundary. A missing serializer is a *startup* failure in Orleans, not a runtime one: a silo
-whose grain interfaces mention an unserializable type refuses to boot.
-
-
-## Railway-Oriented Programming
-
-Async operators accept both `Task<Result<T>>` and `ValueTask<Result<T>>` receivers and preserve that receiver shape, so a
-chain never has to be broken by an `await`, a temporary variable, or a forced `.AsTask()` allocation.
-
-
-> **Package:** `ManagedCode.Communication.Extensions`, namespace `ManagedCode.Communication.Extensions`.
-> One `using` gives you the whole railway surface. ASP.NET Core applications get it transitively through
-> `ManagedCode.Communication.AspNetCore`. The aggregation helpers (`Result.Merge`, `Result.MergeAll`,
-> `Result.Combine`, `Result.CombineAll`) are static methods on `Result` in the core package, so combining
-> results needs no extra reference.
+Communication does not register a JSON grain-storage adapter. The application owns its storage provider and
+serializer. Native Orleans storage uses the same generated serialization as grain communication:
 
 ```csharp
-using ManagedCode.Communication;            // Result, Problem
-using ManagedCode.Communication.Extensions; // Bind / Map / Tap / Then / Ensure / Match / Compensate / ...
+using Orleans.Storage;
+
+var storageSerializer = new OrleansGrainStorageSerializer(
+    serviceProvider.GetRequiredService<Orleans.Serialization.Serializer>());
+var restored = storageSerializer.Deserialize<Result<int>>(
+    storageSerializer.Serialize(Result<int>.Succeed(0)));
+// restored.IsSuccess is true; restored.Value is 0.
 ```
 
-Railway-oriented programming treats operations as a series of tracks where success continues on the main track and failures switch to an error track.
+Existing persisted data must match the application-selected storage format. Changing serializer configuration
+does not migrate old records. Any cleanup or migration must target exact application-owned state.
 
-### The full surface
+### System.Text.Json for application and HTTP JSON
 
-Most operators short-circuit on failure: once a result is failed, the step is skipped and the original `Problem`
-is carried to the end. The exceptions are the ones that exist to handle failure — `Else`, `Compensate*`, `Match`,
-`Switch` — and `Finally`, which runs on both branches.
-
-| Operator | Purpose |
-| --- | --- |
-| `Bind` / `Then` | Run the next step, which itself returns a `Result`. **Two names for one operation** — `Bind` is the conventional ROP name, `Then` reads better in long chains. Pick one per codebase. |
-| `BindAsync` / `ThenAsync` | Async form of the above. |
-| `Map` / `MapAsync` | Transform the value with a plain function that cannot fail. |
-| `Tap` / `TapAsync`, `Do` / `DoAsync` | Run a side effect (logging, metrics) and pass the value through unchanged. |
-| `Ensure`, `Where`, `Verify`, `Check` | Fail the chain when a predicate does not hold. |
-| `FailIf`, `OkIf` | Flip a result based on a predicate. |
-| `Match` | Collapse to a single value by handling both branches. The usual way to leave the railway. |
-| `Else` | Substitute an alternative result when the current one failed. |
-| `Compensate`, `CompensateAsync`, `CompensateWith` | Recover from a failure, optionally by calling a fallback. |
-| `Switch`, `SwitchFirst` | Branch on success/failure without leaving the chain. |
-| `Finally` | Run an action on both branches, like a `finally` block. |
-| `ToResult` | Lift a nullable value into a `Result`, failing when it is null. |
-
-Every asynchronous operator accepts a `Task<Result>` / `Task<Result<T>>` receiver, and the allocation-conscious lane accepts
-`ValueTask<Result>` / `ValueTask<Result<T>>` with `ValueTask` continuations. Each lane returns the same async shape it receives,
-so an asynchronous pipeline never has to be interrupted by an `await` and a temporary variable:
+Communication's JSON implementation uses `System.Text.Json`. `Result`, `Result<T>`, and `Problem` provide
+their JSON converters through type attributes:
 
 ```csharp
-var result = await LoadUserAsync(id)
-    .EnsureAsync(user => user.IsActive, Problem.Create("inactive", "User is disabled.", 403))
-    .TapAsync(user => _audit.RecordAsync(user.Id))
-    .BindAsync(user => LoadCartAsync(user.Id))
-    .MapAsync(cart => cart.Total)
-    .CompensateAsync(problem => RecoverAsync(problem))
-    .MatchAsync(total => Results.Ok(total), problem => Results.Problem(problem.Detail));
+using System.Text.Json;
+
+var json = JsonSerializer.Serialize(Result<int>.Succeed(0));
+var restored = JsonSerializer.Deserialize<Result<int>>(json);
 ```
 
-A `ValueTask` pipeline stays a `ValueTask` end to end:
+This application serialization is separate from the HTTP result filter, which emits a raw success payload or
+problem response, and from Orleans native serialization. Do not install an application JSON codec merely to
+transport Communication types through Orleans.
+
+CQRS JSON defaults are available as the immutable `CqrsStreamSerialization.Default`. For source-generated
+payload contracts, use `CqrsStreamSerialization.WithPayloadContext(MyJsonContext.Default)` in
+`CqrsStreamClientOptions.JsonSerializerOptions`; it combines the payload context with contracts for the
+transport types. Configure matching payload contexts through ASP.NET Core's HTTP JSON options on the server.
+
+## Logging and telemetry
+
+### Connect the application logger
+
+Core results work without registration. Without a configured logger, the internal logger emits no output.
+For a web application, `AddCommunicationAspNetCore()` connects the host logger at startup; `AddCommunication()`
+also adds MVC filters. A console application can configure it directly:
 
 ```csharp
-ValueTask<Result<Receipt>> receipt = cachedOrder
-    .AsValueTask()
-    .EnsureAsync(order => ValueTask.FromResult(order.CanCheckout), Problem.InvalidState())
-    .DoAsync(order => audit.RecordAsync(order.Id))
-    .BindAsync(order => checkout.ExecuteAsync(order));
+using ManagedCode.Communication.Logging;
+
+using var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
+CommunicationLogger.Configure(loggerFactory);
 ```
 
-Aggregation lives on `Result` itself in the core package, so it needs no extra reference:
+The core `services.ConfigureCommunication(loggerFactory)` overload also accepts an explicit factory.
+There is no parameterless core `ConfigureCommunication()` registration.
 
-| Method | Purpose |
-| --- | --- |
-| `Result.Merge(...)` | Succeeds when all succeed; returns the **first** failure otherwise. |
-| `Result.MergeAll(...)` | Succeeds when all succeed; aggregates **every** failure otherwise. |
-| `Result.Combine(...)` | Collects values into a `CollectionResult<T>`, stopping at the first failure. |
-| `Result.CombineAll(...)` | Collects values, aggregating every failure. |
+Failures without an exception log at Warning with problem fields. Exception conversions log at Error with
+the original exception and throw-site stack trace. Automatic factory diagnostics are deduplicated per
+`Problem` object: wrapping the same instance does not report it as a new occurrence. New problems represent
+new occurrences; successes and reading a result do not emit automatic failure diagnostics.
 
+### OpenTelemetry and Aspire
 
-### Basic Chaining
-
-```csharp
-public Result<Order> ProcessOrder(int userId)
-{
-    return Result.From(() => GetUser(userId))
-        .Then(user => ValidateUser(user))
-        .Then(user => GetUserCart(user.Id))
-        .Then(cart => ValidateCart(cart))
-        .Then(cart => CreateOrder(cart))
-        .Then(order => ProcessPayment(order))
-        .Then(order => SendConfirmation(order));
-}
-```
-
-### Async Operations
-
-```csharp
-public async Task<Result<Order>> ProcessOrderAsync(int userId)
-{
-    return await Result.From(() => GetUserAsync(userId))
-        .ThenAsync(user => ValidateUserAsync(user))
-        .ThenAsync(user => GetUserCartAsync(user.Id))
-        .ThenAsync(cart => CreateOrderAsync(cart))
-        .ThenAsync(order => ProcessPaymentAsync(order))
-        .ThenAsync(order => SendConfirmationAsync(order));
-}
-```
-
-### Error Recovery
-
-```csharp
-var result = await GetPrimaryService()
-    .CompensateAsync(async error => 
-    {
-        _logger.LogWarning($"Primary service failed: {error.Detail}");
-        return await GetFallbackService();
-    })
-    .CompensateWith(defaultValue); // Final fallback
-```
-
-### Combining Multiple Results
-
-```csharp
-// Merge: Stop at first failure
-var firstFailureResult = Result.Merge(
-    ValidateName(name),
-    ValidateEmail(email),
-    ValidateAge(age)
-);
-
-// MergeAll: aggregate all failures
-var allFailuresResult = Result.MergeAll(
-    ValidateName(name),
-    ValidateEmail(email),
-    ValidateAge(age)
-);
-
-if (allFailuresResult.TryGetProblem(out var problem))
-{
-    // All failures were validation failures:
-    // problem.GetValidationErrors() returns merged field errors.
-    //
-    // Mixed failures (401/403/500/...) return aggregate problem:
-    // problem.StatusCode == 500
-    // problem.Extensions["errors"] contains the original Problem[] list.
-}
-
-if (allFailuresResult.TryGetProblem(out var aggregateProblem) &&
-    aggregateProblem.TryGetExtension("errors", out Problem[]? originalErrors))
-{
-    foreach (var error in originalErrors)
-    {
-        Console.WriteLine($"{error.StatusCode}: {error.Title} - {error.Detail}");
-    }
-}
-
-// Combine: Aggregate values
-var combined = Result.Combine(
-    GetUserProfile(),
-    GetUserSettings(),
-    GetUserPermissions()
-); // Returns CollectionResult<T>
-
-// CombineAll: aggregate failures while preserving original errors
-var combinedAll = Result.CombineAll(
-    GetUserProfile(),
-    GetUserSettings(),
-    GetUserPermissions()
-);
-```
-
-## Command Pattern and Idempotency
-
-### Command Infrastructure
-
-The library includes built-in support for command pattern with distributed idempotency:
-
-```csharp
-// Basic command
-public class CreateOrderCommand : Command<Order>
-{
-    public CreateOrderCommand(string orderId, Order order) 
-        : base(orderId, "CreateOrder")
-    {
-        Value = order;
-        UserId = "user123";
-        CorrelationId = Guid.NewGuid().ToString();
-    }
-}
-
-// Command with metadata
-var command = new Command("command-id", "ProcessPayment")
-{
-    UserId = "user123",
-    SessionId = "session456",
-    CorrelationId = "correlation789",
-    CausationId = "parent-command-id",
-    TraceId = Activity.Current?.TraceId.ToString(),
-    SpanId = Activity.Current?.SpanId.ToString()
-};
-```
-
-### Pagination Commands
-
-Pagination is now a first-class command concept that keeps factories DRY and metadata consistent:
-
-```csharp
-var options = new PaginationOptions(defaultPageSize: 25, maxPageSize: 100);
-var request = PaginationRequest.Create(skip: 0, take: 0, options); // take defaults to 25
-
-// Rich factory surface without duplicate overloads
-var paginationCommand = PaginationCommand.Create(request, options)
-    .WithCorrelationId(Guid.NewGuid().ToString());
-
-// Apply to results without manually recalculating metadata
-var page = CollectionResult<Order>.Succeed(orders, paginationCommand.Value!, totalItems: 275, options);
-
-// Use enum-based command types when desired
-enum PaginationCommandType { ListCustomers }
-var typedCommand = PaginationCommand.Create(PaginationCommandType.ListCustomers);
-```
-
-`PaginationRequest` exposes helpers such as `Normalize`, `ClampToTotal`, and `ToSlice` to keep skip/take logic predictable. Configure bounds globally with `PaginationOptions` to protect APIs from oversized queries.
-
-### Idempotent Command Execution
-
-Idempotency is available only through the native `ICommandExecutor`/`CommandExecutor` path described in
-[Native Command Execution](#native-command-execution). The former delegate-only idempotency, retry, timeout, batch, and
-status/result APIs were removed because they formed a second reliability subsystem and could not atomically bind a trusted
-scope, request fingerprint, owner fence, and terminal `Result`.
-
-`ICommandIdempotencyStore` is now a deliberately small atomic protocol: acquire, renew, complete, mark indeterminate, release,
-and explicit resolution/reset. A completed record preserves stored `null`/default values and validates the operation,
-fingerprint, and result contract before replay. `ICommandIdempotencyMaintenance` is separate because only stores with a real
-enumeration index can honestly offer completed-outcome cleanup/count operations; active and `Indeterminate` records can never
-be removed by maintenance because that could authorize a duplicate side effect. The Orleans store does not pretend that grain
-deactivation deletes durable state.
-
-`CommandIdempotencyExtensions` was removed rather than renamed. Its methods implemented a second retry/timeout path and split
-status from result persistence, so keeping compatibility wrappers would preserve the unsafe semantics. Version 10 uses this
-forward-only mapping:
-
-| Removed API | Version 10 replacement |
-| --- | --- |
-| `ExecuteIdempotentAsync` | Register an `ICommandIdempotencyStore`, configure trusted scope/fingerprint, then call `ICommandExecutor` or `CommandExecutor`. |
-| `ExecuteIdempotentWithRetryAsync` | Enable `CommandExecutionOptions.Retry`; idempotency owns the complete retry sequence automatically. |
-| `ExecuteWithTimeoutAsync` | Configure `Timeout.TotalTimeout` and optional `Timeout.AttemptTimeout` on the same executor. |
-| `ExecuteBatchIdempotentAsync` | Execute one `ICommand` per item through the executor and apply an application-owned bounded concurrency policy. There is no unbounded batch shortcut. |
-| `TryGetCachedResultAsync` | Execute the same scoped command key; the atomic acquire operation either replays the typed outcome, waits for its owner, or fails closed. There is no racy cache-only read. |
-
-The store protocol is infrastructure-facing. Normal application code should not call `TryAcquireAsync` directly; use the
-executor so claim renewal, finalization, timeout, telemetry, and `Indeterminate` handling remain one operation.
-
-### Command Correlation and Tracing Identifiers
-
-Commands implement `ICommand` and surface correlation, causation, trace, span, user, and session identifiers alongside optional metadata so every hop can attach observability context. The base `Command` and `Command<T>` types keep those properties on the
-root object, and serializers/Orleans surrogates round-trip them without custom plumbing.
-
-#### Identifier lifecycle
-- Static command factories generate monotonic version 7 identifiers via `Guid.CreateVersion7()` and stamp a UTC timestamp so commands can be sorted chronologically even when sharded.
-- Factory helpers never mutate the correlation or trace identifiers; callers opt in through fluent extension
-  methods that return the same command instance, so they chain freely:
-
-| Method | Sets |
-| --- | --- |
-| `WithCorrelationId(id)` | Correlation identifier shared by everything in one logical operation. |
-| `WithCausationId(id)` | Identifier of the command that caused this one. |
-| `WithTraceId(id)` / `WithSpanId(id)` | Distributed-tracing identifiers. |
-| `WithUserId(id)` | Acting user. |
-| `WithSessionId(id)` | Session the command belongs to. |
-| `WithMetadata(metadata)` / `WithMetadata(m => …)` | Replaces or edits the whole `CommandMetadata`. |
-
-Every factory generates the command id itself — a time-ordered UUIDv7 — and takes `commandId` as an **optional
-trailing parameter**. Pass one only when the identity comes from outside: an idempotency key sent by the caller,
-or a replayed message whose identity must be preserved.
-
-```csharp
-var command  = Command<PlaceOrder>.From(payload);                    // id generated
-var replayed = Command<PlaceOrder>.From(payload, idempotencyKey);    // id supplied
-```
-
-Only the command id is generated. Correlation, causation, trace, span, user and session describe how a command
-relates to the rest of the system, which the library cannot infer — they stay `null` until you set them.
-
-Correlation, causation, trace, span, user and session identifiers live on the command itself
-(`command.CorrelationId`, `command.UserId`, …); `CommandMetadata` carries the rest — priority, retries, timeout,
-tags and free-form properties.
-
-```csharp
-var command = Command<PlaceOrder>.From(payload)
-    .WithCorrelationId(correlationId)
-    .WithCausationId(parentCommandId)
-    .WithUserId(user.Id)
-    .WithSessionId(session.Id)
-    .WithMetadata(metadata => metadata.Priority = CommandPriority.High);
-```
-- Metadata mirrors the trace/span identifiers for workload-specific diagnostics without coupling transport-level identifiers to
-payload annotations.
-
-#### Field reference
-
-| Field | Purpose | Typical source | Notes |
-| --- | --- | --- | --- |
-| `CommandId` | Unique, monotonic identifier for deduplication | Static command factories | Remains stable for retries and storage lookups. |
-| `CorrelationId` | Ties a command to an upstream workflow/request | HTTP `X-Correlation-Id`, message headers | Preserved through
- serialization and Orleans surrogates. |
-| `CausationId` | Records the predecessor command/event | Current command ID | Supports causal chains in telemetry. |
-| `TraceId` | Connects to distributed tracing spans | OpenTelemetry/`Activity` context | The library stores, but never generate
-s, trace identifiers. |
-| `SpanId` | Identifies the originating span | OpenTelemetry/`Activity` context | Often paired with `Metadata.TraceId` for deep
-er traces. |
-| `UserId` / `SessionId` | Attach security/session principals | Authentication middleware | Useful for multi-tenant auditing. |
-
-#### Trace vs. correlation
-- **Correlation IDs** bundle every command spawned from a single business request. Assign them at ingress and keep the value st
-able across retries so dashboards can answer “what commands ran because of this call?”.
-- **Trace/Span IDs** follow distributed tracing semantics. Commands avoid creating new traces and instead persist the ambient `A
-ctivity` identifiers through serialization so telemetry back-ends can stitch spans together.
-- Both identifier sets are serialized together, enabling pivots between business-level correlation and technical call graphs wit
-hout extra configuration.
-
-#### Generation and propagation guidance
-- Use `Command.Create(...)` / `Command<T>.Create(...)` (or the matching `From(...)` helpers) to get a version 7 identifier and U
-TC timestamp automatically.
-- Read or generate correlation IDs from HTTP headers or upstream messages and apply them via `.WithCorrelationId(...)` before d
-ispatching commands.
-- Capture `Activity.TraceId`/`Activity.SpanId` through `.WithTraceId(...)` and `.WithSpanId(...)` (and metadata counterparts) wh
-en bridging to queues, Orleans, or background pipelines.
-- Serialization tests verify the identifiers round-trip, so consumers can rely on receiving the same values they emitted.
-
-#### Operational considerations
-- Factory unit tests ensure commands created through the helpers carry version 7 identifiers, UTC timestamps, and derived `Comma
-ndType` values for traceability.
-- Idempotency regression tests assert that concurrent callers reuse cached results and propagate failures consistently, preservi
-ng correlation integrity when retry storms occur.
-
-### Idempotency Architecture Overview
-
-The storage key is a SHA-256 digest of trusted scope, command type, and external `CommandId`; the persisted record also binds the
-request fingerprint and concrete result contract. One unpredictable owner token plus a generation fence prevents a stale owner
-from completing a newer execution. Status and outcome are committed in one store operation, so a missing or mismatched terminal
-payload fails closed instead of silently returning `default`.
-
-The in-memory implementation uses a bounded stripe-lock array, so keys cannot race through ref-count removal and store disposal
-does not dispose semaphores beneath active waiters. Orleans performs every transition inside one grain call, physically clears
-released/expired terminal state, honors caller cancellation while awaiting grain calls, and leaves expired running claims as
-durable `Indeterminate` records. Global cleanup remains an optional `ICommandIdempotencyMaintenance` capability.
-That capability removes only old completed replay outcomes; resolving or resetting `Indeterminate` is always an explicit
-operator action.
-
-Retention applies to known completed outcomes. It never silently turns an unknown side effect into permission to run again.
-`CommandMetadata.TimeToLiveSeconds` is a separate command-validity deadline checked before admission.
-
-## Error Handling Patterns
-
-### Validation Pattern
-
-```csharp
-public Result<User> CreateUser(CreateUserDto dto)
-{
-    // Collect all validation errors
-    var errors = new List<(string field, string message)>();
-    
-    if (string.IsNullOrEmpty(dto.Email))
-        errors.Add(("email", "Email is required"));
-    
-    if (!dto.Email.Contains("@"))
-        errors.Add(("email", "Invalid email format"));
-    
-    if (dto.Age < 0)
-        errors.Add(("age", "Age must be positive"));
-    
-    if (dto.Age < 18)
-        errors.Add(("age", "Must be 18 or older"));
-    
-    if (errors.Any())
-        return Result.FailValidation(errors.ToArray());
-    
-    var user = new User { /* ... */ };
-    return Result<User>.Succeed(user);
-}
-```
-
-## Integration Guides
-
-### ASP.NET Core Integration
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-
-builder.AddCommunication();                       // ShowErrorDetails = IsDevelopment
-builder.Services.AddControllers(o => o.AddCommunicationFilters());
-builder.Services.AddSignalR(o => o.AddCommunicationFilters());
-```
-
-An action returns a `Result<T>` directly; the filter turns it into the HTTP response:
-
-```csharp
-[HttpGet("{id}")]
-public Task<Result<User>> Get(int id) => _users.FindAsync(id);
-```
-
-`AddCommunicationFilters()` registers three filters, and the order matters — use the helper rather than adding
-them by hand:
-
-| Order | Filter | What it does |
-| --- | --- | --- |
-| 1 | `CommunicationModelValidationFilter` | Turns ModelState errors into `Result.FailValidation` before the action runs |
-| 2 | `ResultToActionResultFilter` | Maps the returned `Result<T>` to an HTTP response |
-| 3 | `CommunicationExceptionFilter` | Catches anything unhandled and returns Problem Details |
-
-Status codes come from the `Problem`: `FailNotFound` is a 404, `FailValidation` a 400, an unhandled exception a
-500. See [Mapping exceptions to status codes](#mapping-exceptions-to-status-codes) to override that per type.
-
-
-### SignalR Integration
-
-```csharp
-public class ChatHub : Hub
-{
-    public async Task<Result<MessageDto>> SendMessage(string user, string message)
-    {
-        if (string.IsNullOrEmpty(message))
-            return Result.FailValidation(("message", "Message cannot be empty"));
-        
-        var messageDto = new MessageDto
-        {
-            User = user,
-            Message = message,
-            Timestamp = DateTime.UtcNow
-        };
-        
-        await Clients.All.SendAsync("ReceiveMessage", user, message);
-        return Result<MessageDto>.Succeed(messageDto);
-    }
-    
-    public async Task<Result> JoinGroup(string groupName)
-    {
-        if (string.IsNullOrEmpty(groupName))
-            return Result.FailValidation(("groupName", "Group name is required"));
-        
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-        return Result.Succeed();
-    }
-}
-```
-
-### Microsoft Orleans Integration
-
-```csharp
-// silo
-silo.UseLocalhostClustering().UseOrleansCommunication();
-
-// client
-client.UseOrleansCommunication();
-```
-
-`UseOrleansCommunication()` is required — without it a silo whose grain interfaces mention a `Result` refuses to
-start, because Orleans validates serializers at boot. It registers surrogates for `Result`, `Result<T>`,
-`CollectionResult<T>`, `Problem` and `CqrsStreamChunk<,>`, and adds a call filter that converts an exception
-thrown by a grain into a failed result — logging the original exception first, so the stack trace still reaches
-your traces.
-
-A grain then returns results like anything else:
-
-```csharp
-public interface IUserGrain : IGrainWithStringKey
-{
-    Task<Result<UserState>> GetStateAsync();
-    Task<CollectionResult<Activity>> GetActivitiesAsync(int page, int pageSize);
-}
-```
-
-Your own payload types still need `[GenerateSerializer]` with `[Id(n)]` members, as with any type crossing a
-grain boundary.
-
-
-## Performance
-
-### Keeping results cheap
-
-1. **Use structs**: `Result` and `Result<T>` are value types (structs), so a success carries no heap allocation
-2. **Avoid boxing**: Use generic methods to prevent boxing of value types
-3. **Chain operations**: Use railway-oriented programming to avoid intermediate variables
-4. **Async properly**: Use `ConfigureAwait(false)` in library code
-5. **Preserve the async shape**: factories and command helpers return `Task<Result…>` for `Task` inputs and
-   `ValueTask<Result…>` for `ValueTask` inputs, avoiding a forced `Task` allocation on synchronously completed hot paths
-6. **Build problems per failure, do not share them**: `Problem` is mutable — it has settable properties and an
-   `Extensions` dictionary that `AddValidationError` writes into. A shared static instance can be mutated by any
-   caller that touches it, poisoning every later use. Create one per failure, or use a factory method.
-7. **Observe the executor token in handlers.** Timeout is cooperative by design; ignoring the token means the executor must
-   await the handler so it does not release a permit or claim while a side effect is still running.
-
-### Command execution fast path
-
-`CommandExecutionRuntime` validates and snapshots its composed options once. Reading `runtime.Options` returns a detached
-copy, so later caller mutations cannot alter a live executor and the hot path does not repeat static option validation for
-every command. Successful executions do not allocate retry backoff state, and local rate-limiter leases reuse immutable empty
-metadata instead of allocating a dictionary when the limiter supplies no metadata.
-
-The native circuit breaker aggregates its rolling window into ten time buckets and keeps incremental totals. Failure-ratio
-updates are O(1), and memory per partition stays bounded instead of growing with request rate. Only the admitted half-open
-probe may close or reopen a half-open partition; late completions from commands admitted before the circuit opened are ignored
-for that transition.
-
-### Serialization cost
-
-`Result`, `Result<T>` and `CqrsStreamChunk<,>` carry hand-written `System.Text.Json` converters, attached to the
-types themselves — you get them with any `JsonSerializerOptions`, without registering anything. They exist
-because the default path is expensive for these shapes: a struct mixing `init`-only members with a private
-`[JsonInclude]` field pushes `System.Text.Json` onto a reflection-driven path.
-
-What the transport costs, separated from what your payload costs. Measured with
-`GC.GetAllocatedBytesForCurrentThread`, on a progress chunk carrying a ten-character string:
-
-| | Allocated |
-| --- | --- |
-| `Result<T>`, over the payload it wraps | ~24 B |
-| The chunk object itself | 136 B |
-| Serializing a chunk | 128 B |
-| A progress chunk on the wire | 103 B |
-
-Deserializing a whole chunk is those fixed costs plus the payload, and the payload is usually the larger half:
-
-| Payload declared as | Chunk deserializes in | of which payload |
-| --- | --- | --- |
-| `class Progress { public string? State { get; init; } }` | 232 B | 120 B |
-| `record Progress(string State)` | 336 B | 224 B |
-
-`CollectionResult<T>` needs no converter — it has no private serialized field, so the default path costs it only
-~56 bytes over the items themselves.
-
-On the client, chunks are deserialized straight from each frame's UTF-8 bytes rather than from a string per
-frame, and the JSON contract is resolved once per stream instead of once per frame. Reading a 20 000-frame
-stream end to end costs about 292 bytes per frame — and `ToResultAsync` costs the same as the raw
-`await foreach`, because the stream guarantees are one wrapper per stream, not per chunk.
-
-A chunk carries no timestamp. Ordering comes from `sequence`, which the transport always fills in and which the
-SSE `id:` field is derived from; a per-chunk clock reading was roughly a third of every progress frame spent on
-something nothing read.
-
-`ManagedCode.Communication.Tests/Results/SerializationAllocationTests.cs` holds budgets for all of this, so a
-regression fails the build rather than going unnoticed.
-
-#### The payload shape is worth more than everything above
-
-`System.Text.Json` populates a type with a parameterized constructor through a different, allocating path than
-one it can fill property by property. The two declarations below are equally immutable, and the positional one
-costs 104 bytes more per object:
-
-| Payload declared as | Allocated |
-| --- | --- |
-| `record Progress(string State)` | 224 B |
-| `record Progress { public string? State { get; init; } }` | 120 B |
-| `class Progress { public string? State { get; init; } }` | 120 B |
-
-At a thousand chunks a second that is 100 KB/s of pure garbage. If the type is not yours to reshape, hand its
-source-generated contract to the transport instead:
-
-```csharp
-[JsonSerializable(typeof(Progress))]
-internal partial class StreamPayloads : JsonSerializerContext;
-
-var options = new CqrsStreamClientOptions
-{
-    JsonSerializerOptions = CqrsStreamSerialization.WithPayloadContext(StreamPayloads.Default)
-};
-```
-
-`WithPayloadContext` consults your context first and falls back to reflection for everything else, the
-transport's own types included — pointing `TypeInfoResolver` straight at your context would leave
-`CqrsStreamChunk<,>` without a contract and fail on the first chunk. The wire format is unchanged, so one end
-may use a context and the other not. On the server, add the same context to `ConfigureHttpJsonOptions`.
-
-
-## Behaviour Notes
-
-Things that surprise people, gathered in one place.
-
-### `Problem` is mutable
-
-`Problem` has settable properties and a live `Extensions` dictionary. Treat every instance as owned by one
-failure. Do not cache a shared instance in a `static` field: `AddValidationError`, `ErrorCode` and the property
-setters all mutate in place, so one caller can change what every later caller sees.
-
-### Exception-to-status mapping is a heuristic
-
-`HttpStatusCodeHelper.GetStatusCodeForException` classifies common exception types. It cannot know your domain,
-so register overrides at startup with `ExceptionStatusCodeMap` — see
-[Mapping exceptions to status codes](#mapping-exceptions-to-status-codes).
-
-### Results are immutable once built
-
-`Result<T>.Value` and the `CollectionResult<T>` members are `init`-only. Build results through `Succeed` / `Fail`;
-serializers can still populate them.
-
-### HTTP status vs. command outcome
-
-A failed command reported over CQRS streaming still arrives on a `200 OK` response — the HTTP exchange
-succeeded, the command did not. Inspect the terminal chunk, not the status code. A non-2xx status means the
-request never reached the handler.
-
-## Registration Reference
-
-### Nothing is required
-
-Every part of the library works with **no registration at all** — no container, no logger, no OpenTelemetry.
-`Result`, `Problem`, railway operators, the CQRS contract and its HTTP client are plain types you can `new` up in
-a console app or a unit test.
-
-If you never call `CommunicationLogger.Configure`, logging falls back to an internal factory that writes nowhere
-and exports nothing. Result failure factories emit diagnostics automatically; providers and exporters decide
-which signals are collected. Registration is never a precondition for Result correctness.
-
-### What each entry point does
-
-**Core** (`ManagedCode.Communication`)
-
-| Call | Effect |
-| --- | --- |
-| `services.ConfigureCommunication(loggerFactory)` | Points the library's internal logger at your factory. Optional. |
-| `CommunicationLogger.Configure(serviceProvider \| loggerFactory)` | Same, without a service collection. Optional. |
-| `ExceptionStatusCodeMap.Map<TException>(status)` | Overrides the exception-to-status mapping. Call once at startup. |
-
-**Commands and idempotency** (`ManagedCode.Communication`)
-
-| Call | Effect |
-| --- | --- |
-| `services.AddCommandExecution(options)` | Native command executor with composed, immutable option snapshots. |
-| `services.AddCommandIdempotency()` | Atomic in-memory store plus optional maintenance registration; no hosted service. |
-| `services.AddCommandIdempotency<TStore>()` | Custom atomic store; maintenance is registered only when implemented. |
-| `services.AddCommandRateLimiter(limiter)` | Application-selected local or distributed limiter adapter. |
-| ASP.NET Core `services.AddCommandIdempotency<TStore>(cleanup)` | Atomic store plus hosted cleanup of completed replay outcomes; requires `ICommandIdempotencyMaintenance`. |
-
-**ASP.NET Core** (`ManagedCode.Communication.AspNetCore`)
-
-| Call | Effect |
-| --- | --- |
-| `services.AddCommunication(options)` | Logging plus the MVC filters. The usual one-liner. |
-| `services.AddCommunicationAspNetCore([loggerFactory])` | Logging only. |
-| `services.AddCommunicationFilters()` | MVC filters only: exception handling, model validation, `Result` → status code. |
-| `services.AddControllers(o => o.AddCommunicationFilters())` | Same, applied directly to `MvcOptions`. |
-| `app.UseCommunication()` | Middleware for request-scoped handling. |
-| `services.AddCommunicationCqrs([options])` | CQRS Server-Sent Events transport plus `CqrsStreamServerOptions`. |
-| `services.AddControllers(o => o.AddCommunicationCqrsFilters())` | CQRS MVC filter only. |
-| `endpoint.WithCommunicationResults()` | Minimal API: map a returned `Result` to an HTTP response. |
-| `endpoint.WithCommunicationCqrsResults([options])` | Minimal API: render a chunk stream as SSE. |
-| `services.AddSignalR(o => o.AddCommunicationHubFilter())` | Hub filter turning hub exceptions into failed results. |
-
-**Orleans** (`ManagedCode.Communication.Orleans`)
-
-| Call | Effect |
-| --- | --- |
-| `siloBuilder.UseOrleansCommunication()` | Grain call filters and the serialization surrogates. |
-| `clientBuilder.UseOrleansCommunication()` | The client-side half of the same. |
-| `siloBuilder.UseOrleansCommandExecution(...)` | Explicit Orleans idempotency/rate-limiter adapter and native executor; requires `commandStore` grain storage. |
-| `clientBuilder.UseOrleansCommandExecution(...)` | Client-side Orleans command execution adapter. |
-
-**Observability** — see [Observability](#observability):
-
-```csharp
-builder.Services.AddOpenTelemetry()
-    .WithTracing(t => t.AddSource(CommunicationTelemetry.SourceName))
-    .WithMetrics(m => m.AddMeter(CommunicationTelemetry.SourceName));
-```
-
-### A typical web application
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddCommunication();        // logging + MVC filters
-builder.Services.AddCommunicationCqrs();    // only if you stream commands
-builder.Services.AddCommandIdempotency();   // only if you need idempotent commands
-
-builder.Services.AddOpenTelemetry()         // only if you collect telemetry
-    .WithTracing(t => t.AddSource(CommunicationTelemetry.SourceName))
-    .WithMetrics(m => m.AddMeter(CommunicationTelemetry.SourceName));
-
-var app = builder.Build();
-app.UseCommunication();
-app.MapControllers();
-app.Run();
-```
-
-Drop any line you do not need — none of them are load-bearing for the rest.
-
-## Observability
-
-### OpenTelemetry
-
-Failures are reported through `System.Diagnostics.ActivitySource` and `System.Diagnostics.Metrics.Meter`, both of
-which ship with .NET. The **core package has no OpenTelemetry SDK dependency**; the optional
-`ManagedCode.Communication.Extensions` package references the SDK for registration helpers.
-
-```csharp
-builder.Services.AddOpenTelemetry()
-    .WithTracing(tracing => tracing.AddSource(CommunicationTelemetry.SourceName))
-    .WithMetrics(metrics => metrics.AddMeter(CommunicationTelemetry.SourceName));
-```
-
-### Automatic failures and Aspire registration
-
-Install `ManagedCode.Communication.Extensions` and call this in the application's startup or in the shared
-ServiceDefaults method called by each service:
+Install Extensions for registration helpers:
 
 ```csharp
 using ManagedCode.Communication.Extensions.Telemetry;
 
-var builder = WebApplication.CreateBuilder(args);
-builder.AddServiceDefaults();              // existing Aspire logging and OTLP exporters
-builder.AddCommunicationTelemetry();       // Communication traces, metrics and host logger
+builder.AddCommunicationTelemetry();
 ```
 
-The extension returns the same builder, supports workers and web applications, and can be called repeatedly.
-It subscribes to all Communication instruments, including command retry, timeout, rate-limiter, and execution
-metrics. It connects automatic failure logging to the host's `ILoggerFactory` when the host starts.
-Configure it **in each service process**: registering it only in AppHost does not subscribe to child services.
-See [Aspire telemetry](https://aspire.dev/fundamentals/telemetry/) and
-[OpenTelemetry .NET instrumentation](https://opentelemetry.io/docs/languages/dotnet/instrumentation/).
+This connects the host logger and subscribes to Communication traces and metrics. In Aspire, call it in each
+service alongside that service's existing `AddServiceDefaults()`. Calling it only in AppHost does not collect
+signals from child processes. The application still chooses its exporters, sampling, and export intervals.
 
-For an existing OpenTelemetry configuration, use either the combined extension or the individual subscriptions:
+To add instrumentation to an existing OpenTelemetry setup:
 
 ```csharp
 builder.Services.AddOpenTelemetry().WithCommunication();
+```
 
-// Alternatively, when configuring providers separately:
+Or subscribe to individual providers:
+
+```csharp
 builder.Services.AddOpenTelemetry()
     .WithTracing(tracing => tracing.AddCommunicationInstrumentation())
     .WithMetrics(metrics => metrics.AddCommunicationInstrumentation());
 ```
 
-The individual provider extensions only register their signal; configure logging separately using
-`CommunicationLogger.Configure(...)` or the existing ASP.NET Core registration. Outside Aspire, configure
-`builder.Logging.AddOpenTelemetry(...)` and your log/trace/metric exporters as usual. These helpers do not
-choose an exporter, endpoint, sampling policy, or metric export interval for the application.
+Individual provider subscriptions do not configure logging. Without the helpers, subscribe directly to
+`CommunicationTelemetry.SourceName` through `AddSource` and `AddMeter`.
+
+| Signal | Purpose |
+| --- | --- |
+| `communication.result.failure` activity event | Automatic factory failure attached to the current activity |
+| `communication.result.created.failures` counter | Distinct factory failures, including attempts later recovered |
+| `communication.result.failures` counter | Explicit boundary failures and final failed command executions |
+| `communication.exceptions` counter | Exceptions converted into problems |
+| Command execution instruments | Attempt/total duration, retry, timeout, idempotency, circuit, limiter, queue, and outcome signals |
+
+Automatic factory events preserve the parent operation's status and actual HTTP response code, since a caller
+can recover from a failure. Explicit boundary reports and final failed operations can mark the activity as
+Error. Factory failures do not create a synthetic root/dependency trace. Valid serialized W3C trace/span
+identifiers can become command execution's remote parent; actor IDs are not metric tags.
+
+### Explicit reporting and exception mapping
 
 ```csharp
-return Result<Order>.FailNotFound("Order does not exist");
-// Logs the problem and adds a communication.result.failure event to the current operation.
+using ManagedCode.Communication.Telemetry;
 
-// Inside a catch block, the original exception and stack trace are included automatically:
-return Result<Order>.Fail(exception);
+var result = LoadOrder(orderId).Report(logger);
+var order = await CommunicationDiagnostics.TrackAsync(
+    "orders.place", () => orderService.PlaceAsync(cart), logger);
 ```
 
-This applies to `Result`, `Result<T>`, and `CollectionResult<T>` failure factories. Failures without an exception log at
-Warning with structured `ProblemTitle`, `StatusCode`, `ProblemDetail`, and `ErrorCode` properties
-(validation failures also identify the fields). Failures with an
-exception log at Error with the original exception and stack trace. Wrapping the same `Problem` object again (including conversions between
-result types) does not repeat automatic diagnostics. A new Problem represents a new occurrence. Successful
-factories, reading a result, and `default(Result)` do not emit failure diagnostics.
-
-Automatic failures add a `communication.result.failure` event to the existing activity, including activities
-created by ASP.NET Core, HTTP clients, Orleans, or another library. The event carries `error.type`,
-`problem.type`, `problem.title`, `problem.detail`, `problem.status`, and `problem.error_code`; originating
-exceptions add an `exception` event with their original type, message, and stack trace. No synthetic dependency
-or root trace is created. The operation's status and native HTTP response code remain unchanged: a caller can
-recover, or a command retry can succeed. Without an active activity, the failure still logs and counts.
-
-For example, an OAuth failure can retain both its HTTP status and its provider/domain machine code:
-
-```csharp
-var problem = Problem.Create("Bad Request", "OAuth refresh token is invalid or expired.", 400);
-problem.ErrorCode = "invalid_grant";
-return Result<Token>.Fail(problem);
-```
-
-The current operation receives an event with `problem.status = 400` and `problem.error_code = invalid_grant`.
-The warning exposes `StatusCode = 400` and `ErrorCode = invalid_grant` without requiring logging scopes.
-The HTTP instrumentation records the response actually sent by the endpoint; an internal handled failure
-cannot overwrite that response or produce an unrelated `InProc: communication.result.failure` dependency.
-`communication.result.created.failures` counts these distinct factory failures, including failures later
-recovered by retries. The existing `communication.result.failures` continues counting explicitly reported
-boundaries and final failed command executions; retry attempts do not inflate that final-outcome counter.
-`Report` and `Track` remain explicit boundary reporting APIs and may add a boundary log/span annotation in
-addition to the automatic creation signal.
-
-| Signal | Name | Notes |
-| --- | --- | --- |
-| Trace event | `communication.result.failure` | Automatic factory failures attach exact Problem fields and exception events to the current operation, preserving its status and native response code. |
-| Traces | `ManagedCode.Communication` | Explicitly reported and final failed operations set the span status to `Error` and tag it with `error.type`, `problem.type`, `problem.title`, `problem.status`, `problem.error_code`. |
-| Metric | `communication.result.created.failures` | Automatic factory failures, once per Problem object, including recovered attempts. |
-| Metric | `communication.result.failures` | Explicitly reported failures and final failed command executions, tagged by `error.type` and `problem.status`. |
-| Metric | `communication.exceptions` | Counter of exceptions converted into a `Problem`. |
-
-### Recording the real error
-
-The `Fail(exception)` overloads immediately write the original exception and stack trace to the log and trace,
-then return a plain Problem. Neither Result nor Problem stores the exception reference. The `Try`/`From`
-helpers follow the same path when a delegate throws, including Task and ValueTask operations.
-`Problem.Create(exception)` alone only builds data; if you use it directly, report the exception at the catch
-site before returning the failed result:
+`Track`/`TrackAsync` convert thrown exceptions into failed results and report the original exception.
+`Problem.Create(exception)` alone builds problem data; report at the catch site if using it directly:
 
 ```csharp
 catch (Exception exception)
 {
     var problem = Problem.Create(exception);
-    CommunicationDiagnostics.ReportFailure(logger, problem, exception); // logs + traces, stack trace included
+    CommunicationDiagnostics.ReportFailure(logger, problem, exception);
     return Result<Order>.Fail(problem);
 }
 ```
 
-The ASP.NET Core exception filter, the SignalR hub filter and the Orleans grain call filter already do this for
-you — anything they convert arrives in your traces with its original stack.
+ASP.NET Core, SignalR, and Orleans filters report exceptions they convert. Runtime results and problems never
+retain exceptions for later logging.
 
-### Helpers
-
-```csharp
-// Report a failure without breaking a chain; a successful result passes through untouched.
-var result = LoadOrder(id).Report(logger);
-
-// Wrap an operation in a span, reporting whatever it returns or throws.
-var order = await CommunicationDiagnostics.TrackAsync("orders.place",
-    () => _service.PlaceAsync(cart), logger);
-```
-
-`Track`/`TrackAsync` convert a thrown exception into a failed `Result<T>`, so callers stay on the Result path
-while the exception still reaches the log and the trace.
-
-Static, source-generated logging lives in `LoggerCenter` (general) and `ProblemLoggerCenter` (failures), so
-the generated log call avoids formatting when its level is disabled. Automatic failure tracking still maintains
-weakly keyed deduplication state for each Problem; it does not retain Problems globally.
-
-### Debug symbols and internal implementation
-
-Packages use portable PDBs and the existing `.snupkg` symbol package instead of embedding PDBs inside runtime
-DLLs. Untracked source embedding is disabled. These packaging settings affect debugging and package size;
-they do not enable traces, logs, metrics, or an exporter. Public `CommunicationTelemetry.SourceName`, metric
-names, and registration extensions are available to consumers; internal tags and implementation helpers stay
-internal. No access to internal members is needed in ServiceDefaults.
-
-### Mapping exceptions to status codes
-
-The rule is **4xx means the caller was wrong, 5xx means the server was**. `InvalidOperationException`,
-`NotSupportedException`, `InvalidCastException`, `NullReferenceException` and `IndexOutOfRangeException` are
-server defects and map to **500** — reporting them as 400 blames the client and hides the defect from every
-alert watching the 5xx rate.
-
-The mapping cannot know your domain, so override it once at startup:
+Default exception-to-status mapping is a heuristic. Server defects such as `InvalidOperationException`,
+`NotSupportedException`, and `NullReferenceException` map to `500`; domain-specific mappings can be registered
+once at startup:
 
 ```csharp
+using ManagedCode.Communication.Helpers;
+
 ExceptionStatusCodeMap.Map<OrderNotFoundException>(HttpStatusCode.NotFound);
-ExceptionStatusCodeMap.Map<DomainRuleViolationException>(HttpStatusCode.UnprocessableEntity);
 ```
 
-Lookup walks the exception's type hierarchy, so mapping a base type covers everything derived from it and the
-most derived registration wins.
+Mapping walks the exception type hierarchy and uses the most specific registration. Packages include portable
+PDBs and symbol packages; debug symbols do not enable telemetry providers or exporters.
 
-## Testing
+## Registration reference
 
-The repository uses [TUnit](https://tunit.dev/) with [Microsoft.Testing.Platform](https://learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-intro) and [Shouldly](https://github.com/shouldly/shouldly) for assertions. The repository-level `global.json` selects Microsoft.Testing.Platform as the `dotnet test` runner.
+Use only the registrations required by your application. Plain result factories, railway operators, CQRS
+contracts, and HTTP clients do not require a host registration.
 
-Run the complete Release suite:
+| Boundary | Entry point | Effect |
+| --- | --- | --- |
+| Core logging | `ConfigureCommunication(loggerFactory)` | Connect an explicit logger factory |
+| Commands | `AddCommandExecution(...)` | Register native executor/runtime and options |
+| Idempotency | `AddCommandIdempotency()` / `<TStore>()` | Register local/custom atomic store; no Core hosted cleanup |
+| Limiting | `AddCommandRateLimiter(limiter)` | Register a selected command limiter |
+| ASP.NET Core logging | `AddCommunicationAspNetCore()` | Connect host logging at startup |
+| MVC | `AddCommunication()` | Host logging and MVC result/validation/exception filters |
+| MVC filters only | `AddCommunicationFilters()` | Register filters without host logging |
+| Minimal API | `WithCommunicationResults()` | Map results to raw success/RFC 7807 HTTP responses |
+| CQRS server | `AddCommunicationCqrs(...)` | Shared stream options and MVC stream filter |
+| CQRS Minimal API | `WithCommunicationCqrsResults(...)` | Render a stream as SSE |
+| SignalR | `AddCommunicationHubFilter()` on hub options | Convert Result-returning hub exceptions |
+| Orleans | `UseOrleansCommunication()` on silo/client | Grain-call filters and limiter options; native generated surrogates |
+| Orleans execution | `UseOrleansCommandExecution(...)` | Distributed idempotency/limiting and executor; silo requires `commandStore` |
+| HTTP resilience | `AddCommunicationResilienceHandler(...)` | Native execution around safe HTTP replays |
+| Telemetry | `AddCommunicationTelemetry()` | Host logger and trace/metric subscriptions |
+
+## Development and testing
+
+The repository uses TUnit, Microsoft.Testing.Platform, and Shouldly. `global.json` selects native
+Microsoft.Testing.Platform mode, so use `--project` or `--solution`, with runner arguments passed directly.
 
 ```shell
-dotnet test --solution ManagedCode.Communication.slnx --configuration Release --output Normal
+dotnet restore ManagedCode.Communication.slnx
+dotnet build -c Release ManagedCode.Communication.slnx
+dotnet test --project ManagedCode.Communication.Tests/ManagedCode.Communication.Tests.csproj --configuration Release --no-build --output Normal
 ```
 
-Generate a Cobertura coverage report using the same collector and output format as CI:
+For the complete solution, the CI-equivalent command is:
+
+```shell
+dotnet test --solution ManagedCode.Communication.slnx --configuration Release --no-build --output Normal
+```
+
+Collect Cobertura coverage:
 
 ```shell
 dotnet test --solution ManagedCode.Communication.slnx --configuration Release --coverage --coverage-output coverage.cobertura.xml --coverage-output-format cobertura --output Normal
 ```
 
-The report is written under `TestResults/coverage.cobertura.xml`. Shared matchers such as `ShouldBeEquivalentTo` and `AssertProblem()` live in `ManagedCode.Communication.Tests/TestHelpers`. When adding APIs, mirror the existing TUnit patterns, exercise both success and failure paths, and drive the public surface rather than internal helpers.
+Run the existing performance benchmarks when evaluating allocation or throughput changes:
 
-## Comparison
-
-### Comparison with Other Libraries
-
-| Feature | ManagedCode.Communication | FluentResults | CSharpFunctionalExtensions | ErrorOr |
-|---------|--------------------------|---------------|---------------------------|---------|
-| **Multiple Errors** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
-| **Railway-Oriented** | ✅ Full | ✅ Full | ✅ Full | ⚠️ Limited |
-| **HTTP Integration** | ✅ Built-in | ❌ No | ⚠️ Extension | ❌ No |
-| **Orleans Support** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
-| **SignalR Support** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
-| **RFC 7807** | ✅ Full | ❌ No | ❌ No | ❌ No |
-| **Pagination** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
-| **Command Pattern** | ✅ Built-in | ❌ No | ❌ No | ❌ No |
-| **Performance** | ✅ Struct-based | ❌ Class-based | ✅ Struct-based | ✅ Struct-based |
-| **Async Support** | ✅ Full | ✅ Full | ✅ Full | ✅ Full |
-
-### When to Use ManagedCode.Communication
-
-Choose this library when you need:
-
-- **Full-stack integration**: ASP.NET Core + SignalR + Orleans
-- **Standardized errors**: RFC 7807 Problem Details
-- **Pagination**: Built-in collection results with paging
-- **Command pattern**: Command infrastructure with idempotency
-- **Performance**: Struct-based implementation for minimal overhead
-
-## Best Practices
-
-### DO ✅
-
-```csharp
-// DO: Use Result for operations that can fail
-public Result<User> GetUser(int id)
-{
-    var user = _repository.FindById(id);
-    return user != null 
-        ? Result<User>.Succeed(user)
-        : Result<User>.FailNotFound($"User {id} not found");
-}
-
-// DO: Chain operations using railway-oriented programming
-public Result<Order> ProcessOrder(OrderDto dto)
-{
-    return ValidateOrder(dto)
-        .Then(CreateOrder)
-        .Then(CalculateTotals)
-        .Then(ApplyDiscounts)
-        .Then(SaveOrder);
-}
-
-// DO: Provide specific error information
-public Result ValidateEmail(string email)
-{
-    if (string.IsNullOrEmpty(email))
-        return Result.FailValidation(("email", "Email is required"));
-    
-    if (!email.Contains("@"))
-        return Result.FailValidation(("email", "Invalid email format"));
-    
-    return Result.Succeed();
-}
-
-// DO: Use CollectionResult for paginated data
-public CollectionResult<Product> GetProducts(int page, int pageSize)
-{
-    var products = _repository.GetPaged(page, pageSize);
-    var total = _repository.Count();
-    return CollectionResult<Product>.Succeed(products, page, pageSize, total);
-}
-```
-
-### DON'T ❌
-
-```csharp
-// DON'T: Throw exceptions from Result-returning methods
-public Result<User> GetUser(int id)
-{
-    if (id <= 0)
-        throw new ArgumentException("Invalid ID"); // ❌ Don't throw
-    
-    // Instead:
-    if (id <= 0)
-        return Result.FailValidation(("id", "ID must be positive")); // ✅
-}
-
-// DON'T: Ignore Result values
-var result = UpdateUser(user); // ❌ Result ignored
-DoSomethingElse();
-
-// Instead:
-var result = UpdateUser(user);
-if (result.IsFailed)
-    return result; // ✅ Handle the failure
-
-// DON'T: Mix Result and exceptions
-public async Task<User> GetUserMixed(int id)
-{
-    var result = await GetUserAsync(id);
-    if (result.IsFailed)
-        throw new Exception(result.Problem.Detail); // ❌ Mixing patterns
-    
-    return result.Value;
-}
-
-// DON'T: Create generic error messages
-return Result.Fail("Error"); // ❌ Too vague
-
-// Instead:
-return Result.Fail("User creation failed", "Email already exists"); // ✅
-```
-
-## Contributing
-
-Contributions are welcome! Fork the repository and submit a pull request.
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/managed-code-hub/Communication.git
-
-# Build the solution
-dotnet build
-
-# Run tests
-dotnet test
-
-# Run benchmarks
+```shell
 dotnet run -c Release --project ManagedCode.Communication.Benchmark
 ```
 
-## License
+Results are structs and the JSON converters handle the result envelope directly; payload shape, collection
+materialization, logging, and the transport still affect allocations. Use benchmark evidence for a specific
+path rather than assuming an entire operation allocates nothing.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+New APIs should have success/failure regressions at their public boundary. Orleans tests cover native
+round-trips, HTTP tests cover raw success/RFC 7807 contracts, and CQRS tests cover terminal outcomes,
+cancellation, disposal, malformed input, and bounds. Shared assertion helpers are in
+`ManagedCode.Communication.Tests/TestHelpers`.
 
-## Support
+Package version is owned by `Version` and `PackageVersion` in `Directory.Build.props`. The Release workflow
+on `main` builds, tests, packs, publishes to NuGet, and creates the GitHub release/tag. A completed build does
+not establish publication: verify the intended package is downloadable from NuGet.
 
-- **Issues**: [GitHub Issues](https://github.com/managed-code-hub/Communication/issues)
-- **Source Code**: [GitHub Repository](https://github.com/managed-code-hub/Communication)
-
-## Acknowledgments
-
-- Inspired by F# and Rust Result types
-- Railway-oriented programming concepts
-- RFC 7807 Problem Details for HTTP APIs
-- Built for seamless integration with Microsoft Orleans
-- Optimized for ASP.NET Core applications
-
-### Cancellation at stream completion
-
-`await stream.ToResultAsync(cancellationToken)` throws `OperationCanceledException` when the caller
-cancels while the source finishes, including sources that end normally without a terminal chunk.
-Cancellation is not converted into an incomplete-stream failure; callers can retain resumable state.
-
-### CQRS streams inside Orleans grains
-
-CQRS stream creation, normalization, `ToResultAsync`, and `ToOutcomeAsync` preserve the caller's scheduler and synchronization context. This keeps subsequent stream reads, disposal, and progress callbacks on the Orleans grain scheduler, preserving the calling grain identity across batches.
-
-```csharp
-var result = await otherGrain.StreamAsync().ToResultAsync(
-    async (progress, cancellationToken) =>
-    {
-        // Runs on this grain's scheduler; grain-owned state remains safe to update.
-        await SaveProgressAsync(progress, cancellationToken);
-    });
-```
+See [AGENTS.md](AGENTS.md) for repository conventions, [GitHub Issues](https://github.com/managed-code-hub/Communication/issues)
+for support, and [the source repository](https://github.com/managed-code-hub/Communication) for contributions.
+The project is licensed under [MIT](LICENSE).
