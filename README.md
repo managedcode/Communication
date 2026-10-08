@@ -565,37 +565,20 @@ services.AddCommandRateLimiter(limiter);
 also accepts a permit-count selector. Wrapping an application-owned `PartitionedRateLimiter<ICommand>` does not transfer
 ownership by default; factory-created limiters are owned and disposed by the adapter.
 
-Native Orleans JSON grain storage also preserves `Result` and `Result<T>` success flags, typed values (including
-failure payloads), and `Problem` details. `UseOrleansCommunication()` and `UseOrleansCommandExecution()` register the
-adapter automatically. A standalone storage reader or migration host can register it without starting a silo:
+Orleans grain calls and persisted state use the native Communication surrogates for
+Result, Result<T>, commands, collections, and Problem. Communication does not configure JSON
+grain storage or install JSON converters. The application owns its storage provider and serializer:
 
-```csharp
-services.AddCommunicationOrleansJsonStorage();
-var nativeSerializer = serviceProvider.GetRequiredService<OrleansJsonSerializer>();
-var storageSerializer = new JsonGrainStorageSerializer(nativeSerializer);
+~~~csharp
+var storageSerializer = new OrleansGrainStorageSerializer(
+    serviceProvider.GetRequiredService<Orleans.Serialization.Serializer>());
 var restored = storageSerializer.Deserialize<Result<int>>(
     storageSerializer.Serialize(Result<int>.Succeed(0)));
 // restored.IsSuccess is true and restored.Value is 0.
-```
+~~~
 
-The reader accepts existing native PascalCase result records and their native `Problem` shape. A legacy explicit `IsFailed: true`
-is accepted when default-value suppression omitted `IsSuccess: false`; missing, non-boolean or contradictory outcome
-flags are rejected rather than inventing an operation outcome. Typed payloads retain
-the native Orleans serializer and its type allow-list. Deploy the adapter to every host that reads this JSON state.
-
-The registration also preserves typed `System.Text.Json.JsonElement` values in native Newtonsoft storage,
-including elements boxed as `object` in dictionaries and Result payloads. It uses the configured
-Newtonsoft type metadata plus a JSON payload reconstructed by System.Text.Json; other types keep
-the configured contract resolver. Missing or malformed stored JSON fails closed. Previously stored
-Undefined elements cannot recover their lost content. Register the adapter on every reader and writer.
-
-```csharp
-using var document = JsonDocument.Parse("{\"count\":3}");
-var result = Result<object>.Succeed(document.RootElement.Clone());
-var restored = serializer.Deserialize<Result<object>>(serializer.Serialize(result));
-var count = ((JsonElement)restored.Value!).GetProperty("count").GetInt32(); // 3
-```
-
+Native storage preserves successful default values, failure payloads, and typed Problem details
+through the published Orleans surrogates.
 
 `UseOrleansCommunication()` registers only serializers and grain-call filters. Enable Orleans-backed command idempotency and
 cluster-wide rate limiting explicitly with `UseOrleansCommandExecution()`. The silo must configure grain storage named

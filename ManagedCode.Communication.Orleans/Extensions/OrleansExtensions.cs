@@ -88,7 +88,6 @@ public static class OrleansExtensions
         IServiceCollection services,
         Action<OrleansCommandRateLimiterOptions>? configureRateLimiting)
     {
-        services.AddCommunicationOrleansJsonStorage();
         services.AddOptions<OrleansCommandRateLimiterOptions>();
         if (configureRateLimiting is not null)
         {

@@ -71,7 +71,7 @@ public class ProblemRegressionTests
     [Test]
     public void Deserialize_AcceptsPascalCaseMembers()
     {
-        // Producers using default System.Text.Json options, Newtonsoft, or a non-.NET stack send PascalCase.
+        // Producers using default System.Text.Json options or a non-.NET stack send PascalCase.
         // Matching case-sensitively left every standard member unset and dumped them into Extensions.
         var problem = JsonSerializer.Deserialize<Problem>(
             """{"Type":"https://example/x","Title":"Boom","Status":418,"Detail":"d","Instance":"/i"}""", Web)!;

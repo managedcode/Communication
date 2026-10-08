@@ -50,7 +50,7 @@ public class ProblemJsonConverter : JsonConverter<Problem>
             reader.Read();
 
             // RFC 7807 member names are lowercase, but producers that use PascalCase (the System.Text.Json
-            // default, Newtonsoft, several non-.NET stacks) are common enough that a case-sensitive match would
+            // default and several non-.NET stacks) are common enough that a case-sensitive match would
             // silently dump every standard member into Extensions and leave the Problem blank.
             if (Matches(propertyName, TypeMember))
             {
