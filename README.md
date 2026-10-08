@@ -767,37 +767,25 @@ public interface IImportGrain : IGrainWithStringKey
 }
 ```
 
-Communication does not register a JSON grain-storage adapter. The application owns its storage provider and
-serializer. Native Orleans storage uses the same generated serialization as grain communication:
+Communication does not register a JSON grain-storage adapter. Configure the normal silo/client integration
+from [Orleans integration](#orleans-integration) and mark application models with `[GenerateSerializer]` and
+stable `[Id]` members. Orleans owns serialization and deserialization at the boundary; application handlers
+do not add manual serialization, payload sizing, or conversion algorithms.
 
-```csharp
-using Orleans.Storage;
-
-var storageSerializer = new OrleansGrainStorageSerializer(
-    serviceProvider.GetRequiredService<Orleans.Serialization.Serializer>());
-var restored = storageSerializer.Deserialize<Result<int>>(
-    storageSerializer.Serialize(Result<int>.Succeed(0)));
-// restored.IsSuccess is true; restored.Value is 0.
-```
+The application selects its storage provider and framework storage serializer. Native
+`OrleansGrainStorageSerializer` uses the same generated serialization as grain communication.
 
 Existing persisted data must match the application-selected storage format. Changing serializer configuration
 does not migrate old records. Any cleanup or migration must target exact application-owned state.
 
 ### System.Text.Json for application and HTTP JSON
 
-Communication's JSON implementation uses `System.Text.Json`. `Result`, `Result<T>`, and `Problem` provide
-their JSON converters through type attributes:
+Communication's application and HTTP JSON implementation uses `System.Text.Json`. `Result`, `Result<T>`,
+and `Problem` provide their JSON converters through type attributes; ASP.NET Core and the HTTP client own
+the transport serialization. The HTTP result filter emits a raw success payload or problem response.
 
-```csharp
-using System.Text.Json;
-
-var json = JsonSerializer.Serialize(Result<int>.Succeed(0));
-var restored = JsonSerializer.Deserialize<Result<int>>(json);
-```
-
-This application serialization is separate from the HTTP result filter, which emits a raw success payload or
-problem response, and from Orleans native serialization. Do not install an application JSON codec merely to
-transport Communication types through Orleans.
+HTTP JSON and Orleans native serialization are separate boundaries. Do not install an application JSON
+codec or manual conversion layer merely to transport Communication types through Orleans.
 
 CQRS JSON defaults are available as the immutable `CqrsStreamSerialization.Default`. For source-generated
 payload contracts, use `CqrsStreamSerialization.WithPayloadContext(MyJsonContext.Default)` in
