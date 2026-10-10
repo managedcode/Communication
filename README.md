@@ -4,9 +4,13 @@
 long-running operations report typed progress through CQRS streams. The library also provides railway
 composition, reliable command execution, and ASP.NET Core, SignalR, and Orleans adapters for .NET 10.
 
-[![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg)](https://www.nuget.org/packages/ManagedCode.Communication/)
+[![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+[![CI](https://github.com/managedcode/Communication/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/ci.yml)
+[![Release](https://github.com/managedcode/Communication/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/release.yml)
+[![CodeQL](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/managedcode/Communication/actions/workflows/codeql-analysis.yml)
+[![Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication)
 
 ## Contents
 
@@ -27,14 +31,14 @@ composition, reliable command execution, and ASP.NET Core, SignalR, and Orleans 
 
 ## Installation
 
-Choose the package for the boundary you need. All packages target .NET 10 and use the same release version.
+Choose the package for the boundary you need. All packages target .NET 10 and use the same release version. Package links open the latest stable release on NuGet; badges update automatically.
 
-| Package | Public API | Dependencies within this library |
-| --- | --- | --- |
-| `ManagedCode.Communication` | Results, problems, collections, commands, execution, CQRS contracts and HTTP stream client, diagnostics | None |
-| `ManagedCode.Communication.Extensions` | Railway operators, HTTP result clients, `IHttpClientFactory` resilience, OpenTelemetry registration helpers | Core |
-| `ManagedCode.Communication.AspNetCore` | Minimal API and MVC filters, SignalR filter, SSE transport, host logging setup | Core and Extensions |
-| `ManagedCode.Communication.Orleans` | Native serialization surrogates, grain-call filters, Orleans idempotency and distributed limiter adapters | Core and AspNetCore |
+| Package | Latest version | Downloads | Public API | Dependencies within this library |
+| --- | --- | --- | --- | --- |
+| [ManagedCode.Communication](https://www.nuget.org/packages/ManagedCode.Communication) | [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication) | [![Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication) | Results, problems, collections, commands, execution, CQRS contracts and HTTP stream client, diagnostics | None |
+| [ManagedCode.Communication.Extensions](https://www.nuget.org/packages/ManagedCode.Communication.Extensions) | [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.Extensions.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication.Extensions) | [![Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.Extensions.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication.Extensions) | Railway operators, HTTP result clients, `IHttpClientFactory` resilience, OpenTelemetry registration helpers | Core |
+| [ManagedCode.Communication.AspNetCore](https://www.nuget.org/packages/ManagedCode.Communication.AspNetCore) | [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.AspNetCore.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication.AspNetCore) | [![Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.AspNetCore.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication.AspNetCore) | Minimal API and MVC filters, SignalR filter, SSE transport, host logging setup | Core and Extensions |
+| [ManagedCode.Communication.Orleans](https://www.nuget.org/packages/ManagedCode.Communication.Orleans) | [![NuGet](https://img.shields.io/nuget/v/ManagedCode.Communication.Orleans.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication.Orleans) | [![Downloads](https://img.shields.io/nuget/dt/ManagedCode.Communication.Orleans.svg?style=flat-square&logo=nuget)](https://www.nuget.org/packages/ManagedCode.Communication.Orleans) | Native serialization surrogates, grain-call filters, Orleans idempotency and distributed limiter adapters | Core and AspNetCore |
 
 Core and Extensions do not depend on ASP.NET Core. Orleans currently brings the AspNetCore package transitively.
 The core package uses Microsoft.Extensions caching/logging and System.Threading.RateLimiting; it does not
@@ -43,25 +47,25 @@ require the OpenTelemetry SDK. Extensions adds the OpenTelemetry hosting and HTT
 For a web application:
 
 ```shell
-dotnet add package ManagedCode.Communication.AspNetCore --version 10.3.4
+dotnet add package ManagedCode.Communication.AspNetCore
 ```
 
 For a worker, console, or browser client using railway operators:
 
 ```shell
-dotnet add package ManagedCode.Communication.Extensions --version 10.3.4
+dotnet add package ManagedCode.Communication.Extensions
 ```
 
 For Orleans:
 
 ```shell
-dotnet add package ManagedCode.Communication.Orleans --version 10.3.4
+dotnet add package ManagedCode.Communication.Orleans
 ```
 
-A core-only application can reference `ManagedCode.Communication` directly. Equivalent project reference:
+A core-only application can install `ManagedCode.Communication` directly:
 
-```xml
-<PackageReference Include="ManagedCode.Communication" Version="10.3.4" />
+```shell
+dotnet add package ManagedCode.Communication
 ```
 
 ## Quick start
