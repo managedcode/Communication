@@ -21,23 +21,23 @@ public class ProblemException : Exception
     /// <summary>
     ///     Initializes a new instance of the <see cref="ProblemException" /> class with title.
     /// </summary>
-    public ProblemException(string title) 
+    public ProblemException(string title)
         : this(Problem.Create(title, title))
     {
     }
-    
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="ProblemException" /> class with title and detail.
     /// </summary>
-    public ProblemException(string title, string detail) 
+    public ProblemException(string title, string detail)
         : this(Problem.Create(title, detail))
     {
     }
-    
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="ProblemException" /> class with title, detail and status code.
     /// </summary>
-    public ProblemException(string title, string detail, int statusCode) 
+    public ProblemException(string title, string detail, int statusCode)
         : this(Problem.Create(title, detail, statusCode))
     {
     }
@@ -45,7 +45,7 @@ public class ProblemException : Exception
     /// <summary>
     ///     Initializes a new instance of the <see cref="ProblemException" /> class with an inner exception.
     /// </summary>
-    public ProblemException(Exception innerException) 
+    public ProblemException(Exception innerException)
         : this(Problem.Create(innerException))
     {
     }

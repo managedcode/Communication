@@ -1,0 +1,4 @@
+# Match the CRLF convention in .editorconfig on every checkout.
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.props text eol=crlf

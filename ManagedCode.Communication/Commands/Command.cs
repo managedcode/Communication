@@ -19,7 +19,7 @@ public partial class Command : ICommand, ICommandFactory<Command>
     {
         CommandType = string.Empty;
     }
-    
+
     /// <summary>
     ///     Creates a command with the given identity and type.
     /// </summary>

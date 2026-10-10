@@ -41,8 +41,8 @@ public static partial class ResultRailwayExtensions
     {
         if (result.IsSuccess)
             return next(result.Value);
-        
-        return result.TryGetProblem(out var problem) 
+
+        return result.TryGetProblem(out var problem)
             ? Task.FromResult(Result<TOut>.Fail(problem))
             : Task.FromResult(Result<TOut>.Fail(ProblemConstants.Titles.Error, ProblemConstants.Messages.GenericError));
     }
@@ -74,7 +74,7 @@ public static partial class ResultRailwayExtensions
     /// <summary>
     ///     Fails the result if the predicate is true with a custom error enum.
     /// </summary>
-    public static Result<T> FailIf<T, TEnum>(this Result<T> result, Func<T, bool> predicate, TEnum errorCode) 
+    public static Result<T> FailIf<T, TEnum>(this Result<T> result, Func<T, bool> predicate, TEnum errorCode)
         where TEnum : Enum
     {
         if (result.IsSuccess && predicate(result.Value))
@@ -135,7 +135,7 @@ public static partial class ResultRailwayExtensions
     /// <summary>
     ///     Switches to different results based on the current state.
     /// </summary>
-    public static Result<TOut> SwitchFirst<T, TOut>(this Result<T> result, 
+    public static Result<TOut> SwitchFirst<T, TOut>(this Result<T> result,
         params (Func<T, bool> condition, Func<T, Result<TOut>> action)[] cases)
     {
         if (result.IsFailed)
@@ -167,7 +167,7 @@ public static partial class ResultRailwayExtensions
     {
         if (result.IsSuccess)
             return result;
-            
+
         return result.TryGetProblem(out var problem)
             ? recovery(problem)
             : recovery(Problem.GenericError());
@@ -188,11 +188,11 @@ public static partial class ResultRailwayExtensions
     {
         if (result.IsSuccess)
             return result;
-            
+
         var problem = result.TryGetProblem(out var p)
             ? p
             : Problem.GenericError();
-            
+
         return await recovery(problem);
     }
 
@@ -248,8 +248,8 @@ public static partial class ResultRailwayExtensions
     /// </summary>
     public static Result<T> ToResult<T>(this T? value) where T : class
     {
-        return value != null 
-            ? Result<T>.Succeed(value) 
+        return value != null
+            ? Result<T>.Succeed(value)
             : Result<T>.FailNotFound($"{typeof(T).Name} not found");
     }
 

@@ -5,8 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CollectionResults.Extensions;
-using Microsoft.Extensions.Logging;
 using ManagedCode.Communication.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.CollectionResultT;
 

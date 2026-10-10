@@ -55,7 +55,7 @@ public partial class Problem
             Detail = detail
         };
     }
-    
+
     /// <summary>
     ///     Creates a Problem with title, detail and status code.
     /// </summary>
@@ -69,7 +69,7 @@ public partial class Problem
             Detail = detail
         };
     }
-    
+
     /// <summary>
     ///     Creates a Problem with title, detail and HttpStatusCode.
     /// </summary>
@@ -83,7 +83,7 @@ public partial class Problem
             Detail = detail
         };
     }
-    
+
     /// <summary>
     ///     Creates a Problem with title, detail, status code and type.
     /// </summary>
@@ -97,7 +97,7 @@ public partial class Problem
             Detail = detail
         };
     }
-    
+
     /// <summary>
     ///     Creates a Problem with all fields.
     /// </summary>
@@ -126,7 +126,7 @@ public partial class Problem
             Detail = statusCode.ToString()
         };
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an HTTP status code with detail.
     /// </summary>
@@ -148,11 +148,11 @@ public partial class Problem
     {
         // Try to get the enum's numeric value as status code
         var enumValue = Convert.ToInt32(errorCode);
-        
+
         // If the enum value looks like an HTTP status code (100-599), use it
         // Otherwise default to 400 Bad Request for domain errors
         var statusCode = (enumValue >= 100 && enumValue <= 599) ? enumValue : 400;
-        
+
         var problem = new Problem
         {
             Type = ProblemConstants.Types.HttpStatus(statusCode),
@@ -166,7 +166,7 @@ public partial class Problem
 
         return problem;
     }
-    
+
     /// <summary>
     ///     Creates a Problem from a custom error enum with detail.
     /// </summary>
@@ -174,11 +174,11 @@ public partial class Problem
     {
         // Try to get the enum's numeric value as status code
         var enumValue = Convert.ToInt32(errorCode);
-        
+
         // If the enum value looks like an HTTP status code (100-599), use it
         // Otherwise default to 400 Bad Request for domain errors
         var statusCode = (enumValue >= 100 && enumValue <= 599) ? enumValue : 400;
-        
+
         var problem = new Problem
         {
             Type = ProblemConstants.Types.HttpStatus(statusCode),
@@ -192,7 +192,7 @@ public partial class Problem
 
         return problem;
     }
-    
+
     /// <summary>
     ///     Creates a Problem from a custom error enum with explicit status code.
     /// </summary>
@@ -211,7 +211,7 @@ public partial class Problem
 
         return problem;
     }
-    
+
     /// <summary>
     ///     Creates a Problem from a custom error enum with detail and status code.
     /// </summary>
@@ -245,7 +245,7 @@ public partial class Problem
         };
 
         problem.ErrorCode = exception.GetType().FullName ?? exception.GetType().Name;
-        
+
         // Store the original exception type for potential reconstruction
         problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = exception.GetType().FullName;
 
@@ -262,7 +262,7 @@ public partial class Problem
 
         return problem;
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an exception with HttpStatusCode.
     /// </summary>
@@ -270,7 +270,7 @@ public partial class Problem
     {
         return Create(exception, (int)statusCode);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an exception with status code.
     /// </summary>
@@ -285,7 +285,7 @@ public partial class Problem
         };
 
         problem.ErrorCode = exception.GetType().FullName ?? exception.GetType().Name;
-        
+
         // Store the original exception type for potential reconstruction
         problem.Extensions[ProblemConstants.ExtensionKeys.OriginalExceptionType] = exception.GetType().FullName;
 
@@ -302,7 +302,7 @@ public partial class Problem
 
         return problem;
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an exception.
     /// </summary>
@@ -310,7 +310,7 @@ public partial class Problem
     {
         return Create(exception);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an exception with the status code.
     /// </summary>
@@ -318,7 +318,7 @@ public partial class Problem
     {
         return Create(exception, statusCode);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an HTTP status code.
     /// </summary>
@@ -326,7 +326,7 @@ public partial class Problem
     {
         return Create(statusCode);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an HTTP status code with detail.
     /// </summary>
@@ -334,7 +334,7 @@ public partial class Problem
     {
         return Create(statusCode, detail);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from a custom error enum.
     /// </summary>
@@ -342,7 +342,7 @@ public partial class Problem
     {
         return Create(errorCode);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from a custom error enum with detail.
     /// </summary>
@@ -350,7 +350,7 @@ public partial class Problem
     {
         return Create(errorCode, detail);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from a custom error enum with detail and explicit status code.
     /// </summary>
@@ -536,34 +536,34 @@ public partial class Problem
         switch (errors)
         {
             case JsonElement { ValueKind: JsonValueKind.Object } jsonElement:
-            {
-                var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-                foreach (var property in jsonElement.EnumerateObject())
                 {
-                    result[property.Name] = ReadMessages(property.Value);
-                }
+                    var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+                    foreach (var property in jsonElement.EnumerateObject())
+                    {
+                        result[property.Name] = ReadMessages(property.Value);
+                    }
 
-                return result;
-            }
+                    return result;
+                }
 
             // Some producers hand back a plain object map (e.g. an IDictionary from a different serializer).
             case IDictionary<string, object?> objectMap:
-            {
-                var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-                foreach (var pair in objectMap)
                 {
-                    result[pair.Key] = pair.Value switch
+                    var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+                    foreach (var pair in objectMap)
                     {
-                        List<string> list => list,
-                        IEnumerable<string> messages => [..messages],
-                        JsonElement element => ReadMessages(element),
-                        null => [],
-                        var other => [other.ToString() ?? string.Empty]
-                    };
-                }
+                        result[pair.Key] = pair.Value switch
+                        {
+                            List<string> list => list,
+                            IEnumerable<string> messages => [.. messages],
+                            JsonElement element => ReadMessages(element),
+                            null => [],
+                            var other => [other.ToString() ?? string.Empty]
+                        };
+                    }
 
-                return result;
-            }
+                    return result;
+                }
 
             default:
                 return null;
@@ -611,7 +611,7 @@ public partial class Problem
     {
         return TryGetExtension<T>(key, out var value) ? value! : defaultValue;
     }
-    
+
     /// <summary>
     ///     Adds a validation error for a specific field.
     /// </summary>
@@ -710,14 +710,14 @@ public partial class Problem
     public Exception ToException()
     {
         // Check if we have the original exception type stored
-        if (TryGetExtension<string>(ProblemConstants.ExtensionKeys.OriginalExceptionType, out var originalTypeName) && 
+        if (TryGetExtension<string>(ProblemConstants.ExtensionKeys.OriginalExceptionType, out var originalTypeName) &&
             !string.IsNullOrWhiteSpace(originalTypeName))
         {
             try
             {
                 // Try to get the type from the current app domain
                 var originalType = System.Type.GetType(originalTypeName);
-                
+
                 // If not found, search in all loaded assemblies
                 if (originalType == null)
                 {
@@ -728,12 +728,12 @@ public partial class Problem
                             break;
                     }
                 }
-                
+
                 if (originalType != null && typeof(Exception).IsAssignableFrom(originalType))
                 {
                     // Try to create instance of the original exception type
-                    var message = !string.IsNullOrEmpty(Detail) ? Detail : 
-                                  !string.IsNullOrEmpty(Title) ? Title : 
+                    var message = !string.IsNullOrEmpty(Detail) ? Detail :
+                                  !string.IsNullOrEmpty(Title) ? Title :
                                   "An error occurred";
                     if (Activator.CreateInstance(originalType, message) is Exception reconstructedException)
                     {

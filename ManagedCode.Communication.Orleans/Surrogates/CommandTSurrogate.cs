@@ -60,8 +60,8 @@ public struct CommandTSurrogate<T>
     ///     Creates the surrogate from its parts.
     /// </summary>
     public CommandTSurrogate(
-        Guid commandId, 
-        string commandType, 
+        Guid commandId,
+        string commandType,
         T? value,
         DateTime timestamp,
         string? correlationId,

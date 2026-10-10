@@ -15,7 +15,7 @@ public static class ProblemCreationExtensions
     {
         return Problem.Create(exception);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an exception with status code
     /// </summary>
@@ -39,7 +39,7 @@ public static class ProblemCreationExtensions
     {
         return Problem.Create(errorCode);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an enum with detail
     /// </summary>
@@ -47,7 +47,7 @@ public static class ProblemCreationExtensions
     {
         return Problem.Create(errorCode, detail);
     }
-    
+
     /// <summary>
     ///     Creates a Problem from an enum with detail and status code
     /// </summary>

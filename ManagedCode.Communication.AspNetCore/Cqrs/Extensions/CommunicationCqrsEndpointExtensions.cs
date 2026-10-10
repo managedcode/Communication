@@ -1,11 +1,11 @@
 using System;
 using ManagedCode.Communication.AspNetCore.Filters;
+using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using ManagedCode.Communication.CQRS;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 

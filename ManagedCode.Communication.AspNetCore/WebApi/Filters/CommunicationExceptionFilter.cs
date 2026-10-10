@@ -1,9 +1,9 @@
 using System;
+using ManagedCode.Communication.Logging;
+using ManagedCode.Communication.Telemetry;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
-using ManagedCode.Communication.Logging;
-using ManagedCode.Communication.Telemetry;
 using static ManagedCode.Communication.AspNetCore.Helpers.HttpStatusCodeHelper;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;

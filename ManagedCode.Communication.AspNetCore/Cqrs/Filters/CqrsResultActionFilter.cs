@@ -1,10 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using ManagedCode.Communication.CQRS;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 

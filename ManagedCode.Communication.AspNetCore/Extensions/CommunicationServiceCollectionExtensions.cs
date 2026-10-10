@@ -1,12 +1,12 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using ManagedCode.Communication.AspNetCore.Configuration;
+using ManagedCode.Communication.Logging;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using ManagedCode.Communication.Logging;
-using ManagedCode.Communication.AspNetCore.Configuration;
-using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
@@ -53,10 +53,10 @@ public static class CommunicationServiceCollectionExtensions
     {
         var options = new CommunicationOptions();
         configure?.Invoke(options);
-        
+
         services.AddCommunicationAspNetCore();
         services.AddCommunicationFilters();
-        
+
         return services;
     }
 }

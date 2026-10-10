@@ -39,7 +39,7 @@ public static class CommunicationLogger
     {
         if (_logger != null)
             return _logger;
-            
+
         _logger = CreateLogger();
         return _logger;
     }

@@ -23,7 +23,7 @@ public static class CommunicationAppBuilderExtensions
         // Currently no middleware registration needed - 
         // Communication functionality is handled via filters
         // Future middleware can be added here as needed
-        
+
         return app;
     }
 }

@@ -7,11 +7,11 @@ using ManagedCode.Communication;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Constants;
 using Microsoft.AspNetCore.Http;
-using HttpResults = Microsoft.AspNetCore.Http.Results;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
+using AspNetResultFactory = System.Func<object, Microsoft.AspNetCore.Http.IResult>;
 using CommunicationResult = ManagedCode.Communication.IResult;
 using CommunicationResultOfObject = ManagedCode.Communication.IResult<object?>;
-using AspNetResultFactory = System.Func<object, Microsoft.AspNetCore.Http.IResult>;
+using HttpResults = Microsoft.AspNetCore.Http.Results;
 
 namespace ManagedCode.Communication.AspNetCore.MinimalApi;
 

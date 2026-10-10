@@ -104,5 +104,5 @@ public partial struct Result
     public static Result From(Func<bool> condition, Problem problem)
     {
         return condition.ToResult(problem);
-}
+    }
 }

@@ -1,6 +1,6 @@
+using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication;
 

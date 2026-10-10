@@ -1,8 +1,8 @@
 using System.Linq;
+using ManagedCode.Communication.Logging;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Logging;
-using ManagedCode.Communication.Logging;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 

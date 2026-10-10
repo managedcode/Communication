@@ -122,7 +122,7 @@ public static partial class LoggerCenter
         Level = LogLevel.Information,
         Message = "Health metrics - Total: {TotalCommands}, Completed: {CompletedCommands}, Failed: {FailedCommands}, InProgress: {InProgressCommands}, FailureRate: {FailureRate:P2}, StuckRate: {StuckRate:P2}")]
     public static partial void LogHealthMetrics(
-        ILogger logger, int totalCommands, int completedCommands, int failedCommands, 
+        ILogger logger, int totalCommands, int completedCommands, int failedCommands,
         int inProgressCommands, double failureRate, double stuckRate);
 
     /// <summary>

@@ -56,7 +56,7 @@ public struct CommandSurrogate
     ///     Creates the surrogate from its parts.
     /// </summary>
     public CommandSurrogate(
-        Guid commandId, 
+        Guid commandId,
         string commandType,
         DateTime timestamp,
         string? correlationId,

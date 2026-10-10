@@ -17,20 +17,20 @@ public sealed class ProblemSurrogateConverter : IConverter<Problem, ProblemSurro
     {
         var problem = surrogate.Instance != null && surrogate.Type != null
             ? Problem.Create(
-                surrogate.Title ?? ProblemConstants.Titles.Error, 
-                surrogate.Detail ?? ProblemConstants.Messages.GenericError, 
-                surrogate.StatusCode, 
-                surrogate.Type, 
+                surrogate.Title ?? ProblemConstants.Titles.Error,
+                surrogate.Detail ?? ProblemConstants.Messages.GenericError,
+                surrogate.StatusCode,
+                surrogate.Type,
                 surrogate.Instance)
             : surrogate.Type != null
                 ? Problem.Create(
-                    surrogate.Title ?? ProblemConstants.Titles.Error, 
-                    surrogate.Detail ?? ProblemConstants.Messages.GenericError, 
-                    surrogate.StatusCode, 
+                    surrogate.Title ?? ProblemConstants.Titles.Error,
+                    surrogate.Detail ?? ProblemConstants.Messages.GenericError,
+                    surrogate.StatusCode,
                     surrogate.Type)
                 : Problem.Create(
-                    surrogate.Title ?? ProblemConstants.Titles.Error, 
-                    surrogate.Detail ?? ProblemConstants.Messages.GenericError, 
+                    surrogate.Title ?? ProblemConstants.Titles.Error,
+                    surrogate.Detail ?? ProblemConstants.Messages.GenericError,
                     surrogate.StatusCode);
 
         // Copy extensions using the WithExtensions method

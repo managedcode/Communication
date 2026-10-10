@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using ManagedCode.Communication.Constants;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.AspNetCore;
 
@@ -44,7 +44,7 @@ public static class ProblemExtensions
             Detail = problemDetails.Detail,
             Instance = problemDetails.Instance
         };
-        
+
         // If Type was null in the original ProblemDetails, keep it null
         if (problemDetails.Type == null)
         {

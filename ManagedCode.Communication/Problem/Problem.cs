@@ -83,7 +83,7 @@ public partial class Problem
     [JsonExtensionData]
     public IDictionary<string, object?> Extensions { get; set; } = new Dictionary<string, object?>(StringComparer.Ordinal);
 
-    
+
     // Alternative constructor that ensures Extensions is properly initialized
     internal Problem(IDictionary<string, object?> extensions) : this()
     {

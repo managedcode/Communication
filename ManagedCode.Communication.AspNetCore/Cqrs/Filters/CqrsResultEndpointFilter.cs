@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using ManagedCode.Communication.CQRS;
+using Microsoft.AspNetCore.Http;
 
 namespace ManagedCode.Communication.AspNetCore.Filters;
 

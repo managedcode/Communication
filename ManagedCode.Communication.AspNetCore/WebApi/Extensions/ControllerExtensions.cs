@@ -1,9 +1,9 @@
 using System;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Results.Extensions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 
@@ -19,7 +19,7 @@ public static class ControllerExtensions
     {
         if (result.IsSuccess)
             return new OkObjectResult(result.Value);
-        
+
         var problem = NormalizeProblem(result.GetProblemNoFallback());
         return new ObjectResult(problem)
         {
@@ -34,7 +34,7 @@ public static class ControllerExtensions
     {
         if (result.IsSuccess)
             return new NoContentResult();
-        
+
         var problem = NormalizeProblem(result.GetProblemNoFallback());
         return new ObjectResult(problem)
         {
@@ -49,7 +49,7 @@ public static class ControllerExtensions
     {
         if (result.IsSuccess)
             return Microsoft.AspNetCore.Http.Results.Ok(result.Value);
-        
+
         var problem = NormalizeProblem(result.GetProblemNoFallback());
         return Microsoft.AspNetCore.Http.Results.Problem(
             title: problem.Title,
@@ -68,7 +68,7 @@ public static class ControllerExtensions
     {
         if (result.IsSuccess)
             return Microsoft.AspNetCore.Http.Results.NoContent();
-        
+
         var problem = NormalizeProblem(result.GetProblemNoFallback());
         return Microsoft.AspNetCore.Http.Results.Problem(
             title: problem.Title,
