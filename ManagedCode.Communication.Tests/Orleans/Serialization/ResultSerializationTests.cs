@@ -117,18 +117,16 @@ public class ResultSerializationTests
     }
 
     [Test]
-    public async Task ResultT_WithNullValue_ShouldSerializeCorrectly()
+    public async Task ResultT_WithNullFailureValue_ShouldSerializeCorrectly()
     {
-        // Arrange
         var grain = _grainFactory.GetGrain<ITestSerializationGrain>(Guid.NewGuid());
-        var result = Result<string?>.Succeed((string?)null);
+        var result = Result<string?>.Fail();
 
-        // Act
         var echoed = await grain.EchoResultAsync(result);
 
-        // Assert
-        echoed.IsSuccess.ShouldBeTrue();
+        echoed.IsFailed.ShouldBeTrue();
         echoed.Value.ShouldBeNull();
+        echoed.Problem.ShouldNotBeNull();
     }
 
     [Test]

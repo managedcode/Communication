@@ -40,18 +40,11 @@ public class ResultConversionExtensionsTests
     }
 
     [Test]
-    public void AsResult_WithNullValue_CreatesSuccessfulResultWithNull()
+    public void AsResult_WithNullValue_RejectsInvalidSuccess()
     {
-        // Arrange
         string? value = null;
 
-        // Act
-        var result = value.AsResult();
-
-        // Assert
-        result.IsSuccess.ShouldBeTrue();
-        result.Value.ShouldBeNull();
-        result.Problem.ShouldBeNull();
+        Should.Throw<ArgumentNullException>(() => value.AsResult());
     }
 
     [Test]
