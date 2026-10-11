@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using ManagedCode.Communication.CollectionResultT;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
@@ -55,6 +56,23 @@ public class ResultSuccessValueContractTests
         result.IsFailed.ShouldBeTrue();
         result.Value.ShouldBeNull();
         result.Problem.ShouldNotBeNull();
+    }
+
+    [Test]
+    public void CollectionSuccess_WithNullInitializer_PreservesEmptyNonNullCollection()
+    {
+        var result = CollectionResult<string>.Succeed(Array.Empty<string>()) with { Collection = null! };
+        result.IsSuccess.ShouldBeTrue();
+        result.Collection.ShouldBeEmpty();
+        result.Value.ShouldBeSameAs(result.Collection);
+    }
+
+    [Test]
+    public void CollectionSuccess_FromDefaultStruct_PreservesNonNullCollection()
+    {
+        var result = default(CollectionResult<string>) with { IsSuccess = true };
+        result.Collection.ShouldBeEmpty();
+        result.Value.ShouldBeSameAs(result.Collection);
     }
 
     [Test]

@@ -17,6 +17,8 @@ namespace ManagedCode.Communication.CollectionResultT;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Count: {Collection?.Length ?? 0}; Problem: {Problem?.Title}")]
 public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionResultFactory<CollectionResult<T>, T>
 {
+    private T[]? _collection;
+
     private CollectionResult(bool isSuccess, IEnumerable<T>? collection, int pageNumber, int pageSize, int totalItems, Problem? problem) : this(
         isSuccess, collection?.ToArray(), pageNumber, pageSize, totalItems, problem)
     {
@@ -70,7 +72,11 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [JsonPropertyName(CommunicationJsonNames.Collection)]
     [JsonPropertyOrder(2)]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public T[] Collection { get; init; } = [];
+    public T[] Collection
+    {
+        get => _collection ?? [];
+        init => _collection = value;
+    }
 
     /// <summary>
     ///     Gets the collection as a Value property, for <see cref="IResult{T}" /> compatibility.

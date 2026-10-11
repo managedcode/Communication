@@ -125,6 +125,8 @@ replacing a successful payload with null in an initializer, throws `ArgumentNull
 C# type argument does not allow a successful null payload. `Result<int>.Succeed()` still carries zero,
 while `Result<string>.Succeed()` has no valid default payload and throws. For an operation with no
 data, return `Result.Succeed()`; for optional data, return a real value or an appropriate failure.
+`CollectionResult<T>.Collection` always exposes a non-null collection, including default struct values
+and null initializer input; missing collections normalize to empty, matching its existing factories.
 
 `Result` and `Result<T>` are structs. Their state is fixed after construction, but referenced payloads and
 `Problem` objects remain mutable. Avoid changing a shared problem after returning or publishing it.
