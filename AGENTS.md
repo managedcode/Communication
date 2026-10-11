@@ -9,6 +9,7 @@ If I tell you to remember something, you do the same, update
 
 
 ## Rules to follow
+- A successful `Result<T>` must always carry a non-null `Value`, matching its `MemberNotNullWhen` annotations. Reject null success payloads at the owning result setter/factory, including nullable type arguments and initializer overrides. Use non-generic `Result.Succeed()` for a success without a payload; never preserve a successful null value to accommodate a consumer null guard.
 - Communication Orleans integration uses native generated Orleans serialization and its typed surrogates only. Do not add Newtonsoft.Json, JSON grain-storage adapters/converters, or automatic JSON storage registrations. Applications own their storage-provider serialization.
 - For failure logging, use Warning with failure details when there is no exception, and Error with the original stack trace when an exception is supplied.
 - For automatic Result failure telemetry, record the error and original exception immediately in the failure/catch path; never retain an exception reference in Result or Problem for later diagnostics.

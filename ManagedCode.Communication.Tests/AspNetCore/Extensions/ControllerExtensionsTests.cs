@@ -215,18 +215,11 @@ public class ControllerExtensionsTests
     }
 
     [Test]
-    public void ToHttpResult_WithNullValue_HandlesGracefully()
+    public void ToHttpResult_WithNullTypedSuccess_RejectsInvalidPayload()
     {
-        // Arrange
         string? nullValue = null;
-        var result = Result<string?>.Succeed(nullValue);
 
-        // Act
-        var httpResult = result.ToHttpResult();
-
-        // Assert
-        httpResult.ShouldNotBeNull();
-        httpResult.GetType().Name.ShouldContain("Ok");
+        Should.Throw<ArgumentNullException>(() => Result<string?>.Succeed(nullValue).ToHttpResult());
     }
 
     [Test]

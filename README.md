@@ -120,6 +120,12 @@ A failed untyped `Result` or a `Problem` can become a typed failure. A successfu
 value to supply to `Result<T>`; converting it to a typed result produces a failure. Create typed successes
 from their actual values.
 
+`Result<T>.IsSuccess` guarantees a non-null `Value`. Passing null to a typed success factory, or
+replacing a successful payload with null in an initializer, throws `ArgumentNullException`; a nullable
+C# type argument does not allow a successful null payload. `Result<int>.Succeed()` still carries zero,
+while `Result<string>.Succeed()` has no valid default payload and throws. For an operation with no
+data, return `Result.Succeed()`; for optional data, return a real value or an appropriate failure.
+
 `Result` and `Result<T>` are structs. Their state is fixed after construction, but referenced payloads and
 `Problem` objects remain mutable. Avoid changing a shared problem after returning or publishing it.
 `default(Result)` is not a successful result; use a factory to state the intended outcome.

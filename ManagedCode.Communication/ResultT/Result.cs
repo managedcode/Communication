@@ -18,6 +18,8 @@ namespace ManagedCode.Communication;
 [DebuggerDisplay("IsSuccess: {IsSuccess}; Problem: {Problem?.Title}")]
 public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResultValueFactory<Result<T>, T>
 {
+    private T? _value;
+
     /// <summary>
     ///     Initializes a new instance of the Result struct.
     /// </summary>
@@ -127,7 +129,19 @@ public partial struct Result<T> : IResult<T>, IResultFactory<Result<T>>, IResult
     /// </remarks>
     [JsonPropertyName(CommunicationJsonNames.Value)]
     [JsonPropertyOrder(2)]
-    public T? Value { get; init; }
+    public T? Value
+    {
+        get => _value;
+        init
+        {
+            if (IsSuccess)
+            {
+                ArgumentNullException.ThrowIfNull(value);
+            }
+
+            _value = value;
+        }
+    }
 
     [JsonInclude]
     [JsonPropertyName(CommunicationJsonNames.Problem)]
