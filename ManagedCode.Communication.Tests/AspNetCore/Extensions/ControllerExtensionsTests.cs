@@ -1,3 +1,4 @@
+using System;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
