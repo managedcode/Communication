@@ -17,6 +17,7 @@ composition, reliable command execution, and ASP.NET Core, SignalR, and Orleans 
 - [Installation](#installation)
 - [Quick start](#quick-start)
 - [Results and problems](#results-and-problems)
+- [Static analysis guidance](#static-analysis-guidance)
 - [Collections and pagination](#collections-and-pagination)
 - [Railway composition](#railway-composition)
 - [HTTP integration](#http-integration)
@@ -83,11 +84,19 @@ static Result<int> Divide(int dividend, int divisor)
     return Result<int>.Succeed(dividend / divisor);
 }
 
-var result = Divide(12, 3);
-if (result.IsSuccess)
+static void PrintDivision(int dividend, int divisor)
+{
+    var result = Divide(dividend, divisor);
+    if (result.IsFailed)
+    {
+        Console.WriteLine(result.Problem.Detail);
+        return;
+    }
+
     Console.WriteLine(result.Value);
-else
-    Console.WriteLine(result.Problem.Detail);
+}
+
+PrintDivision(12, 3);
 ```
 
 Use results for expected failures that callers can handle. Inspect the returned result: C# does not require
@@ -98,12 +107,16 @@ failed result at a chosen boundary.
 
 ### Result types and factories
 
-| Type | Carries |
-| --- | --- |
-| `Result` | Success or a failure without a success value |
-| `Result<T>` | Success value of type `T`, or a failure |
-| `CollectionResult<T>` | Collection plus optional pagination metadata, or a failure |
-| `Problem` | `Type`, `Title`, `StatusCode`, `Detail`, `Instance`, and extension fields |
+Choose the return type from what a successful operation promises:
+
+| Contract | Use | Successful return |
+| --- | --- | --- |
+| A command completed; there is no response data | `Result` | `Result.Succeed()` |
+| A query or command returns one value | `Result<T>` | `Result<T>.Succeed(value)` with a non-null value |
+| A list query returns zero or more items | `CollectionResult<T>` | `CollectionResult<T>.Succeed(items)`; an empty collection is valid |
+| A failed operation needs structured details | `Problem` inside a failed result | A failure factory, such as `Result.FailNotFound(detail)` |
+
+`Problem` carries `Type`, `Title`, `StatusCode`, `Detail`, `Instance`, and extension fields.
 
 ```csharp
 Result saved = Result.Succeed();
@@ -123,10 +136,9 @@ from their actual values.
 `Result<T>.IsSuccess` guarantees a non-null `Value`. Passing null to a typed success factory, or
 replacing a successful payload with null in an initializer, throws `ArgumentNullException`; a nullable
 C# type argument does not allow a successful null payload. `Result<int>.Succeed()` still carries zero,
-while `Result<string>.Succeed()` has no valid default payload and throws. For an operation with no
-data, return `Result.Succeed()`; for optional data, return a real value or an appropriate failure.
-`CollectionResult<T>.Collection` always exposes a non-null collection, including default struct values
-and null initializer input; missing collections normalize to empty, matching its existing factories.
+while `Result<string>.Succeed()` has no valid default payload and throws. Prefer the explicit value overload
+for typed successes. `Result<string?>.Succeed((string?)null)` and `Result<int?>.Succeed((int?)null)` also
+throw; nullable type arguments do not change the success contract.
 
 `Result` and `Result<T>` are structs. Their state is fixed after construction, but referenced payloads and
 `Problem` objects remain mutable. Avoid changing a shared problem after returning or publishing it.
@@ -135,6 +147,133 @@ and null initializer input; missing collections normalize to empty, matching its
 The static factory interfaces (`IResultFactory<T>`, `IResultValueFactory<,>`, `ICommandFactory<T>`, and
 `ICommandValueFactory<,>`) support the shared factory surface. Custom implementations should reuse these
 contracts rather than duplicate every factory overload.
+
+### Check status before reading data
+
+Use `IsFailed` for a failure guard and preserve the incoming `Problem` when returning another result type:
+
+```csharp
+static Result<int> GetTextLength(Result<string> text)
+{
+    if (text.IsFailed)
+        return Result<int>.Fail(text.Problem);
+
+    return Result.Succeed(text.Value.Length);
+}
+```
+
+`IsSuccess` has `[MemberNotNullWhen(true, nameof(Value))]`; `IsFailed` has the corresponding
+`[MemberNotNullWhen(false, nameof(Value))]`. On failure, both status properties establish a non-null
+`Problem`. With nullable analysis enabled, the compiler understands both branches. After the guard above,
+use `text.Value` directly: an additional `Value is null`, `Value!`, `Value?.Length`, or `Value ?? ...` is
+unnecessary. Inside the failure branch, `Problem is not null` and `Problem!` are unnecessary too.
+
+These guarantees concern the payload itself. A nullable property inside the payload, or a nullable element
+inside a collection, still needs its own domain check. Keep the guard and value access on the same result;
+reassigning it or checking a different result does not establish the guarantee.
+
+### Success without data
+
+Use non-generic `Result` for acknowledgements, completed mutations, and deliberately ignored events:
+
+```csharp
+static Result ApplyEvent(bool applies, Action apply)
+{
+    if (!applies)
+        return Result.Succeed(); // Ignoring this event is a successful outcome.
+
+    apply();
+    return Result.Succeed();
+}
+```
+
+This example lets exceptions propagate; use `Result.From(apply)` at a boundary where exceptions should
+be converted into failures. Do not invent a nullable typed payload when callers only need the status.
+A method returning `Result<T>` cannot return `Result.Succeed()` as a typed success: the implicit conversion
+produces a failure because there is no value. The reverse conversion, `Result<T>` to `Result`, intentionally
+discards the value while preserving success or failure.
+
+### Required and optional query data
+
+When the query promises a specific object, absence is a domain failure:
+
+```csharp
+static Result<string> RequireDisplayName(string? displayName)
+{
+    if (displayName is null)
+        return Result.FailNotFound("Display name does not exist.");
+
+    return Result.Succeed(displayName);
+}
+```
+
+The non-generic failure above converts to a typed failure and preserves its problem. When forwarding a
+failure from a different `Result<T>`, use `Result<U>.Fail(source.Problem)` inside `source.IsFailed` instead
+of constructing a generic error and losing the original details.
+
+If absence is part of a successful query's actual response, express it in a named domain response. For
+example, querying shipment state may succeed before the order has a shipment:
+
+```csharp
+using ManagedCode.Communication;
+
+public sealed record Shipment(string TrackingNumber);
+public sealed record ShipmentState(Shipment? Shipment);
+
+public static class ShipmentQueries
+{
+    public static Result<ShipmentState> ReadShipmentState(Shipment? shipment) =>
+        Result.Succeed(new ShipmentState(shipment));
+}
+```
+
+The `ShipmentState` payload is always non-null. Its `Shipment` property can be null because that is an
+explicit domain state; consumers inspect that property after checking the result. If no caller needs a
+response at all, use non-generic `Result` instead. A list query uses an empty successful collection, as
+shown in [Collections and pagination](#collections-and-pagination).
+
+### What IsEmpty means
+
+`Result<T>.IsEmpty` means `Value is null`. It does not mean the operation succeeded with no data, and it
+does not inspect string length or collection count. Every typed success has `IsEmpty == false`, including
+`Result<string>.Succeed(string.Empty)` and `Result<int[]>.Succeed([])`. A failed result can still have a
+non-null value, including a value-type default, so `!IsEmpty` is not proof of success. Check `IsFailed`
+or `IsSuccess` to determine the outcome.
+
+`CollectionResult<T>.IsEmpty` has a different, collection-specific meaning: the page contains zero items.
+Check status first so a failed query is not mistaken for a successful empty page.
+
+### Factory and conversion overloads
+
+| Need | API | Behavior |
+| --- | --- | --- |
+| Explicit success without data | `Result.Succeed()` | Produces `Result` |
+| Explicit success with data | `Result.Succeed(value)` or `Result<T>.Succeed(value)` | Produces `Result<T>` and rejects a null payload |
+| Configure a new payload | `Result.Succeed<T>(instance => ...)` | Creates `T` with its public parameterless constructor, then configures it |
+| Keep a known failure | `Result<T>.Fail(problem)` | Preserves the supplied problem |
+| Wrap a synchronous operation with no return value | `Result.From(Action)` | Converts a thrown exception into a failure |
+| Wrap a synchronous value | `Result<T>.From(Func<T>)` | Wraps the returned value; converts exceptions into failures |
+| Run a function already returning a result | `Result<T>.From(Func<Result<T>>)` | Preserves the returned result without nesting it |
+| Await a value or an existing result | `Result<T>.From(Task<T>)` / `Result<T>.From(Task<Result<T>>)` | Wraps a value or preserves a result |
+| Invoke and await a deferred operation | `Result<T>.From(Func<Task<T>>)` / `Result<T>.From(Func<Task<Result<T>>>)` | Includes invocation inside the exception boundary |
+| Preserve ValueTask shape | Corresponding `ValueTask<T>` / `Func<ValueTask<T>>` overloads, including existing-result variants | Returns `ValueTask<Result<T>>` |
+
+```csharp
+Result<int> parsed = Result<int>.From(() => int.Parse(text));
+
+// LoadAsync returns Task<Order>; FindAsync returns Task<Result<Order>>.
+Task<Result<Order>> loaded = Result<Order>.From(
+    () => repository.LoadAsync(orderId, cancellationToken), cancellationToken);
+Task<Result<Order>> preserved = Result<Order>.From(
+    () => orders.FindAsync(orderId, cancellationToken), cancellationToken);
+```
+
+`Result.From<T>(...)` provides the corresponding typed overloads too. Prefer a factory when the method
+can throw before returning its task: `From(service.CallAsync())` cannot catch an exception thrown while
+evaluating that argument. Pass the operation's cancellation token into the operation itself. These general
+`From` helpers convert caught exceptions, including cancellation, into failures; HTTP/CQRS adapters have
+their own documented caller-cancellation behavior. `From` does not retry; use command execution when
+retry, timeout, or idempotency is required.
 
 ### Failure helpers
 
@@ -183,7 +322,70 @@ var message = result.ToDisplayMessage(messages, defaultMessage: "The operation c
 Resolver delegates, dictionaries, key-value sequences, and tuple mappings are supported. Keep user-facing
 messages separate from operational details that may contain information unsuitable for a public response.
 
+## Static analysis guidance
+
+Enable C# nullable analysis (`<Nullable>enable</Nullable>`) so the compiler can use the result status
+annotations. The published Communication packages currently do not include a dedicated usage analyzer.
+The following are suggested rules for a future analyzer or an application's own rules:
+
+| Pattern to diagnose | Correct usage or safe fix |
+| --- | --- |
+| A typed success receives a known null, including with nullable type arguments | Supply the real payload or deliberately change a status-only contract to `Result`; changing a contract needs review |
+| Parameterless `Result<T>.Succeed()` where `default(T)` is null | Supply an explicit non-null payload or use `Result` for an acknowledgement |
+| A value null check, conditional access, coalescing, or null-forgiving operator after proven success | Use the payload directly; only remove checks proven redundant by control flow |
+| A `Problem` null check or null-forgiving operator inside proven failure | Use `Problem` directly |
+| `!result.IsSuccess` | Prefer the equivalent `result.IsFailed` failure guard |
+| A status-only success implicitly converted to `Result<T>` | Construct a typed success from its value or review the declared return contract |
+| A collection's compatibility `Value` member used for page access | Prefer the non-null `Collection` member |
+
+Rules must resolve Communication's actual symbols and track the same result through control flow.
+They must preserve checks on nullable payload members and collection elements. A suppression such as
+`Value!` is not evidence that success was checked. Likewise, separate LINQ lambdas do not share nullable
+flow facts: `Where(result => result.IsSuccess)` does not make `Value` non-null inside a later `Select`.
+Keep the check and use together when collecting successful values:
+
+```csharp
+static List<string> CollectSuccessfulValues(IEnumerable<Result<string>> results)
+{
+    var values = new List<string>();
+    foreach (var result in results)
+    {
+        if (result.IsFailed)
+            continue;
+
+        values.Add(result.Value);
+    }
+
+    return values;
+}
+```
+
+Do not automatically rewrite absence into an error, change return types, or discard an incoming problem.
+Those choices depend on the operation's domain contract.
+
 ## Collections and pagination
+
+Use an empty successful page when a list query has no matches:
+
+```csharp
+using ManagedCode.Communication;
+using ManagedCode.Communication.CollectionResultT;
+
+static Result<int> CountItems(CollectionResult<string> page)
+{
+    if (page.IsFailed)
+        return Result<int>.Fail(page.Problem);
+
+    return Result.Succeed(page.Collection.Length);
+}
+
+var emptyPage = CollectionResult<string>.Succeed();
+var count = CountItems(emptyPage); // Successful count of zero.
+```
+
+`Collection` is always non-null, including on default or failed results. Prefer it to the nullable-annotated
+compatibility member `Value`. Collection availability and item count do not replace the status check;
+nullable elements still require their own checks.
 
 `PaginationRequest` stores `Skip`/`Take` and provides normalization, page conversion, clamping, and slicing.
 `PaginationCommand` carries the request through the command contract.
