@@ -15,7 +15,7 @@ public partial class Command : ICommand, ICommandFactory<Command>
     ///     Creates an empty command. Present for serializers; use the factory methods.
     /// </summary>
     [JsonConstructor]
-    protected Command()
+    public Command()
     {
         CommandType = string.Empty;
     }

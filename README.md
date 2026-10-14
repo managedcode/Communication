@@ -601,6 +601,23 @@ var replayed = Command<PlaceOrder>.From(payload, idempotencyKey);
 ```
 
 Correlation, causation, trace, span, user, and session identifiers remain unset until the caller assigns them.
+
+Commands support System.Text.Json source-generated metadata, including native AOT consumers.
+Declare the exact envelope and payload in the caller's context, then use the JsonTypeInfo overloads:
+
+```csharp
+var json = JsonSerializer.Serialize(command, ApiJsonContext.Default.CommandPlaceOrder);
+var received = JsonSerializer.Deserialize(json, ApiJsonContext.Default.CommandPlaceOrder);
+
+[JsonSerializable(typeof(Command))]
+[JsonSerializable(typeof(Command<PlaceOrder>))]
+partial class ApiJsonContext : JsonSerializerContext;
+```
+
+The public parameterless JSON constructors support generated deserialization. Continue to use
+`Command.Create` or `Command<T>.Create` when starting an operation so its identity is generated once.
+`PaginationCommand` supports the same generated serialization path.
+
 Use `WithTraceId` and `WithSpanId` to propagate an existing W3C activity context. `CommandMetadata` also
 contains retry budget, timeout, priority, trace metadata, tags, and application extension fields.
 

@@ -10,8 +10,9 @@ public sealed class PaginationCommand : Command<PaginationRequest>, ICommandValu
 {
     private const string DefaultCommandType = "Pagination";
 
+    /// <summary>Creates an empty command for generated JSON serializers. Use the factories for new operations.</summary>
     [JsonConstructor]
-    private PaginationCommand()
+    public PaginationCommand()
     {
         CommandType = DefaultCommandType;
     }
