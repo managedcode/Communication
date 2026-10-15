@@ -80,6 +80,12 @@ public struct CommandMetadataSurrogate
     ///     Extension data.
     /// </summary>
     [Id(16)] public Dictionary<string, object?>? Extensions;
+    /// <summary>Application-owned command properties.</summary>
+    [Id(17)] public Dictionary<string, object?>? Properties;
+    /// <summary>W3C trace state.</summary>
+    [Id(18)] public string? TraceState;
+    /// <summary>Whether the propagated trace is recorded.</summary>
+    [Id(19)] public bool TraceRecorded;
 }
 
 /// <summary>
@@ -111,7 +117,10 @@ public sealed class CommandMetadataSurrogateConverter : IConverter<CommandMetada
             ExecutionTime = surrogate.ExecutionTime,
             TimeToLiveSeconds = surrogate.TimeToLiveSeconds,
             Tags = surrogate.Tags ?? new Dictionary<string, string>(),
-            Extensions = surrogate.Extensions ?? new Dictionary<string, object?>()
+            Extensions = surrogate.Extensions ?? new Dictionary<string, object?>(),
+            Properties = surrogate.Properties ?? new Dictionary<string, object?>(),
+            TraceState = surrogate.TraceState,
+            TraceRecorded = surrogate.TraceRecorded
         };
     }
 
@@ -138,7 +147,10 @@ public sealed class CommandMetadataSurrogateConverter : IConverter<CommandMetada
             ExecutionTime = value.ExecutionTime,
             TimeToLiveSeconds = value.TimeToLiveSeconds,
             Tags = value.Tags,
-            Extensions = value.Extensions
+            Extensions = value.Extensions,
+            Properties = value.Properties,
+            TraceState = value.TraceState,
+            TraceRecorded = value.TraceRecorded
         };
     }
 }

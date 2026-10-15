@@ -44,9 +44,10 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
         return new CollectionResult<T>(true, collection, pageNumber, pageSize, totalItems, null);
     }
 
-    internal static CollectionResult<T> CreateFailed(Problem problem, T[]? collection = null)
+    internal static CollectionResult<T> CreateFailed(Problem problem, T[]? collection = null,
+        int pageNumber = 0, int pageSize = 0, int totalItems = 0)
     {
-        return new CollectionResult<T>(false, collection, 0, 0, 0, problem);
+        return new CollectionResult<T>(false, collection, pageNumber, pageSize, totalItems, problem);
     }
 
     /// <summary>
@@ -112,26 +113,19 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     [JsonPropertyOrder(6)]
     public int TotalPages { get; init; }
 
-    [JsonInclude]
-    [JsonPropertyName(CommunicationJsonNames.Problem)]
-    [JsonPropertyOrder(7)]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     private Problem? _problem;
 
     /// <summary>
     ///     The failure, or <c>null</c> when the result succeeded.
     /// </summary>
-    [JsonIgnore]
+    [JsonInclude]
+    [JsonPropertyName(CommunicationJsonNames.Problem)]
+    [JsonPropertyOrder(7)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public Problem? Problem
     {
-        get
-        {
-            if (_problem is null && !IsSuccess)
-                _problem = Problem.GenericError();
-
-            return _problem;
-        }
-        private init => _problem = value;
+        get => _problem ?? (IsSuccess ? null : Problem.GenericError());
+        init => _problem = value;
     }
 
     /// <summary>

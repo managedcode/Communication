@@ -22,6 +22,8 @@ namespace ManagedCode.Communication;
 /// </remarks>
 internal static class ResultMemberEncoding
 {
+    private const string InvalidSuccessFlag = "The result success flag must be a JSON boolean.";
+
     private const string IsSuccessName = CommunicationJsonNames.IsSuccess;
     private const string ValueName = CommunicationJsonNames.Value;
     private const string ProblemName = CommunicationJsonNames.Problem;
@@ -31,6 +33,16 @@ internal static class ResultMemberEncoding
     public static readonly JsonEncodedText Value = JsonEncodedText.Encode(ValueName);
 
     public static readonly JsonEncodedText Problem = JsonEncodedText.Encode(ProblemName);
+
+    public static bool ReadIsSuccess(ref Utf8JsonReader reader)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.True => true,
+            JsonTokenType.False => false,
+            _ => throw new JsonException(InvalidSuccessFlag)
+        };
+    }
 
     public static bool MatchesIsSuccess(ref Utf8JsonReader reader)
     {

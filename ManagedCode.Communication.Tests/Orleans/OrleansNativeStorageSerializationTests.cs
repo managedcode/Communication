@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using ManagedCode.Communication.CollectionResultT;
+using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.Tests.Serialization;
 using ManagedCode.Communication.Orleans.Converters;
 using ManagedCode.Communication.Orleans.Surrogates;
 using ManagedCode.Communication.Tests.Orleans.Fixtures;
@@ -84,6 +87,61 @@ public sealed class OrleansNativeStorageSerializationTests(OrleansClusterFixture
         var serializer = Serializer();
         Should.Throw<Exception>(() => serializer.Deserialize<StoredState>(
             new BinaryData(new byte[] { 255, 255, 255 })));
+    }
+
+    [Test]
+    public void NativeStoragePreservesCompleteCommandAndMetadata()
+    {
+        var expected = SerializationContract.WithEnvelope(Command.Create(SerializationContract.Name));
+        var serializer = Serializer();
+        var actual = serializer.Deserialize<Command>(serializer.Serialize(expected))!;
+        SerializationContract.AssertEnvelope(expected, actual, JsonContractMode.Reflection);
+    }
+
+    [Test]
+    [Arguments(0, 0)]
+    [Arguments(750, 500)]
+    [Arguments(12, 5)]
+    public void NativeStoragePreservesAcceptedPaginationWithoutRenormalization(int skip, int take)
+    {
+        var expected = SerializationContract.WithEnvelope(PaginationCommand.Create(0, 10));
+        expected.CommandType = SerializationContract.Name;
+        // An accepted payload is a snapshot; deserialization must not apply creation-time defaults again.
+        expected.Value = new PaginationRequest(skip, take);
+        var serializer = Serializer();
+        var actual = serializer.Deserialize<PaginationCommand>(serializer.Serialize(expected))!;
+        SerializationContract.AssertEnvelope(expected, actual, JsonContractMode.Reflection);
+        actual.Value.ShouldBe(expected.Value);
+        actual.Skip.ShouldBe(skip);
+        actual.Take.ShouldBe(take);
+        actual.PageNumber.ShouldBe(expected.PageNumber);
+    }
+
+    [Test]
+    public void NativeStoragePreservesNullPaginationPayload()
+    {
+        var expected = PaginationCommand.Create(0, 10);
+        expected.Value = null;
+        var serializer = Serializer();
+        var actual = serializer.Deserialize<PaginationCommand>(serializer.Serialize(expected))!;
+        actual.CommandId.ShouldBe(expected.CommandId);
+        actual.Value.ShouldBeNull();
+    }
+
+    [Test]
+    public void NativeStoragePreservesFailedCollectionPageAndPartialItems()
+    {
+        var expected = CollectionResult<int>.Fail(SerializationContract.Failure(), new[] { 7 }) with
+        { PageNumber = 3, PageSize = 10, TotalItems = 27, TotalPages = 3 };
+        var serializer = Serializer();
+        var actual = serializer.Deserialize<CollectionResult<int>>(serializer.Serialize(expected));
+        actual.IsFailed.ShouldBeTrue();
+        actual.Collection.ShouldBe(expected.Collection);
+        actual.PageNumber.ShouldBe(expected.PageNumber);
+        actual.PageSize.ShouldBe(expected.PageSize);
+        actual.TotalItems.ShouldBe(expected.TotalItems);
+        actual.TotalPages.ShouldBe(expected.TotalPages);
+        SerializationContract.AssertProblem(expected.Problem!, actual.Problem, JsonContractMode.Reflection);
     }
 
     [GenerateSerializer]

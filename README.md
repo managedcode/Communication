@@ -1015,6 +1015,30 @@ Communication's application and HTTP JSON implementation uses `System.Text.Json`
 and `Problem` provide their JSON converters through type attributes; ASP.NET Core and the HTTP client own
 the transport serialization. The HTTP result filter emits a raw success payload or problem response.
 
+Commands and results can also use an external source-generated JSON context with reflection disabled.
+Register every closed envelope and payload type used by your application, including types only reached
+through a result converter, such as `Problem` and nested payloads:
+
+```csharp
+[JsonSerializable(typeof(Command<ImportReport>))]
+[JsonSerializable(typeof(Result<ImportReport>))]
+[JsonSerializable(typeof(CollectionResult<ImportReport>))]
+[JsonSerializable(typeof(ImportReport))]
+[JsonSerializable(typeof(Problem))]
+internal partial class ImportJsonContext : JsonSerializerContext;
+
+var command = Command<ImportReport>.Create(new ImportReport(12));
+var json = JsonSerializer.Serialize(command, ImportJsonContext.Default.CommandImportReport);
+var restored = JsonSerializer.Deserialize(json, ImportJsonContext.Default.CommandImportReport);
+// restored retains the original CommandId; a new operation still starts through Command.Create.
+```
+
+JSON result success flags must be booleans: `{"isSuccess":"true"}` is malformed and throws `JsonException`.
+Successful `Result<T>` values cannot be null. Failed results retain their problem and any partial value;
+collection results retain both partial items and paging information. Native Orleans command restoration
+preserves accepted pagination exactly without applying defaults again, together with command properties,
+trace state, and the trace-recorded flag.
+
 HTTP JSON and Orleans native serialization are separate boundaries. Do not install an application JSON
 codec or manual conversion layer merely to transport Communication types through Orleans.
 

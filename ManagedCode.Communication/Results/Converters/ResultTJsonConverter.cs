@@ -56,7 +56,7 @@ public sealed class ResultTJsonConverter<T> : JsonConverter<Result<T>>
             if (ResultMemberEncoding.MatchesIsSuccess(ref reader))
             {
                 reader.Read();
-                isSuccess = reader.TokenType == JsonTokenType.True;
+                isSuccess = ResultMemberEncoding.ReadIsSuccess(ref reader);
             }
             else if (ResultMemberEncoding.MatchesValue(ref reader))
             {

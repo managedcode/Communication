@@ -18,7 +18,8 @@ public sealed class CollectionResultTSurrogateConverter<T> : IConverter<Collecti
         if (surrogate.IsSuccess)
             return CollectionResult<T>.CreateSuccess(surrogate.Collection, surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems);
 
-        return CollectionResult<T>.CreateFailed(surrogate.Problem ?? Problem.GenericError(), surrogate.Collection);
+        return CollectionResult<T>.CreateFailed(surrogate.Problem ?? Problem.GenericError(), surrogate.Collection,
+            surrogate.PageNumber, surrogate.PageSize, surrogate.TotalItems);
     }
 
     /// <summary>
