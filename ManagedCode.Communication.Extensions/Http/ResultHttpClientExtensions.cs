@@ -30,6 +30,7 @@ public static class ResultHttpClientExtensions
         Func<HttpRequestMessage> requestFactory,
         CancellationToken cancellationToken = default)
     {
+        using var diagnostics = HttpFailureDiagnostics.Begin(true);
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(requestFactory);
 
@@ -67,6 +68,7 @@ public static class ResultHttpClientExtensions
         Func<HttpResponseMessage, CancellationToken, Task<T?>> readSuccessAsync,
         CancellationToken cancellationToken = default)
     {
+        using var diagnostics = HttpFailureDiagnostics.Begin(true);
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(requestFactory);
         ArgumentNullException.ThrowIfNull(readSuccessAsync);
@@ -102,6 +104,7 @@ public static class ResultHttpClientExtensions
         Func<HttpRequestMessage> requestFactory,
         CancellationToken cancellationToken = default)
     {
+        using var diagnostics = HttpFailureDiagnostics.Begin(true);
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(requestFactory);
 

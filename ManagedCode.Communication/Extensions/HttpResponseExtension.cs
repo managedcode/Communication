@@ -24,6 +24,7 @@ public static class HttpResponseExtension
         this HttpResponseMessage responseMessage,
         CancellationToken cancellationToken = default)
     {
+        using var diagnostics = HttpFailureDiagnostics.Begin(true);
         ArgumentNullException.ThrowIfNull(responseMessage);
 
         if (!responseMessage.IsSuccessStatusCode)
@@ -66,6 +67,7 @@ public static class HttpResponseExtension
         this HttpResponseMessage responseMessage,
         CancellationToken cancellationToken = default)
     {
+        using var diagnostics = HttpFailureDiagnostics.Begin(true);
         ArgumentNullException.ThrowIfNull(responseMessage);
 
         if (responseMessage.IsSuccessStatusCode)

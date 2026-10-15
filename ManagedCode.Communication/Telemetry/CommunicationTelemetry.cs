@@ -257,6 +257,7 @@ public static class CommunicationTelemetry
             return;
         }
 
+        problem = HttpFailureDiagnostics.Project(problem);
         var errorType = ResolveErrorType(problem, exception);
         var statusCode = problem?.StatusCode ?? 0;
 
@@ -272,6 +273,7 @@ public static class CommunicationTelemetry
 
     internal static void RecordCreatedFailure(Problem problem, Exception? exception, Activity? activity)
     {
+        problem = HttpFailureDiagnostics.Project(problem);
         var errorType = ResolveErrorType(problem, exception);
         CreatedFailureCounter.Add(1, BuildTags(errorType, problem.StatusCode));
         if (activity is null)
@@ -294,19 +296,20 @@ public static class CommunicationTelemetry
             }));
         if (exception is not null)
         {
-            activity.AddException(exception);
+            HttpFailureDiagnostics.RecordException(activity, exception);
         }
     }
 
     private static void AnnotateFailure(Problem? problem, Exception? exception, Activity? target)
     {
+        problem = HttpFailureDiagnostics.Project(problem);
         var errorType = ResolveErrorType(problem, exception);
         if (target is null)
         {
             return;
         }
 
-        target.SetStatus(ActivityStatusCode.Error, problem?.Detail ?? exception?.Message);
+        target.SetStatus(ActivityStatusCode.Error, problem?.Detail ?? (HttpFailureDiagnostics.IsActive ? null : exception?.Message));
         target.SetTag(ErrorTypeTag, errorType);
 
         if (problem is not null)
@@ -323,9 +326,8 @@ public static class CommunicationTelemetry
 
         if (exception is not null)
         {
-            // Carries type, message and stack trace as an exception event, which is what makes a trace
-            // actionable without adding exception objects to the wire payload.
-            target.AddException(exception);
+            // Ordinary commands retain the exception event; HTTP operations retain only safe type/stack metadata.
+            HttpFailureDiagnostics.RecordException(target, exception);
         }
     }
 
@@ -348,7 +350,7 @@ public static class CommunicationTelemetry
         var activity = Activity.Current;
         if (activity is not null)
         {
-            activity.AddException(exception);
+            HttpFailureDiagnostics.RecordException(activity, exception);
             activity.AddEvent(new ActivityEvent(
                 CommandAttemptFailureEventName,
                 tags: new ActivityTagsCollection
@@ -372,7 +374,7 @@ public static class CommunicationTelemetry
             { ErrorTypeTag, exception.GetType().Name }
         };
         CommandInfrastructureFailureCounter.Add(1, tags);
-        Activity.Current?.AddException(exception);
+        HttpFailureDiagnostics.RecordException(Activity.Current, exception);
         Activity.Current?.AddEvent(new ActivityEvent(
             CommandInfrastructureFailureEventName,
             tags: new ActivityTagsCollection { { InfrastructurePhaseTag, phase } }));
@@ -631,6 +633,7 @@ public static class CommunicationTelemetry
             return UnknownErrorType;
         }
 
+        problem = HttpFailureDiagnostics.Project(problem);
         return !string.IsNullOrEmpty(problem.ErrorCode)
             ? problem.ErrorCode
             : problem.Type;

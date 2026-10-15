@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Commands.Execution;
+using ManagedCode.Communication.Telemetry;
 
 namespace ManagedCode.Communication.Extensions.Http;
 
@@ -24,11 +25,11 @@ public static class CommandResultHttpClientExtensions
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(requestFactory);
-        return Result<T>.ExecuteAsync(
+        return HttpFailureDiagnostics.ExecuteAsync(() => Result<T>.ExecuteAsync(
             command,
             (current, token) => client.SendForResultAsync<T>(() => requestFactory(current), token),
             runtime,
-            cancellationToken);
+            cancellationToken));
     }
 
     /// <summary>
@@ -46,14 +47,14 @@ public static class CommandResultHttpClientExtensions
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(requestFactory);
         ArgumentNullException.ThrowIfNull(readSuccessAsync);
-        return Result<T>.ExecuteAsync(
+        return HttpFailureDiagnostics.ExecuteAsync(() => Result<T>.ExecuteAsync(
             command,
             (current, token) => client.SendForResultAsync(
                 () => requestFactory(current),
                 readSuccessAsync,
                 token),
             runtime,
-            cancellationToken);
+            cancellationToken));
     }
 
     /// <summary>Sends a payload-free response through native command execution.</summary>
@@ -67,10 +68,10 @@ public static class CommandResultHttpClientExtensions
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(requestFactory);
-        return Result.ExecuteAsync(
+        return HttpFailureDiagnostics.ExecuteAsync(() => Result.ExecuteAsync(
             command,
             (current, token) => client.SendForResultAsync(() => requestFactory(current), token),
             runtime,
-            cancellationToken);
+            cancellationToken));
     }
 }

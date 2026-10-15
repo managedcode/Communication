@@ -38,6 +38,8 @@ public sealed class CommandExecutionRuntime
 
     internal CommandExecutionOptions OptionsSnapshot => _optionsSnapshot;
 
+    internal bool RedactHttpDiagnostics { get; init; }
+
     /// <summary>Optional idempotency backend.</summary>
     public ICommandIdempotencyStore? IdempotencyStore { get; }
 
@@ -50,6 +52,6 @@ public sealed class CommandExecutionRuntime
     /// <summary>Clock used by timeout, retry, and telemetry logic.</summary>
     public TimeProvider TimeProvider { get; }
 
-    /// <summary>Logger that receives original exceptions.</summary>
+    /// <summary>Logger for original command exceptions, or safe metadata for HTTP operations.</summary>
     public ILogger? Logger { get; }
 }

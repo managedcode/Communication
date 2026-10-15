@@ -1070,6 +1070,19 @@ the original exception and throw-site stack trace. Automatic factory diagnostics
 `Problem` object: wrapping the same instance does not report it as a new occurrence. New problems represent
 new occurrences; successes and reading a result do not emit automatic failure diagnostics.
 
+HTTP resilience, HTTP-to-Result conversion and HTTP CQRS readers share a privacy boundary. Its automatic failure logs and traces retain status, exception types,
+throw-site stack frames and correlation, while omitting exception messages, inner messages, response reason
+phrases/content and request URL user information/path/query. This policy also applies without sampled traces;
+other command and Result operations keep the original exception logging described above.
+
+```csharp
+services.AddHttpClient("catalog").AddCommunicationResilienceHandler();
+```
+
+The client still receives the original transport exception or raw HTTP response. Exception-based retry
+callbacks receive that same original exception; diagnostic projection does not replace operational values.
+Default command authority correlation and circuit partitions use only scheme, host and port.
+
 ### OpenTelemetry and Aspire
 
 Install Extensions for registration helpers:

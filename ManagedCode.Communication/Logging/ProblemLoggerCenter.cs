@@ -14,6 +14,7 @@ namespace ManagedCode.Communication.Logging;
 /// </remarks>
 public static partial class ProblemLoggerCenter
 {
+    private const string HttpFailureMessage = "HTTP dependency failure: StatusCode={StatusCode}, ExceptionType={ExceptionType}, CauseTypes={CauseTypes}, StackTrace={StackTrace}";
     private const string ProblemMessage = "Operation failed: {ProblemTitle} ({StatusCode}) — {ProblemDetail}";
     private const string FailureMessage = "Operation failed: {ProblemTitle} ({StatusCode}) — {ProblemDetail}; ErrorCode: {ErrorCode}";
     private const string ExceptionFailureMessage = "Operation failed with an exception: {ProblemTitle} ({StatusCode}) — {ProblemDetail}; ErrorCode: {ErrorCode}";
@@ -78,6 +79,11 @@ public static partial class ProblemLoggerCenter
     [LoggerMessage(EventId = 8006, Level = LogLevel.Error, Message = ExceptionFailureMessage)]
     internal static partial void LogExceptionFailure(
         ILogger logger, Exception exception, string? problemTitle, int statusCode, string? problemDetail, string? errorCode);
+
+    [LoggerMessage(EventId = 8008,
+        Message = HttpFailureMessage)]
+    internal static partial void LogHttpFailure(ILogger logger, LogLevel level, int statusCode,
+        string? exceptionType, string? causeTypes, string? stackTrace);
 
     [LoggerMessage(EventId = 8007, Level = LogLevel.Warning, Message = ValidationFailureMessage)]
     internal static partial void LogValidationFailure(

@@ -23,7 +23,10 @@ internal sealed class CommunicationResilienceHandler : DelegatingHandler
         ArgumentNullException.ThrowIfNull(options.ShouldHandle);
 
         _shouldHandle = options.ShouldHandle;
-        _runtime = new CommandExecutionRuntime(options.Execution, logger: logger);
+        _runtime = new CommandExecutionRuntime(options.Execution, logger: logger)
+        {
+            RedactHttpDiagnostics = true
+        };
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(
@@ -141,7 +144,7 @@ internal sealed class CommunicationResilienceHandler : DelegatingHandler
     private static string ResolveAuthority(Uri? requestUri)
     {
         return requestUri is { IsAbsoluteUri: true }
-            ? requestUri.GetLeftPart(UriPartial.Authority)
+            ? requestUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.UriEscaped)
             : HttpCommandExecutionConstants.UnknownAuthority;
     }
 }

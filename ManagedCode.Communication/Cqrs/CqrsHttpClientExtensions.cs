@@ -48,11 +48,12 @@ public static class CqrsHttpClientExtensions
         var effectiveOptions = options ?? CqrsStreamClientOptions.Default;
         effectiveOptions.Validate();
 
-        return CqrsStreamNormalizer.NormalizeAsync(
+        var stream = CqrsStreamNormalizer.NormalizeAsync(
             ReadCqrsStreamAsync<TProgress, TResult>(client, requestFactory, effectiveOptions, cancellationToken),
             effectiveOptions.AssignSequenceNumbers,
             effectiveOptions.EnsureTerminalChunk,
             cancellationToken);
+        return HttpFailureDiagnostics.ReadStreamAsync(stream, cancellationToken);
     }
 
     /// <inheritdoc cref="SendForCqrsStreamAsync{TProgress,TResult}(HttpClient,Func{HttpRequestMessage},CqrsStreamClientOptions,CancellationToken)" />

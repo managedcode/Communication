@@ -103,6 +103,18 @@ public static class CommunicationDiagnostics
             return;
         }
 
+        if (HttpFailureDiagnostics.IsActive)
+        {
+            var level = exception is null ? LogLevel.Warning : LogLevel.Error;
+            if (logger.IsEnabled(level))
+            {
+                var diagnostic = HttpFailureDiagnostics.Describe(exception);
+                ProblemLoggerCenter.LogHttpFailure(logger, level, problem?.StatusCode ?? 0,
+                    diagnostic.ExceptionType, diagnostic.CauseTypes, diagnostic.StackTrace);
+            }
+            return;
+        }
+
         if (exception is null && problem is not null && TryDescribeValidation(problem, out var fieldCount, out var fields))
         {
             ProblemLoggerCenter.LogValidationFailure(

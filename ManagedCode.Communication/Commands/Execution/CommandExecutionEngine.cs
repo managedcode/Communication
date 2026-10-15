@@ -24,6 +24,7 @@ internal static class CommandExecutionEngine
         ArgumentNullException.ThrowIfNull(handler);
         ArgumentNullException.ThrowIfNull(runtime);
 
+        using var diagnostics = HttpFailureDiagnostics.Begin(runtime.RedactHttpDiagnostics);
         var startedAt = runtime.TimeProvider.GetTimestamp();
         using var activity = CommunicationTelemetry.StartCommandExecution(command);
         if (TryGetLifetimeProblem(command, out var lifetimeProblem))
