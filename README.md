@@ -1033,6 +1033,19 @@ var restored = JsonSerializer.Deserialize(json, ImportJsonContext.Default.Comman
 // restored retains the original CommandId; a new operation still starts through Command.Create.
 ```
 
+A failed `Result<JsonElement>` with an undefined value has no JSON payload. Its converter omits the `value`
+member and retains the complete problem; reading it restores the undefined value. The same absence rule
+applies to an undefined nullable JSON element. Defined JSON partial values, including JSON `null` on
+`Result<JsonElement>`, remain serialized. Successful undefined JSON elements still fail serialization.
+
+```csharp
+var problem = Problem.Create("QueryRejected", "The query was rejected.", 400);
+var failure = Result<JsonElement>.Fail(problem);
+var json = JsonSerializer.Serialize(failure); // problem is retained; the value member is absent.
+var restored = JsonSerializer.Deserialize<Result<JsonElement>>(json);
+// restored.Value.ValueKind == JsonValueKind.Undefined
+```
+
 JSON result success flags must be booleans: `{"isSuccess":"true"}` is malformed and throws `JsonException`.
 Successful `Result<T>` values cannot be null. Failed results retain their problem and any partial value;
 collection results retain both partial items and paging information. Native Orleans command restoration

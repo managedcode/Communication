@@ -91,7 +91,8 @@ public sealed class ResultTJsonConverter<T> : JsonConverter<Result<T>>
 
         // Always written on success, including when it equals default: omitting it would leave a non-.NET
         // client unable to tell Succeed(0) from a result carrying nothing.
-        if (value.IsSuccess || value.Value is not null)
+        if (value.IsSuccess || value.Value is not null
+            && value.Value is not JsonElement { ValueKind: JsonValueKind.Undefined })
         {
             writer.WritePropertyName(ResultMemberEncoding.Value);
             JsonSerializer.Serialize(writer, value.Value, options);
