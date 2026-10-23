@@ -16,21 +16,6 @@ public static partial class ResultExecutionExtensions
     {
         try
         {
-            if (task.IsCompletedSuccessfully)
-            {
-                return Result.Succeed();
-            }
-
-            if (task.IsCanceled)
-            {
-                return Result.Fail(new TaskCanceledException());
-            }
-
-            if (task.IsFaulted && task.Exception is not null)
-            {
-                return Result.Fail(task.Exception);
-            }
-
             await task.ConfigureAwait(false);
             return Result.Succeed();
         }
@@ -47,7 +32,8 @@ public static partial class ResultExecutionExtensions
     {
         try
         {
-            await Task.Run(taskFactory, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            await taskFactory().ConfigureAwait(false);
             return Result.Succeed();
         }
         catch (Exception exception)
@@ -63,16 +49,6 @@ public static partial class ResultExecutionExtensions
     {
         try
         {
-            if (valueTask.IsCompletedSuccessfully)
-            {
-                return Result.Succeed();
-            }
-
-            if (valueTask.IsCanceled || valueTask.IsFaulted)
-            {
-                return Result.Fail();
-            }
-
             await valueTask.ConfigureAwait(false);
             return Result.Succeed();
         }

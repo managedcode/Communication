@@ -1107,6 +1107,39 @@ CommunicationLogger.Configure(loggerFactory);
 The core `services.ConfigureCommunication(loggerFactory)` overload also accepts an explicit factory.
 There is no parameterless core `ConfigureCommunication()` registration.
 
+Pass a caller's logger directly to `Try`, `TryAsync`, the delegate `TryAsResult` extensions, or
+`Fail(exception, logger)` when converting an exception at that boundary:
+
+```csharp
+Task<Result<Order>> LoadAsync(ILogger logger, Func<Task<Order>> load) =>
+    Result.TryAsync(load, logger);
+
+ValueTask<Result<Order>> LoadCachedAsync(ILoggerFactory loggerFactory, Func<ValueTask<Order>> load) =>
+    Result.TryAsync(load, loggerFactory.CreateLogger<Order>());
+
+Result Persist(ILogger logger, Action persist) => Result.Try(persist, logger);
+
+Task<Result<Order>> LoadWithDomainErrorsAsync(ILogger logger, Func<Task<Order>> load) =>
+    Result.TryAsync(load, logger, problemFactory: exception =>
+        exception is OrderAccessException access
+            ? access.Problem
+            : Problem.Create(exception));
+```
+
+An optional `problemFactory` maps the exception to an application-owned Problem before reporting it. It is
+invoked once and must return a non-null Problem; failures in the mapper propagate to the caller.
+The supplied logger receives the original exception immediately; tracing uses the current activity and the
+normal Communication telemetry registration. Task delegates return Task, and ValueTask delegates return
+ValueTask. Task overloads remain preferred for an untyped async lambda. The library invokes delegates in the
+caller's current context; it does not offload them with `Task.Run`. A cancellation token passed to `From`
+checks admission before invocation and does not cancel an operation that the caller has already started.
+Completed Task and ValueTask failures are awaited once, preserving their actual exception and stack trace.
+
+A thrown `ProblemException` already carries the business failure. Exception-to-Problem conversion preserves
+that exact `Problem`, including its status, code, instance and extensions; the supplied error status applies
+to ordinary exceptions. Throwing a previously reported problem records its first exception and stack without
+counting another created failure. No exception reference or stack trace is retained in Result or Problem.
+
 Failures without an exception log at Warning with problem fields. Exception conversions log at Error with
 the original exception and throw-site stack trace. Automatic factory diagnostics are deduplicated per
 `Problem` object: wrapping the same instance does not report it as a new occurrence. New problems represent

@@ -1,13 +1,14 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using ManagedCode.Communication.Constants;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
 
 public class ResultExecutionExtensionsTests
 {
+    private const string TaskFailureDetail = "faulted";
+    private const string ValueTaskFailureDetail = "vt boom";
     [Test]
     public void From_Action_Success_ReturnsSuccess()
     {
@@ -44,15 +45,15 @@ public class ResultExecutionExtensionsTests
     [Test]
     public async Task From_Task_Faulted_ReturnsProblemWithExceptionDetails()
     {
-        var exception = new InvalidOperationException("faulted");
+        var exception = new InvalidOperationException(TaskFailureDetail);
         var task = Task.FromException(exception);
 
         var result = await Result.From(task);
 
         result.IsFailed.ShouldBeTrue();
-        result.Problem!.Title.ShouldBe(nameof(AggregateException));
+        result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
         result.Problem.Detail.ShouldNotBeNull();
-        result.Problem.Detail!.ShouldContain("faulted");
+        result.Problem.Detail!.ShouldContain(TaskFailureDetail);
     }
 
     [Test]
@@ -92,14 +93,15 @@ public class ResultExecutionExtensionsTests
     }
 
     [Test]
-    public async Task From_ValueTask_Faulted_ReturnsGenericFailure()
+    public async Task From_ValueTask_Faulted_ReturnsOriginalFailure()
     {
-        var valueTask = new ValueTask(Task.FromException(new InvalidOperationException("vt boom")));
+        var valueTask = new ValueTask(Task.FromException(new InvalidOperationException(ValueTaskFailureDetail)));
 
         var result = await Result.From(valueTask);
 
         result.IsFailed.ShouldBeTrue();
-        result.Problem!.Title.ShouldBe(ProblemConstants.Titles.Error);
+        result.Problem!.Title.ShouldBe(nameof(InvalidOperationException));
+        result.Problem.Detail.ShouldBe(ValueTaskFailureDetail);
     }
 
     [Test]

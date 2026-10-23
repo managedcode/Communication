@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using ManagedCode.Communication.Results;
+using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication;
 
@@ -53,6 +54,14 @@ public partial struct Result<T>
     public static Result<T> Fail(Exception exception, HttpStatusCode status)
     {
         return ResultFactoryBridge<Result<T>>.Fail(exception, status);
+    }
+
+    /// <summary>
+    ///     Creates a failure and immediately logs the original exception through the supplied logger.
+    /// </summary>
+    public static Result<T> Fail(Exception exception, ILogger? logger, HttpStatusCode status = HttpStatusCode.InternalServerError, Func<Exception, Problem>? problemFactory = null)
+    {
+        return ResultFactoryBridge<Result<T>>.Fail(exception, logger, status, problemFactory);
     }
 
     /// <summary>

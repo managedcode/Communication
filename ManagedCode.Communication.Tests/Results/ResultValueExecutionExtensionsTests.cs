@@ -86,14 +86,17 @@ public class ResultValueExecutionExtensionsTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
+        var invoked = false;
         var result = await Result<int>.From(async () =>
         {
+            invoked = true;
             await Task.Delay(1);
             return 99;
         }, cts.Token);
 
+        invoked.ShouldBeFalse();
         result.IsFailed.ShouldBeTrue();
-        result.Problem!.Title.ShouldBe(nameof(TaskCanceledException));
+        result.Problem!.Title.ShouldBe(nameof(OperationCanceledException));
     }
 
     [Test]

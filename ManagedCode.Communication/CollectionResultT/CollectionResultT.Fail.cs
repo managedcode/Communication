@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using ManagedCode.Communication.Results;
+using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
@@ -75,6 +76,14 @@ public partial struct CollectionResult<T>
     public static CollectionResult<T> Fail(Exception exception, HttpStatusCode status)
     {
         return ResultFactoryBridge<CollectionResult<T>>.Fail(exception, status);
+    }
+
+    /// <summary>
+    ///     Creates a failure and immediately logs the original exception through the supplied logger.
+    /// </summary>
+    public static CollectionResult<T> Fail(Exception exception, ILogger? logger, HttpStatusCode status = HttpStatusCode.InternalServerError, Func<Exception, Problem>? problemFactory = null)
+    {
+        return ResultFactoryBridge<CollectionResult<T>>.Fail(exception, logger, status, problemFactory);
     }
 
     /// <summary>

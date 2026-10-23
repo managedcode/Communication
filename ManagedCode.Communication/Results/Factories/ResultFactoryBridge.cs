@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using ManagedCode.Communication.Constants;
+using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.Results;
 
@@ -57,6 +58,12 @@ internal static class ResultFactoryBridge
         where TSelf : struct, IResultFactory<TSelf>
     {
         return TSelf.Fail(IResultFactory<TSelf>.CreateExceptionProblem(exception, (int)status));
+    }
+
+    public static TSelf Fail<TSelf>(Exception exception, ILogger? logger, HttpStatusCode status, Func<Exception, Problem>? problemFactory)
+        where TSelf : struct, IResultFactory<TSelf>
+    {
+        return TSelf.Fail(IResultFactory<TSelf>.CreateExceptionProblem(exception, (int)status, logger, problemFactory));
     }
 
     public static TSelf Fail<TSelf, TEnum>(TEnum errorCode)
@@ -247,6 +254,11 @@ internal static class ResultFactoryBridge<TSelf>
     public static TSelf Fail(Exception exception, HttpStatusCode status)
     {
         return ResultFactoryBridge.Fail<TSelf>(exception, status);
+    }
+
+    public static TSelf Fail(Exception exception, ILogger? logger, HttpStatusCode status, Func<Exception, Problem>? problemFactory)
+    {
+        return ResultFactoryBridge.Fail<TSelf>(exception, logger, status, problemFactory);
     }
 
     public static TSelf Fail<TEnum>(TEnum errorCode) where TEnum : Enum

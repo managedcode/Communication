@@ -236,6 +236,12 @@ public partial class Problem
     /// </summary>
     public static Problem Create(Exception exception)
     {
+        ArgumentNullException.ThrowIfNull(exception);
+        if (exception is ProblemException problemException)
+        {
+            return problemException.Problem;
+        }
+
         var problem = new Problem
         {
             Type = ProblemConstants.Types.HttpStatus(500),
@@ -276,6 +282,12 @@ public partial class Problem
     /// </summary>
     public static Problem Create(Exception exception, int statusCode)
     {
+        ArgumentNullException.ThrowIfNull(exception);
+        if (exception is ProblemException problemException)
+        {
+            return problemException.Problem;
+        }
+
         var problem = new Problem
         {
             Type = ProblemConstants.Types.HttpStatus(statusCode),

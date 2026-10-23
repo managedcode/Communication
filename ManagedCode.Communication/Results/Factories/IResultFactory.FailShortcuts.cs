@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.Results;
 
@@ -54,10 +55,19 @@ public partial interface IResultFactory<TSelf>
         return TSelf.Fail(CreateExceptionProblem(exception, (int)status));
     }
 
-    internal static Problem CreateExceptionProblem(Exception exception, int status)
+    /// <summary>
+    ///     Creates a failure and immediately logs the original exception through the supplied logger.
+    /// </summary>
+    static virtual TSelf Fail(Exception exception, ILogger? logger, HttpStatusCode status = HttpStatusCode.InternalServerError, Func<Exception, Problem>? problemFactory = null)
     {
-        var problem = Problem.Create(exception, status);
-        Telemetry.CommunicationDiagnostics.ReportCreatedFailure(problem, exception);
+        return TSelf.Fail(CreateExceptionProblem(exception, (int)status, logger, problemFactory));
+    }
+
+    internal static Problem CreateExceptionProblem(Exception exception, int status, ILogger? logger = null, Func<Exception, Problem>? problemFactory = null)
+    {
+        var problem = problemFactory is null ? Problem.Create(exception, status) : problemFactory(exception);
+        ArgumentNullException.ThrowIfNull(problem);
+        Telemetry.CommunicationDiagnostics.ReportCreatedFailure(problem, exception, logger);
         return problem;
     }
 

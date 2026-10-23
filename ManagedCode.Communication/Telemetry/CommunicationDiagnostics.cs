@@ -21,21 +21,28 @@ public static class CommunicationDiagnostics
     private const string ValidationFieldSeparator = ", ";
     private static readonly ConditionalWeakTable<Problem, CreatedFailureState> CreatedFailures = new();
 
-    internal static void ReportCreatedFailure(Problem problem, Exception? exception = null)
+    internal static void ReportCreatedFailure(Problem problem, Exception? exception = null, ILogger? logger = null)
     {
         var state = CreatedFailures.GetValue(problem, static _ => new CreatedFailureState());
-        if (Interlocked.Exchange(ref state.Reported, 1) != 0)
+        var reportException = exception is not null && Interlocked.Exchange(ref state.ExceptionReported, 1) == 0;
+        if (Interlocked.Exchange(ref state.Reported, 1) == 0)
         {
-            return;
+            CommunicationTelemetry.RecordCreatedFailure(problem, reportException ? exception : null, Activity.Current);
+            LogFailure(logger ?? CommunicationLogger.GetLogger(), problem, reportException ? exception : null);
         }
-
-        CommunicationTelemetry.RecordCreatedFailure(problem, exception, Activity.Current);
-        LogFailure(CommunicationLogger.GetLogger(), problem, exception);
+        else if (reportException)
+        {
+            // A previously returned business problem may later be thrown. Keep its first real stack trace
+            // without counting the same problem as a second failure or retaining the exception.
+            HttpFailureDiagnostics.RecordException(Activity.Current, exception!);
+            LogFailure(logger ?? CommunicationLogger.GetLogger(), problem, exception);
+        }
     }
 
     private sealed class CreatedFailureState
     {
         internal int Reported;
+        internal int ExceptionReported;
     }
 
     /// <summary>

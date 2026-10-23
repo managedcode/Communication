@@ -46,7 +46,8 @@ public static partial class ResultValueExecutionExtensions
     {
         try
         {
-            return Result<T>.Succeed(await Task.Run(taskFactory, cancellationToken).ConfigureAwait(false));
+            cancellationToken.ThrowIfCancellationRequested();
+            return Result<T>.Succeed(await taskFactory().ConfigureAwait(false));
         }
         catch (Exception exception)
         {
@@ -61,7 +62,8 @@ public static partial class ResultValueExecutionExtensions
     {
         try
         {
-            return await Task.Run(taskFactory, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return await taskFactory().ConfigureAwait(false);
         }
         catch (Exception exception)
         {
