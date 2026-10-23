@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using ManagedCode.Communication;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;

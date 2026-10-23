@@ -18,10 +18,7 @@ public partial interface IResultValueFactory<TSelf, TValue>
     /// </summary>
     static virtual TSelf Succeed(Func<TValue> valueFactory)
     {
-        if (valueFactory is null)
-        {
-            throw new ArgumentNullException(nameof(valueFactory));
-        }
+        ArgumentNullException.ThrowIfNull(valueFactory);
 
         return TSelf.Succeed(valueFactory());
     }

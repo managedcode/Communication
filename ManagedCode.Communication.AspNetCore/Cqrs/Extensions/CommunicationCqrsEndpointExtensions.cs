@@ -1,6 +1,5 @@
 using System;
 using ManagedCode.Communication.AspNetCore.Filters;
-using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;

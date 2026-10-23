@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;

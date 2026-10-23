@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CollectionResultT;
-using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
 

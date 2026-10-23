@@ -1,6 +1,5 @@
 using System;
 using ManagedCode.Communication.Extensions;
-using ManagedCode.Communication.Results.Extensions;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;

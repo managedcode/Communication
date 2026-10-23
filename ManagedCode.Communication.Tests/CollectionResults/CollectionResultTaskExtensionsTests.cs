@@ -1,6 +1,4 @@
 using System.Threading.Tasks;
-using ManagedCode.Communication;
-using ManagedCode.Communication.CollectionResults.Extensions;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
@@ -9,6 +7,7 @@ namespace ManagedCode.Communication.Tests.CollectionResults;
 
 public class CollectionResultTaskExtensionsTests
 {
+
     [Test]
     public async Task AsTask_ReturnsSameCollectionResult()
     {

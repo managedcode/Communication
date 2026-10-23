@@ -724,7 +724,7 @@ public sealed class CommandExecutionEdgeCaseTests
             Command.Create(CommandExecutionTestConstants.AttemptNoncooperative),
             static async (_, _) =>
             {
-                await Task.Delay(30);
+                await Task.Delay(30, CancellationToken.None);
                 return 5;
             },
             runtime);

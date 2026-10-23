@@ -1,11 +1,9 @@
-using System;
 using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Commands.Extensions;
 using ManagedCode.Communication.Telemetry;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;

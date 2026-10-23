@@ -64,12 +64,7 @@ public partial struct Result<T>
             return Result.Succeed();
         }
 
-        if (result.Problem != null)
-        {
-            return Result.Fail(result.Problem);
-        }
-
-        return Result.Fail();
+        return Result.Fail(result.Problem);
     }
 
     /// <summary>

@@ -1,8 +1,6 @@
 using System;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Tests.TestHelpers;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Shouldly;
 

@@ -42,7 +42,7 @@ public static partial class CollectionResultExecutionExtensions
     /// </summary>
     public static Result ToResult<T>(this CollectionResult<T> result)
     {
-        return result.IsSuccess ? Result.Succeed() : Result.Fail(result.Problem ?? Problem.GenericError());
+        return result.IsSuccess ? Result.Succeed() : Result.Fail(result.Problem);
     }
 
     private static CollectionResult<T> Execute<T, TValue>(Func<TValue> func, Func<TValue, CollectionResult<T>> projector)

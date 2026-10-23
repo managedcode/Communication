@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using System.Text.Json.Serialization;
 using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Results;

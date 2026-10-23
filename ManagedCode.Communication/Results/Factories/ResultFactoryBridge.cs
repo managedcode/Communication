@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication.Results;
@@ -363,10 +362,7 @@ internal static class ResultValueFactoryBridge<TSelf, TValue>
 
     public static TSelf Succeed(Func<TValue> valueFactory)
     {
-        if (valueFactory is null)
-        {
-            throw new ArgumentNullException(nameof(valueFactory));
-        }
+        ArgumentNullException.ThrowIfNull(valueFactory);
 
         return TSelf.Succeed(valueFactory());
     }

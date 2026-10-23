@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;

@@ -60,7 +60,7 @@ public partial struct Result<T>
     /// </summary>
     public static Result<T> From(Result<T> result)
     {
-        return result.IsSuccess ? result : result.Problem != null ? Fail(result.Problem) : Fail();
+        return result.IsSuccess ? result : Fail(result.Problem);
     }
 
     /// <summary>

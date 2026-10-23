@@ -9,7 +9,6 @@ using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.TestHost;
 
 namespace ManagedCode.Communication.Tests.CQRS;
 
@@ -90,7 +89,7 @@ internal static class CqrsHttpBoundsTestSupport
         var cleanupFailures = new List<Exception>();
         try
         {
-            result = await read.WaitAsync(TimeSpan.FromSeconds(CleanupTimeoutSeconds)).ConfigureAwait(false);
+            result = await read.WaitAsync(TimeSpan.FromSeconds(CleanupTimeoutSeconds), CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception exception)
         {

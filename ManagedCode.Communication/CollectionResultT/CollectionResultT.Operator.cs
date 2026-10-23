@@ -59,7 +59,7 @@ public partial struct CollectionResult<T>
     /// </summary>
     public static implicit operator Result(CollectionResult<T> result)
     {
-        return result.IsSuccess ? Result.Succeed() : result.Problem != null ? Result.Fail(result.Problem) : Result.Fail();
+        return result.IsSuccess ? Result.Succeed() : Result.Fail(result.Problem);
     }
 
     /// <summary>

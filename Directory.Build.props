@@ -27,8 +27,8 @@
         <RepositoryUrl>https://github.com/managedcode/Communication</RepositoryUrl>
         <PackageProjectUrl>https://github.com/managedcode/Communication</PackageProjectUrl>
         <Product>Managed Code - Communication</Product>
-        <Version>10.3.11</Version>
-        <PackageVersion>10.3.11</PackageVersion>
+        <Version>10.3.12</Version>
+        <PackageVersion>10.3.12</PackageVersion>
 
     </PropertyGroup>
     <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
@@ -43,5 +43,13 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+    </ItemGroup>
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'ManagedCode.Communication.Analyzers' and '$(MSBuildProjectName)' != 'ManagedCode.Communication.Tests'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)ManagedCode.Communication.Analyzers/ManagedCode.Communication.Analyzers.csproj"
+                          OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(MSBuildProjectName)' == 'ManagedCode.Communication' or '$(MSBuildProjectName)' == 'ManagedCode.Communication.Extensions' or '$(MSBuildProjectName)' == 'ManagedCode.Communication.AspNetCore' or '$(MSBuildProjectName)' == 'ManagedCode.Communication.Orleans'">
+        <None Include="$(MSBuildThisFileDirectory)ManagedCode.Communication.Analyzers/bin/$(Configuration)/netstandard2.0/ManagedCode.Communication.Analyzers.dll"
+              Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 </Project>

@@ -3,8 +3,6 @@ using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 

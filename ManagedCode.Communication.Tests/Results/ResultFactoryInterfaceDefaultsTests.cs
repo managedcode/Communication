@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
-using ManagedCode.Communication;
-using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Results;
 using Shouldly;
 

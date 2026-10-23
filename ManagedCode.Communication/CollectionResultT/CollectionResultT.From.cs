@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CollectionResults.Extensions;
-using ManagedCode.Communication.Logging;
-using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.CollectionResultT;
 
@@ -90,7 +87,7 @@ public partial struct CollectionResult<T>
     /// </summary>
     public static CollectionResult<T> From(CollectionResult<T> result)
     {
-        return result.IsSuccess ? result : result.Problem != null ? Fail(result.Problem) : Fail();
+        return result.IsSuccess ? result : Fail(result.Problem);
     }
 
     /// <summary>

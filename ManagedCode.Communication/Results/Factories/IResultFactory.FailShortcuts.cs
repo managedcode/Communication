@@ -1,6 +1,5 @@
 using System;
 using System.Net;
-using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication.Results;
 

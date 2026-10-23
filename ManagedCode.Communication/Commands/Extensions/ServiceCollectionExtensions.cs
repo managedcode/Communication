@@ -1,7 +1,6 @@
 using System;
 using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Commands.Stores;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;

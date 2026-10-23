@@ -1,4 +1,3 @@
-using System;
 
 namespace ManagedCode.Communication;
 

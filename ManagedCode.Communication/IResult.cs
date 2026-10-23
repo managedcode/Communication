@@ -9,12 +9,16 @@ namespace ManagedCode.Communication;
 /// </summary>
 public interface IResult : IResultProblem, IResultInvalid
 {
+    /// <inheritdoc />
+    new Problem? Problem { get; }
+
     /// <summary>
     ///     Gets a value indicating whether the operation was successful.
     /// </summary>
     /// <value>true if the operation was successful; otherwise, false.</value>
     [JsonPropertyName(CommunicationJsonNames.IsSuccess)]
     [JsonPropertyOrder(1)]
+    [MemberNotNullWhen(false, nameof(Problem))]
     bool IsSuccess { get; }
 
     /// <summary>
@@ -22,6 +26,7 @@ public interface IResult : IResultProblem, IResultInvalid
     /// </summary>
     /// <value>true if the operation failed; otherwise, false.</value>
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Problem))]
     bool IsFailed { get; }
 
     /// <summary>

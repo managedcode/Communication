@@ -9,6 +9,22 @@ namespace ManagedCode.Communication;
 /// <typeparam name="T">The type of the value.</typeparam>
 public interface IResult<out T> : IResult
 {
+    /// <inheritdoc />
+    new Problem? Problem { get; }
+
+    /// <inheritdoc />
+    [JsonPropertyName(CommunicationJsonNames.IsSuccess)]
+    [JsonPropertyOrder(1)]
+    [MemberNotNullWhen(true, nameof(Value))]
+    [MemberNotNullWhen(false, nameof(Problem))]
+    new bool IsSuccess { get; }
+
+    /// <inheritdoc />
+    [JsonIgnore]
+    [MemberNotNullWhen(false, nameof(Value))]
+    [MemberNotNullWhen(true, nameof(Problem))]
+    new bool IsFailed { get; }
+
     /// <summary>
     ///     Gets the value from the result.
     /// </summary>

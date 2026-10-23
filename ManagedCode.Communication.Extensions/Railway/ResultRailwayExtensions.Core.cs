@@ -1,8 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication.Extensions;
 

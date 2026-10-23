@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
-using ManagedCode.Communication.Helpers;
 using ManagedCode.Communication.Orleans.Helpers;
 using ManagedCode.Communication.Results;
 using ManagedCode.Communication.Telemetry;

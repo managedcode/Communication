@@ -1,5 +1,5 @@
-using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using Orleans;
@@ -41,7 +41,7 @@ public class CqrsProbeGrain : Grain, ICqrsProbeGrain
             await stream.ToResultAsync(async (_, _) =>
             {
                 preserved &= TaskScheduler.Current == scheduler;
-                await Task.Delay(10);
+                await Task.Delay(10, CancellationToken.None);
                 preserved &= TaskScheduler.Current == scheduler;
             });
         }

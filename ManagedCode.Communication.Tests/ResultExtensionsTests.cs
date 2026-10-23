@@ -2,7 +2,6 @@ using System;
 using System.Globalization;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Extensions;
-using ManagedCode.Communication.Results.Extensions;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests;

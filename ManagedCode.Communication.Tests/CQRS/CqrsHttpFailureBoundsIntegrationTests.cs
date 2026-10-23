@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Http;

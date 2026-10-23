@@ -375,12 +375,13 @@ public partial class Problem
         var errorDict = new Dictionary<string, List<string>>();
         foreach (var (field, message) in errors)
         {
-            if (!errorDict.ContainsKey(field))
+            if (!errorDict.TryGetValue(field, out List<string>? value))
             {
-                errorDict[field] = new List<string>();
+                value = new List<string>();
+                errorDict[field] = value;
             }
 
-            errorDict[field].Add(message);
+            value.Add(message);
         }
 
         problem.Extensions[ProblemConstants.ExtensionKeys.Errors] = errorDict;

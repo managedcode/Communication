@@ -70,7 +70,7 @@ public static partial class ResultRailwayExtensions
         ArgumentNullException.ThrowIfNull(recovery);
 
         var result = await resultTask.ConfigureAwait(false);
-        return result.IsSuccess ? result : recovery(result.Problem!);
+        return result.IsSuccess ? result : recovery(result.Problem);
     }
 
     /// <summary>Awaits a value-task result, then substitutes a synchronous alternative on failure.</summary>
@@ -117,7 +117,7 @@ public static partial class ResultRailwayExtensions
         var result = await resultTask.ConfigureAwait(false);
         return result.IsSuccess
             ? await next().ConfigureAwait(false)
-            : Result<T>.Fail(result.Problem!);
+            : Result<T>.Fail(result.Problem);
     }
 
     /// <summary>Awaits a value-task result, then runs an asynchronous side effect on success.</summary>
@@ -169,7 +169,7 @@ public static partial class ResultRailwayExtensions
         ArgumentNullException.ThrowIfNull(onFailure);
 
         var result = await resultTask.ConfigureAwait(false);
-        return result.IsSuccess ? onSuccess() : onFailure(result.Problem!);
+        return result.IsSuccess ? onSuccess() : onFailure(result.Problem);
     }
 
     /// <summary>Awaits a value-task result, then runs an asynchronous result-producing step on its value.</summary>
@@ -216,7 +216,7 @@ public static partial class ResultRailwayExtensions
         var result = await resultTask.ConfigureAwait(false);
         return result.IsSuccess
             ? await binder(result.Value).ConfigureAwait(false)
-            : Result.Fail(result.Problem!);
+            : Result.Fail(result.Problem);
     }
 
     /// <summary>Awaits a value-task result and applies a synchronous success predicate.</summary>
@@ -293,7 +293,7 @@ public static partial class ResultRailwayExtensions
         ArgumentNullException.ThrowIfNull(recovery);
 
         var result = await resultTask.ConfigureAwait(false);
-        return result.IsSuccess ? result : await recovery(result.Problem!).ConfigureAwait(false);
+        return result.IsSuccess ? result : await recovery(result.Problem).ConfigureAwait(false);
     }
 
     /// <summary>Awaits a value-task result, then replaces a failure with a successful default value.</summary>
@@ -327,7 +327,7 @@ public static partial class ResultRailwayExtensions
         ArgumentNullException.ThrowIfNull(onFailure);
 
         var result = await resultTask.ConfigureAwait(false);
-        return result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Problem!);
+        return result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Problem);
     }
 
     /// <summary>Awaits a value-task result and handles both branches asynchronously.</summary>
@@ -342,6 +342,6 @@ public static partial class ResultRailwayExtensions
         var result = await resultTask.ConfigureAwait(false);
         return result.IsSuccess
             ? await onSuccess(result.Value).ConfigureAwait(false)
-            : await onFailure(result.Problem!).ConfigureAwait(false);
+            : await onFailure(result.Problem).ConfigureAwait(false);
     }
 }

@@ -78,7 +78,7 @@ internal sealed class CommunicationResilienceHandler : DelegatingHandler
 
         if (result.IsSuccess)
         {
-            return result.Value!;
+            return result.Value;
         }
 
         if (lastResponse is not null)
@@ -88,7 +88,7 @@ internal sealed class CommunicationResilienceHandler : DelegatingHandler
 
         lastException?.Throw();
         throw new HttpRequestException(
-            result.Problem?.Detail ?? HttpCommandExecutionConstants.ExecutionFailedDetail,
+            result.Problem.Detail ?? HttpCommandExecutionConstants.ExecutionFailedDetail,
             null,
             HttpStatusCode.ServiceUnavailable);
     }

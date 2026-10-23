@@ -48,6 +48,9 @@ jobs:
     - name: Pack NuGet packages
       run: dotnet pack --configuration Release --no-build --output ./artifacts
 
+    - name: Verify packaged compiler analyzers
+      run: bash scripts/verify-analyzer-packages.sh ./artifacts "${{ steps.version.outputs.version }}"
+
     - name: Upload artifacts
       uses: actions/upload-artifact@v7.0.2
       with:
@@ -82,7 +85,6 @@ jobs:
 
     - name: Publish to NuGet
       id: publish
-      continue-on-error: true
       run: |
         set +e
         OUTPUT=""

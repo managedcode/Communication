@@ -1,10 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Results.Extensions;
 
 namespace ManagedCode.Communication.Extensions;
 

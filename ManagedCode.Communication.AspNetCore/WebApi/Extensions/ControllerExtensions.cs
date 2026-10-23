@@ -1,8 +1,5 @@
 using System;
-using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
-using ManagedCode.Communication.Results.Extensions;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;

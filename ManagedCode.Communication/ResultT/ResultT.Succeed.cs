@@ -1,5 +1,4 @@
 using System;
-using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication;
 

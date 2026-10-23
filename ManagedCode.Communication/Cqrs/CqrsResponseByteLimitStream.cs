@@ -108,8 +108,6 @@ internal sealed class CqrsResponseByteLimitStream : Stream
 
     public override ValueTask DisposeAsync()
     {
-        _disposed = true;
-        GC.SuppressFinalize(this);
-        return ValueTask.CompletedTask;
+        return base.DisposeAsync();
     }
 }

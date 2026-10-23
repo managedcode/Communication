@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using ManagedCode.Communication.Extensions;
-using ManagedCode.Communication.Results.Extensions;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Results;
@@ -136,6 +135,14 @@ public class RailwayOrientedProgrammingTests
         output.ShouldBe("Failed: Something went wrong");
     }
 
+    private static readonly string[] expected = new[]
+        {
+            "Starting with: 123",
+            "Parsed to: 123",
+            "Doubled to: 246",
+            "Final result: Large number: 246"
+        };
+
     [Test]
     public void ComplexChain_ShouldWorkCorrectly()
     {
@@ -158,13 +165,7 @@ public class RailwayOrientedProgrammingTests
             .ShouldBeTrue();
         result.Value
             .ShouldBe("Large number: 246");
-        log.ShouldBe(new[]
-        {
-            "Starting with: 123",
-            "Parsed to: 123",
-            "Doubled to: 246",
-            "Final result: Large number: 246"
-        });
+        log.ShouldBe(expected);
     }
 
     [Test]

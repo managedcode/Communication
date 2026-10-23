@@ -44,10 +44,7 @@ public sealed class PartitionedCommandRateLimiter : ICommandRateLimiter, IAsyncD
     {
         ArgumentNullException.ThrowIfNull(partitionKeySelector);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(permitLimit);
-        if (window <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(window));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(window, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfNegative(queueLimit);
 
         var limiter = PartitionedRateLimiter.Create<ICommand, string>(command =>

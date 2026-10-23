@@ -262,7 +262,7 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
         string? eventId = null,
         long? sequence = null)
     {
-        if (!final.IsSuccess)
+        if (final.IsFailed)
         {
             throw new ArgumentException("Completed stream chunk requires a successful result.", nameof(final));
         }

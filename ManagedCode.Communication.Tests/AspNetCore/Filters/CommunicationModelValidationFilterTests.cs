@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using ManagedCode.Communication;
 using ManagedCode.Communication.AspNetCore.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

@@ -1,7 +1,6 @@
 using System;
 using System.Net;
 using ManagedCode.Communication.Extensions;
-using ManagedCode.Communication.Results.Extensions;
 using ManagedCode.Communication.Tests.TestHelpers;
 using Shouldly;
 

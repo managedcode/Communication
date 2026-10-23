@@ -5,7 +5,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using ManagedCode.Communication;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.Commands.Execution;
 using ManagedCode.Communication.Extensions.Http;

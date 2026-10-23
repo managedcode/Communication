@@ -1,5 +1,4 @@
 using System;
-using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Commands;
 using Microsoft.Extensions.DependencyInjection;
 

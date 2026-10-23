@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ManagedCode.Communication.Tests.CQRS;

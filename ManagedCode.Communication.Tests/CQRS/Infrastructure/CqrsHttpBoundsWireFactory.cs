@@ -5,6 +5,7 @@ namespace ManagedCode.Communication.Tests.CQRS;
 
 internal static class CqrsHttpBoundsWireFactory
 {
+    private const string InvalidPayloadMessage = "The payload must contain data and a comma when multiline framing is requested.";
     private const string DataPrefixText = "data: ";
     private const string CommentText = ": heartbeat";
     private static readonly byte[] DataPrefix = Encoding.UTF8.GetBytes(DataPrefixText);
@@ -30,7 +31,7 @@ internal static class CqrsHttpBoundsWireFactory
         var splitAt = multiline ? Array.IndexOf(payload, (byte)',') + 1 : payload.Length;
         if (splitAt <= 0)
         {
-            throw new ArgumentException(nameof(payload));
+            throw new ArgumentException(InvalidPayloadMessage, nameof(payload));
         }
 
         return splitAt;

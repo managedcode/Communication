@@ -32,7 +32,7 @@ composition, reliable command execution, and ASP.NET Core, SignalR, and Orleans 
 
 ## Installation
 
-Choose the package for the boundary you need. All packages target .NET 10 and use the same release version. Package links open the latest stable release on NuGet; badges update automatically.
+Choose the package for the boundary you need. All runtime packages target .NET 10 and use the same release version. Package links open the latest stable release on NuGet; badges update automatically.
 
 | Package | Latest version | Downloads | Public API | Dependencies within this library |
 | --- | --- | --- | --- | --- |
@@ -324,9 +324,38 @@ messages separate from operational details that may contain information unsuitab
 
 ## Static analysis guidance
 
-Enable C# nullable analysis (`<Nullable>enable</Nullable>`) so the compiler can use the result status
-annotations. The published Communication packages currently do not include a dedicated usage analyzer.
-The following are suggested rules for a future analyzer or an application's own rules:
+Every runtime package includes `ManagedCode.Communication.Analyzers.dll` under
+`analyzers/dotnet/cs`. NuGet loads it into ordinary C# builds automatically, including CI;
+there is no separate analyzer installation or opt-in build target. Both shipped rules are enabled
+as compiler errors by default:
+
+| Error | Rejected usage | Correct usage |
+| --- | --- | --- |
+| `MCC0001` | `!result.IsSuccess`, `== false`, `!= true`, `is false`, `is not true` (including interface-typed results) | `result.IsFailed` |
+| `MCC0002` | Redundant `Problem`/`Value`/`Collection` null checks, `?.`, `??` or `!` when non-null is proven | Consume the member directly |
+
+Enable C# nullable analysis (`<Nullable>enable</Nullable>`) for `MCC0002` and the compiler's
+result status annotations. `IResult` and `IResult<T>` expose the same status guarantees as concrete
+results. The analyzer resolves actual Communication symbols, so similarly named foreign APIs
+and nullable domain members are unaffected. It does not treat a null-forgiving operator as proof
+of its own redundancy, transfer guards between LINQ lambdas, or retain a guard after result reassignment.
+
+```csharp
+static Result<int> Count(Result<string> result)
+{
+    if (result.IsFailed)
+        return Result<int>.Fail(result.Problem);
+
+    return Result<int>.Succeed(result.Value.Length);
+}
+```
+
+CI and release builds run `scripts/verify-analyzer-packages.sh <packages-directory> <version>`.
+It restores each of the four packed packages into an isolated consumer with no project analyzer
+references, proves that both invalid examples fail an ordinary build, and executes a correct
+success/failure flow. Publication runs only after these package-level checks pass.
+
+The following additional contract considerations still require caller review:
 
 | Pattern to diagnose | Correct usage or safe fix |
 | --- | --- |

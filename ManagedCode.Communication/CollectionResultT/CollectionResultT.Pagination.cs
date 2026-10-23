@@ -16,10 +16,7 @@ public partial struct CollectionResult<T>
     /// <param name="options">Optional normalization options.</param>
     public static CollectionResult<T> Succeed(IEnumerable<T> values, PaginationRequest request, int totalItems, PaginationOptions? options = null)
     {
-        if (values is null)
-        {
-            throw new ArgumentNullException(nameof(values));
-        }
+        ArgumentNullException.ThrowIfNull(values);
 
         var array = values as T[] ?? values.ToArray();
         var normalized = request.Normalize(options).ClampToTotal(totalItems);
@@ -35,10 +32,7 @@ public partial struct CollectionResult<T>
     /// <param name="options">Optional normalization options.</param>
     public static CollectionResult<T> Succeed(T[] values, PaginationRequest request, int totalItems, PaginationOptions? options = null)
     {
-        if (values is null)
-        {
-            throw new ArgumentNullException(nameof(values));
-        }
+        ArgumentNullException.ThrowIfNull(values);
 
         var normalized = request.Normalize(options).ClampToTotal(totalItems);
         return CreateSuccess(values, normalized.PageNumber, normalized.PageSize, totalItems);

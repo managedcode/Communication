@@ -606,7 +606,7 @@ internal static class CommandExecutionEngine
                 return result;
             }
 
-            var failure = result.Problem!;
+            var failure = result.Problem;
             if (!retry.Enabled)
             {
                 return result;

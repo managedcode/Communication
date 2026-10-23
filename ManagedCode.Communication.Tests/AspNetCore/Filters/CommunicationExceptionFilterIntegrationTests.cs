@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
-using ManagedCode.Communication;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.AspNetCore.Filters;
 using Microsoft.AspNetCore.Builder;

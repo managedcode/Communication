@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
-using ManagedCode.Communication;
 using ManagedCode.Communication.AspNetCore.Extensions;
 using ManagedCode.Communication.Constants;
 using Microsoft.AspNetCore.Http;

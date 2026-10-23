@@ -38,7 +38,7 @@ public sealed class OrleansCommandRateLimiter(
 
         var context = CreateContext(command, _options);
         var holder = await orchestrator.CreateLimiterGroupAsync(context, cancellationToken).ConfigureAwait(false);
-        var acquireTask = holder.AcquireAsync();
+        var acquireTask = holder.AcquireAsync(CancellationToken.None);
         var wasQueued = !acquireTask.IsCompletedSuccessfully;
         OrleansRateLimitLease? lease;
 

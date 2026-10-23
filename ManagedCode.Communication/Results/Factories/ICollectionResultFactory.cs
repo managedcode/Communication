@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 
 namespace ManagedCode.Communication.Results;
 

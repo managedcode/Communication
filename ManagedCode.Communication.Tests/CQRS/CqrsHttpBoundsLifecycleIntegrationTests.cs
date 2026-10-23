@@ -1,9 +1,7 @@
-using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Shouldly;
 

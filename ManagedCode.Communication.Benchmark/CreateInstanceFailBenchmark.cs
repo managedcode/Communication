@@ -45,13 +45,13 @@ public class CreateInstanceFailBenchmark
     [Benchmark]
     public object? ActivatorCreateInstanceType()
     {
-        return Activator.CreateInstance(typeof(Result));
+        return Activator.CreateInstance<Result>();
     }
 
     [Benchmark]
     public object? ActivatorCreateInstanceTypeInt()
     {
-        return Activator.CreateInstance(typeof(Result<int>));
+        return Activator.CreateInstance<Result<int>>();
     }
 
 

@@ -1,7 +1,6 @@
 using System;
 using System.Net;
 using System.Reflection;
-using ManagedCode.Communication.Helpers;
 using ManagedCode.Communication.Orleans.Helpers;
 using Orleans.Runtime;
 using Shouldly;

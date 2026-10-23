@@ -2,7 +2,6 @@ using System;
 using System.Net.Http;
 using ManagedCode.Communication.Commands.Execution;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.Extensions.Http;

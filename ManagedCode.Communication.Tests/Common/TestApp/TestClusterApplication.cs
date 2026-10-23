@@ -2,7 +2,6 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore.Extensions;
-using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Orleans.Extensions;
 using ManagedCode.Communication.Tests.Common.TestApp.Controllers;
 using Microsoft.AspNetCore.Authentication;

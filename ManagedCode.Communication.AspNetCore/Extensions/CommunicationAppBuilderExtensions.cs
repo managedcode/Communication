@@ -15,10 +15,7 @@ public static class CommunicationAppBuilderExtensions
     /// </summary>
     public static IApplicationBuilder UseCommunication(this IApplicationBuilder app)
     {
-        if (app == null)
-        {
-            throw new ArgumentNullException(nameof(app));
-        }
+        ArgumentNullException.ThrowIfNull(app);
 
         // Currently no middleware registration needed - 
         // Communication functionality is handled via filters

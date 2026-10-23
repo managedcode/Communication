@@ -13,6 +13,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Orleans.TestingHost" />
         <PackageReference Include="ManagedCode.Orleans.RateLimiting.Core" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
         <PackageReference Include="Shouldly" />
         <PackageReference Include="TUnit" />
         <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
@@ -25,6 +26,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../ManagedCode.Communication.Analyzers/ManagedCode.Communication.Analyzers.csproj" />
         <ProjectReference Include="..\ManagedCode.Communication.AspNetCore\ManagedCode.Communication.AspNetCore.csproj"/>
         <ProjectReference Include="..\ManagedCode.Communication.Extensions\ManagedCode.Communication.Extensions.csproj"/>
         <ProjectReference Include="..\ManagedCode.Communication.Orleans\ManagedCode.Communication.Orleans.csproj"/>

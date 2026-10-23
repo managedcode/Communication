@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using ManagedCode.Communication;
 using ManagedCode.Communication.Constants;
 
 namespace ManagedCode.Communication.Results.Extensions;

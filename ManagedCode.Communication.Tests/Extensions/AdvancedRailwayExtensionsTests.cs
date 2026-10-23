@@ -650,7 +650,7 @@ public class AdvancedRailwayExtensionsTests
             ? Result.FailValidation(("name", "Name is required"))
             : Result.Succeed();
 
-        var emailValidation = !user.Email.Contains("@")
+        var emailValidation = !user.Email.Contains('@')
             ? Result.FailValidation(("email", "Invalid email format"))
             : Result.Succeed();
 

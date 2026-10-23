@@ -1,7 +1,5 @@
-using System;
 using ManagedCode.Communication.AspNetCore.Filters;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ManagedCode.Communication.AspNetCore.Extensions;
 

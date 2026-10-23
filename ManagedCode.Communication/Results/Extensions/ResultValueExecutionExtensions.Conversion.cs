@@ -7,6 +7,6 @@ public static partial class ResultValueExecutionExtensions
     /// </summary>
     public static Result ToResult<T>(this IResult<T> result)
     {
-        return result.IsSuccess ? Result.Succeed() : Result.Fail(result.Problem ?? Problem.GenericError());
+        return result.IsSuccess ? Result.Succeed() : Result.Fail(result.Problem);
     }
 }

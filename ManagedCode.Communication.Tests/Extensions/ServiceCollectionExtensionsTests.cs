@@ -1,5 +1,4 @@
 using System;
-using ManagedCode.Communication.Extensions;
 using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

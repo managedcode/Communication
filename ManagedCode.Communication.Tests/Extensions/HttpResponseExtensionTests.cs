@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using ManagedCode.Communication.Extensions;
 using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Extensions;

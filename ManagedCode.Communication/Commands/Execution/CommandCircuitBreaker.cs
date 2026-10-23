@@ -199,7 +199,7 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
 
         cancellationToken.ThrowIfCancellationRequested();
         var isFailure = exception is null
-            ? outcome.IsFailed && _options.ShouldBreak(outcome.Problem!)
+            ? outcome.IsFailed && _options.ShouldBreak(outcome.Problem)
             : _options.ShouldBreakException(exception);
         var now = _timeProvider.GetTimestamp();
         CommandCircuitBreakerEvent? transition = null;

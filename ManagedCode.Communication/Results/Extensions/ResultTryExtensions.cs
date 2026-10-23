@@ -1,8 +1,6 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using ManagedCode.Communication;
-using ManagedCode.Communication.Results;
 
 namespace ManagedCode.Communication.Results.Extensions;
 
