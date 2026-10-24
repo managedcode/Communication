@@ -22,7 +22,7 @@ using Shouldly;
 namespace ManagedCode.Communication.Tests.Telemetry;
 
 [NotInParallel]
-public sealed class TryFailureTelemetryTests
+public sealed partial class TryFailureTelemetryTests
 {
     private const string OperationName = "try-failure-operation";
     private const string CallerCategory = "try-failure-caller";

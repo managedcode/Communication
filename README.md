@@ -695,6 +695,28 @@ Task handlers produce Task results and ValueTask handlers produce ValueTask resu
 also supported. Without DI, use `CommandExecutionRuntime` with static `CommandExecutor.ExecuteAsync` or
 `Result<T>.ExecuteAsync` entry points.
 
+A runtime without an explicit logger resolves the currently configured Communication logger at each diagnostic
+boundary. It can be created before the host configures its logger factory:
+
+```csharp
+using ManagedCode.Communication.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+
+var runtime = new CommandExecutionRuntime(executionOptions);
+CommunicationLogger.Configure(loggerFactory);
+
+Result<Catalog> result = await CommandExecutor.ExecuteAsync(
+    Command.Create("catalog.refresh"),
+    (_, token) => catalogService.RefreshAsync(sourceId, token),
+    runtime,
+    cancellationToken);
+```
+
+An explicit caller logger always takes precedence. Pass `NullLogger.Instance` to the runtime to suppress its
+original-exception log output while retaining telemetry; a disabled explicit logger is also respected. This
+runtime default does not change explicit `CommunicationDiagnostics.ReportFailure(null, ...)`, which remains
+telemetry-only.
+
 ### Retry decisions and delays
 
 `MaxRetries` counts retries after the first attempt: `3` allows up to four physical attempts. Execution stops

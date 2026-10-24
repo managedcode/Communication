@@ -1,4 +1,5 @@
 using System;
+using ManagedCode.Communication.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace ManagedCode.Communication.Commands.Execution;
@@ -9,6 +10,7 @@ namespace ManagedCode.Communication.Commands.Execution;
 public sealed class CommandExecutionRuntime
 {
     private readonly CommandExecutionOptions _optionsSnapshot;
+    private readonly ILogger? _logger;
 
     /// <summary>
     ///     Creates a command execution runtime.
@@ -27,7 +29,7 @@ public sealed class CommandExecutionRuntime
         IdempotencyStore = idempotencyStore;
         RateLimiter = rateLimiter;
         TimeProvider = timeProvider ?? TimeProvider.System;
-        Logger = logger;
+        _logger = logger;
         CircuitBreaker = circuitBreaker ?? (_optionsSnapshot.CircuitBreaker.Enabled
             ? new PartitionedCommandCircuitBreaker(_optionsSnapshot.CircuitBreaker, TimeProvider)
             : null);
@@ -53,5 +55,9 @@ public sealed class CommandExecutionRuntime
     public TimeProvider TimeProvider { get; }
 
     /// <summary>Logger for original command exceptions, or safe metadata for HTTP operations.</summary>
-    public ILogger? Logger { get; }
+    /// <remarks>
+    ///     An omitted logger resolves the currently configured Communication logger when diagnostics are emitted.
+    ///     An explicitly supplied logger, including a disabled logger, is always preserved.
+    /// </remarks>
+    public ILogger? Logger => _logger ?? CommunicationLogger.GetLogger();
 }
