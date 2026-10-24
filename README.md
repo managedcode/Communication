@@ -1145,6 +1145,26 @@ the original exception and throw-site stack trace. Automatic factory diagnostics
 `Problem` object: wrapping the same instance does not report it as a new occurrence. New problems represent
 new occurrences; successes and reading a result do not emit automatic failure diagnostics.
 
+The created-failure count, original exception log and original exception trace are deduplicated independently.
+An unavailable activity or Error-disabled logger does not consume the other output's opportunity. If a later
+boundary supplies the same original exception and Problem with an enabled logger or a current activity, that
+output records its first original diagnostic without recounting the problem or repeating an existing output:
+
+```csharp
+using Microsoft.Extensions.Logging.Abstractions;
+
+Result ObserveOriginalFailure(Exception original, ILogger logger)
+{
+    var problem = Problem.Create(original);
+    Result.Fail(original, NullLogger.Instance, problemFactory: _ => problem);
+    return Result.Fail(original, logger, problemFactory: _ => problem);
+}
+```
+
+This requires supplying the original exception again; wrapping the Problem alone cannot recover its stack.
+The library does not retain exceptions or retry exporter delivery. An enabled native logger call and a current
+activity do not guarantee that the application's configured exporters persist their output.
+
 HTTP resilience, HTTP-to-Result conversion and HTTP CQRS readers share a privacy boundary. Its automatic failure logs and traces retain status, exception types,
 throw-site stack frames and correlation, while omitting exception messages, inner messages, response reason
 phrases/content and request URL user information/path/query. This policy also applies without sampled traces;

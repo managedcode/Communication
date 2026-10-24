@@ -24,25 +24,40 @@ public static class CommunicationDiagnostics
     internal static void ReportCreatedFailure(Problem problem, Exception? exception = null, ILogger? logger = null)
     {
         var state = CreatedFailures.GetValue(problem, static _ => new CreatedFailureState());
-        var reportException = exception is not null && Interlocked.Exchange(ref state.ExceptionReported, 1) == 0;
+        var activity = Activity.Current;
+        var effectiveLogger = logger;
+        var traceException = exception is not null && activity is not null
+            && Interlocked.Exchange(ref state.ExceptionTraced, 1) == 0;
+        var logException = exception is not null && (effectiveLogger ??= CommunicationLogger.GetLogger()).IsEnabled(LogLevel.Error)
+            && Interlocked.Exchange(ref state.ExceptionLogged, 1) == 0;
         if (Interlocked.Exchange(ref state.Reported, 1) == 0)
         {
-            CommunicationTelemetry.RecordCreatedFailure(problem, reportException ? exception : null, Activity.Current);
-            LogFailure(logger ?? CommunicationLogger.GetLogger(), problem, reportException ? exception : null);
+            CommunicationTelemetry.RecordCreatedFailure(problem, exception, activity, traceException);
+            if (exception is null || logException)
+            {
+                LogFailure(effectiveLogger ?? CommunicationLogger.GetLogger(), problem, exception);
+            }
         }
-        else if (reportException)
+        else
         {
-            // A previously returned business problem may later be thrown. Keep its first real stack trace
-            // without counting the same problem as a second failure or retaining the exception.
-            HttpFailureDiagnostics.RecordException(Activity.Current, exception!);
-            LogFailure(logger ?? CommunicationLogger.GetLogger(), problem, exception);
+            // A missing activity or disabled logger must not consume the other output's first original
+            // exception. Keep their availability independent without recounting or retaining the cause.
+            if (traceException)
+            {
+                HttpFailureDiagnostics.RecordException(activity, exception!);
+            }
+            if (logException)
+            {
+                LogFailure(effectiveLogger, problem, exception);
+            }
         }
     }
 
     private sealed class CreatedFailureState
     {
         internal int Reported;
-        internal int ExceptionReported;
+        internal int ExceptionTraced;
+        internal int ExceptionLogged;
     }
 
     /// <summary>

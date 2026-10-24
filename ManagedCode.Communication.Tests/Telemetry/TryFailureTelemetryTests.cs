@@ -26,6 +26,7 @@ public sealed class TryFailureTelemetryTests
 {
     private const string OperationName = "try-failure-operation";
     private const string CallerCategory = "try-failure-caller";
+    private const string DisabledCallerCategory = "disabled-try-failure-caller";
     private const string FailureDetail = "original failure detail";
     private const string BusinessTitle = "Access denied";
     private const string BusinessDetail = "The requested Company cannot be accessed.";
@@ -37,6 +38,12 @@ public sealed class TryFailureTelemetryTests
     private const string StackTraceTag = "exception.stacktrace";
     private const string SensitiveHttpDetail = "secret-http-payload";
     private const int Value = 42;
+    private const int ExplicitNullLogger = 0;
+    private const int DisabledLogger = 1;
+    private const int DefaultNullLogger = 2;
+    private const int AbsentActivity = 0;
+    private const int SampledActivity = 1;
+    private const int UnsampledActivity = 2;
 
     [Test]
     [Arguments(false)]
@@ -351,6 +358,188 @@ public sealed class TryFailureTelemetryTests
         observation.FlushFailures().ShouldBe(0);
     }
 
+    [Test]
+    [Arguments(false, ExplicitNullLogger)]
+    [Arguments(true, ExplicitNullLogger)]
+    [Arguments(false, DisabledLogger)]
+    [Arguments(true, DisabledLogger)]
+    [Arguments(false, DefaultNullLogger)]
+    [Arguments(true, DefaultNullLogger)]
+    public async Task TryAsync_AfterUnavailableLogger_ShouldExportOriginalExceptionOnce(bool useValueTask, int loggerSelection)
+    {
+        using var observation = new Observation();
+        ILogger? unavailableLogger = loggerSelection switch
+        {
+            ExplicitNullLogger => NullLogger.Instance,
+            DisabledLogger => observation.DisabledLogger,
+            DefaultNullLogger => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(loggerSelection))
+        };
+        if (loggerSelection == DefaultNullLogger)
+        {
+            CommunicationLogger.Configure(NullLoggerFactory.Instance);
+            CommunicationLogger.GetLogger().IsEnabled(LogLevel.Error).ShouldBeFalse();
+        }
+        else
+        {
+            unavailableLogger.ShouldNotBeNull();
+            unavailableLogger.IsEnabled(LogLevel.Error).ShouldBeFalse();
+        }
+        using (var activity = CommunicationTelemetry.StartActivity(OperationName))
+        {
+            activity.ShouldNotBeNull();
+            var exception = new InvalidOperationException(FailureDetail);
+            var problem = CreateBusinessProblem();
+            var first = useValueTask
+                ? await Result.TryAsync((Func<ValueTask<int>>)(() => ThrowValueTaskAsync(exception)), unavailableLogger, problemFactory: _ => problem)
+                : await Result.TryAsync((Func<Task<int>>)(() => ThrowTaskAsync(exception)), unavailableLogger, problemFactory: _ => problem);
+            first.IsFailed.ShouldBeTrue();
+            first.Problem.ShouldBeSameAs(problem);
+            observation.Logs.ShouldBeEmpty();
+            activity.Events.Count(item => item.Name == ExceptionEvent).ShouldBe(1);
+
+            AssertForwardedFailure(problem, exception, observation.Logger);
+            AssertException(observation, activity, exception);
+            AssertBusinessProblem(problem);
+            activity.Status.ShouldBe(ActivityStatusCode.Unset);
+        }
+
+        observation.Spans.ShouldHaveSingleItem().Events.Count(item => item.Name == ExceptionEvent).ShouldBe(1);
+        observation.FlushFailures().ShouldBe(1);
+        observation.CreatedErrorTypes.ShouldHaveSingleItem().ShouldBe(nameof(InvalidOperationException));
+    }
+
+    [Test]
+    [Arguments(false, false)]
+    [Arguments(false, true)]
+    [Arguments(true, false)]
+    [Arguments(true, true)]
+    public async Task TryAsync_WithoutInitialActivity_ShouldExportLaterOriginalTraceOnce(bool useValueTask, bool initialLoggerEnabled)
+    {
+        using var observation = new Observation();
+        var previousActivity = Activity.Current;
+        Activity.Current = null;
+        try
+        {
+            var exception = new InvalidOperationException(FailureDetail);
+            var problem = CreateBusinessProblem();
+            var logger = initialLoggerEnabled ? observation.Logger : NullLogger.Instance;
+            var first = useValueTask
+                ? await Result.TryAsync((Func<ValueTask<int>>)(() => ThrowValueTaskAsync(exception)), logger, problemFactory: _ => problem)
+                : await Result.TryAsync((Func<Task<int>>)(() => ThrowTaskAsync(exception)), logger, problemFactory: _ => problem);
+            first.IsFailed.ShouldBeTrue();
+            first.Problem.ShouldBeSameAs(problem);
+            observation.Logs.Count.ShouldBe(initialLoggerEnabled ? 1 : 0);
+            observation.Spans.ShouldBeEmpty();
+            using (var activity = CommunicationTelemetry.StartActivity(OperationName))
+            {
+                activity.ShouldNotBeNull();
+                AssertForwardedFailure(problem, exception, observation.Logger);
+                var log = observation.Logs.ShouldHaveSingleItem();
+                log.Level.ShouldBe(LogLevel.Error);
+                log.Exception.ShouldBeSameAs(exception);
+                log.TraceId.ShouldBe(initialLoggerEnabled ? default : activity.TraceId);
+                log.SpanId.ShouldBe(initialLoggerEnabled ? default : activity.SpanId);
+                var trace = activity.Events.Single(item => item.Name == ExceptionEvent);
+                trace.Tags.Single(item => item.Key == StackTraceTag).Value!.ToString()!.ShouldContain(nameof(Throw));
+                activity.Events.Count(item => item.Name == CommunicationTelemetry.CreatedFailureEventName).ShouldBe(0);
+                activity.Status.ShouldBe(ActivityStatusCode.Unset);
+                AssertBusinessProblem(problem);
+            }
+            observation.Spans.ShouldHaveSingleItem().Events.Count(item => item.Name == ExceptionEvent).ShouldBe(1);
+            observation.FlushFailures().ShouldBe(1);
+            observation.CreatedErrorTypes.ShouldHaveSingleItem().ShouldBe(nameof(InvalidOperationException));
+        }
+        finally
+        {
+            Activity.Current = previousActivity;
+        }
+    }
+
+    [Test]
+    [Arguments(AbsentActivity)]
+    [Arguments(SampledActivity)]
+    [Arguments(UnsampledActivity)]
+    public async Task TryAsync_AfterUnavailableHttpLogger_ShouldExportOnlySafeOriginalDiagnostics(int activitySelection)
+    {
+        using var observation = new Observation(sampleTraces: activitySelection != UnsampledActivity);
+        var previousActivity = Activity.Current;
+        Activity.Current = null;
+        try
+        {
+            using var activity = activitySelection == AbsentActivity ? null : CommunicationTelemetry.StartActivity(OperationName);
+            if (activitySelection != AbsentActivity)
+            {
+                activity.ShouldNotBeNull();
+                activity.Recorded.ShouldBe(activitySelection == SampledActivity);
+            }
+            using var privacy = HttpFailureDiagnostics.Begin(true);
+            var exception = new InvalidOperationException(SensitiveHttpDetail, new FormatException(SensitiveHttpDetail));
+            var problem = CreateBusinessProblem();
+            var first = await Result.TryAsync((Func<Task<int>>)(() => ThrowTaskAsync(exception)), NullLogger.Instance, problemFactory: _ => problem);
+            first.IsFailed.ShouldBeTrue();
+            first.Problem.ShouldBeSameAs(problem);
+            observation.Logs.ShouldBeEmpty();
+            AssertForwardedFailure(problem, exception, observation.Logger);
+            var log = observation.Logs.ShouldHaveSingleItem();
+            log.Level.ShouldBe(LogLevel.Error);
+            log.Exception.ShouldBeNull();
+            log.Message.ShouldContain(nameof(InvalidOperationException));
+            log.Message.ShouldContain(nameof(FormatException));
+            log.Message.ShouldContain(nameof(Throw));
+            log.Message.ShouldNotContain(SensitiveHttpDetail);
+            log.Message.ShouldNotContain(BusinessDetail);
+            if (activity is not null)
+            {
+                var trace = activity.Events.Single(item => item.Name == ExceptionEvent);
+                trace.Tags.Single(item => item.Key == StackTraceTag).Value!.ToString()!.ShouldContain(nameof(Throw));
+                foreach (var tag in activity.Events.SelectMany(item => item.Tags))
+                {
+                    tag.Value?.ToString()?.ShouldNotContain(SensitiveHttpDetail);
+                    tag.Value?.ToString()?.ShouldNotContain(BusinessDetail);
+                }
+                activity.Status.ShouldBe(ActivityStatusCode.Unset);
+            }
+            observation.FlushFailures().ShouldBe(1);
+            observation.CreatedErrorTypes.ShouldHaveSingleItem().ShouldBe(nameof(InvalidOperationException));
+        }
+        finally
+        {
+            Activity.Current = previousActivity;
+        }
+    }
+
+    private static Problem CreateBusinessProblem()
+    {
+        var problem = Problem.Create(BusinessTitle, BusinessDetail, HttpStatusCode.Forbidden);
+        problem.ErrorCode = BusinessCode;
+        problem.Instance = BusinessInstance;
+        problem.Extensions[BusinessExtension] = BusinessOwner;
+        return problem;
+    }
+
+    private static void AssertBusinessProblem(Problem problem)
+    {
+        problem.StatusCode.ShouldBe((int)HttpStatusCode.Forbidden);
+        problem.ErrorCode.ShouldBe(BusinessCode);
+        problem.Title.ShouldBe(BusinessTitle);
+        problem.Detail.ShouldBe(BusinessDetail);
+        problem.Instance.ShouldBe(BusinessInstance);
+        problem.Extensions[BusinessExtension].ShouldBe(BusinessOwner);
+        problem.Extensions.Values.OfType<Exception>().ShouldBeEmpty();
+    }
+
+    private static void AssertForwardedFailure(Problem problem, Exception exception, ILogger logger)
+    {
+        var result = Result<int>.Fail(exception, logger, problemFactory: _ => problem);
+        result.IsFailed.ShouldBeTrue();
+        result.Problem.ShouldBeSameAs(problem);
+        Result.Fail(exception, logger, problemFactory: _ => problem).Problem.ShouldBeSameAs(problem);
+        CollectionResult<int>.Fail(exception, logger, problemFactory: _ => problem).Problem.ShouldBeSameAs(problem);
+        Result.Fail(problem).Problem.ShouldBeSameAs(problem);
+        JsonSerializer.Serialize(result).ShouldNotContain(exception.StackTrace!);
+    }
+
     private static void AssertException(Observation observation, Activity activity, Exception exception)
     {
         var log = observation.Logs.ShouldHaveSingleItem();
@@ -416,9 +605,11 @@ public sealed class TryFailureTelemetryTests
         private readonly MeterProvider _meter;
         private long _failures;
 
-        internal Observation()
+        internal Observation(bool sampleTraces = true)
         {
-            _factory = LoggerFactory.Create(builder => builder.AddOpenTelemetry(options =>
+            _factory = LoggerFactory.Create(builder => builder
+                .AddFilter(DisabledCallerCategory, LogLevel.Critical)
+                .AddOpenTelemetry(options =>
             {
                 options.IncludeFormattedMessage = true;
                 options.AddProcessor(new SimpleLogRecordExportProcessor(new CaptureExporter<LogRecord>(record =>
@@ -426,10 +617,15 @@ public sealed class TryFailureTelemetryTests
             }));
             CommunicationLogger.Configure(_factory);
             Logger = _factory.CreateLogger(CallerCategory);
-            _tracer = Sdk.CreateTracerProviderBuilder()
+            DisabledLogger = _factory.CreateLogger(DisabledCallerCategory);
+            var tracing = Sdk.CreateTracerProviderBuilder()
                 .AddSource(CommunicationTelemetry.SourceName)
-                .AddProcessor(new SimpleActivityExportProcessor(new CaptureExporter<Activity>(Spans.Add)))
-                .Build();
+                .AddProcessor(new SimpleActivityExportProcessor(new CaptureExporter<Activity>(Spans.Add)));
+            if (!sampleTraces)
+            {
+                tracing.SetSampler(new AlwaysOffSampler());
+            }
+            _tracer = tracing.Build();
             _meter = Sdk.CreateMeterProviderBuilder()
                 .AddMeter(CommunicationTelemetry.SourceName)
                 .AddReader(new PeriodicExportingMetricReader(new CaptureExporter<Metric>(metric =>
@@ -439,6 +635,13 @@ public sealed class TryFailureTelemetryTests
                         foreach (ref readonly var point in metric.GetMetricPoints())
                         {
                             _failures += point.GetSumLong();
+                            foreach (var tag in point.Tags)
+                            {
+                                if (tag.Key == CommunicationTelemetry.ErrorTypeTag)
+                                {
+                                    CreatedErrorTypes.Add(tag.Value?.ToString());
+                                }
+                            }
                         }
                     }
                 }), exportIntervalMilliseconds: int.MaxValue))
@@ -446,8 +649,10 @@ public sealed class TryFailureTelemetryTests
         }
 
         internal ILogger Logger { get; }
+        internal ILogger DisabledLogger { get; }
         internal List<LogEntry> Logs { get; } = [];
         internal List<Activity> Spans { get; } = [];
+        internal List<string?> CreatedErrorTypes { get; } = [];
         internal long FlushFailures()
         {
             _meter.ForceFlush().ShouldBeTrue();

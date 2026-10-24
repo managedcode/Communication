@@ -270,7 +270,7 @@ public static class CommunicationTelemetry
         AnnotateFailure(problem, exception, activity ?? Activity.Current);
     }
 
-    internal static void RecordCreatedFailure(Problem problem, Exception? exception, Activity? activity)
+    internal static void RecordCreatedFailure(Problem problem, Exception? exception, Activity? activity, bool recordException)
     {
         problem = HttpFailureDiagnostics.Project(problem);
         var errorType = ResolveErrorType(problem, exception);
@@ -293,7 +293,7 @@ public static class CommunicationTelemetry
                 { ProblemStatusTag, problem.StatusCode },
                 { ProblemErrorCodeTag, problem.ErrorCode }
             }));
-        if (exception is not null)
+        if (recordException && exception is not null)
         {
             HttpFailureDiagnostics.RecordException(activity, exception);
         }
