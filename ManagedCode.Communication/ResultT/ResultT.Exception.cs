@@ -19,10 +19,13 @@ public partial struct Result<T>
     /// <summary>
     ///     Throws a ProblemException if the result has a problem.
     /// </summary>
-    [MemberNotNullWhen(false, nameof(Value))]
+    [MemberNotNull(nameof(Value))]
     public void ThrowIfProblem()
     {
-        ResultProblemExtensions.ThrowIfProblem(this);
+        if (IsFailed)
+        {
+            throw new ProblemException(Problem);
+        }
     }
 
     /// <summary>

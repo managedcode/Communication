@@ -172,6 +172,22 @@ These guarantees concern the payload itself. A nullable property inside the payl
 inside a collection, still needs its own domain check. Keep the guard and value access on the same result;
 reassigning it or checking a different result does not establish the guarantee.
 
+When the caller needs an exception instead of a failed result, use `ThrowIfProblem()`:
+
+```csharp
+static int RequireTextLength(Result<string> result)
+{
+    result.ThrowIfProblem();
+    return result.Value.Length;
+}
+```
+
+A failed result throws `ProblemException` carrying its original `Problem`. On normal return,
+`Result<T>.ThrowIfProblem()` establishes a non-null `Value`, including nullable type arguments;
+no additional null guard or null-forgiving operator is needed. Collection results expose their
+existing non-null item array through both `Collection` and `Value`, including an empty array
+when there are no items.
+
 ### Success without data
 
 Use non-generic `Result` for acknowledgements, completed mutations, and deliberately ignored events:

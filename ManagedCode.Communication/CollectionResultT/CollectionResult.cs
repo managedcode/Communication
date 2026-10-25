@@ -79,10 +79,10 @@ public partial struct CollectionResult<T> : IResultCollection<T>, ICollectionRes
     }
 
     /// <summary>
-    ///     Gets the collection as a Value property, for <see cref="IResult{T}" /> compatibility.
+    ///     Gets the non-null collection as a Value property, for <see cref="IResult{T}" /> compatibility.
     /// </summary>
     [JsonIgnore]
-    public T[]? Value => Collection;
+    public T[] Value => Collection;
 
     /// <summary>
     ///     1-based index of this page.
