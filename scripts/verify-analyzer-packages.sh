@@ -53,13 +53,108 @@ CS
 
     cat > "$consumer_directory/Program.cs" <<'CS'
 using ManagedCode.Communication;
+var result = Result.Fail();
+return result.IsFailed && result.Problem is { } problem ? problem.StatusCode : 0;
+CS
+    if dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release > "$consumer_directory/MCC0002-pattern.log" 2>&1; then
+        echo "$package incorrectly accepted a redundant Problem capture" >&2
+        exit 1
+    fi
+    grep -q 'error MCC0002' "$consumer_directory/MCC0002-pattern.log" || { tail -60 "$consumer_directory/MCC0002-pattern.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using System;
+using ManagedCode.Communication;
+var result = Result<string>.Succeed(string.Empty);
+result.ThrowIfProblem();
+ArgumentNullException.ThrowIfNull(result.Value);
+return 0;
+CS
+    if dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release > "$consumer_directory/MCC0002-postcondition.log" 2>&1; then
+        echo "$package incorrectly accepted a null guard after ThrowIfProblem" >&2
+        exit 1
+    fi
+    grep -q 'error MCC0002' "$consumer_directory/MCC0002-postcondition.log" || { tail -60 "$consumer_directory/MCC0002-postcondition.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+#pragma warning disable MCC0003
+using ManagedCode.Communication;
+using ManagedCode.Communication.Commands;
+var command = Command.From(1);
+var result = Result.Succeed(command);
+return result.IsSuccess ? 0 : 1;
+CS
+    if dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release -p:NoWarn=MCC0003 > "$consumer_directory/MCC0003.log" 2>&1; then
+        echo "$package incorrectly accepted a command result payload or its suppression" >&2
+        exit 1
+    fi
+    grep -q 'error MCC0003' "$consumer_directory/MCC0003.log" || { tail -60 "$consumer_directory/MCC0003.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using System.Collections.Generic;
+using ManagedCode.Communication;
+using ManagedCode.Communication.Commands;
+var result = Result<List<Payload>>.Succeed([new Payload(Command.From(1))]);
+return result.IsSuccess ? 0 : 1;
+public sealed record Payload(ICommand Work);
+CS
+    if dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release > "$consumer_directory/MCC0003-nested.log" 2>&1; then
+        echo "$package incorrectly accepted a command nested inside a result DTO collection" >&2
+        exit 1
+    fi
+    grep -q 'error MCC0003' "$consumer_directory/MCC0003-nested.log" || { tail -60 "$consumer_directory/MCC0003-nested.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
+using ManagedCode.Communication.Commands;
+var command = Command.From(Result.Succeed(1));
+return command.IsEmpty ? 1 : 0;
+CS
+    if dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release > "$consumer_directory/MCC0003-command.log" 2>&1; then
+        echo "$package incorrectly accepted a result inside a command payload" >&2
+        exit 1
+    fi
+    grep -q 'error MCC0003' "$consumer_directory/MCC0003-command.log" || { tail -60 "$consumer_directory/MCC0003-command.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
+var result = Result.Succeed(Result.Succeed(1));
+return result.IsFailed ? 1 : 0;
+CS
+    dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release -p:TreatWarningsAsErrors=false > "$consumer_directory/MCC0004-nested.log" 2>&1 || { tail -60 "$consumer_directory/MCC0004-nested.log"; exit 1; }
+    grep -q 'warning MCC0004' "$consumer_directory/MCC0004-nested.log" || { tail -60 "$consumer_directory/MCC0004-nested.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
+var result = Preserve(Result.Succeed(1));
+return result.IsFailed ? 1 : 0;
+static Result<int> Preserve(Result<int> result)
+{
+    if (result.IsFailed) return result;
+    return Result.Succeed(result.Value);
+}
+CS
+    dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release -p:TreatWarningsAsErrors=false > "$consumer_directory/MCC0004-reuse.log" 2>&1 || { tail -60 "$consumer_directory/MCC0004-reuse.log"; exit 1; }
+    grep -q 'warning MCC0004' "$consumer_directory/MCC0004-reuse.log" || { tail -60 "$consumer_directory/MCC0004-reuse.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
+using ManagedCode.Communication.Commands;
 var problem = Problem.GenericError();
 var failed = Convert(Result<string>.Fail(problem));
 if (failed.IsSuccess) return 1;
 if (!object.ReferenceEquals(failed.Problem, problem)) return 2;
 var success = Convert(Result<string>.Succeed(string.Empty));
 if (success.IsFailed) return 3;
+var command = Command.From(7);
+var output = Handle(command);
+if (output.IsFailed) return 4;
+if (output.Value != 7) return 5;
+var checkedPayload = Result<string>.Succeed(string.Empty);
+checkedPayload.ThrowIfProblem();
+if (checkedPayload.Value.Length != 0) return 6;
 return success.Value;
+static Result<int> Handle(Command<int> command) => Result.Succeed(command.Value);
 static Result<int> Convert(IResult<string> result)
 {
     if (result.IsFailed) return Result<int>.Fail(result.Problem);
@@ -67,5 +162,5 @@ static Result<int> Convert(IResult<string> result)
 }
 CS
     dotnet run --project "$consumer_directory/Consumer.csproj" --no-restore -c Release > "$consumer_directory/accepted.log" 2>&1 || { tail -60 "$consumer_directory/accepted.log"; exit 1; }
-    echo "$package $version: both compiler errors enforced; correct flow built and executed."
+    echo "$package $version: all compiler errors and warnings enforced; separate command/result flow built and executed."
 done

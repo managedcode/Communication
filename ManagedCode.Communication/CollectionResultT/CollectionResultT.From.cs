@@ -87,7 +87,7 @@ public partial struct CollectionResult<T>
     /// </summary>
     public static CollectionResult<T> From(CollectionResult<T> result)
     {
-        return result.IsSuccess ? result : Fail(result.Problem);
+        return result;
     }
 
     /// <summary>

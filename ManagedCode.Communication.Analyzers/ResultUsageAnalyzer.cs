@@ -9,7 +9,7 @@ namespace ManagedCode.Communication.Analyzers;
 
 /// <summary>Enforces the status and nullable payload contracts of Communication results.</summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
-public sealed class ResultUsageAnalyzer : DiagnosticAnalyzer
+public sealed partial class ResultUsageAnalyzer : DiagnosticAnalyzer
 {
     /// <summary>Use the dedicated failure status property.</summary>
     public const string NegatedSuccessId = "MCC0001";
@@ -32,6 +32,8 @@ public sealed class ResultUsageAnalyzer : DiagnosticAnalyzer
     private const string CollectionInterface = "IResultCollection`1";
     private const string NegatedTitle = "Use IsFailed for failure checks";
     private const string NegatedMessage = "Use IsFailed instead of negating IsSuccess";
+    private const string NullThrowMethodName = "ThrowIfNull";
+    private const string NullThrowMetadataName = "System.ArgumentNullException";
     private const string NullGuardTitle = "Trust the result nullability contract";
     private const string NullGuardMessage = "'{0}' is already non-null here; remove the redundant null guard or suppression";
 
@@ -42,7 +44,7 @@ public sealed class ResultUsageAnalyzer : DiagnosticAnalyzer
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(NegatedSuccess, RedundantNullGuard);
+        ImmutableArray.Create(NegatedSuccess, RedundantNullGuard, RedundantWrapping);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -54,6 +56,9 @@ public sealed class ResultUsageAnalyzer : DiagnosticAnalyzer
         context.RegisterSyntaxNodeAction(AnalyzeGuard, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression,
             SyntaxKind.IsPatternExpression, SyntaxKind.CoalesceExpression, SyntaxKind.ConditionalAccessExpression,
             SyntaxKind.SuppressNullableWarningExpression);
+        context.RegisterSyntaxNodeAction(AnalyzeNullThrowGuard, SyntaxKind.InvocationExpression);
+        context.RegisterSyntaxNodeAction(AnalyzeNestedResult, SyntaxKind.GenericName);
+        context.RegisterOperationAction(AnalyzeResultWrapping, OperationKind.Invocation, OperationKind.ObjectCreation);
     }
 
     private static void AnalyzeNegation(SyntaxNodeAnalysisContext context)
@@ -98,6 +103,30 @@ public sealed class ResultUsageAnalyzer : DiagnosticAnalyzer
             PostfixUnaryExpressionSyntax postfix => postfix.Operand,
             _ => null
         };
+        ReportGuard(context, expression);
+    }
+
+    private static void AnalyzeNullThrowGuard(SyntaxNodeAnalysisContext context)
+    {
+        if (context.SemanticModel.GetOperation(context.Node, context.CancellationToken) is not IInvocationOperation operation ||
+            operation.TargetMethod.Name != NullThrowMethodName ||
+            !SymbolEqualityComparer.Default.Equals(operation.TargetMethod.ContainingType,
+                context.Compilation.GetTypeByMetadataName(NullThrowMetadataName)))
+        {
+            return;
+        }
+        foreach (var argument in operation.Arguments)
+        {
+            if (argument.Parameter?.Ordinal == 0)
+            {
+                ReportGuard(context, argument.Value.Syntax as ExpressionSyntax);
+                return;
+            }
+        }
+    }
+
+    private static void ReportGuard(SyntaxNodeAnalysisContext context, ExpressionSyntax? expression)
+    {
         if (expression is null || Unwrap(expression) is not MemberAccessExpressionSyntax member ||
             member.Name.Identifier.ValueText is not (ProblemName or ValueName or CollectionName) ||
             !IsResultProperty(member, context.SemanticModel, context.CancellationToken))
@@ -147,10 +176,18 @@ public sealed class ResultUsageAnalyzer : DiagnosticAnalyzer
                     pattern = unary.Pattern;
                     continue;
                 default:
-                    return pattern is ConstantPatternSyntax constant && constant.Expression.IsKind(SyntaxKind.NullLiteralExpression);
+                    return pattern is ConstantPatternSyntax constant && constant.Expression.IsKind(SyntaxKind.NullLiteralExpression) ||
+                        pattern is RecursivePatternSyntax { Type: null, PositionalPatternClause: null,
+                            PropertyPatternClause.Subpatterns.Count: 0 };
             }
         }
     }
+
+    internal static bool IsNativeResultType(ITypeSymbol? symbol) => symbol is INamedTypeSymbol type &&
+        type.ContainingAssembly?.Name == AssemblyName &&
+        type.MetadataName is ResultType or GenericResultType or CollectionType or
+            ResultInterface or GenericResultInterface or CollectionInterface &&
+        type.ContainingNamespace?.ToDisplayString() is ResultNamespace or CollectionNamespace;
 
     internal static bool IsResultProperty(MemberAccessExpressionSyntax member, SemanticModel model, System.Threading.CancellationToken token)
     {

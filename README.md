@@ -342,19 +342,32 @@ messages separate from operational details that may contain information unsuitab
 
 Every runtime package includes `ManagedCode.Communication.Analyzers.dll` under
 `analyzers/dotnet/cs`. NuGet loads it into ordinary C# builds automatically, including CI;
-there is no separate analyzer installation or opt-in build target. Both shipped rules are enabled
-as compiler errors by default:
+there is no separate analyzer installation or opt-in build target. `MCC0001`–`MCC0003` are compiler
+errors by default; `MCC0004` is a warning:
 
-| Error | Rejected usage | Correct usage |
-| --- | --- | --- |
-| `MCC0001` | `!result.IsSuccess`, `== false`, `!= true`, `is false`, `is not true` (including interface-typed results) | `result.IsFailed` |
-| `MCC0002` | Redundant `Problem`/`Value`/`Collection` null checks, `?.`, `??` or `!` when non-null is proven | Consume the member directly |
+| Rule | Severity | Diagnosed usage | Correct usage |
+| --- | --- | --- | --- |
+| `MCC0001` | Error | `!result.IsSuccess`, `== false`, `!= true`, `is false`, `is not true` (including interface-typed results) | `result.IsFailed` |
+| `MCC0002` | Error | Redundant `Problem`/`Value`/`Collection` null checks, `is { }` captures, native `ThrowIfNull`, `?.`, `??` or `!` when non-null is proven | Consume the member directly |
+| `MCC0003` | Error | A command envelope inside a result payload, or a result envelope inside a command payload, including collections and nested DTO members | Accept `Command<Input>` and return `Result<Output>` separately |
+| `MCC0004` | Warning | Nested result payloads and same-type `Succeed(result.Value)`, `Fail(result.Problem)` or `From(result)` reconstruction | Return the existing result when its status is already established |
 
 Enable C# nullable analysis (`<Nullable>enable</Nullable>`) for `MCC0002` and the compiler's
 result status annotations. `IResult` and `IResult<T>` expose the same status guarantees as concrete
 results. The analyzer resolves actual Communication symbols, so similarly named foreign APIs
 and nullable domain members are unaffected. It does not treat a null-forgiving operator as proof
 of its own redundancy, transfer guards between LINQ lambdas, or retain a guard after result reassignment.
+It also honors the native `[MemberNotNull]` postcondition after `result.ThrowIfProblem()`, while
+invalidating that proof after assignments, ref aliases or ref/out writes. A nullable domain member
+such as `result.Value.Name` still needs its own handling. Checking an unknown result payload with
+`is { }` or `ArgumentNullException.ThrowIfNull` remains valid when no non-null guarantee exists.
+
+`MCC0004` preserves real projections: converting `Result<string>` to `Result<int>`, propagating its
+problem into a different result type, changing nullable type arguments, or supplying explicit new
+pagination metadata does not suggest reusing the source result. The warning only suggests reuse for
+an unchanged local or parameter of the same type and a proven matching success/failure branch.
+`From(result)` is an unconditional pass-through: the native factory now preserves the complete
+original result, including failure payloads, Problem identity and collection paging metadata.
 
 ```csharp
 static Result<int> Count(Result<string> result)
@@ -366,10 +379,30 @@ static Result<int> Count(Result<string> result)
 }
 ```
 
+`MCC0003` is a non-suppressible compiler error. It follows the actual `ICommand` and `IResult`
+contracts, including implementations, constrained type parameters, arrays, collections, tuples,
+and public readable instance DTO fields/properties. A domain type named `CommandStatus` or a
+foreign type named `Command` is unaffected unless it implements Communication's command contract.
+Declarations, inferred factories, and directly typed payload writes are checked; assigning a command
+to `Result<object>.Succeed(command)` does not hide it. Runtime-only values already erased behind
+`object`, `dynamic`, reflection, or an opaque external implementation cannot be recovered by static analysis.
+
+Commands carry operation identity and input. Results carry the business output or a problem:
+
+```csharp
+static Result<int> Increment(Command<int> command)
+{
+    return Result<int>.Succeed(command.Value + 1);
+}
+
+// Rejected: Result<Command<RenameCompanyInput>>, Result<List<Command<RenameCompanyInput>>>,
+// a Result<Dto> whose public data graph contains ICommand, and Command<Result<CompanySnapshot>>.
+```
+
 CI and release builds run `scripts/verify-analyzer-packages.sh <packages-directory> <version>`.
 It restores each of the four packed packages into an isolated consumer with no project analyzer
-references, proves that both invalid examples fail an ordinary build, and executes a correct
-success/failure flow. Publication runs only after these package-level checks pass.
+references, proves that all shipped rules reject invalid consumers in ordinary builds, including attempted
+`MCC0003` suppression, and executes a correct success/failure flow with separate command input and result output. Publication runs only after these package-level checks pass.
 
 The following additional contract considerations still require caller review:
 
