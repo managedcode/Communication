@@ -1,3 +1,4 @@
+using System.Globalization;
 using System;
 using System.Collections.Immutable;
 using System.IO;
@@ -73,6 +74,14 @@ public sealed class CommandResultSeparationAnalyzerTests
         public sealed record Payload(ICommand Work);
         """;
     private const string MetadataConsumer = "public static Result<Dependency.Payload> Execute() => Result<Dependency.Payload>.Fail();";
+    private const int SharedGraphDepth = 18;
+    private const string SharedGraphNode = "public sealed class SharedPayload{0} {{ public int Amount {{ get; init; }} public SharedPayload{1}? Left {{ get; init; }} public SharedPayload{1}? Right {{ get; init; }} }}";
+    private const string SharedGraphLeaf = "public sealed class SharedPayload{0} {{ public int Amount {{ get; init; }} }}";
+    private const string SharedGraphExecute = "public static bool Execute() { var command = Command.From(new Input(2)); if (command.Value is not { } input) return false; var result = Result.Succeed(new SharedPayload0 { Amount = input.Amount + 3 }); return result.IsSuccess && result.Value.Amount == 5; }";
+    private const string CyclicSharedPayload = "public sealed class Left { public Right? Next { get; set; } public ICommand? Work { get; set; } } public sealed class Right { public Left? Next { get; set; } } public static Result<Left> ReadLeft() => Result<Left>.Fail(); public static Result<Right> ReadRight() => Result<Right>.Fail();";
+    private const string LeftPayload = "Result<Left>";
+    private const string RightPayload = "Result<Right>";
+
     private const string ValidFlow = """
         public sealed record Output(int Amount);
         public sealed record CommandStatus(int Code);
@@ -184,6 +193,29 @@ public sealed class CommandResultSeparationAnalyzerTests
     [Test]
     public Task SeparateCommandAndResult_CompilerAccepts_ExecutesTerminalSuccessAndFailure() => ExecuteValidFlow();
 
+    [Test]
+    public async Task SharedPayloadDiamond_CompilerAccepts_ExecutesTerminalResult()
+    {
+        var nodes = string.Concat(Enumerable.Range(0, SharedGraphDepth).Select(index =>
+            string.Format(CultureInfo.InvariantCulture, SharedGraphNode, index, index + 1)));
+        var leaf = string.Format(CultureInfo.InvariantCulture, SharedGraphLeaf, SharedGraphDepth);
+        await ExecuteValidFlow(nodes + leaf + SharedGraphExecute);
+    }
+
+    [Test]
+    public async Task CyclicSharedPayload_BothResultRootsRejected_SeparateFlowExecutes()
+    {
+        var compilation = CreateCompilation(CyclicSharedPayload);
+        compilation.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
+        var diagnostics = await Analyze(compilation);
+        foreach (var payload in new[] { LeftPayload, RightPayload })
+        {
+            diagnostics.ShouldContain(diagnostic => diagnostic.Id == CommandResultSeparationAnalyzer.DiagnosticId &&
+                diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan) == payload);
+        }
+        await ExecuteValidFlow();
+    }
+
     private static CSharpCompilation CreateCompilation(string source) => CSharpCompilation.Create(AssemblyName,
         [CSharpSyntaxTree.ParseText(Prefix + Environment.NewLine + source + Environment.NewLine + Suffix)], References(),
         new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
@@ -194,9 +226,9 @@ public sealed class CommandResultSeparationAnalyzerTests
     private static Task<ImmutableArray<Diagnostic>> Analyze(CSharpCompilation compilation) =>
         compilation.WithAnalyzers([new CommandResultSeparationAnalyzer()]).GetAnalyzerDiagnosticsAsync();
 
-    private static async Task ExecuteValidFlow()
+    private static async Task ExecuteValidFlow(string source = ValidFlow)
     {
-        var compilation = CreateCompilation(ValidFlow);
+        var compilation = CreateCompilation(source);
         (await Analyze(compilation)).ShouldBeEmpty();
         using var image = new MemoryStream();
         var emitted = compilation.Emit(image);

@@ -7,7 +7,7 @@ version="${2:?Pass the package version}"
 work_directory="$repository_root/artifacts/analyzer-package-check"
 mkdir -p "$work_directory"
 
-for package in ManagedCode.Communication ManagedCode.Communication.Extensions ManagedCode.Communication.AspNetCore ManagedCode.Communication.Orleans; do
+for package in ManagedCode.Communication ManagedCode.Communication.Extensions ManagedCode.Communication.AspNetCore ManagedCode.Communication.Orleans Combined; do
     consumer_directory="$work_directory/$package"
     mkdir -p "$consumer_directory"
     # Isolate the consumer from this repository's analyzer ProjectReferences and central packages.
@@ -17,13 +17,27 @@ XML
     cat > "$consumer_directory/Directory.Packages.props" <<'XML'
 <Project><PropertyGroup><ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally></PropertyGroup></Project>
 XML
+    package_references="<PackageReference Include=\"$package\" Version=\"$version\" />"
+    if [[ "$package" == Combined ]]; then
+        package_references=""
+        for combined_package in ManagedCode.Communication ManagedCode.Communication.Extensions ManagedCode.Communication.AspNetCore ManagedCode.Communication.Orleans; do
+            package_references+="<PackageReference Include=\"$combined_package\" Version=\"$version\" />"
+        done
+    fi
     cat > "$consumer_directory/Consumer.csproj" <<XML
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><Nullable>enable</Nullable></PropertyGroup>
-  <ItemGroup><PackageReference Include="$package" Version="$version" /></ItemGroup>
+  <ItemGroup>$package_references</ItemGroup>
 </Project>
 XML
     dotnet restore "$consumer_directory/Consumer.csproj" --source "$packages_directory" --source https://api.nuget.org/v3/index.json > "$consumer_directory/restore.log" 2>&1 || { tail -60 "$consumer_directory/restore.log"; exit 1; }
+
+    dotnet msbuild "$consumer_directory/Consumer.csproj" -target:ResolveReferences -getItem:Analyzer -verbosity:quiet > "$consumer_directory/analyzer-items.json"
+    analyzer_count="$(jq '[.Items.Analyzer[] | select(.Identity | endswith("/ManagedCode.Communication.Analyzers.dll"))] | length' "$consumer_directory/analyzer-items.json")"
+    if [[ "$analyzer_count" != 1 ]]; then
+        echo "$package must load exactly one Communication analyzer; found $analyzer_count" >&2
+        exit 1
+    fi
 
     cat > "$consumer_directory/Program.cs" <<'CS'
 using ManagedCode.Communication;

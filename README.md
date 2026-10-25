@@ -1399,3 +1399,7 @@ not establish publication: verify the intended package is downloadable from NuGe
 See [AGENTS.md](AGENTS.md) for repository conventions, [GitHub Issues](https://github.com/managed-code-hub/Communication/issues)
 for support, and [the source repository](https://github.com/managed-code-hub/Communication) for contributions.
 The project is licensed under [MIT](LICENSE).
+
+### Compiler analyzer delivery
+
+Every runtime package enables the Communication compiler rules through the core package dependency. The analyzer DLL is shipped once in `ManagedCode.Communication`; integration packages do not embed duplicate copies. MCC0003 memoizes completed payload subgraphs within each compilation, retaining cycle-aware checks for nested commands and results. No consumer build target or analyzer suppression is required.
