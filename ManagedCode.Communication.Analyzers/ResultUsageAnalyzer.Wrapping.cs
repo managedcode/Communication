@@ -20,7 +20,7 @@ public sealed partial class ResultUsageAnalyzer
     private const string FromMethodName = "From";
     private const string CollectionTypeName = "CollectionResult";
     private const string CollectionInterfaceName = "IResultCollection";
-    private const string ProblemMetadataName = "ManagedCode.Communication.Problem";
+    internal const string ProblemMetadataName = "ManagedCode.Communication.Problem";
     private static readonly DiagnosticDescriptor RedundantWrapping = new(
         RedundantWrappingId, WrappingTitle, WrappingMessage, Category, DiagnosticSeverity.Warning, true);
 

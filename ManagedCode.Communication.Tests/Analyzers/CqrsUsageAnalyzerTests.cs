@@ -45,6 +45,26 @@ public sealed class CqrsUsageAnalyzerTests
     private const string ResultAsPayload = "public static CqrsStreamChunk<int, Result<string>> Run() => CqrsStreamChunk<int, Result<string>>.Completed(Result<string>.Fail());";
     private const string WidenedProblem = "public static CqrsStreamChunk<object, object> Run(Problem problem) => CqrsStreamChunk<object, object>.Completed(Result<object>.Succeed(problem));";
     private const string ForeignFactories = "public sealed class Foreign { public static string Progress(Result<string> result) => string.Empty; } public static string Run(string payload) => Foreign.Progress(Result<string>.Succeed(payload));";
+    internal const string ConvertedStatusIterator = """
+        public static async System.Threading.Tasks.Task<bool> Execute()
+        {
+            var problem = Problem.GenericError();
+            var count = 0;
+            await foreach (var chunk in Stream(Result.Fail(problem)))
+            {
+                if (!chunk.IsFailed || !ReferenceEquals(chunk.Problem, problem)) return false;
+                count++;
+            }
+            return count == 1;
+        }
+        private static async System.Collections.Generic.IAsyncEnumerable<Chunk> Stream(Result result)
+        {
+            await System.Threading.Tasks.Task.Yield();
+            yield return result.IsSuccess ? Chunk.Completed(result) : Chunk.Failed(result);
+        }
+        """;
+    private const string ConvertedSuccessStatus = "public static bool Execute() { var chunk = Chunk.Failed(Result.Succeed()); return chunk.IsFailed && chunk.TryGetProblem(out _); }";
+    private const string RawResultConditional = "public static CqrsStreamChunk<int, Result<string>> Run(Result<string> result) => result.IsSuccess ? CqrsStreamChunk<int, Result<string>>.Completed(result) : CqrsStreamChunk<int, Result<string>>.Failed(result);";
     private const string ShadowedChunk = """
         using ManagedCode.Communication;
         namespace ManagedCode.Communication.CQRS
@@ -104,10 +124,20 @@ public sealed class CqrsUsageAnalyzerTests
     [Arguments(ForeignFactories)]
     [Arguments(WidenedProblem)]
     [Arguments(ResultAsPayload)]
+    [Arguments(RawResultConditional)]
     public async Task MeaningfulConstruction_DoesNotRecommendUnsafeReplacement(string source)
     {
         (await Analyze(Create(source), new CqrsUsageAnalyzer())).ShouldBeEmpty();
         await ExecuteCorrectedFlow();
+    }
+
+    [Test]
+    [Arguments(ConvertedSuccessStatus)]
+    public async Task NativeResultConversion_PreservesItsActualTerminalOutcome(string source)
+    {
+        var compilation = Create(source);
+        (await Analyze(compilation, new CqrsUsageAnalyzer())).ShouldBeEmpty();
+        await ExecuteAsync(compilation);
     }
 
     [Test]
@@ -137,6 +167,11 @@ public sealed class CqrsUsageAnalyzerTests
     {
         var compilation = Create(CorrectedFlow);
         (await Analyze(compilation, new CqrsUsageAnalyzer(), new ResultUsageAnalyzer())).ShouldBeEmpty();
+        await ExecuteAsync(compilation);
+    }
+
+    private static async Task ExecuteAsync(CSharpCompilation compilation)
+    {
         using var image = new MemoryStream();
         var emitted = compilation.Emit(image);
         emitted.Success.ShouldBeTrue(string.Join(Environment.NewLine, emitted.Diagnostics));
@@ -145,8 +180,10 @@ public sealed class CqrsUsageAnalyzerTests
         try
         {
             var assembly = context.LoadFromStream(image);
-            assembly.GetType(EntryType)!.GetMethod(EntryMethod, BindingFlags.Public | BindingFlags.Static)!
-                .Invoke(null, null).ShouldBe(true);
+            var outcome = assembly.GetType(EntryType)!.GetMethod(EntryMethod, BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, null);
+            if (outcome is Task<bool> asyncOutcome) (await asyncOutcome).ShouldBeTrue();
+            else outcome.ShouldBe(true);
         }
         finally
         {

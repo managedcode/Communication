@@ -48,6 +48,7 @@ public sealed class CommunicationUsageCodeFixTests
     private const string From = "public static bool Execute() { var result = Result<string>.Succeed(string.Empty); var copy = Result<string>.From(result); return copy.IsSuccess && copy.Value.Length == 0; }";
     private const string ConditionalChunk = "public static bool Execute() { var result = Result<string>.Succeed(string.Empty); var chunk = result.IsSuccess ? Chunk.Completed(result) : Chunk.Failed(result); return chunk.IsCompleted; }";
     private const string CompletedFailure = "public static bool Execute() { var chunk = Chunk.Completed(Result<string>.Fail(), sequence: 2); return chunk.IsFailed && chunk.Sequence == 2; }";
+    private const string CompletedConvertedStatus = "public static bool Execute() { var chunk = Chunk.Completed(Result.Succeed()); return chunk.IsFailed && chunk.TryGetProblem(out _); }";
     private const string FailedSuccess = "public static bool Execute() { var chunk = Chunk.Failed(Result<string>.Succeed(string.Empty)); return chunk.IsCompleted; }";
     private const string ChunkPayload = "public static bool Execute() { var chunk = Chunk.Progress(Result<string>.Succeed(string.Empty)); return chunk.IsProgress; }";
     private const string Capture = "public static bool Execute() { var result = Result.Fail(); return result.IsFailed && result.Problem is { } problem && problem.StatusCode == 500; }";
@@ -87,6 +88,8 @@ public sealed class CommunicationUsageCodeFixTests
     [Arguments(Iterator, CqrsUsageAnalyzer.ResultConversionId)]
     [Arguments(CompletedFailure, CqrsUsageAnalyzer.TerminalStatusId)]
     [Arguments(FailedSuccess, CqrsUsageAnalyzer.TerminalStatusId)]
+    [Arguments(CompletedConvertedStatus, CqrsUsageAnalyzer.TerminalStatusId)]
+    [Arguments(CqrsUsageAnalyzerTests.ConvertedStatusIterator, CqrsUsageAnalyzer.ResultConversionId)]
     public async Task Diagnostic_RealCodeFix_CompilesAndExecutes(string source, string expected)
     {
         using var workspace = new AdhocWorkspace();
@@ -153,6 +156,56 @@ public sealed class CommunicationUsageCodeFixTests
         {
             loadContext.Unload();
         }
+    }
+
+    [Test]
+    [Arguments(false, false, FixAllScope.Document)]
+    [Arguments(true, false, FixAllScope.Document)]
+    [Arguments(false, true, FixAllScope.Document)]
+    [Arguments(true, true, FixAllScope.Document)]
+    [Arguments(false, false, FixAllScope.Project)]
+    [Arguments(true, true, FixAllScope.Project)]
+    [Arguments(false, false, FixAllScope.Solution)]
+    [Arguments(true, true, FixAllScope.Solution)]
+    public async Task BatchFixAll_CompilesAndExecutesIterator(bool fullTypeName, bool convertedResult, FixAllScope scope)
+    {
+        const string alias = "Chunk";
+        const string fullName = "CqrsStreamChunk<string, string>";
+        var sample = convertedResult ? CqrsUsageAnalyzerTests.ConvertedStatusIterator : Iterator;
+        var source = fullTypeName ? sample.Replace(alias, fullName) : sample;
+        using var workspace = new AdhocWorkspace();
+        var project = workspace.AddProject(AssemblyName, LanguageNames.CSharp)
+            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
+                nullableContextOptions: NullableContextOptions.Enable))
+            .AddMetadataReferences(((string)AppContext.GetData(TrustedAssembliesKey)!).Split(Path.PathSeparator)
+                .Append(typeof(Result).Assembly.Location).Distinct().Select(path => MetadataReference.CreateFromFile(path)));
+        var document = project.AddDocument(FileName, SourceText.From(Prefix + Environment.NewLine + source + Environment.NewLine + Suffix));
+        var provider = new CommunicationUsageCodeFixProvider();
+        var context = new FixAllContext(document, provider, scope, CqrsUsageAnalyzer.ResultConversionId,
+            [CqrsUsageAnalyzer.ResultConversionId], new DocumentDiagnostics(), CancellationToken.None);
+        var action = await provider.GetFixAllProvider().GetFixAsync(context);
+        action.ShouldNotBeNull();
+        var operations = await action.GetOperationsAsync(CancellationToken.None);
+        var fixedDocument = operations.OfType<ApplyChangesOperation>().Single().ChangedSolution.GetDocument(document.Id)!;
+        var fixedCompilation = (await fixedDocument.Project.GetCompilationAsync())!;
+        (await Analyze(fixedCompilation)).ShouldBeEmpty();
+        await ExecuteAsync(fixedCompilation);
+    }
+
+    private sealed class DocumentDiagnostics : FixAllContext.DiagnosticProvider
+    {
+        public override async Task<IEnumerable<Diagnostic>> GetDocumentDiagnosticsAsync(Document document, CancellationToken token)
+        {
+            var tree = await document.GetSyntaxTreeAsync(token);
+            var compilation = (await document.Project.GetCompilationAsync(token))!;
+            return (await Analyze(compilation)).Where(diagnostic => diagnostic.Location.SourceTree == tree);
+        }
+
+        public override Task<IEnumerable<Diagnostic>> GetProjectDiagnosticsAsync(Project project, CancellationToken token) =>
+            Task.FromResult<IEnumerable<Diagnostic>>([]);
+
+        public override async Task<IEnumerable<Diagnostic>> GetAllDiagnosticsAsync(Project project, CancellationToken token) =>
+            await Analyze((await project.GetCompilationAsync(token))!);
     }
 
     private static Task<ImmutableArray<Diagnostic>> Analyze(Compilation compilation) => compilation

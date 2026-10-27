@@ -16,10 +16,17 @@ public sealed class CqrsUsageAnalyzer : DiagnosticAnalyzer
     public const string PayloadFactoryId = "MCC0006";
     /// <summary>The terminal factory contradicts its result status.</summary>
     public const string TerminalStatusId = "MCC0007";
+    /// <summary>The result needs its native conversion before constructing a terminal chunk.</summary>
+    public const string ResultFactoryRequiredProperty = "ResultFactoryRequired";
     internal const string ChunkMetadataName = "ManagedCode.Communication.CQRS.CqrsStreamChunk`2";
     private const string Category = "Usage";
     private const string ResultConversionTitle = "Use the native CQRS result conversion";
-    private const string ResultConversionMessage = "Convert '{0}' directly to a terminal chunk; use 'yield return {0};' in an iterator or the FromResult factory";
+    private const string ResultConversionMessage = "{0}";
+    private const string ImplicitResultMessage = "Convert '{0}' directly to a terminal chunk; use 'yield return {0};' in an iterator or the FromResult factory";
+    private const string FactoryResultMessage = "Use FromResult({0}) to preserve its required conversion to the typed terminal result";
+    private const string ExceptionMetadataName = "System.Exception";
+    private static readonly ImmutableDictionary<string, string?> FactoryRequired =
+        ImmutableDictionary<string, string?>.Empty.Add(ResultFactoryRequiredProperty, null);
     private const string PayloadFactoryTitle = "Use the CQRS payload factory";
     private const string PayloadFactoryMessage = "Pass the payload directly to {0}; the chunk factory already creates the successful result";
     private const string SuccessName = "IsSuccess";
@@ -55,8 +62,11 @@ public sealed class CqrsUsageAnalyzer : DiagnosticAnalyzer
             {
                 return;
             }
+            var plainResult = start.Compilation.GetTypeByMetadataName(ResultUsageAnalyzer.ResultMetadataName);
+            var problem = start.Compilation.GetTypeByMetadataName(ResultUsageAnalyzer.ProblemMetadataName);
+            var exception = start.Compilation.GetTypeByMetadataName(ExceptionMetadataName);
             start.RegisterOperationAction(node => AnalyzeConditional(node, chunkType), OperationKind.Conditional);
-            start.RegisterOperationAction(node => AnalyzePayloadFactory(node, chunkType), OperationKind.Invocation);
+            start.RegisterOperationAction(node => AnalyzePayloadFactory(node, chunkType, plainResult, problem, exception), OperationKind.Invocation);
         });
     }
 
@@ -66,6 +76,8 @@ public sealed class CqrsUsageAnalyzer : DiagnosticAnalyzer
             Unwrap(conditional.WhenTrue) is not IInvocationOperation completed ||
             Unwrap(conditional.WhenFalse) is not IInvocationOperation failed ||
             !IsChunkFactory(completed, chunkType) || !IsChunkFactory(failed, chunkType) ||
+            !ResultUsageAnalyzer.IsNativeResultType(completed.TargetMethod.OriginalDefinition.Parameters[0].Type) ||
+            !ResultUsageAnalyzer.IsNativeResultType(failed.TargetMethod.OriginalDefinition.Parameters[0].Type) ||
             !SymbolEqualityComparer.IncludeNullability.Equals(completed.Type, failed.Type) ||
             SymbolEqualityComparer.Default.Equals(context.ContainingSymbol.ContainingType?.OriginalDefinition, chunkType) ||
             !TryStatus(conditional.Condition, out var receiver, out var success))
@@ -80,10 +92,15 @@ public sealed class CqrsUsageAnalyzer : DiagnosticAnalyzer
         {
             return;
         }
-        context.ReportDiagnostic(Diagnostic.Create(ResultConversion, conditional.Syntax.GetLocation(), receiver.Name));
+        var needsFactory = !SymbolEqualityComparer.IncludeNullability.Equals(first.Type, Unwrap(first)?.Type);
+        var message = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            needsFactory ? FactoryResultMessage : ImplicitResultMessage, receiver.Name);
+        context.ReportDiagnostic(Diagnostic.Create(ResultConversion, conditional.Syntax.GetLocation(),
+            properties: needsFactory ? FactoryRequired : null, messageArgs: [message]));
     }
 
-    private static void AnalyzePayloadFactory(OperationAnalysisContext context, INamedTypeSymbol chunkType)
+    private static void AnalyzePayloadFactory(OperationAnalysisContext context, INamedTypeSymbol chunkType,
+        INamedTypeSymbol? plainResult, INamedTypeSymbol? problem, INamedTypeSymbol? exception)
     {
         var invocation = (IInvocationOperation)context.Operation;
         if (invocation.TargetMethod.Name is CompletedName or FailedName && IsChunkFactory(invocation, chunkType) &&
@@ -91,10 +108,11 @@ public sealed class CqrsUsageAnalyzer : DiagnosticAnalyzer
         {
             foreach (var terminalArgument in invocation.Arguments)
             {
-                if (terminalArgument.Parameter?.Ordinal != 0 || Unwrap(terminalArgument.Value) is not IInvocationOperation resultFactory ||
-                    !ResultUsageAnalyzer.IsNativeResultType(resultFactory.TargetMethod.ContainingType)) continue;
-                if (invocation.TargetMethod.Name == CompletedName && resultFactory.TargetMethod.Name.StartsWith(FailPrefix, StringComparison.Ordinal) ||
-                    invocation.TargetMethod.Name == FailedName && resultFactory.TargetMethod.Name == SucceedName)
+                if (terminalArgument.Parameter?.Ordinal != 0 || Unwrap(terminalArgument.Value) is not IInvocationOperation sourceFactory ||
+                    !ResultUsageAnalyzer.IsNativeResultType(sourceFactory.TargetMethod.ContainingType)) continue;
+                var success = GetResultStatus(terminalArgument.Value,
+                    (INamedTypeSymbol)invocation.TargetMethod.Parameters[0].Type, plainResult, problem, exception);
+                if (success is { } known && known != (invocation.TargetMethod.Name == CompletedName))
                     context.ReportDiagnostic(Diagnostic.Create(TerminalStatus, invocation.Syntax.GetLocation(), invocation.TargetMethod.Name));
                 break;
             }
@@ -111,6 +129,35 @@ public sealed class CqrsUsageAnalyzer : DiagnosticAnalyzer
             return;
         }
         context.ReportDiagnostic(Diagnostic.Create(PayloadFactory, factory.Syntax.GetLocation(), invocation.TargetMethod.Name));
+    }
+
+    private static bool? GetResultStatus(IOperation argument, INamedTypeSymbol expected,
+        INamedTypeSymbol? plainResult, INamedTypeSymbol? problem, INamedTypeSymbol? exception)
+    {
+        var value = argument;
+        while (value is IParenthesizedOperation || value is IConversionOperation { IsImplicit: true, OperatorMethod: null })
+        {
+            value = value is IParenthesizedOperation parentheses ? parentheses.Operand : ((IConversionOperation)value).Operand;
+        }
+        if (value is IConversionOperation { IsImplicit: true, OperatorMethod: { } method } &&
+            SymbolEqualityComparer.Default.Equals(method.ContainingType.OriginalDefinition, expected.OriginalDefinition))
+        {
+            var source = method.OriginalDefinition.Parameters[0].Type;
+            if (SymbolEqualityComparer.Default.Equals(source, method.ContainingType.OriginalDefinition.TypeParameters[0]))
+                return true;
+            if (SymbolEqualityComparer.Default.Equals(source, plainResult) ||
+                SymbolEqualityComparer.Default.Equals(source, problem) ||
+                SymbolEqualityComparer.Default.Equals(source, exception))
+                return false;
+        }
+        if (Unwrap(value) is IInvocationOperation factory &&
+            SymbolEqualityComparer.Default.Equals(factory.Type, argument.Type) &&
+            ResultUsageAnalyzer.IsNativeResultType(factory.TargetMethod.ContainingType))
+        {
+            if (factory.TargetMethod.Name == SucceedName) return true;
+            if (factory.TargetMethod.Name.StartsWith(FailPrefix, StringComparison.Ordinal)) return false;
+        }
+        return null;
     }
 
     private static bool IsChunkFactory(IInvocationOperation invocation, INamedTypeSymbol chunkType) =>

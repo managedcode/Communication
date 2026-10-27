@@ -18,7 +18,7 @@ public sealed partial class ResultUsageAnalyzer : DiagnosticAnalyzer
     public const string RedundantNullGuardId = "MCC0002";
     private const string Category = "Usage";
     internal const string AssemblyName = "ManagedCode.Communication";
-    private const string ResultMetadataName = "ManagedCode.Communication.Result";
+    internal const string ResultMetadataName = "ManagedCode.Communication.Result";
     private const string ResultNamespace = "ManagedCode.Communication";
     private const string CollectionNamespace = "ManagedCode.Communication.CollectionResultT";
     private const string SuccessName = "IsSuccess";

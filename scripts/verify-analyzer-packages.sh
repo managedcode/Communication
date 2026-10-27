@@ -192,6 +192,18 @@ CS
 
     cat > "$consumer_directory/Program.cs" <<'CS'
 using ManagedCode.Communication;
+using ManagedCode.Communication.CQRS;
+var chunk = CqrsStreamChunk<int, string>.Completed(Result.Succeed());
+return chunk.IsCompleted ? 0 : 1;
+CS
+    if dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release > "$consumer_directory/MCC0007-converted.log" 2>&1; then
+        echo "$package incorrectly accepted a success converted into a failed typed terminal result" >&2
+        exit 1
+    fi
+    grep -q 'error MCC0007' "$consumer_directory/MCC0007-converted.log" || { tail -60 "$consumer_directory/MCC0007-converted.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
 using ManagedCode.Communication.Commands;
 using ManagedCode.Communication.CQRS;
 var problem = Problem.GenericError();
@@ -210,6 +222,8 @@ if (checkedPayload.Value.Length != 0) return 6;
 CqrsStreamChunk<int, string> completed = checkedPayload;
 CqrsStreamChunk<int, string> failure = Result<string>.Fail(problem);
 if (!completed.IsCompleted || !failure.IsFailed || !object.ReferenceEquals(failure.Problem, problem)) return 7;
+var converted = CqrsStreamChunk<int, string>.Failed(Result.Succeed());
+if (!converted.IsFailed) return 8;
 return success.Value;
 static Result<int> Handle(Command<int> command) => Result.Succeed(command.Value);
 static Result<int> Convert(IResult<string> result)

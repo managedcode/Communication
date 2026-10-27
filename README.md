@@ -371,7 +371,10 @@ problem into a different result type, changing nullable type arguments, or suppl
 pagination metadata does not suggest reusing the source result. The warning only suggests reuse for
 an unchanged local or parameter of the same type and a proven matching success/failure branch.
 IDE quick fixes and Fix All cover failure checks, proven redundant null guards, same-type result reuse,
-terminal CQRS conversion, and bare chunk payload factories. A ternary directly inside `yield return` becomes
+terminal CQRS conversion, and bare chunk payload factories. Required native conversions remain explicit through `FromResult`;
+only an already typed `Result<TResult>` is yielded directly. `MCC0007` evaluates the status after the
+native result conversion, so a status-only `Result.Succeed()` converted to a typed result is a failure,
+not a successful terminal payload. A ternary directly inside `yield return` becomes
 `yield return result;`; an inferred local initializer uses `FromResult(result)` to retain the chunk type.
 Nested result contracts and captures whose bindings would need a business rewrite remain diagnostics
 without an unsafe automatic edit.

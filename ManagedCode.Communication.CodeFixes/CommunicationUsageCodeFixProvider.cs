@@ -88,7 +88,7 @@ public sealed class CommunicationUsageCodeFixProvider : CodeFixProvider
             case CqrsUsageAnalyzer.ResultConversionId:
                 if (node is ConditionalExpressionSyntax conditional && Unwrap(conditional.WhenTrue) is InvocationExpressionSyntax factory &&
                     factory.Expression is MemberAccessExpressionSyntax method && factory.ArgumentList.Arguments.Count == 1)
-                    replacement = node.Parent is YieldStatementSyntax
+                    replacement = node.Parent is YieldStatementSyntax && !diagnostic.Properties.ContainsKey(CqrsUsageAnalyzer.ResultFactoryRequiredProperty)
                         ? factory.ArgumentList.Arguments[0].Expression
                         : factory.WithExpression(method.WithName(SyntaxFactory.IdentifierName(FromResultName).WithTriviaFrom(method.Name)));
                 break;
