@@ -39,6 +39,12 @@ XML
         exit 1
     fi
 
+    codefix_count="$(jq '[.Items.Analyzer[] | select(.Identity | endswith("/ManagedCode.Communication.CodeFixes.dll"))] | length' "$consumer_directory/analyzer-items.json")"
+    if [[ "$codefix_count" != 1 ]]; then
+        echo "$package must load exactly one Communication IDE fix asset; found $codefix_count" >&2
+        exit 1
+    fi
+
     cat > "$consumer_directory/Program.cs" <<'CS'
 using ManagedCode.Communication;
 var result = Result.Succeed();
@@ -153,7 +159,41 @@ CS
 
     cat > "$consumer_directory/Program.cs" <<'CS'
 using ManagedCode.Communication;
+using ManagedCode.Communication.CQRS;
+var result = Result<int>.Succeed(7);
+CqrsStreamChunk<string, int> chunk = result.IsSuccess
+    ? CqrsStreamChunk<string, int>.Completed(result)
+    : CqrsStreamChunk<string, int>.Failed(result);
+return chunk.IsCompleted ? 0 : 1;
+CS
+    dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release -p:TreatWarningsAsErrors=false > "$consumer_directory/MCC0005.log" 2>&1 || { tail -60 "$consumer_directory/MCC0005.log"; exit 1; }
+    grep -q 'warning MCC0005' "$consumer_directory/MCC0005.log" || { tail -60 "$consumer_directory/MCC0005.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
+using ManagedCode.Communication.CQRS;
+var chunk = CqrsStreamChunk<int, int>.Progress(Result<int>.Succeed(7));
+return chunk.IsProgress ? 0 : 1;
+CS
+    dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release -p:TreatWarningsAsErrors=false > "$consumer_directory/MCC0006.log" 2>&1 || { tail -60 "$consumer_directory/MCC0006.log"; exit 1; }
+    grep -q 'warning MCC0006' "$consumer_directory/MCC0006.log" || { tail -60 "$consumer_directory/MCC0006.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
+using ManagedCode.Communication.CQRS;
+var chunk = CqrsStreamChunk<int, int>.Completed(Result<int>.Fail());
+return chunk.IsFailed ? 0 : 1;
+CS
+    if dotnet build "$consumer_directory/Consumer.csproj" --no-restore -c Release > "$consumer_directory/MCC0007.log" 2>&1; then
+        echo "$package incorrectly accepted a contradictory terminal result" >&2
+        exit 1
+    fi
+    grep -q 'error MCC0007' "$consumer_directory/MCC0007.log" || { tail -60 "$consumer_directory/MCC0007.log"; exit 1; }
+
+    cat > "$consumer_directory/Program.cs" <<'CS'
+using ManagedCode.Communication;
 using ManagedCode.Communication.Commands;
+using ManagedCode.Communication.CQRS;
 var problem = Problem.GenericError();
 var failed = Convert(Result<string>.Fail(problem));
 if (failed.IsSuccess) return 1;
@@ -167,6 +207,9 @@ if (output.Value != 7) return 5;
 var checkedPayload = Result<string>.Succeed(string.Empty);
 checkedPayload.ThrowIfProblem();
 if (checkedPayload.Value.Length != 0) return 6;
+CqrsStreamChunk<int, string> completed = checkedPayload;
+CqrsStreamChunk<int, string> failure = Result<string>.Fail(problem);
+if (!completed.IsCompleted || !failure.IsFailed || !object.ReferenceEquals(failure.Problem, problem)) return 7;
 return success.Value;
 static Result<int> Handle(Command<int> command) => Result.Succeed(command.Value);
 static Result<int> Convert(IResult<string> result)

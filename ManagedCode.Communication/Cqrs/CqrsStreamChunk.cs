@@ -252,6 +252,31 @@ public sealed record CqrsStreamChunk<TProgress, TResult>
     }
 
     /// <summary>
+    ///     Creates a terminal chunk from a result, selecting <see cref="CqrsStreamChunkKind.Completed" />
+    ///     for success or <see cref="CqrsStreamChunkKind.Failed" /> for failure without rebuilding the result.
+    /// </summary>
+    public static CqrsStreamChunk<TProgress, TResult> FromResult(
+        Result<TResult> final,
+        string? message = null,
+        string? eventType = null,
+        string? eventId = null,
+        long? sequence = null)
+    {
+        return final.IsSuccess
+            ? Completed(final, message, eventType, eventId, sequence)
+            : Failed(final, message, eventType, eventId, sequence);
+    }
+
+    /// <summary>
+    ///     Converts a result into a terminal chunk. Progress always requires an explicit factory call,
+    ///     including when <typeparamref name="TProgress" /> and <typeparamref name="TResult" /> are the same type.
+    /// </summary>
+    public static implicit operator CqrsStreamChunk<TProgress, TResult>(Result<TResult> final)
+    {
+        return FromResult(final);
+    }
+
+    /// <summary>
     ///     Creates a terminal <see cref="CqrsStreamChunkKind.Completed" /> chunk.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="final" /> is a failed result.</exception>

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -16,7 +17,8 @@ public sealed partial class ResultUsageAnalyzer : DiagnosticAnalyzer
     /// <summary>Trust the result member's proven non-null contract.</summary>
     public const string RedundantNullGuardId = "MCC0002";
     private const string Category = "Usage";
-    private const string AssemblyName = "ManagedCode.Communication";
+    internal const string AssemblyName = "ManagedCode.Communication";
+    private const string ResultMetadataName = "ManagedCode.Communication.Result";
     private const string ResultNamespace = "ManagedCode.Communication";
     private const string CollectionNamespace = "ManagedCode.Communication.CollectionResultT";
     private const string SuccessName = "IsSuccess";
@@ -51,14 +53,25 @@ public sealed partial class ResultUsageAnalyzer : DiagnosticAnalyzer
     {
         context.EnableConcurrentExecution();
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
-        context.RegisterSyntaxNodeAction(AnalyzeNegation, SyntaxKind.LogicalNotExpression,
-            SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression, SyntaxKind.IsPatternExpression);
-        context.RegisterSyntaxNodeAction(AnalyzeGuard, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression,
-            SyntaxKind.IsPatternExpression, SyntaxKind.CoalesceExpression, SyntaxKind.ConditionalAccessExpression,
-            SyntaxKind.SuppressNullableWarningExpression);
-        context.RegisterSyntaxNodeAction(AnalyzeNullThrowGuard, SyntaxKind.InvocationExpression);
-        context.RegisterSyntaxNodeAction(AnalyzeNestedResult, SyntaxKind.GenericName);
-        context.RegisterOperationAction(AnalyzeResultWrapping, OperationKind.Invocation, OperationKind.ObjectCreation);
+        context.RegisterCompilationStartAction(start =>
+        {
+            if (start.Compilation.GetTypeByMetadataName(ResultMetadataName) is null)
+            {
+                return;
+            }
+            var nestedResults = new ConcurrentDictionary<ITypeSymbol, bool>(SymbolEqualityComparer.Default);
+            var nullThrowType = start.Compilation.GetTypeByMetadataName(NullThrowMetadataName);
+            var problemType = start.Compilation.GetTypeByMetadataName(ProblemMetadataName);
+            start.RegisterSyntaxNodeAction(AnalyzeNegation, SyntaxKind.LogicalNotExpression,
+                SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression, SyntaxKind.IsPatternExpression);
+            start.RegisterSyntaxNodeAction(AnalyzeGuard, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression,
+                SyntaxKind.IsPatternExpression, SyntaxKind.CoalesceExpression, SyntaxKind.ConditionalAccessExpression,
+                SyntaxKind.SuppressNullableWarningExpression);
+            start.RegisterSyntaxNodeAction(node => AnalyzeNullThrowGuard(node, nullThrowType), SyntaxKind.InvocationExpression);
+            start.RegisterSyntaxNodeAction(node => AnalyzeNestedResult(node, nestedResults), SyntaxKind.GenericName);
+            start.RegisterOperationAction(node => AnalyzeResultWrapping(node, nestedResults, problemType),
+                OperationKind.Invocation, OperationKind.ObjectCreation);
+        });
     }
 
     private static void AnalyzeNegation(SyntaxNodeAnalysisContext context)
@@ -106,12 +119,21 @@ public sealed partial class ResultUsageAnalyzer : DiagnosticAnalyzer
         ReportGuard(context, expression);
     }
 
-    private static void AnalyzeNullThrowGuard(SyntaxNodeAnalysisContext context)
+    private static void AnalyzeNullThrowGuard(SyntaxNodeAnalysisContext context, INamedTypeSymbol? nullThrowType)
     {
-        if (context.SemanticModel.GetOperation(context.Node, context.CancellationToken) is not IInvocationOperation operation ||
+        // Most invocations cannot be ThrowIfNull; avoid constructing their operation trees here.
+        var invocation = (InvocationExpressionSyntax)context.Node;
+        var name = invocation.Expression switch
+        {
+            MemberAccessExpressionSyntax member => member.Name.Identifier.ValueText,
+            IdentifierNameSyntax identifier => identifier.Identifier.ValueText,
+            _ => null
+        };
+        if (name != NullThrowMethodName ||
+            context.SemanticModel.GetOperation(context.Node, context.CancellationToken) is not IInvocationOperation operation ||
             operation.TargetMethod.Name != NullThrowMethodName ||
             !SymbolEqualityComparer.Default.Equals(operation.TargetMethod.ContainingType,
-                context.Compilation.GetTypeByMetadataName(NullThrowMetadataName)))
+                nullThrowType))
         {
             return;
         }
@@ -177,8 +199,11 @@ public sealed partial class ResultUsageAnalyzer : DiagnosticAnalyzer
                     continue;
                 default:
                     return pattern is ConstantPatternSyntax constant && constant.Expression.IsKind(SyntaxKind.NullLiteralExpression) ||
-                        pattern is RecursivePatternSyntax { Type: null, PositionalPatternClause: null,
-                            PropertyPatternClause.Subpatterns.Count: 0 };
+                        pattern is RecursivePatternSyntax
+                        {
+                            Type: null, PositionalPatternClause: null,
+                            PropertyPatternClause.Subpatterns.Count: 0
+                        };
             }
         }
     }

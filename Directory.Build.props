@@ -27,8 +27,8 @@
         <RepositoryUrl>https://github.com/managedcode/Communication</RepositoryUrl>
         <PackageProjectUrl>https://github.com/managedcode/Communication</PackageProjectUrl>
         <Product>Managed Code - Communication</Product>
-        <Version>10.3.18</Version>
-        <PackageVersion>10.3.18</PackageVersion>
+        <Version>10.3.19</Version>
+        <PackageVersion>10.3.19</PackageVersion>
 
     </PropertyGroup>
     <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
@@ -44,11 +44,15 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
-    <ItemGroup Condition="'$(MSBuildProjectName)' != 'ManagedCode.Communication.Analyzers' and '$(MSBuildProjectName)' != 'ManagedCode.Communication.Tests'">
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'ManagedCode.Communication.Analyzers' and '$(MSBuildProjectName)' != 'ManagedCode.Communication.Tests' and '$(MSBuildProjectName)' != 'ManagedCode.Communication.CodeFixes'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)ManagedCode.Communication.Analyzers/ManagedCode.Communication.Analyzers.csproj"
                           OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     </ItemGroup>
     <ItemGroup Condition="'$(MSBuildProjectName)' == 'ManagedCode.Communication'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)ManagedCode.Communication.CodeFixes/ManagedCode.Communication.CodeFixes.csproj"
+                          ReferenceOutputAssembly="false" PrivateAssets="all" />
+        <None Include="$(MSBuildThisFileDirectory)ManagedCode.Communication.CodeFixes/bin/$(Configuration)/netstandard2.0/ManagedCode.Communication.CodeFixes.dll"
+              Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
         <None Include="$(MSBuildThisFileDirectory)ManagedCode.Communication.Analyzers/bin/$(Configuration)/netstandard2.0/ManagedCode.Communication.Analyzers.dll"
               Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>

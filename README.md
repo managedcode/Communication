@@ -342,8 +342,9 @@ messages separate from operational details that may contain information unsuitab
 
 Every runtime package includes `ManagedCode.Communication.Analyzers.dll` under
 `analyzers/dotnet/cs`. NuGet loads it into ordinary C# builds automatically, including CI;
-there is no separate analyzer installation or opt-in build target. `MCC0001`–`MCC0003` are compiler
-errors by default; `MCC0004` is a warning:
+there is no separate analyzer installation or opt-in build target. The same core package includes
+IDE code fixes in a separate Workspaces-based assembly, keeping CLI compilation independent of IDE services. `MCC0001`–`MCC0003` are compiler
+errors by default; `MCC0007` also rejects a contradictory terminal status. `MCC0004`–`MCC0006` are recommendations reported as warnings:
 
 | Rule | Severity | Diagnosed usage | Correct usage |
 | --- | --- | --- | --- |
@@ -351,6 +352,9 @@ errors by default; `MCC0004` is a warning:
 | `MCC0002` | Error | Redundant `Problem`/`Value`/`Collection` null checks, `is { }` captures, native `ThrowIfNull`, `?.`, `??` or `!` when non-null is proven | Consume the member directly |
 | `MCC0003` | Error | A command envelope inside a result payload, or a result envelope inside a command payload, including collections and nested DTO members | Accept `Command<Input>` and return `Result<Output>` separately |
 | `MCC0004` | Warning | Nested result payloads and same-type `Succeed(result.Value)`, `Fail(result.Problem)` or `From(result)` reconstruction | Return the existing result when its status is already established |
+| `MCC0005` | Warning | A status ternary selecting `Completed(result)` or `Failed(result)` for the same result | `yield return result;` or `CqrsStreamChunk<TProgress, TResult>.FromResult(result)` |
+| `MCC0006` | Warning | `Progress(Result<T>.Succeed(payload))` or `Completed(Result<T>.Succeed(payload))` without metadata | `Progress(payload)` or `Completed(payload)` |
+| `MCC0007` | Error | `Completed(Result<T>.Fail(...))` or `Failed(Result<T>.Succeed(...))` | `FromResult(...)` preserves the outcome and metadata |
 
 Enable C# nullable analysis (`<Nullable>enable</Nullable>`) for `MCC0002` and the compiler's
 result status annotations. `IResult` and `IResult<T>` expose the same status guarantees as concrete
@@ -366,6 +370,19 @@ such as `result.Value.Name` still needs its own handling. Checking an unknown re
 problem into a different result type, changing nullable type arguments, or supplying explicit new
 pagination metadata does not suggest reusing the source result. The warning only suggests reuse for
 an unchanged local or parameter of the same type and a proven matching success/failure branch.
+IDE quick fixes and Fix All cover failure checks, proven redundant null guards, same-type result reuse,
+terminal CQRS conversion, and bare chunk payload factories. A ternary directly inside `yield return` becomes
+`yield return result;`; an inferred local initializer uses `FromResult(result)` to retain the chunk type.
+Nested result contracts and captures whose bindings would need a business rewrite remain diagnostics
+without an unsafe automatic edit.
+
+The CQRS recommendations resolve actual library methods and local/parameter identity. They do not
+collapse different results, side-effecting receivers, unrelated status conditions, explicit casts or
+metadata-bearing factory calls. Chunk-owned factory implementations remain the canonical wrapping owner.
+Result-shape checks are cached per compilation, framework symbols are resolved once, and unrelated
+invocations and generic syntax are rejected before semantic binding. Caches never retain symbols from
+another compilation.
+
 `From(result)` is an unconditional pass-through: the native factory now preserves the complete
 original result, including failure payloads, Problem identity and collection paging metadata.
 
@@ -903,8 +920,25 @@ It converts nonfatal producer exceptions into failures. Fatal runtime exceptions
 nested in an `AggregateException`. Original exceptions are reported immediately; public chunks contain
 problem data rather than exception objects or stack traces.
 
-For a handwritten iterator, use the `Started`, `Progress`, `Completed`, and `Failed` chunk factories, then
-`CqrsStream.Normalize` when publishing through a transport that does not normalize automatically. The SSE
+For a handwritten iterator, yield a `Result<TResult>` directly to produce its terminal chunk:
+
+```csharp
+async IAsyncEnumerable<CqrsStreamChunk<string, ImportReport>> ImportAsync()
+{
+    yield return CqrsStreamChunk<string, ImportReport>.Progress("Importing records.");
+    Result<ImportReport> result = await ImportRecordsAsync();
+    yield return result;
+}
+```
+
+The implicit conversion chooses `Completed` for success and `Failed` for failure, preserving the original
+result and its problem. It always produces a terminal chunk, even when progress and result use the same
+payload type. Use `Progress(...)` explicitly for intermediate updates. Use
+`CqrsStreamChunk<TProgress, TResult>.FromResult(result, message: ..., eventType: ..., eventId: ..., sequence: ...)`
+when the terminal chunk needs metadata; the `Completed` and `Failed` factories still enforce their stated
+outcome.
+
+Use `CqrsStream.Normalize` when publishing through a transport that does not normalize automatically. The SSE
 adapter normalizes by default: missing terminal results become `CqrsStreamProblems.IncompleteStream`, and
 nonfatal enumeration failures become failed chunks. An exception before a handler returns its stream belongs
 to the host's ordinary exception handling.

@@ -171,9 +171,7 @@ public static class CqrsStream
         {
             var final = await handler(writer).ConfigureAwait(true);
 
-            var terminal = final.IsSuccess
-                ? CqrsStreamChunk<TProgress, TResult>.Completed(final, sequence: writer.NextSequence())
-                : CqrsStreamChunk<TProgress, TResult>.Failed(final, sequence: writer.NextSequence());
+            var terminal = CqrsStreamChunk<TProgress, TResult>.FromResult(final, sequence: writer.NextSequence());
 
             await channel.Writer.WriteAsync(terminal, cancellationToken).ConfigureAwait(true);
         }

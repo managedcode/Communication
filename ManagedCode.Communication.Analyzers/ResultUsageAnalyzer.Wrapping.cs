@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -17,21 +18,27 @@ public sealed partial class ResultUsageAnalyzer
     private const string SucceedMethodName = "Succeed";
     private const string FailMethodName = "Fail";
     private const string FromMethodName = "From";
+    private const string CollectionTypeName = "CollectionResult";
+    private const string CollectionInterfaceName = "IResultCollection";
     private const string ProblemMetadataName = "ManagedCode.Communication.Problem";
     private static readonly DiagnosticDescriptor RedundantWrapping = new(
         RedundantWrappingId, WrappingTitle, WrappingMessage, Category, DiagnosticSeverity.Warning, true);
 
-    private static void AnalyzeNestedResult(SyntaxNodeAnalysisContext context)
+    private static void AnalyzeNestedResult(SyntaxNodeAnalysisContext context, ConcurrentDictionary<ITypeSymbol, bool> nestedResults)
     {
-        if (context.SemanticModel.GetTypeInfo(context.Node, context.CancellationToken).Type is { } type && HasNestedResult(type))
+        if (((GenericNameSyntax)context.Node).Identifier.ValueText is not (ResultType or ResultInterface or CollectionTypeName or CollectionInterfaceName))
+        {
+            return;
+        }
+        if (context.SemanticModel.GetTypeInfo(context.Node, context.CancellationToken).Type is { } type && nestedResults.GetOrAdd(type, HasNestedResult))
         {
             context.ReportDiagnostic(Diagnostic.Create(RedundantWrapping, context.Node.GetLocation(), NestedResultMessage));
         }
     }
 
-    private static void AnalyzeResultWrapping(OperationAnalysisContext context)
+    private static void AnalyzeResultWrapping(OperationAnalysisContext context, ConcurrentDictionary<ITypeSymbol, bool> nestedResults, INamedTypeSymbol? problemType)
     {
-        if (context.Operation.Type is { } type && HasNestedResult(type))
+        if (context.Operation.Type is { } type && IsNativeResultType(type) && nestedResults.GetOrAdd(type, HasNestedResult))
         {
             context.ReportDiagnostic(Diagnostic.Create(RedundantWrapping, context.Operation.Syntax.GetLocation(), NestedResultMessage));
             return;
@@ -66,7 +73,7 @@ public sealed partial class ResultUsageAnalyzer
                 ResultStatusFlow.ProvesStatus(invocation.Syntax, member.Expression, true, model, context.CancellationToken) ||
              invocation.TargetMethod.Name == FailMethodName && member.Name.Identifier.ValueText == ProblemName &&
                 SymbolEqualityComparer.Default.Equals(invocation.TargetMethod.Parameters[0].OriginalDefinition.Type,
-                    context.Compilation.GetTypeByMetadataName(ProblemMetadataName)) &&
+                    problemType) &&
                 ResultStatusFlow.ProvesStatus(invocation.Syntax, member.Expression, false, model, context.CancellationToken)))
         {
             receiver = member.Expression;

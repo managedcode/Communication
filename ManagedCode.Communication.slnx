@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="ManagedCode.Communication.Analyzers/ManagedCode.Communication.Analyzers.csproj" />
   <Project Path="ManagedCode.Communication.AspNetCore/ManagedCode.Communication.AspNetCore.csproj" />
+  <Project Path="ManagedCode.Communication.CodeFixes/ManagedCode.Communication.CodeFixes.csproj" />
   <Project Path="ManagedCode.Communication.Extensions/ManagedCode.Communication.Extensions.csproj" />
   <Project Path="ManagedCode.Communication.Benchmark/ManagedCode.Communication.Benchmark.csproj" />
   <Project Path="ManagedCode.Communication.Orleans/ManagedCode.Communication.Orleans.csproj" />
