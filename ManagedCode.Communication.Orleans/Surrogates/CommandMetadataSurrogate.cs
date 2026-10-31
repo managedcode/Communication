@@ -8,7 +8,6 @@ namespace ManagedCode.Communication.Orleans.Surrogates;
 /// <summary>
 ///     Orleans serialization surrogate for <c>CommandMetadata</c>.
 /// </summary>
-[Immutable]
 [GenerateSerializer]
 public struct CommandMetadataSurrogate
 {

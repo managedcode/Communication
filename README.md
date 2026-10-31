@@ -1070,6 +1070,13 @@ These methods add incoming/outgoing grain-call filters and limiter options. Comm
 surrogates are registered through Orleans-generated metadata. This setup does not enable command execution,
 choose a grain storage serializer, or install JSON grain-storage converters.
 
+Native Orleans deep copies own mutable command payloads, command metadata dictionaries, result payloads,
+problem extensions, collection items and CQRS progress/final payloads. For example, after
+`var copy = copier.Copy(command)`, changing the original command's byte array or metadata tags leaves
+`copy` unchanged. These transport envelopes do not declare nested application data immutable; Orleans
+uses each payload's registered generated copier. Application-declared immutable payloads retain their
+own Orleans immutability contract.
+
 ### Distributed command execution
 
 Enable the execution adapter explicitly and configure named `commandStore` grain storage on the silo:

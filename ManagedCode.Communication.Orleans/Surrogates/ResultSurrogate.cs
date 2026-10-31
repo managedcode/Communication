@@ -5,7 +5,6 @@ namespace ManagedCode.Communication.Orleans.Surrogates;
 /// <summary>
 ///     Orleans serialization surrogate for <c>Result</c>.
 /// </summary>
-[Immutable]
 [GenerateSerializer]
 public struct ResultSurrogate
 {

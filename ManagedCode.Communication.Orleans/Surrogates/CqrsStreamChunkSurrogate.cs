@@ -10,7 +10,6 @@ namespace ManagedCode.Communication.Orleans.Surrogates;
 ///     Without this, Orleans refuses to start any silo whose grain interfaces mention a chunk: the type has no
 ///     generated serializer, and that is a configuration error rather than a runtime one.
 /// </remarks>
-[Immutable]
 [GenerateSerializer]
 public struct CqrsStreamChunkSurrogate<TProgress, TResult>
 {
