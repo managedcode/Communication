@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Orleans.Helpers;
 using ManagedCode.Communication.Results;
@@ -11,6 +12,9 @@ namespace ManagedCode.Communication.Orleans.Filters;
 
 internal static class CommunicationGrainCallResultFactory
 {
+    private static readonly ConditionalWeakTable<Type, FailureFactory> FailureFactories = new();
+    private static readonly FailureFactory UnsupportedReturnType = new(null);
+
     private static readonly MethodInfo CreateFailureGenericMethod =
         typeof(CommunicationGrainCallResultFactory).GetMethod(
             nameof(CreateFailureGeneric),
@@ -24,8 +28,8 @@ internal static class CommunicationGrainCallResultFactory
 
     public static bool TrySetFailure(IGrainCallContext context, Exception exception, out HttpStatusCode statusCode)
     {
-        var resultType = GetCommunicationResultType(context.InterfaceMethod.ReturnType);
-        if (resultType is null)
+        var createFailure = FailureFactories.GetValue(context.InterfaceMethod.ReturnType, BuildFailureFactory).Create;
+        if (createFailure is null)
         {
             statusCode = HttpStatusCode.InternalServerError;
             return false;
@@ -37,7 +41,7 @@ internal static class CommunicationGrainCallResultFactory
         // exactly where the stack trace would otherwise be lost.
         CommunicationTelemetry.RecordFailure(Problem.Create(exception, (int)statusCode), exception);
 
-        context.Result = CreateFailure(resultType, exception, statusCode);
+        context.Result = createFailure(exception, statusCode);
         return true;
     }
 
@@ -55,25 +59,41 @@ internal static class CommunicationGrainCallResultFactory
         }
 
         var resultType = returnType.GenericTypeArguments[0];
-        if (!typeof(IResult).IsAssignableFrom(resultType))
+        if (!resultType.IsValueType || !typeof(IResult).IsAssignableFrom(resultType))
         {
             return null;
         }
 
-        var resultFactoryType = typeof(IResultFactory<>).MakeGenericType(resultType);
-        return resultFactoryType.IsAssignableFrom(resultType) ? resultType : null;
+        foreach (var contract in resultType.GetInterfaces())
+        {
+            if (contract.IsGenericType
+                && contract.GetGenericTypeDefinition() == typeof(IResultFactory<>)
+                && contract.GenericTypeArguments[0] == resultType)
+            {
+                return resultType;
+            }
+        }
+
+        return null;
     }
 
-    private static object CreateFailure(Type resultType, Exception exception, HttpStatusCode statusCode)
+    private static FailureFactory BuildFailureFactory(Type returnType)
     {
-        var genericMethod = CreateFailureGenericMethod.MakeGenericMethod(resultType);
-        return genericMethod.Invoke(obj: null, [exception, statusCode])
-            ?? throw new InvalidOperationException(resultType.FullName);
+        var resultType = GetCommunicationResultType(returnType);
+        return resultType is null
+            ? UnsupportedReturnType
+            : new FailureFactory(CreateFailureGenericMethod.MakeGenericMethod(resultType)
+                .CreateDelegate<Func<Exception, HttpStatusCode, object>>());
     }
 
-    private static TSelf CreateFailureGeneric<TSelf>(Exception exception, HttpStatusCode statusCode)
+    private static object CreateFailureGeneric<TSelf>(Exception exception, HttpStatusCode statusCode)
         where TSelf : struct, IResultFactory<TSelf>
     {
         return TSelf.Fail(exception, statusCode);
+    }
+
+    private sealed class FailureFactory(Func<Exception, HttpStatusCode, object>? create)
+    {
+        public Func<Exception, HttpStatusCode, object>? Create { get; } = create;
     }
 }

@@ -44,34 +44,45 @@ internal static class ResultMemberEncoding
         };
     }
 
-    public static bool MatchesIsSuccess(ref Utf8JsonReader reader)
+    public static ResultJsonMember MatchMember(ref Utf8JsonReader reader)
     {
-        return Matches(ref reader, IsSuccess, IsSuccessName);
-    }
+        // Try all canonical names before decoding the property name for case-insensitive matching.
+        if (reader.ValueTextEquals(IsSuccess.EncodedUtf8Bytes))
+        {
+            return ResultJsonMember.IsSuccess;
+        }
 
-    public static bool MatchesValue(ref Utf8JsonReader reader)
-    {
-        return Matches(ref reader, Value, ValueName);
-    }
+        if (reader.ValueTextEquals(Value.EncodedUtf8Bytes))
+        {
+            return ResultJsonMember.Value;
+        }
 
-    public static bool MatchesProblem(ref Utf8JsonReader reader)
-    {
-        return Matches(ref reader, Problem, ProblemName);
-    }
+        if (reader.ValueTextEquals(Problem.EncodedUtf8Bytes))
+        {
+            return ResultJsonMember.Problem;
+        }
 
-    /// <summary>
-    ///     Compares against the encoded UTF-8 name first, which allocates nothing and covers everything this
-    ///     library writes, then falls back to a case-insensitive comparison so a producer using PascalCase still
-    ///     reads.
-    /// </summary>
-    /// <remarks>
-    ///     The bytes come from the same <see cref="JsonEncodedText" /> that is written, which itself comes from
-    ///     <see cref="CommunicationJsonNames" /> — so there is no second spelling of a name anywhere that could
-    ///     drift from the first.
-    /// </remarks>
-    private static bool Matches(ref Utf8JsonReader reader, JsonEncodedText encoded, string name)
-    {
-        return reader.ValueTextEquals(encoded.EncodedUtf8Bytes)
-               || string.Equals(reader.GetString(), name, StringComparison.OrdinalIgnoreCase);
+        var name = reader.GetString();
+        if (string.Equals(name, IsSuccessName, StringComparison.OrdinalIgnoreCase))
+        {
+            return ResultJsonMember.IsSuccess;
+        }
+
+        if (string.Equals(name, ValueName, StringComparison.OrdinalIgnoreCase))
+        {
+            return ResultJsonMember.Value;
+        }
+
+        return string.Equals(name, ProblemName, StringComparison.OrdinalIgnoreCase)
+            ? ResultJsonMember.Problem
+            : ResultJsonMember.Unknown;
     }
+}
+
+internal enum ResultJsonMember
+{
+    Unknown,
+    IsSuccess,
+    Value,
+    Problem
 }

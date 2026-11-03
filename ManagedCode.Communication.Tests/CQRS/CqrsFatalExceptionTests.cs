@@ -59,6 +59,18 @@ public sealed class CqrsFatalExceptionTests
     }
 
     [Test]
+    public void FindFatal_PreservesBreadthFirstOrder()
+    {
+        var shallow = new OutOfMemoryException(FatalDetail);
+        var deep = new AccessViolationException(FatalDetail);
+        var nested = new AggregateException(deep);
+        var sibling = new AggregateException(new StackOverflowException(FatalDetail));
+
+        CqrsRuntimeFailures.FindFatal(new AggregateException(nested, shallow)).ShouldBeSameAs(shallow);
+        CqrsRuntimeFailures.FindFatal(new AggregateException(nested, sibling)).ShouldBeSameAs(deep);
+    }
+
+    [Test]
     public async Task NormalizePropagatesNativeAggregateFatalExceptionsAndDisposesSource()
     {
         foreach (var fatal in FatalSentinels())

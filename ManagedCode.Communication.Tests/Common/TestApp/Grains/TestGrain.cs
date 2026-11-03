@@ -41,6 +41,11 @@ public class TestGrain : Grain, ITestGrain
         throw new Exception("result int error");
     }
 
+    public Task<IResult> TestResultInterfaceInvalidOperationError()
+    {
+        throw new InvalidOperationException(nameof(TestResultInterfaceInvalidOperationError));
+    }
+
     public Task<Result<int>> TestResultIntInvalidOperationError()
     {
         throw new InvalidOperationException("result int invalid operation error");

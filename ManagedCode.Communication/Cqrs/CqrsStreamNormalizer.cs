@@ -21,7 +21,7 @@ internal static class CqrsStreamNormalizer
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // Enumeration and disposal must retain the caller scheduler, including Orleans grain identity.
-        var enumerator = source.GetAsyncEnumerator(cancellationToken);
+        IAsyncEnumerator<CqrsStreamChunk<TProgress, TResult>>? enumerator = null;
         var sequence = 0L;
         var sawTerminal = false;
         CqrsStreamChunk<TProgress, TResult>? faultChunk = null;
@@ -30,11 +30,19 @@ internal static class CqrsStreamNormalizer
         {
             while (true)
             {
-                bool moved;
+                CqrsStreamChunk<TProgress, TResult>? current;
 
                 try
                 {
-                    moved = await enumerator.MoveNextAsync().ConfigureAwait(true);
+                    enumerator ??= source.GetAsyncEnumerator(cancellationToken);
+                    var moved = await enumerator.MoveNextAsync().ConfigureAwait(true);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!moved)
+                    {
+                        break;
+                    }
+
+                    current = enumerator.Current;
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
@@ -43,7 +51,7 @@ internal static class CqrsStreamNormalizer
                 catch (CqrsStreamPassthroughException passthrough)
                 {
                     ExceptionDispatchInfo.Capture(passthrough.Inner).Throw();
-                    throw; // Unreachable; keeps the compiler happy about `moved`.
+                    throw;
                 }
                 catch (Exception exception) when (CqrsRuntimeFailures.FindFatal(exception) is null)
                 {
@@ -55,14 +63,6 @@ internal static class CqrsStreamNormalizer
                     break;
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (!moved)
-                {
-                    break;
-                }
-
-                var current = enumerator.Current;
                 if (current is null)
                 {
                     continue;
@@ -78,7 +78,10 @@ internal static class CqrsStreamNormalizer
         }
         finally
         {
-            await enumerator.DisposeAsync().ConfigureAwait(true);
+            if (enumerator is not null)
+            {
+                await enumerator.DisposeAsync().ConfigureAwait(true);
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();

@@ -62,6 +62,24 @@ public class PaginationRequestTests
     }
 
     [Test]
+    public void FromPage_WithUnrepresentableOffset_RejectsPageNumber()
+    {
+        const int pageNumber = int.MaxValue;
+        var error = Should.Throw<ArgumentOutOfRangeException>(() => PaginationRequest.FromPage(pageNumber, 3));
+
+        error.ParamName.ShouldBe(nameof(pageNumber));
+    }
+
+    [Test]
+    public void PageNumber_WithUnrepresentableIndex_ThrowsOverflow()
+    {
+        var request = new PaginationRequest(int.MaxValue, 1);
+
+        Should.Throw<OverflowException>(() => _ = request.PageNumber);
+        PaginationRequest.FromPage(int.MaxValue, 1).PageNumber.ShouldBe(int.MaxValue);
+    }
+
+    [Test]
     public void PaginationOptions_InvalidArguments_ShouldThrow()
     {
         Should.Throw<ArgumentOutOfRangeException>(() => new PaginationOptions(defaultPageSize: 0));

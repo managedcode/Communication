@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -15,6 +16,7 @@ namespace ManagedCode.Communication.CQRS;
 internal static class CqrsFailureBodyReader
 {
     private const int DetectionBytes = 1;
+    private const int InitialBufferSize = 1024;
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
 
     public static async Task<Problem> ReadAsync(
@@ -22,57 +24,66 @@ internal static class CqrsFailureBodyReader
         CqrsStreamClientOptions options,
         CancellationToken cancellationToken)
     {
-        if (response.Content.Headers.ContentLength is { } length && length > options.MaximumFailureBodyBytes)
+        var length = response.Content.Headers.ContentLength;
+        var maximumBytes = options.MaximumFailureBodyBytes;
+        if (length > maximumBytes)
         {
             return Limited(response.StatusCode);
         }
 
-        var buffer = new byte[checked(options.MaximumFailureBodyBytes + DetectionBytes)];
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        var count = await ReadBodyAsync(stream, buffer, options.MaximumFailureBodyBytes, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (count > options.MaximumFailureBodyBytes)
-        {
-            return Limited(response.StatusCode);
-        }
-
+        var readLimit = maximumBytes + DetectionBytes;
+        var initialSize = length is { } declaredLength
+            ? (int)declaredLength + DetectionBytes
+            : Math.Min(readLimit, InitialBufferSize);
+        var pool = ArrayPool<byte>.Shared;
+        var buffer = pool.Rent(initialSize);
         try
         {
-            _ = StrictUtf8.GetCharCount(buffer.AsSpan(0, count));
-        }
-        catch (DecoderFallbackException exception)
-        {
-            CommunicationDiagnostics.ReportFailure(CommunicationLogger.GetLogger(), null, exception);
-            return SafeFailure(response.StatusCode);
-        }
-
-        return SafeFailure(response.StatusCode, ParseProblem(response, buffer.AsSpan(0, count), options));
-    }
-
-    private static async Task<int> ReadBodyAsync(
-        Stream stream,
-        byte[] buffer,
-        int maximumBytes,
-        CancellationToken cancellationToken)
-    {
-        var count = 0;
-        while (count < buffer.Length)
-        {
-            var read = await stream.ReadAsync(buffer.AsMemory(count), cancellationToken).ConfigureAwait(false);
-            if (read == 0)
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            var count = 0;
+            while (count < readLimit)
             {
-                break;
+                if (count == buffer.Length)
+                {
+                    var expanded = pool.Rent(Math.Min(readLimit, buffer.Length * 2));
+                    buffer.AsSpan(0, count).CopyTo(expanded);
+                    pool.Return(buffer, clearArray: true);
+                    buffer = expanded;
+                }
+
+                var read = await stream.ReadAsync(
+                        buffer.AsMemory(count, Math.Min(readLimit, buffer.Length) - count), cancellationToken)
+                    .ConfigureAwait(false);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                count += read;
             }
 
-            count += read;
             if (count > maximumBytes)
             {
-                break;
+                return Limited(response.StatusCode);
             }
-        }
 
-        return count;
+            var body = buffer.AsSpan(0, count);
+            try
+            {
+                _ = StrictUtf8.GetCharCount(body);
+            }
+            catch (DecoderFallbackException exception)
+            {
+                CommunicationDiagnostics.ReportFailure(CommunicationLogger.GetLogger(), null, exception);
+                return SafeFailure(response.StatusCode);
+            }
+
+            return SafeFailure(response.StatusCode, ParseProblem(response, body, options));
+        }
+        finally
+        {
+            pool.Return(buffer, clearArray: true);
+        }
     }
 
     private static Problem? ParseProblem(

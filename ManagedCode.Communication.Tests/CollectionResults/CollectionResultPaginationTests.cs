@@ -1,3 +1,4 @@
+using System.Linq;
 using ManagedCode.Communication.CollectionResultT;
 using ManagedCode.Communication.Commands;
 using Shouldly;
@@ -19,6 +20,26 @@ public class CollectionResultPaginationTests
         result.PageSize.ShouldBe(request.Take);
         result.TotalItems.ShouldBe(10);
         result.TotalPages.ShouldBe(4);
+    }
+
+    [Test]
+    public void Succeed_WithPartialLastPage_PreservesNormalizedPagingMetadata()
+    {
+        int[] items = [51, 52, 53];
+        var request = PaginationRequest.FromPage(3, 25);
+
+        var arrayResult = CollectionResult<int>.Succeed(items, request, totalItems: 53);
+        var enumerableResult = CollectionResult<int>.Succeed(items.Select(static item => item), request, totalItems: 53);
+
+        arrayResult.PageNumber.ShouldBe(3);
+        arrayResult.PageSize.ShouldBe(25);
+        arrayResult.TotalPages.ShouldBe(3);
+        arrayResult.Collection.ShouldBeSameAs(items);
+        enumerableResult.PageNumber.ShouldBe(3);
+        enumerableResult.PageSize.ShouldBe(25);
+        enumerableResult.TotalPages.ShouldBe(3);
+        enumerableResult.Collection.ShouldBe(items);
+        request.ToSlice(53).ShouldBe((50, 3));
     }
 
     [Test]

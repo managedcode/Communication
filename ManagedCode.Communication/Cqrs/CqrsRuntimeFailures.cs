@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace ManagedCode.Communication.CQRS;
 
@@ -25,15 +26,39 @@ public static class CqrsRuntimeFailures
             return null;
         }
 
-        foreach (var inner in aggregate.Flatten().InnerExceptions)
+        // Visit aggregates in the same breadth-first order as Flatten.
+        Queue<AggregateException>? pending = null;
+        while (true)
         {
-            if (IsFatal(inner))
+            var inners = aggregate.InnerExceptions;
+            if (inners.Count == 1 && inners[0] is AggregateException onlyChild
+                && (pending is null || pending.Count == 0))
             {
-                return inner;
+                aggregate = onlyChild;
+                continue;
             }
-        }
 
-        return null;
+            for (var i = 0; i < inners.Count; i++)
+            {
+                var inner = inners[i];
+                if (IsFatal(inner))
+                {
+                    return inner;
+                }
+
+                if (inner is AggregateException nested)
+                {
+                    (pending ??= new Queue<AggregateException>()).Enqueue(nested);
+                }
+            }
+
+            if (pending is null || !pending.TryDequeue(out var next))
+            {
+                return null;
+            }
+
+            aggregate = next;
+        }
     }
 
     private static bool IsFatal(Exception exception)

@@ -152,7 +152,10 @@ public class ResultHttpClientExtensionsTests
         var result = await client.SendForResultAsync(
             static () => new HttpRequestMessage(HttpMethod.Get, "https://example.com"),
             static async (response, cancellationToken) =>
-                await response.Content.ReadAsStringAsync(cancellationToken));
+            {
+                await Task.Yield();
+                return await response.Content.ReadAsStringAsync(cancellationToken);
+            });
 
         result.IsSuccess.ShouldBeTrue();
         result.Value.ShouldBe("payload");

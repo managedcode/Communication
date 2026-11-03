@@ -19,8 +19,8 @@ public partial struct CollectionResult<T>
         ArgumentNullException.ThrowIfNull(values);
 
         var array = values as T[] ?? values.ToArray();
-        var normalized = request.Normalize(options).ClampToTotal(totalItems);
-        return CreateSuccess(array, normalized.PageNumber, normalized.PageSize, totalItems);
+        var (pageNumber, pageSize) = request.GetPageMetadata(totalItems, options);
+        return CreateSuccess(array, pageNumber, pageSize, totalItems);
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public partial struct CollectionResult<T>
     {
         ArgumentNullException.ThrowIfNull(values);
 
-        var normalized = request.Normalize(options).ClampToTotal(totalItems);
-        return CreateSuccess(values, normalized.PageNumber, normalized.PageSize, totalItems);
+        var (pageNumber, pageSize) = request.GetPageMetadata(totalItems, options);
+        return CreateSuccess(values, pageNumber, pageSize, totalItems);
     }
 }

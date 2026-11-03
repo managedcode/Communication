@@ -8,6 +8,9 @@ namespace ManagedCode.Communication.Commands;
 /// </summary>
 public sealed record PaginationRequest
 {
+    private const string UnrepresentablePageOffset = "The page offset exceeds the supported range.";
+    private const string InvalidTotalItems = "Total items must be greater than or equal to zero.";
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PaginationRequest"/> record.
     /// </summary>
@@ -45,8 +48,9 @@ public sealed record PaginationRequest
     /// <summary>
     /// Gets the calculated page number (1-based) for the request. Defaults to the first page when <see cref="Take"/> is zero.
     /// </summary>
+    /// <exception cref="OverflowException">The calculated page index exceeds the supported range.</exception>
     [JsonIgnore]
-    public int PageNumber => Take <= 0 ? 1 : (Skip / Take) + 1;
+    public int PageNumber => Take <= 0 ? 1 : checked(Skip / Take + 1);
 
     /// <summary>
     /// Gets the requested page size.
@@ -80,9 +84,8 @@ public sealed record PaginationRequest
     /// <param name="options">Normalization options; defaults to <see cref="PaginationOptions.Default"/>.</param>
     public static PaginationRequest Create(int skip, int take, PaginationOptions? options = null)
     {
-        var nonNegativeSkip = Math.Max(0, skip);
-        var nonNegativeTake = Math.Max(0, take);
-        return new PaginationRequest(nonNegativeSkip, nonNegativeTake).Normalize(options);
+        var (normalizedSkip, normalizedTake) = NormalizeBounds(skip, take, options);
+        return new PaginationRequest(normalizedSkip, normalizedTake);
     }
 
     /// <summary>
@@ -91,6 +94,7 @@ public sealed record PaginationRequest
     /// <param name="pageNumber">1-based page number.</param>
     /// <param name="pageSize">Requested page size.</param>
     /// <param name="options">Normalization options; defaults to <see cref="PaginationOptions.Default"/>.</param>
+    /// <exception cref="ArgumentOutOfRangeException">The page number, page size or resulting offset is outside the supported range.</exception>
     public static PaginationRequest FromPage(int pageNumber, int pageSize, PaginationOptions? options = null)
     {
         if (pageNumber < 1)
@@ -103,10 +107,14 @@ public sealed record PaginationRequest
             throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than or equal to zero.");
         }
 
-        var baseRequest = new PaginationRequest(0, pageSize).Normalize(options);
-        var pageSkip = pageNumber == 1 ? 0 : (pageNumber - 1) * baseRequest.Take;
-        var request = new PaginationRequest(pageSkip, baseRequest.Take);
-        return options is null ? request : request.Normalize(options);
+        var (_, take) = NormalizeBounds(0, pageSize, options);
+        var skip = (long)(pageNumber - 1) * take;
+        if (skip > int.MaxValue)
+        {
+            throw new ArgumentOutOfRangeException(nameof(pageNumber), UnrepresentablePageOffset);
+        }
+
+        return new PaginationRequest((int)skip, take);
     }
 
     /// <summary>
@@ -116,9 +124,15 @@ public sealed record PaginationRequest
     /// <returns>A new <see cref="PaginationRequest"/> instance guaranteed to respect the supplied constraints.</returns>
     public PaginationRequest Normalize(PaginationOptions? options = null)
     {
+        var (skip, take) = NormalizeBounds(Skip, Take, options);
+        return this with { Skip = skip, Take = take };
+    }
+
+    private static (int Skip, int Take) NormalizeBounds(int skip, int take, PaginationOptions? options)
+    {
         var settings = options ?? PaginationOptions.Default;
 
-        var normalizedTake = Take <= 0 ? settings.DefaultPageSize : Take;
+        var normalizedTake = take <= 0 ? settings.DefaultPageSize : take;
         normalizedTake = Math.Max(settings.MinimumPageSize, normalizedTake);
 
         if (settings.MaxPageSize is { } max)
@@ -126,9 +140,7 @@ public sealed record PaginationRequest
             normalizedTake = Math.Min(normalizedTake, max);
         }
 
-        var normalizedSkip = Math.Max(0, Skip);
-
-        return this with { Skip = normalizedSkip, Take = normalizedTake };
+        return (Math.Max(0, skip), normalizedTake);
     }
 
     /// <summary>
@@ -138,21 +150,25 @@ public sealed record PaginationRequest
     /// <returns>A new request whose <see cref="Skip"/> never exceeds <paramref name="totalItems"/>.</returns>
     public PaginationRequest ClampToTotal(int totalItems)
     {
+        var (skip, take) = ClampBounds(Skip, Take, totalItems);
+        return this with { Skip = skip, Take = take };
+    }
+
+    private static (int Skip, int Take) ClampBounds(int skip, int take, int totalItems)
+    {
         if (totalItems < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(totalItems), "Total items must be greater than or equal to zero.");
+            throw new ArgumentOutOfRangeException(nameof(totalItems), InvalidTotalItems);
         }
 
         if (totalItems == 0)
         {
-            return this with { Skip = 0, Take = 0 };
+            return (0, 0);
         }
 
-        var maxSkip = Math.Max(0, totalItems - 1);
-        var clampedSkip = Math.Min(Skip, maxSkip);
+        var clampedSkip = Math.Min(skip, totalItems - 1);
         var remaining = Math.Max(0, totalItems - clampedSkip);
-        var adjustedTake = Math.Min(Take, remaining);
-        return this with { Skip = clampedSkip, Take = adjustedTake };
+        return (clampedSkip, Math.Min(take, remaining));
     }
 
     /// <summary>
@@ -162,9 +178,14 @@ public sealed record PaginationRequest
     /// <param name="options">Optional normalization settings.</param>
     public (int start, int length) ToSlice(int? totalItems = null, PaginationOptions? options = null)
     {
-        var normalized = Normalize(options);
-        var request = totalItems is null ? normalized : normalized.ClampToTotal(totalItems.Value);
-        var length = totalItems is null ? request.Take : Math.Min(request.Take, Math.Max(0, totalItems.Value - request.Skip));
-        return (request.Skip, length);
+        var (skip, take) = NormalizeBounds(Skip, Take, options);
+        return totalItems is { } total ? ClampBounds(skip, take, total) : (skip, take);
+    }
+
+    internal (int PageNumber, int PageSize) GetPageMetadata(int totalItems, PaginationOptions? options)
+    {
+        var (skip, pageSize) = NormalizeBounds(Skip, Take, options);
+        var (start, _) = ClampBounds(skip, pageSize, totalItems);
+        return totalItems == 0 ? (1, 0) : (start / pageSize + 1, pageSize);
     }
 }

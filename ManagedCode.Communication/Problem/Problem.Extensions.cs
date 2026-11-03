@@ -516,9 +516,12 @@ public partial class Problem
     /// <summary>
     ///     Gets validation errors if any.
     /// </summary>
-    public Dictionary<string, List<string>>? GetValidationErrors()
+    public Dictionary<string, List<string>>? GetValidationErrors() => ReadValidationErrors(requireCache: false);
+
+    private Dictionary<string, List<string>>? ReadValidationErrors(bool requireCache)
     {
-        if (!Extensions.TryGetValue(ProblemConstants.ExtensionKeys.Errors, out var errors))
+        var extensions = Extensions;
+        if (!extensions.TryGetValue(ProblemConstants.ExtensionKeys.Errors, out var errors))
         {
             return null;
         }
@@ -529,14 +532,12 @@ public partial class Problem
         }
 
         var materialized = MaterializeValidationErrors(errors);
-        if (materialized is null)
+        // A mutation needs the materialized map stored in Extensions. Reads can use it directly.
+        if (materialized is not null && (requireCache || !extensions.IsReadOnly))
         {
-            return null;
+            extensions[ProblemConstants.ExtensionKeys.Errors] = materialized;
         }
 
-        // Store the materialized form back, so repeated reads do not rebuild it and so a later
-        // AddValidationError sees a real dictionary instead of the raw deserialized payload.
-        Extensions[ProblemConstants.ExtensionKeys.Errors] = materialized;
         return materialized;
     }
 
@@ -562,7 +563,7 @@ public partial class Problem
             // Some producers hand back a plain object map (e.g. an IDictionary from a different serializer).
             case IDictionary<string, object?> objectMap:
                 {
-                    var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+                    var result = new Dictionary<string, List<string>>(objectMap.Count, StringComparer.Ordinal);
                     foreach (var pair in objectMap)
                     {
                         result[pair.Key] = pair.Value switch
@@ -659,7 +660,7 @@ public partial class Problem
     /// </remarks>
     private Dictionary<string, List<string>> GetOrCreateValidationErrors()
     {
-        var existing = GetValidationErrors();
+        var existing = ReadValidationErrors(requireCache: true);
         if (existing is not null)
         {
             return existing;

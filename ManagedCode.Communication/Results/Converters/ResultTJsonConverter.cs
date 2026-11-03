@@ -53,25 +53,22 @@ public sealed class ResultTJsonConverter<T> : JsonConverter<Result<T>>
                 continue;
             }
 
-            if (ResultMemberEncoding.MatchesIsSuccess(ref reader))
+            var member = ResultMemberEncoding.MatchMember(ref reader);
+            reader.Read();
+            switch (member)
             {
-                reader.Read();
-                isSuccess = ResultMemberEncoding.ReadIsSuccess(ref reader);
-            }
-            else if (ResultMemberEncoding.MatchesValue(ref reader))
-            {
-                reader.Read();
-                value = JsonSerializer.Deserialize<T>(ref reader, options);
-            }
-            else if (ResultMemberEncoding.MatchesProblem(ref reader))
-            {
-                reader.Read();
-                problem = JsonSerializer.Deserialize<Problem>(ref reader, options);
-            }
-            else
-            {
-                reader.Read();
-                reader.Skip();
+                case ResultJsonMember.IsSuccess:
+                    isSuccess = ResultMemberEncoding.ReadIsSuccess(ref reader);
+                    break;
+                case ResultJsonMember.Value:
+                    value = JsonSerializer.Deserialize<T>(ref reader, options);
+                    break;
+                case ResultJsonMember.Problem:
+                    problem = JsonSerializer.Deserialize<Problem>(ref reader, options);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
             }
         }
 

@@ -49,8 +49,9 @@ internal sealed class CqrsResponseByteAdmission
     public int Admit(ReadOnlySpan<byte> input)
     {
         var accepted = 0;
-        foreach (var value in input)
+        while (accepted < input.Length)
         {
+            var value = input[accepted];
             PrepareForByte(value);
             if (WouldExceed(out var kind))
             {
@@ -58,8 +59,29 @@ internal sealed class CqrsResponseByteAdmission
                 break;
             }
 
-            Count(value);
-            accepted++;
+            if (value is (byte)'\r' or (byte)'\n')
+            {
+                CountDelimiter(value);
+                accepted++;
+                continue;
+            }
+
+            var available = Math.Min(input.Length - accepted, _maximumFrameBytes - _frameBytes);
+            if (_maximumStreamBytes is { } maximumStreamBytes)
+            {
+                available = (int)Math.Min(available, maximumStreamBytes - _streamBytes);
+            }
+
+            var delimiter = input.Slice(accepted, available).IndexOfAny((byte)'\r', (byte)'\n');
+            var dataBytes = delimiter < 0 ? available : delimiter;
+            _frameBytes += dataBytes;
+            if (_maximumStreamBytes is not null)
+            {
+                _streamBytes += dataBytes;
+            }
+
+            _lineHasBytes = true;
+            accepted += dataBytes;
         }
 
         if (accepted > 0)
@@ -89,7 +111,7 @@ internal sealed class CqrsResponseByteAdmission
         return false;
     }
 
-    private void Count(byte value)
+    private void CountDelimiter(byte value)
     {
         _frameBytes++;
         if (_maximumStreamBytes is not null)
@@ -97,24 +119,14 @@ internal sealed class CqrsResponseByteAdmission
             _streamBytes++;
         }
 
-        if (_carriageReturnPending)
-        {
-            CompleteLine();
-            _carriageReturnPending = false;
-            return;
-        }
-
         if (value == (byte)'\r')
         {
             _carriageReturnPending = true;
         }
-        else if (value == (byte)'\n')
-        {
-            CompleteLine();
-        }
         else
         {
-            _lineHasBytes = true;
+            CompleteLine();
+            _carriageReturnPending = false;
         }
     }
 

@@ -16,6 +16,7 @@ public interface ITestGrain : IGrainWithIntegerKey
     Task<Result> TestResultError();
     Task<Result<int>> TestResultIntError();
     Task<Result<int>> TestResultIntInvalidOperationError();
+    Task<IResult> TestResultInterfaceInvalidOperationError();
     Task<CollectionResult<int>> TestCollectionResultIntError();
 
     ValueTask<int> TestPlainValueTaskIntError();

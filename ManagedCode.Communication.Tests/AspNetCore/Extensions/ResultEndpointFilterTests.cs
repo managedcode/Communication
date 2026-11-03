@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore.MinimalApi;
+using ManagedCode.Communication.Constants;
 using ManagedCode.Communication.Extensions.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +17,10 @@ namespace ManagedCode.Communication.Tests.AspNetCore.Extensions;
 
 public class ResultEndpointFilterTests
 {
+    private const string ThrottledRoute = "/throttled-import";
+    private const string ThrottledProblemType = "https://managedcode.dev/problems/import-throttled";
+    private const string ThrottledProblemInstance = "/imports/42";
+
     [Test]
     public async Task WithCommunicationResults_SuccessResult_ReturnsOkResponse()
     {
@@ -140,6 +145,35 @@ public class ResultEndpointFilterTests
         problem.StatusCode.ShouldBe(500);
         problem.Title.ShouldBe("Operation failed");
         problem.Detail.ShouldBe("Unknown error occurred");
+    }
+
+    [Test]
+    public async Task WithCommunicationResults_GenericTextPreservesExplicitProblemData()
+    {
+        await using var app = await CreateAppAsync(static app =>
+        {
+            var problem = Problem.Create(
+                ProblemConstants.Titles.Error,
+                ProblemConstants.Messages.GenericError,
+                HttpStatusCode.TooManyRequests);
+            problem.Type = ThrottledProblemType;
+            problem.Instance = ThrottledProblemInstance;
+            problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] = 30;
+
+            app.MapGet(ThrottledRoute, () => Result<int>.Fail(problem)).WithCommunicationResults();
+        });
+
+        using var client = app.GetTestClient();
+        using var response = await client.GetAsync(ThrottledRoute);
+        response.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
+        var receivedProblem = await response.Content.ReadFromJsonAsync<Problem>();
+        receivedProblem.ShouldNotBeNull();
+        receivedProblem.Title.ShouldBe(ProblemConstants.Titles.Error);
+        receivedProblem.Detail.ShouldBe(ProblemConstants.Messages.GenericError);
+        receivedProblem.Type.ShouldBe(ThrottledProblemType);
+        receivedProblem.Instance.ShouldBe(ThrottledProblemInstance);
+        receivedProblem.TryGetExtension<int>(ProblemConstants.ExtensionKeys.RetryAfter, out var retryAfter).ShouldBeTrue();
+        retryAfter.ShouldBe(30);
     }
 
     [Test]

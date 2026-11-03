@@ -251,13 +251,15 @@ public sealed class MemoryCacheCommandIdempotencyStore :
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maxAge, TimeSpan.Zero);
         var cutoff = DateTime.UtcNow.Subtract(maxAge);
-        var candidates = _commandTimestamps
-            .Where(pair => pair.Value.UpdatedAtUtc < cutoff)
-            .Select(pair => pair.Key)
-            .ToList();
         var cleaned = 0;
-        foreach (var key in candidates)
+        foreach (var (key, candidate) in _commandTimestamps)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (candidate.UpdatedAtUtc >= cutoff)
+            {
+                continue;
+            }
+
             using var scope = await AcquireLockAsync(key, cancellationToken).ConfigureAwait(false);
             if (!_commandTimestamps.TryGetValue(key, out var indexEntry)
                 || indexEntry.UpdatedAtUtc >= cutoff)
@@ -287,7 +289,7 @@ public sealed class MemoryCacheCommandIdempotencyStore :
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         var counts = new Dictionary<CommandExecutionStatus, int>();
-        foreach (var key in _commandTimestamps.Keys)
+        foreach (var (key, _) in _commandTimestamps)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (_memoryCache.Get<AtomicCommandState>(GetAtomicKey(key)) is { } state)

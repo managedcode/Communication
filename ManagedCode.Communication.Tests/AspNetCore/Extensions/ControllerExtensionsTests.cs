@@ -104,6 +104,18 @@ public class ControllerExtensionsTests
     }
 
     [Test]
+    public void ToActionResult_WithEnrichedGenericProblem_PreservesOriginalProblem()
+    {
+        var problem = Problem.GenericError();
+        problem.Extensions[ProblemConstants.ExtensionKeys.ErrorCode] = InvalidStateErrorCode;
+
+        var actionResult = Result.Fail(problem).ToActionResult().ShouldBeOfType<ObjectResult>();
+
+        actionResult.StatusCode.ShouldBe(500);
+        actionResult.Value.ShouldBeSameAs(problem);
+    }
+
+    [Test]
     public void ToHttpResult_WithSuccessResult_ReturnsOkResult()
     {
         // Arrange

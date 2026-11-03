@@ -150,6 +150,9 @@ public static class CommunicationTelemetry
     private const string UnknownErrorType = "unknown";
     private const string UnknownAssemblyVersion = "0.0.0";
 
+    private static readonly object CommandSucceededTagValue = true;
+    private static readonly object CommandFailedTagValue = false;
+
     private static readonly Meter MeterInstance = new(SourceName, ThisAssemblyVersion);
 
     private static readonly Counter<long> FailureCounter = MeterInstance.CreateCounter<long>(
@@ -256,25 +259,49 @@ public static class CommunicationTelemetry
             return;
         }
 
+        var target = activity ?? Activity.Current;
+        var countFailure = FailureCounter.Enabled;
+        var exceptionToCount = exception is not null && ExceptionCounter.Enabled ? exception : null;
+        if (target is null && !countFailure && exceptionToCount is null)
+        {
+            return;
+        }
+
         problem = HttpFailureDiagnostics.Project(problem);
         var errorType = ResolveErrorType(problem, exception);
         var statusCode = problem?.StatusCode ?? 0;
 
-        FailureCounter.Add(1, BuildTags(errorType, statusCode));
-
-        if (exception is not null)
+        if (countFailure)
         {
-            ExceptionCounter.Add(1, BuildTags(exception.GetType().FullName ?? errorType, statusCode));
+            FailureCounter.Add(1, BuildTags(errorType, statusCode));
         }
 
-        AnnotateFailure(problem, exception, activity ?? Activity.Current);
+        if (exceptionToCount is not null)
+        {
+            ExceptionCounter.Add(1, BuildTags(exceptionToCount.GetType().FullName ?? errorType, statusCode));
+        }
+
+        if (target is not null)
+        {
+            AnnotateFailure(problem, exception, target, errorType);
+        }
     }
 
     internal static void RecordCreatedFailure(Problem problem, Exception? exception, Activity? activity, bool recordException)
     {
+        var countFailure = CreatedFailureCounter.Enabled;
+        if (activity is null && !countFailure)
+        {
+            return;
+        }
+
         problem = HttpFailureDiagnostics.Project(problem);
         var errorType = ResolveErrorType(problem, exception);
-        CreatedFailureCounter.Add(1, BuildTags(errorType, problem.StatusCode));
+        if (countFailure)
+        {
+            CreatedFailureCounter.Add(1, BuildTags(errorType, problem.StatusCode));
+        }
+
         if (activity is null)
         {
             return;
@@ -299,15 +326,8 @@ public static class CommunicationTelemetry
         }
     }
 
-    private static void AnnotateFailure(Problem? problem, Exception? exception, Activity? target)
+    private static void AnnotateFailure(Problem? problem, Exception? exception, Activity target, string errorType)
     {
-        problem = HttpFailureDiagnostics.Project(problem);
-        var errorType = ResolveErrorType(problem, exception);
-        if (target is null)
-        {
-            return;
-        }
-
         target.SetStatus(ActivityStatusCode.Error, problem?.Detail ?? (HttpFailureDiagnostics.IsActive ? null : exception?.Message));
         target.SetTag(ErrorTypeTag, errorType);
 
@@ -387,7 +407,7 @@ public static class CommunicationTelemetry
         var tags = new TagList
         {
             { InfrastructurePhaseTag, phase },
-            { ErrorTypeTag, ResolveErrorType(problem, null) }
+            { ErrorTypeTag, ResolveErrorType(HttpFailureDiagnostics.Project(problem), null) }
         };
         CommandInfrastructureFailureCounter.Add(1, tags);
         Activity.Current?.AddEvent(new ActivityEvent(
@@ -491,7 +511,7 @@ public static class CommunicationTelemetry
             tags: new ActivityTagsCollection
             {
                 { CommandAttemptTag, attempt },
-                { CommandSuccessTag, result.IsSuccess }
+                { CommandSuccessTag, result.IsSuccess ? CommandSucceededTagValue : CommandFailedTagValue }
             }));
     }
 
@@ -590,15 +610,27 @@ public static class CommunicationTelemetry
     /// <summary>Records a command rejected by an open, half-open, or isolated circuit.</summary>
     public static void RecordCircuitRejected(ICommand command, CommandCircuitBreakerLease lease)
     {
-        var tags = BuildCommandTags(command, false);
-        tags.Add(CircuitStateTag, lease.State.ToString());
-        CommandCircuitRejectedCounter.Add(1, tags);
-        Activity.Current?.AddEvent(new ActivityEvent(
+        var activity = Activity.Current;
+        var countRejection = CommandCircuitRejectedCounter.Enabled;
+        if (activity is null && !countRejection)
+        {
+            return;
+        }
+
+        var state = lease.State.ToString();
+        if (countRejection)
+        {
+            var tags = BuildCommandTags(command, false);
+            tags.Add(CircuitStateTag, state);
+            CommandCircuitRejectedCounter.Add(1, tags);
+        }
+
+        activity?.AddEvent(new ActivityEvent(
             CommandCircuitRejectedEventName,
             tags: new ActivityTagsCollection
             {
                 { CircuitPartitionTag, lease.PartitionKey },
-                { CircuitStateTag, lease.State.ToString() },
+                { CircuitStateTag, state },
                 { CircuitRetryAfterMillisecondsTag, lease.RetryAfter.TotalMilliseconds }
             }));
     }
@@ -606,19 +638,32 @@ public static class CommunicationTelemetry
     /// <summary>Records a circuit-breaker state transition without using its partition as a metric tag.</summary>
     public static void RecordCircuitTransition(CommandCircuitBreakerEvent transition)
     {
-        var tags = new TagList
+        var activity = Activity.Current;
+        var countTransition = CommandCircuitTransitionCounter.Enabled;
+        if (activity is null && !countTransition)
         {
-            { CircuitPreviousStateTag, transition.PreviousState.ToString() },
-            { CircuitStateTag, transition.State.ToString() }
-        };
-        CommandCircuitTransitionCounter.Add(1, tags);
-        Activity.Current?.AddEvent(new ActivityEvent(
+            return;
+        }
+
+        var previousState = transition.PreviousState.ToString();
+        var state = transition.State.ToString();
+        if (countTransition)
+        {
+            var tags = new TagList
+            {
+                { CircuitPreviousStateTag, previousState },
+                { CircuitStateTag, state }
+            };
+            CommandCircuitTransitionCounter.Add(1, tags);
+        }
+
+        activity?.AddEvent(new ActivityEvent(
             CommandCircuitTransitionEventName,
             tags: new ActivityTagsCollection
             {
                 { CircuitPartitionTag, transition.PartitionKey },
-                { CircuitPreviousStateTag, transition.PreviousState.ToString() },
-                { CircuitStateTag, transition.State.ToString() }
+                { CircuitPreviousStateTag, previousState },
+                { CircuitStateTag, state }
             }));
     }
 
@@ -654,10 +699,8 @@ public static class CommunicationTelemetry
             return UnknownErrorType;
         }
 
-        problem = HttpFailureDiagnostics.Project(problem);
-        return !string.IsNullOrEmpty(problem.ErrorCode)
-            ? problem.ErrorCode
-            : problem.Type;
+        var errorCode = problem.ErrorCode;
+        return !string.IsNullOrEmpty(errorCode) ? errorCode : problem.Type;
     }
 
     private static TagList BuildTags(string errorType, int statusCode)
@@ -675,7 +718,7 @@ public static class CommunicationTelemetry
     private static TagList BuildCommandTags(ICommand command, bool success)
     {
         var tags = BuildOperationTags(command);
-        tags.Add(CommandSuccessTag, success);
+        tags.Add(CommandSuccessTag, success ? CommandSucceededTagValue : CommandFailedTagValue);
         return tags;
     }
 

@@ -39,20 +39,14 @@ public partial struct Result
     /// </summary>
     public static Result MergeAll(params Result[] results)
     {
-        var problems = FailedProblems(results);
-
+        var problems = CollectMultipleProblems(results, out var firstFailure);
         if (problems is null)
         {
-            return Succeed();
-        }
-
-        if (problems.Count == 1)
-        {
-            return Fail(problems[0]);
+            return firstFailure ?? Succeed();
         }
 
         return AllAreValidationFailures(problems)
-            ? FailValidation(CollectValidationErrors(problems).ToArray())
+            ? Fail(CreateValidationProblem(problems))
             : Fail(CreateAggregateProblem(problems));
     }
 
@@ -79,28 +73,42 @@ public partial struct Result
     /// </summary>
     public static CollectionResult<T> CombineAll<T>(params Result<T>[] results)
     {
-        var problems = FailedProblems(results);
-
-        if (problems is null)
+        var problems = CollectMultipleProblems(results, out var firstFailure);
+        if (firstFailure is not { } failure)
         {
             return CollectionResult<T>.Succeed(Array.ConvertAll(results, static result => result.Value!));
         }
 
+        problems ??= new List<Problem>(1) { failure.Problem! };
         return AllAreValidationFailures(problems)
-            ? CollectionResult<T>.FailValidation(CollectValidationErrors(problems).ToArray())
+            ? CollectionResult<T>.Fail(CreateValidationProblem(problems))
             : CollectionResult<T>.Fail(CreateAggregateProblem(problems));
     }
 
-    private static List<Problem>? FailedProblems<TResult>(TResult[] results)
+    private static List<Problem>? CollectMultipleProblems<TResult>(TResult[] results, out TResult? firstFailure)
         where TResult : struct, IResult
     {
         ArgumentNullException.ThrowIfNull(results);
+        firstFailure = null;
         List<Problem>? problems = null;
         foreach (var result in results)
         {
-            if (result.IsFailed)
+            if (!result.IsFailed)
             {
-                (problems ??= []).Add(result.Problem);
+                continue;
+            }
+
+            if (problems is not null)
+            {
+                problems.Add(result.Problem);
+            }
+            else if (firstFailure is { } first)
+            {
+                problems = new List<Problem> { first.Problem!, result.Problem };
+            }
+            else
+            {
+                firstFailure = result;
             }
         }
 
@@ -112,31 +120,45 @@ public partial struct Result
         return problems.All(static problem => problem.GetValidationErrors() is not null);
     }
 
-    private static List<(string field, string message)> CollectValidationErrors(IEnumerable<Problem> problems)
+    private static Problem CreateValidationProblem(List<Problem> problems)
     {
-        var validationErrors = new List<(string field, string message)>();
+        var aggregate = Problem.Validation();
+        var validationErrors = aggregate.GetValidationErrors()!;
 
         foreach (var problem in problems)
         {
             var errors = problem.GetValidationErrors();
             if (errors is null || errors.Count == 0)
             {
-                validationErrors.Add((
+                aggregate.AddValidationError(
                     ProblemConstants.ValidationFields.General,
-                    problem.Detail ?? problem.Title ?? ProblemConstants.Messages.GenericError));
+                    problem.Detail ?? problem.Title ?? ProblemConstants.Messages.GenericError);
                 continue;
             }
 
-            foreach (var kvp in errors)
+            foreach (var (field, messages) in errors)
             {
-                foreach (var error in kvp.Value)
+                if (messages.Count == 0)
                 {
-                    validationErrors.Add((kvp.Key, error));
+                    continue;
+                }
+
+                if (!validationErrors.TryGetValue(field, out var existing))
+                {
+                    validationErrors.Add(field, new List<string>(messages));
+                }
+                else if (messages.Count == 1)
+                {
+                    existing.Add(messages[0]);
+                }
+                else
+                {
+                    existing.AddRange(messages);
                 }
             }
         }
 
-        return validationErrors;
+        return aggregate;
     }
 
     private static Problem CreateAggregateProblem(IReadOnlyCollection<Problem> problems)

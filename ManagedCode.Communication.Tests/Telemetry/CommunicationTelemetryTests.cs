@@ -162,6 +162,36 @@ public sealed class CommunicationTelemetryTests : IDisposable
     }
 
     [Test]
+    public void RecordFailure_WithOnlyExceptionCounterEnabled_RecordsExceptionTags()
+    {
+        var measurements = new List<long>();
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, current) =>
+            {
+                if (instrument.Meter.Name == CommunicationTelemetry.SourceName
+                    && instrument.Name == CommunicationTelemetry.ExceptionCounterName)
+                {
+                    current.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            if (HasTag(tags, CommunicationTelemetry.ErrorTypeTag, typeof(IOException).FullName!)
+                && HasTag(tags, CommunicationTelemetry.ProblemStatusTag, (int)HttpStatusCode.ServiceUnavailable))
+            {
+                measurements.Add(value);
+            }
+        });
+        listener.Start();
+
+        CommunicationTelemetry.RecordFailure(Problem.Create(HttpStatusCode.ServiceUnavailable), new IOException());
+
+        measurements.ShouldBe([1L]);
+    }
+
+    [Test]
     public void Report_LeavesTheResultUnchangedSoItCanSitInAChain()
     {
         var failed = Result<int>.Fail(Problem.Create("boom", "d", 500));
@@ -323,9 +353,85 @@ public sealed class CommunicationTelemetryTests : IDisposable
     }
 
     [Test]
+    [Arguments(true, false)]
+    [Arguments(false, true)]
+    [Arguments(true, true)]
+    public void CircuitTelemetry_EmitsMetricsAndTraceEventsIndependently(bool metrics, bool traces)
+    {
+        const string partition = "circuit-telemetry-partition";
+        var command = Command.Create(partition);
+        var delay = TimeSpan.FromSeconds(1);
+        var lease = new CommandCircuitBreakerLease(partition, false, false, CommandCircuitState.Open, delay);
+        var transition = new CommandCircuitBreakerEvent(
+            partition, CommandCircuitState.Closed, CommandCircuitState.Open, delay, null);
+        var rejections = 0L;
+        var transitions = 0L;
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, current) =>
+            {
+                if (instrument.Meter.Name == CommunicationTelemetry.SourceName
+                    && instrument.Name is CommunicationTelemetry.CommandCircuitRejectedCounterName
+                        or CommunicationTelemetry.CommandCircuitTransitionCounterName)
+                {
+                    current.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, value, tags, _) =>
+        {
+            HasTag(tags, CommunicationTelemetry.CircuitStateTag, nameof(CommandCircuitState.Open)).ShouldBeTrue();
+            foreach (var tag in tags)
+            {
+                tag.Key.ShouldNotBe(CommunicationTelemetry.CircuitPartitionTag);
+            }
+
+            if (instrument.Name == CommunicationTelemetry.CommandCircuitRejectedCounterName)
+            {
+                HasTag(tags, CommunicationTelemetry.CommandOperationTag, typeof(Command).FullName!).ShouldBeTrue();
+                rejections += value;
+            }
+            else
+            {
+                HasTag(tags, CommunicationTelemetry.CircuitPreviousStateTag, nameof(CommandCircuitState.Closed)).ShouldBeTrue();
+                transitions += value;
+            }
+        });
+        if (metrics)
+        {
+            listener.Start();
+        }
+
+        using var activity = traces ? new Activity(nameof(CircuitTelemetry_EmitsMetricsAndTraceEventsIndependently)).Start() : null;
+        CommunicationTelemetry.RecordCircuitRejected(command, lease);
+        CommunicationTelemetry.RecordCircuitTransition(transition);
+
+        rejections.ShouldBe(metrics ? 1L : 0L);
+        transitions.ShouldBe(metrics ? 1L : 0L);
+        if (activity is not null)
+        {
+            var rejection = activity.Events.Single(item => item.Name == CommunicationTelemetry.CommandCircuitRejectedEventName);
+            rejection.Tags.Single(tag => tag.Key == CommunicationTelemetry.CircuitStateTag).Value
+                .ShouldBe(nameof(CommandCircuitState.Open));
+            rejection.Tags.Single(tag => tag.Key == CommunicationTelemetry.CircuitPartitionTag).Value.ShouldBe(partition);
+            rejection.Tags.Single(tag => tag.Key == CommunicationTelemetry.CircuitRetryAfterMillisecondsTag).Value
+                .ShouldBe(delay.TotalMilliseconds);
+
+            var change = activity.Events.Single(item => item.Name == CommunicationTelemetry.CommandCircuitTransitionEventName);
+            change.Tags.Single(tag => tag.Key == CommunicationTelemetry.CircuitPreviousStateTag).Value
+                .ShouldBe(nameof(CommandCircuitState.Closed));
+            change.Tags.Single(tag => tag.Key == CommunicationTelemetry.CircuitStateTag).Value
+                .ShouldBe(nameof(CommandCircuitState.Open));
+            change.Tags.Single(tag => tag.Key == CommunicationTelemetry.CircuitPartitionTag).Value.ShouldBe(partition);
+        }
+    }
+
+    [Test]
     public async Task CommandExecution_IncrementsAttemptAndRetryMetrics()
     {
         var measurements = new Dictionary<string, long>(StringComparer.Ordinal);
+        var successfulAttempts = 0;
+        var failedAttempts = 0;
         using var meterListener = new MeterListener
         {
             InstrumentPublished = (instrument, listener) =>
@@ -343,6 +449,18 @@ public sealed class CommunicationTelemetryTests : IDisposable
             if (HasTag(tags, CommunicationTelemetry.CommandOperationTag, typeof(Command).FullName!))
             {
                 measurements[instrument.Name] = measurements.GetValueOrDefault(instrument.Name) + value;
+                if (instrument.Name == CommunicationTelemetry.CommandAttemptCounterName)
+                {
+                    if (HasTag(tags, CommunicationTelemetry.CommandSuccessTag, true))
+                    {
+                        successfulAttempts++;
+                    }
+
+                    if (HasTag(tags, CommunicationTelemetry.CommandSuccessTag, false))
+                    {
+                        failedAttempts++;
+                    }
+                }
             }
         });
         meterListener.Start();
@@ -364,6 +482,8 @@ public sealed class CommunicationTelemetryTests : IDisposable
             new CommandExecutionRuntime(options));
 
         measurements[CommunicationTelemetry.CommandAttemptCounterName].ShouldBe(2);
+        successfulAttempts.ShouldBe(1);
+        failedAttempts.ShouldBe(1);
         measurements[CommunicationTelemetry.CommandRetryCounterName].ShouldBe(1);
     }
 

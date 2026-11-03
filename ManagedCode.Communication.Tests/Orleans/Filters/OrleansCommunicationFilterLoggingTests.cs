@@ -17,6 +17,7 @@ using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Orleans.Filters;
 
+[NotInParallel]
 public sealed class OrleansCommunicationFilterLoggingTests
 {
     [Test]
@@ -67,6 +68,29 @@ public sealed class OrleansCommunicationFilterLoggingTests
             entry.Exception.ShouldNotBeNull();
             entry.Exception.Message.ShouldContain("result int invalid operation error");
             entry.Message.ShouldContain(problem.StatusCode.ToString());
+        }
+        finally
+        {
+            await DisposeClusterAsync(cluster);
+        }
+    }
+
+    [Test]
+    [Arguments(true)]
+    [Arguments(false)]
+    public async Task Filter_WithoutResultFactory_PropagatesOriginalException(bool incoming)
+    {
+        var cluster = incoming
+            ? DeployCluster<CommunicationSiloConfigurator>()
+            : DeployCluster<LoggingOnlySiloConfigurator>();
+        try
+        {
+            var grain = cluster.Client.GetGrain<ITestGrain>(0);
+
+            var exception = await Should.ThrowAsync<InvalidOperationException>(
+                () => grain.TestResultInterfaceInvalidOperationError());
+
+            exception.Message.ShouldBe(nameof(ITestGrain.TestResultInterfaceInvalidOperationError));
         }
         finally
         {

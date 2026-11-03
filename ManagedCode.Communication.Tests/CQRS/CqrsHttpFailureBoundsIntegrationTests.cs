@@ -41,6 +41,29 @@ public class CqrsHttpFailureBoundsIntegrationTests
     }
 
     [Test]
+    public async Task UnknownLengthProblemJson_CanGrowTheBufferUpToTheInclusiveLimit()
+    {
+        var detail = new string('x', 3072);
+        var expected = Problem.Create(ProblemTitle, detail, (int)HttpStatusCode.ServiceUnavailable);
+        var body = JsonSerializer.SerializeToUtf8Bytes(expected, CqrsStreamSerialization.Default);
+        await using var app = await CqrsHttpBoundsTestSupport.StartAsync(context => WriteFailureAsync(
+            context,
+            HttpStatusCode.ServiceUnavailable,
+            body,
+            contentLength: null));
+        using var client = app.GetTestClient();
+
+        var chunks = await CqrsHttpBoundsTestSupport.ReadAsync(
+            client,
+            CqrsHttpBoundsTestSupport.StreamPath,
+            new CqrsStreamClientOptions { MaximumFailureBodyBytes = body.Length });
+
+        chunks.Count.ShouldBe(1);
+        chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
+        chunks[0].Problem!.Detail.ShouldBe(detail);
+    }
+
+    [Test]
     public async Task PlainTextAndInvalidUtf8FailureBodies_UseStatusOnlySafeDetails()
     {
         var responses = new[]

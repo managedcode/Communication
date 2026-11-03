@@ -15,6 +15,9 @@ namespace ManagedCode.Communication.Tests.CQRS;
 /// </summary>
 public class CqrsStreamNormalizerTests
 {
+    private const string EnumeratorFailure = "Enumerator creation failed.";
+    private const string CurrentFailure = "Chunk retrieval failed.";
+
     [Test]
     public async Task AssignsSequenceNumbersWhenHandlerOmitsThem()
     {
@@ -82,6 +85,35 @@ public class CqrsStreamNormalizerTests
         chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
         chunks[0].Problem!.Detail.ShouldBe("Immediate stream failure");
         chunks[0].Sequence.ShouldBe(1);
+    }
+
+    [Test]
+    public async Task TurnsEnumeratorCreationFailureIntoATerminalChunk()
+    {
+        var chunks = await NormalizeAsync(new FaultingEnumeratorSource());
+
+        chunks.Count.ShouldBe(1);
+        chunks[0].Kind.ShouldBe(CqrsStreamChunkKind.Failed);
+        chunks[0].Problem!.Detail.ShouldBe(EnumeratorFailure);
+        chunks[0].Sequence.ShouldBe(1);
+    }
+
+    [Test]
+    public async Task TurnsCurrentFailureIntoATerminalChunkAfterDisposingTheSource()
+    {
+        var source = new FaultingCurrentSource();
+        await using var enumerator = CqrsStream.Normalize(source).GetAsyncEnumerator();
+
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+        enumerator.Current.Kind.ShouldBe(CqrsStreamChunkKind.Started);
+        enumerator.Current.Sequence.ShouldBe(41);
+
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+        enumerator.Current.Kind.ShouldBe(CqrsStreamChunkKind.Failed);
+        enumerator.Current.Problem!.Detail.ShouldBe(CurrentFailure);
+        enumerator.Current.Sequence.ShouldBe(42);
+        source.DisposeCalls.ShouldBe(1);
+        (await enumerator.MoveNextAsync()).ShouldBeFalse();
     }
 
     [Test]
@@ -211,6 +243,35 @@ public class CqrsStreamNormalizerTests
         {
             await Task.Yield();
             yield return chunk;
+        }
+    }
+
+    private sealed class FaultingEnumeratorSource : IAsyncEnumerable<Chunk>
+    {
+        public IAsyncEnumerator<Chunk> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException(EnumeratorFailure);
+        }
+    }
+
+    private sealed class FaultingCurrentSource : IAsyncEnumerable<Chunk>, IAsyncEnumerator<Chunk>
+    {
+        private int _position;
+
+        public int DisposeCalls { get; private set; }
+
+        public Chunk Current => _position == 1
+            ? CqrsTestStreams.Started(sequence: 41)
+            : throw new InvalidOperationException(CurrentFailure);
+
+        public IAsyncEnumerator<Chunk> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
+
+        public ValueTask<bool> MoveNextAsync() => ValueTask.FromResult(++_position <= 2);
+
+        public ValueTask DisposeAsync()
+        {
+            DisposeCalls++;
+            return ValueTask.CompletedTask;
         }
     }
 }

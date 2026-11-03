@@ -1,10 +1,9 @@
 using System;
-using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using ManagedCode.Communication.AspNetCore.Extensions;
-using ManagedCode.Communication.Constants;
 using Microsoft.AspNetCore.Http;
 using AspNetResult = Microsoft.AspNetCore.Http.IResult;
 using AspNetResultFactory = System.Func<object, Microsoft.AspNetCore.Http.IResult>;
@@ -19,7 +18,8 @@ namespace ManagedCode.Communication.AspNetCore.MinimalApi;
 /// </summary>
 public sealed class ResultEndpointFilter : IEndpointFilter
 {
-    private static readonly ConcurrentDictionary<Type, AspNetResultFactory> ValueResultConverters = new();
+    // A converter can reference its result type. Cache it without extending the type's lifetime.
+    private static readonly ConditionalWeakTable<Type, AspNetResultFactory> ValueResultConverters = new();
 
     /// <inheritdoc />
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -53,7 +53,7 @@ public sealed class ResultEndpointFilter : IEndpointFilter
         {
             return valueResult.IsSuccess
                 ? HttpResults.Ok(valueResult.Value)
-                : CreateProblem(valueResult.Problem);
+                : ControllerExtensions.ToProblemHttpResult(valueResult.Problem);
         }
 
         if (TryConvertValueResult(result, out var converted))
@@ -65,40 +65,10 @@ public sealed class ResultEndpointFilter : IEndpointFilter
         {
             return communicationResult.IsSuccess
                 ? HttpResults.NoContent()
-                : CreateProblem(communicationResult.Problem);
+                : ControllerExtensions.ToProblemHttpResult(communicationResult.Problem);
         }
 
         return result;
-    }
-
-    private static AspNetResult CreateProblem(Problem? problem)
-    {
-        var normalized = NormalizeProblem(problem);
-
-        return HttpResults.Problem(
-            title: normalized.Title,
-            detail: normalized.Detail,
-            statusCode: normalized.StatusCode,
-            type: normalized.Type,
-            instance: normalized.Instance,
-            extensions: normalized.Extensions
-        );
-    }
-
-    private static Problem NormalizeProblem(Problem? problem)
-    {
-        if (problem is null || IsGeneric(problem))
-        {
-            return Problem.Create("Operation failed", "Unknown error occurred", 500);
-        }
-
-        return problem;
-    }
-
-    private static bool IsGeneric(Problem problem)
-    {
-        return string.Equals(problem.Title, ProblemConstants.Titles.Error, StringComparison.OrdinalIgnoreCase)
-               && string.Equals(problem.Detail, ProblemConstants.Messages.GenericError, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool TryConvertValueResult(object result, out AspNetResult converted)
@@ -127,7 +97,7 @@ public sealed class ResultEndpointFilter : IEndpointFilter
                 var communicationResult = (CommunicationResult)result;
                 return communicationResult.IsSuccess
                     ? HttpResults.NoContent()
-                    : CreateProblem(communicationResult.Problem);
+                    : ControllerExtensions.ToProblemHttpResult(communicationResult.Problem);
             };
         }
 
@@ -140,7 +110,7 @@ public sealed class ResultEndpointFilter : IEndpointFilter
             var communicationResult = (CommunicationResult)result;
             return communicationResult.IsSuccess
                 ? HttpResults.Ok(getValue(result))
-                : CreateProblem(communicationResult.Problem);
+                : ControllerExtensions.ToProblemHttpResult(communicationResult.Problem);
         };
     }
 

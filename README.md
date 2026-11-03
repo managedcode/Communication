@@ -317,6 +317,16 @@ problem.Extensions["provider"] = "payments";
 return Result<Receipt>.Fail(problem);
 ```
 
+You can read imported validation errors through a read-only extension dictionary. For example, after
+deserializing a problem response:
+
+```csharp
+using System.Collections.ObjectModel;
+
+problem.Extensions = new ReadOnlyDictionary<string, object?>(problem.Extensions);
+var errors = problem.GetValidationErrors();
+```
+
 `Fail(exception)` and exception-catching `From`/`Try` helpers report the original exception immediately and
 return problem data. They do not retain an exception or its stack trace inside the result. See
 [Logging and telemetry](#logging-and-telemetry).
@@ -503,6 +513,10 @@ return CollectionResult<Product>.Succeed(products, request, total, options);
 Supply the total number of items, not the number in the current page. Prefer normalized bounds before
 reading data; `PaginationRequest.Create(skip, take, options)` normalizes incoming skip/take values, while
 `ToSlice(totalItems, options)` returns the bounded offset and length for an in-memory collection.
+A partial last page keeps the normalized page size in its metadata. For example, page 3 with a size of 25
+and 53 total items contains three items and reports `PageNumber = 3`, `PageSize = 25` and `TotalPages = 3`.
+Page offsets must fit in an `int`. For example, `PaginationRequest.FromPage(int.MaxValue, 3)`
+throws `ArgumentOutOfRangeException` for `pageNumber`.
 
 ## Railway composition
 
@@ -553,6 +567,7 @@ var orders = Result.CombineAll(LoadOrder(firstId), LoadOrder(secondId));
 | `Combine` | Collect success values, or return the first failure |
 | `CombineAll` | Collect success values, or aggregate every failure |
 
+`Result.MergeAll(Result.Succeed(), invalid)` returns `invalid` unchanged when it is the only failure.
 When every failure is validation-related, the aggregate merges validation fields. Mixed failures retain the
 original problems under `Problem.Extensions["errors"]` rather than disguising them as validation failures.
 
@@ -586,6 +601,19 @@ app.Run();
 The HTTP wire contract is a raw success payload or an RFC 7807 problem, not a serialized `Result<T>` envelope.
 Minimal API successes map to `200 OK` with a value or `204 No Content` without one; failures use the problem's
 status and fields. Native `Microsoft.AspNetCore.Http.IResult` responses pass through unchanged.
+
+An explicit status or additional problem metadata is preserved even when the title and detail use the
+generic error text. For example, an endpoint returning the following result sends HTTP 429 with a
+`retryAfter` member in the problem body.
+
+```csharp
+var problem = Problem.Create(
+    ProblemConstants.Titles.Error,
+    ProblemConstants.Messages.GenericError,
+    HttpStatusCode.TooManyRequests);
+problem.Extensions[ProblemConstants.ExtensionKeys.RetryAfter] = 30;
+return Result.Fail(problem);
+```
 
 ### MVC controllers
 
@@ -944,7 +972,9 @@ outcome.
 
 Use `CqrsStream.Normalize` when publishing through a transport that does not normalize automatically. The SSE
 adapter normalizes by default: missing terminal results become `CqrsStreamProblems.IncompleteStream`, and
-nonfatal enumeration failures become failed chunks. An exception before a handler returns its stream belongs
+nonfatal enumeration failures become failed chunks. For example, if a custom enumerator throws when reading
+`Current` after chunk 41, the adapter disposes it and emits a failed chunk with sequence 42. If creating the
+enumerator throws, the failed chunk is the first item. An exception before a handler returns its stream belongs
 to the host's ordinary exception handling.
 
 Early consumer disposal cancels and joins the producer, including its `finally` blocks, before disposal

@@ -48,6 +48,18 @@ public sealed class HttpResiliencePrivacyTests
     private const string ExceptionType = "exception.type";
 
     [Test]
+    public void Describe_SingleException_PreservesTypeAndThrowSite()
+    {
+        var diagnostic = HttpFailureDiagnostics.Describe(ThrowOrdinaryFailure());
+
+        diagnostic.ExceptionType.ShouldBe(typeof(InvalidOperationException).FullName);
+        diagnostic.CauseTypes.ShouldBe(diagnostic.ExceptionType);
+        diagnostic.StackTrace.ShouldNotBeNull();
+        diagnostic.StackTrace.ShouldContain(nameof(ThrowOrdinaryFailure));
+        diagnostic.StackTrace.ShouldNotContain(OrdinaryDetail);
+    }
+
+    [Test]
     [Arguments(0, false)]
     [Arguments(0, true)]
     [Arguments(1, false)]

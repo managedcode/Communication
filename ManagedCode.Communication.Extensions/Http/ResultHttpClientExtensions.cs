@@ -38,7 +38,7 @@ public static class ResultHttpClientExtensions
                     client,
                     requestFactory,
                     default(ValueTuple),
-                    static (response, _, token) => response.FromJsonToResult<T>(token),
+                    static (response, _, token) => new ValueTask<Result<T>>(response.FromJsonToResult<T>(token)),
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -114,7 +114,7 @@ public static class ResultHttpClientExtensions
                     client,
                     requestFactory,
                     default(ValueTuple),
-                    static (response, _, token) => response.FromRequestToResult(token),
+                    static (response, _, token) => new ValueTask<Result>(response.FromRequestToResult(token)),
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -169,11 +169,11 @@ public static class ResultHttpClientExtensions
             cancellationToken);
     }
 
-    private static async Task<TResponse> SendCoreAsync<TResponse, TState>(
+    private static async ValueTask<TResponse> SendCoreAsync<TResponse, TState>(
         HttpClient client,
         Func<HttpRequestMessage> requestFactory,
         TState state,
-        Func<HttpResponseMessage, TState, CancellationToken, Task<TResponse>> convert,
+        Func<HttpResponseMessage, TState, CancellationToken, ValueTask<TResponse>> convert,
         CancellationToken cancellationToken)
     {
         using var request = requestFactory();
@@ -181,7 +181,7 @@ public static class ResultHttpClientExtensions
         return await convert(response, state, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<Result<T>> ReadProjectedResultAsync<T>(
+    private static async ValueTask<Result<T>> ReadProjectedResultAsync<T>(
         HttpResponseMessage response,
         Func<HttpResponseMessage, CancellationToken, Task<T?>> readSuccessAsync,
         CancellationToken cancellationToken)

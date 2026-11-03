@@ -93,6 +93,30 @@ public class HttpClientBuilderExtensionsTests
     }
 
     [Test]
+    public async Task AddCommunicationResilienceHandler_CancellationBeforeRetry_DisposesAbandonedResponseAsync()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var content = new DisposalTrackingContent();
+        using var abandonedResponse = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = content };
+        var handler = new SequenceHandler((_, _) => Task.FromResult(abandonedResponse));
+        await using var services = CreateProvider(ResilientClientName, handler, options =>
+        {
+            ConfigureSingleRetry(options);
+            options.Execution.Retry.OnRetry = (_, _) =>
+            {
+                cancellation.Cancel();
+                return ValueTask.CompletedTask;
+            };
+        });
+        using var client = services.GetRequiredService<IHttpClientFactory>().CreateClient(ResilientClientName);
+
+        await Should.ThrowAsync<OperationCanceledException>(() => client.GetAsync(ExampleRequestUrl, cancellation.Token));
+
+        handler.Requests.Count.ShouldBe(1);
+        content.DisposeCount.ShouldBe(1);
+    }
+
+    [Test]
     public async Task AddCommunicationResilienceHandler_RethrowsOriginalTransportExceptionAsync()
     {
         var expected = new HttpRequestException(TransportFailureMessage);
@@ -200,6 +224,21 @@ public class HttpClientBuilderExtensionsTests
     {
         ConfigureSingleRetry(options);
         options.Execution.Retry.Enabled = false;
+    }
+
+    private sealed class DisposalTrackingContent() : StringContent(SuccessPayload)
+    {
+        public int DisposeCount { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                DisposeCount++;
+            }
+
+            base.Dispose(disposing);
+        }
     }
 
     private sealed class SequenceHandler(

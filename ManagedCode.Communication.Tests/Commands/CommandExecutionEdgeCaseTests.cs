@@ -162,10 +162,16 @@ public sealed class CommandExecutionEdgeCaseTests
     public async Task ExecuteResultAsync_WhenTotalTimeoutExpiresDuringBackoff_ReturnsTimeoutWithoutAnotherAttempt()
     {
         var attempts = 0;
+        CommandTimeoutEvent? observedTimeout = null;
         var runtime = CreateRuntime(options =>
         {
             options.Timeout.Enabled = true;
             options.Timeout.TotalTimeout = TimeSpan.FromMilliseconds(30);
+            options.Timeout.OnTimeout = (timeoutEvent, _) =>
+            {
+                observedTimeout = timeoutEvent;
+                return ValueTask.CompletedTask;
+            };
             options.Retry.Enabled = true;
             options.Retry.MaxRetries = 3;
             options.Retry.Delay = TimeSpan.FromSeconds(10);
@@ -183,6 +189,10 @@ public sealed class CommandExecutionEdgeCaseTests
 
         result.Problem!.StatusCode.ShouldBe((int)HttpStatusCode.RequestTimeout);
         attempts.ShouldBe(1);
+        observedTimeout.ShouldNotBeNull();
+        observedTimeout.Kind.ShouldBe(CommandTimeoutKind.Total);
+        observedTimeout.Attempt.ShouldBe(null);
+        observedTimeout.Problem.ShouldBeSameAs(result.Problem);
     }
 
     [Test]
@@ -592,10 +602,16 @@ public sealed class CommandExecutionEdgeCaseTests
     public async Task ExecuteResultAsync_WithAttemptTimeout_RetriesCooperativeHandler()
     {
         var attempts = 0;
+        CommandTimeoutEvent? observedTimeout = null;
         var runtime = CreateRuntime(options =>
         {
             options.Timeout.Enabled = true;
             options.Timeout.AttemptTimeout = TimeSpan.FromMilliseconds(20);
+            options.Timeout.OnTimeout = (timeoutEvent, _) =>
+            {
+                observedTimeout = timeoutEvent;
+                return ValueTask.CompletedTask;
+            };
             options.Retry.Enabled = true;
             options.Retry.MaxRetries = 1;
         });
@@ -615,6 +631,10 @@ public sealed class CommandExecutionEdgeCaseTests
 
         result.IsSuccess.ShouldBeTrue();
         attempts.ShouldBe(2);
+        observedTimeout.ShouldNotBeNull();
+        observedTimeout.Kind.ShouldBe(CommandTimeoutKind.Attempt);
+        observedTimeout.Attempt.ShouldBe(1);
+        observedTimeout.Problem.StatusCode.ShouldBe((int)HttpStatusCode.RequestTimeout);
     }
 
     [Test]
@@ -709,6 +729,38 @@ public sealed class CommandExecutionEdgeCaseTests
 
         result.IsSuccess.ShouldBeTrue();
         observed.ShouldBeLessThanOrEqualTo(TimeSpan.FromMilliseconds(5));
+    }
+
+    [Test]
+    public async Task ExecuteResultAsync_WithGeneratedDelay_PreservesJitterState()
+    {
+        var observed = new List<TimeSpan>();
+        var attempts = 0;
+        var failure = Result.Fail(Problem.Create(HttpStatusCode.ServiceUnavailable));
+        var runtime = CreateRuntime(options =>
+        {
+            options.Retry.Enabled = true;
+            options.Retry.MaxRetries = 3;
+            options.Retry.BackoffType = RetryBackoffType.Exponential;
+            options.Retry.Delay = TimeSpan.FromTicks(10);
+            options.Retry.UseJitter = true;
+            options.Retry.Randomizer = static () => 0.5D;
+            options.Retry.DelayGenerator = static (context, _) =>
+                ValueTask.FromResult<TimeSpan?>(context.Attempt == 2 ? TimeSpan.Zero : null);
+            options.Retry.OnRetry = (retryEvent, _) =>
+            {
+                observed.Add(retryEvent.Delay);
+                return ValueTask.CompletedTask;
+            };
+        });
+
+        var result = await CommandExecutor.ExecuteResultAsync(
+            Command.Create(nameof(ExecuteResultAsync_WithGeneratedDelay_PreservesJitterState)),
+            (_, _) => ValueTask.FromResult(++attempts == 4 ? Result.Succeed() : failure),
+            runtime);
+
+        result.IsSuccess.ShouldBeTrue();
+        observed.ShouldBe(new[] { TimeSpan.FromTicks(8), TimeSpan.Zero, TimeSpan.FromTicks(31) });
     }
 
     [Test]

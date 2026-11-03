@@ -44,53 +44,65 @@ internal sealed class CommunicationResilienceHandler : DelegatingHandler
 
         HttpResponseMessage? lastResponse = null;
         ExceptionDispatchInfo? lastException = null;
-        var result = await CommandExecutor.ExecuteResultAsync<Command, HttpResponseMessage>(
-                command,
-                async (_, token) =>
+        try
+        {
+            var result = await CommandExecutor.ExecuteResultAsync<Command, HttpResponseMessage>(
+                    command,
+                    SendAttemptAsync,
+                    _runtime,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (result.IsSuccess)
+            {
+                lastResponse = null;
+                return result.Value;
+            }
+
+            if (lastResponse is { } response)
+            {
+                lastResponse = null;
+                return response;
+            }
+
+            lastException?.Throw();
+            throw new HttpRequestException(
+                result.Problem.Detail ?? HttpCommandExecutionConstants.ExecutionFailedDetail,
+                null,
+                HttpStatusCode.ServiceUnavailable);
+        }
+        finally
+        {
+            lastResponse?.Dispose();
+        }
+
+        async Task<Result<HttpResponseMessage>> SendAttemptAsync(Command _, CancellationToken token)
+        {
+            var previousResponse = lastResponse;
+            lastResponse = null;
+            lastException = null;
+            previousResponse?.Dispose();
+
+            using var attempt = CloneRequest(request);
+            try
+            {
+                var response = await base.SendAsync(attempt, token).ConfigureAwait(false);
+                response.RequestMessage = request;
+                lastResponse = response;
+                if (response.IsSuccessStatusCode)
                 {
-                    lastResponse?.Dispose();
-                    lastResponse = null;
-                    lastException = null;
+                    return Result<HttpResponseMessage>.Succeed(response);
+                }
 
-                    using var attempt = CloneRequest(request);
-                    try
-                    {
-                        var response = await base.SendAsync(attempt, token).ConfigureAwait(false);
-                        response.RequestMessage = request;
-                        lastResponse = response;
-                        if (response.IsSuccessStatusCode)
-                        {
-                            return Result<HttpResponseMessage>.Succeed(response);
-                        }
-
-                        return Result<HttpResponseMessage>.Fail(CreateProblem(response));
-                    }
-                    catch (Exception exception) when (exception is not OperationCanceledException
-                                                       || !cancellationToken.IsCancellationRequested)
-                    {
-                        lastException = ExceptionDispatchInfo.Capture(exception);
-                        throw;
-                    }
-                },
-                _runtime,
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        if (result.IsSuccess)
-        {
-            return result.Value;
+                return Result<HttpResponseMessage>.Fail(CreateProblem(response));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException
+                                               || !cancellationToken.IsCancellationRequested)
+            {
+                lastException = ExceptionDispatchInfo.Capture(exception);
+                throw;
+            }
         }
-
-        if (lastResponse is not null)
-        {
-            return lastResponse;
-        }
-
-        lastException?.Throw();
-        throw new HttpRequestException(
-            result.Problem.Detail ?? HttpCommandExecutionConstants.ExecutionFailedDetail,
-            null,
-            HttpStatusCode.ServiceUnavailable);
     }
 
     private static HttpRequestMessage CloneRequest(HttpRequestMessage source)

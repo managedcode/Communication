@@ -18,6 +18,7 @@ namespace ManagedCode.Communication.Tests.Results;
 /// </remarks>
 public class SerializationAllocationTests
 {
+    private const string PrimitiveSuccessJson = """{"isSuccess":true,"value":42}""";
     private static readonly JsonSerializerOptions Json = CqrsStreamSerialization.Default;
 
     private static double BytesPerOperation(Action action, int iterations = 20_000)
@@ -49,6 +50,13 @@ public class SerializationAllocationTests
         // Before Result<T> had its own converter this overhead was ~512 bytes: System.Text.Json fell back to a
         // reflection path because the struct mixes init-only members with a private [JsonInclude] field.
         (resultCost - payloadCost).ShouldBeLessThan(128);
+    }
+
+    [Test]
+    public void DeserializingAPrimitiveResultDoesNotAllocateForCanonicalMemberNames()
+    {
+        var bytes = Encoding.UTF8.GetBytes(PrimitiveSuccessJson);
+        BytesPerOperation(() => JsonSerializer.Deserialize<Result<int>>(bytes, Json)).ShouldBeLessThan(16);
     }
 
     [Test]

@@ -97,11 +97,15 @@ internal static class CommandExecutionEngine
             problem.Extensions[ProblemConstants.ExtensionKeys.TimeoutMilliseconds] = totalTimeout.TotalMilliseconds;
             problem.Extensions[ProblemConstants.ExtensionKeys.TimeoutKind] = CommandTimeoutKind.Total.ToString();
             CommunicationTelemetry.RecordCommandTimeout(command, problem, activity);
-            await InvokeTimeoutCallbackWithoutMaskingAsync(
-                    runtime,
-                    new CommandTimeoutEvent(command, CommandTimeoutKind.Total, totalTimeout, null, problem),
-                    cancellationToken)
-                .ConfigureAwait(false);
+            if (runtime.OptionsSnapshot.Timeout.OnTimeout is { } onTimeout)
+            {
+                await InvokeTimeoutCallbackWithoutMaskingAsync(
+                        runtime,
+                        onTimeout,
+                        new CommandTimeoutEvent(command, CommandTimeoutKind.Total, totalTimeout, null, problem),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
             var result = TResult.Fail(problem);
             CommunicationTelemetry.RecordCommandCompleted(
                 command,
@@ -577,7 +581,7 @@ internal static class CommandExecutionEngine
         var retry = runtime.OptionsSnapshot.Retry;
         var retryBudget = retry.Enabled ? ResolveRetryBudget(command, retry.MaxRetries) : 0;
         var initialRetryCount = Math.Max(0, command.Metadata?.RetryCount ?? 0);
-        RetryDelayState? delayState = null;
+        var previousJitter = 0D;
 
         var attempt = 1;
         while (true)
@@ -624,14 +628,11 @@ internal static class CommandExecutionEngine
             var retryNumber = initialRetryCount > int.MaxValue - attempt
                 ? int.MaxValue
                 : initialRetryCount + attempt;
-            var decisionContext = new CommandRetryDecisionContext(
-                command,
-                attempt,
-                retryNumber,
-                failure,
-                exception);
+            var decisionContext = retry.ShouldRetryAsync is not null || retry.DelayGenerator is not null
+                ? new CommandRetryDecisionContext(command, attempt, retryNumber, failure, exception)
+                : null;
             var shouldRetry = retry.ShouldRetryAsync is not null
-                ? await retry.ShouldRetryAsync(decisionContext, cancellationToken).ConfigureAwait(false)
+                ? await retry.ShouldRetryAsync(decisionContext!, cancellationToken).ConfigureAwait(false)
                 : exception is null
                     ? retry.ShouldRetry(failure)
                     : retry.ShouldRetryException(exception);
@@ -644,19 +645,22 @@ internal static class CommandExecutionEngine
                     failure.Extensions[ProblemConstants.ExtensionKeys.RetriesExhausted] = true;
                     CommunicationTelemetry.RecordRetriesExhausted(command, attempt, failure, activity);
 
-                    await InvokeRetryCallbackWithoutMaskingAsync(
-                            runtime,
-                            retry.OnRetriesExhausted,
-                            new CommandRetryEvent(command, attempt, retryNumber, TimeSpan.Zero, failure, exception),
-                            CommandExecutionConstants.RetriesExhaustedCallback)
-                        .ConfigureAwait(false);
+                    if (retry.OnRetriesExhausted is { } onRetriesExhausted)
+                    {
+                        await InvokeRetryCallbackWithoutMaskingAsync(
+                                runtime,
+                                onRetriesExhausted,
+                                new CommandRetryEvent(command, attempt, retryNumber, TimeSpan.Zero, failure, exception),
+                                CommandExecutionConstants.RetriesExhaustedCallback)
+                            .ConfigureAwait(false);
+                    }
                 }
 
                 return result;
             }
 
-            delayState ??= new RetryDelayState();
-            var delayDecision = await CalculateDelayAsync(retry, decisionContext, delayState, cancellationToken)
+            var delayDecision = await CalculateDelayAsync(
+                    retry, failure, attempt, decisionContext, previousJitter, cancellationToken)
                 .ConfigureAwait(false);
             if (!delayDecision.ShouldRetry)
             {
@@ -664,6 +668,7 @@ internal static class CommandExecutionEngine
                 return result;
             }
 
+            previousJitter = delayDecision.PreviousJitter;
             var delay = delayDecision.Delay;
             if (command.Metadata is not null)
             {
@@ -671,12 +676,15 @@ internal static class CommandExecutionEngine
             }
 
             CommunicationTelemetry.RecordCommandRetry(command, attempt, delay, failure, activity);
-            await InvokeRetryCallbackWithoutMaskingAsync(
-                    runtime,
-                    retry.OnRetry,
-                    new CommandRetryEvent(command, attempt, retryNumber, delay, failure, exception),
-                    CommandExecutionConstants.RetryCallback)
-                .ConfigureAwait(false);
+            if (retry.OnRetry is { } onRetry)
+            {
+                await InvokeRetryCallbackWithoutMaskingAsync(
+                        runtime,
+                        onRetry,
+                        new CommandRetryEvent(command, attempt, retryNumber, delay, failure, exception),
+                        CommandExecutionConstants.RetryCallback)
+                    .ConfigureAwait(false);
+            }
 
             if (delay > TimeSpan.Zero)
             {
@@ -726,11 +734,15 @@ internal static class CommandExecutionEngine
             problem.Extensions[ProblemConstants.ExtensionKeys.TimeoutKind] = CommandTimeoutKind.Attempt.ToString();
             problem.Extensions[ProblemConstants.ExtensionKeys.Attempt] = attempt;
             CommunicationTelemetry.RecordCommandTimeout(command, problem);
-            await InvokeTimeoutCallbackWithoutMaskingAsync(
-                    runtime,
-                    new CommandTimeoutEvent(command, CommandTimeoutKind.Attempt, attemptTimeout, attempt, problem),
-                    cancellationToken)
-                .ConfigureAwait(false);
+            if (runtime.OptionsSnapshot.Timeout.OnTimeout is { } onTimeout)
+            {
+                await InvokeTimeoutCallbackWithoutMaskingAsync(
+                        runtime,
+                        onTimeout,
+                        new CommandTimeoutEvent(command, CommandTimeoutKind.Attempt, attemptTimeout, attempt, problem),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
             return TResult.Fail(problem);
         }
     }
@@ -826,7 +838,8 @@ internal static class CommandExecutionEngine
         CancellationToken cancellationToken)
         where TResult : struct, IResult, IResultFactory<TResult>
     {
-        if (!runtime.OptionsSnapshot.RateLimiter.Enabled || runtime.RateLimiter is null)
+        var rateLimiterOptions = runtime.OptionsSnapshot.RateLimiter;
+        if (!rateLimiterOptions.Enabled || runtime.RateLimiter is null)
         {
             return await handler.Invoke(command, cancellationToken).ConfigureAwait(false);
         }
@@ -848,12 +861,15 @@ internal static class CommandExecutionEngine
             if (lease.WasQueued)
             {
                 CommunicationTelemetry.RecordRateLimitQueued(command, queueDuration);
-                await InvokeRateLimitCallbackWithoutMaskingAsync(
-                        runtime,
-                        runtime.OptionsSnapshot.RateLimiter.OnQueued,
-                        new CommandRateLimitEvent(command, queueDuration, lease.Problem),
-                        CommandExecutionConstants.RateLimitQueuedCallback)
-                    .ConfigureAwait(false);
+                if (rateLimiterOptions.OnQueued is { } onQueued)
+                {
+                    await InvokeRateLimitCallbackWithoutMaskingAsync(
+                            runtime,
+                            onQueued,
+                            new CommandRateLimitEvent(command, queueDuration, lease.Problem),
+                            CommandExecutionConstants.RateLimitQueuedCallback)
+                        .ConfigureAwait(false);
+                }
             }
 
             if (!lease.IsAcquired)
@@ -877,12 +893,15 @@ internal static class CommandExecutionEngine
                 problem.Extensions[ProblemConstants.ExtensionKeys.Attempt] = attempt;
                 CommunicationTelemetry.RecordRateLimitRejected(command, problem);
 
-                await InvokeRateLimitCallbackWithoutMaskingAsync(
-                        runtime,
-                        runtime.OptionsSnapshot.RateLimiter.OnRejected,
-                        new CommandRateLimitEvent(command, queueDuration, problem),
-                        CommandExecutionConstants.RateLimitRejectedCallback)
-                    .ConfigureAwait(false);
+                if (rateLimiterOptions.OnRejected is { } onRejected)
+                {
+                    await InvokeRateLimitCallbackWithoutMaskingAsync(
+                            runtime,
+                            onRejected,
+                            new CommandRateLimitEvent(command, queueDuration, problem),
+                            CommandExecutionConstants.RateLimitRejectedCallback)
+                        .ConfigureAwait(false);
+                }
 
                 return TResult.Fail(problem);
             }
@@ -912,15 +931,10 @@ internal static class CommandExecutionEngine
 
     private static async Task InvokeRateLimitCallbackWithoutMaskingAsync(
         CommandExecutionRuntime runtime,
-        Func<CommandRateLimitEvent, CancellationToken, ValueTask>? callback,
+        Func<CommandRateLimitEvent, CancellationToken, ValueTask> callback,
         CommandRateLimitEvent rateLimitEvent,
         string callbackName)
     {
-        if (callback is null)
-        {
-            return;
-        }
-
         try
         {
             await callback(rateLimitEvent, CancellationToken.None).ConfigureAwait(false);
@@ -995,17 +1009,13 @@ internal static class CommandExecutionEngine
 
     private static async Task InvokeTimeoutCallbackWithoutMaskingAsync(
         CommandExecutionRuntime runtime,
+        Func<CommandTimeoutEvent, CancellationToken, ValueTask> callback,
         CommandTimeoutEvent timeoutEvent,
         CancellationToken cancellationToken)
     {
-        if (runtime.OptionsSnapshot.Timeout.OnTimeout is null)
-        {
-            return;
-        }
-
         try
         {
-            await runtime.OptionsSnapshot.Timeout.OnTimeout(timeoutEvent, cancellationToken).ConfigureAwait(false);
+            await callback(timeoutEvent, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception caught)
         {
@@ -1030,15 +1040,10 @@ internal static class CommandExecutionEngine
 
     private static async Task InvokeRetryCallbackWithoutMaskingAsync(
         CommandExecutionRuntime runtime,
-        Func<CommandRetryEvent, CancellationToken, ValueTask>? callback,
+        Func<CommandRetryEvent, CancellationToken, ValueTask> callback,
         CommandRetryEvent retryEvent,
         string callbackName)
     {
-        if (callback is null)
-        {
-            return;
-        }
-
         try
         {
             await callback(retryEvent, CancellationToken.None).ConfigureAwait(false);
@@ -1059,27 +1064,28 @@ internal static class CommandExecutionEngine
 
     private static async ValueTask<RetryDelayDecision> CalculateDelayAsync(
         RetryOptions options,
-        CommandRetryDecisionContext context,
-        RetryDelayState state,
+        Problem problem,
+        int attempt,
+        CommandRetryDecisionContext? context,
+        double previousJitter,
         CancellationToken cancellationToken)
     {
         if (options.DelayGenerator is not null)
         {
-            var generated = await options.DelayGenerator(context, cancellationToken).ConfigureAwait(false);
+            var generated = await options.DelayGenerator(context!, cancellationToken).ConfigureAwait(false);
             if (generated is { } generatedDelay && generatedDelay >= TimeSpan.Zero)
             {
-                return AuthoritativeDelay(generatedDelay, options.MaxRetryAfter);
+                return AuthoritativeDelay(generatedDelay, options.MaxRetryAfter, previousJitter);
             }
         }
 
-        if (TryReadRetryAfter(context.Problem, out var retryAfter))
+        if (TryReadRetryAfter(problem, out var retryAfter))
         {
-            return AuthoritativeDelay(retryAfter, options.MaxRetryAfter);
+            return AuthoritativeDelay(retryAfter, options.MaxRetryAfter, previousJitter);
         }
 
-        var attempt = Math.Max(0, context.Attempt - 1);
-        var delay = BuiltInDelay(options, attempt, state);
-        return new RetryDelayDecision(true, delay > options.MaxDelay ? options.MaxDelay : delay);
+        var delay = BuiltInDelay(options, attempt - 1, ref previousJitter);
+        return new RetryDelayDecision(true, delay > options.MaxDelay ? options.MaxDelay : delay, previousJitter);
     }
 
     private static bool TryReadRetryAfter(Problem problem, out TimeSpan delay)
@@ -1110,14 +1116,14 @@ internal static class CommandExecutionEngine
         return false;
     }
 
-    private static RetryDelayDecision AuthoritativeDelay(TimeSpan delay, TimeSpan maximum)
+    private static RetryDelayDecision AuthoritativeDelay(TimeSpan delay, TimeSpan maximum, double previousJitter)
     {
         return delay > maximum
-            ? new RetryDelayDecision(false, TimeSpan.Zero)
-            : new RetryDelayDecision(true, delay);
+            ? new RetryDelayDecision(false, TimeSpan.Zero, previousJitter)
+            : new RetryDelayDecision(true, delay, previousJitter);
     }
 
-    private static TimeSpan BuiltInDelay(RetryOptions options, int attempt, RetryDelayState state)
+    private static TimeSpan BuiltInDelay(RetryOptions options, int attempt, ref double previousJitter)
     {
         if (options.Delay == TimeSpan.Zero)
         {
@@ -1128,7 +1134,7 @@ internal static class CommandExecutionEngine
         {
             if (options.UseJitter && options.BackoffType == RetryBackoffType.Exponential)
             {
-                return DecorrelatedJitterBackoffV2(attempt, options.Delay, state, options.Randomizer);
+                return DecorrelatedJitterBackoffV2(attempt, options.Delay, ref previousJitter, options.Randomizer);
             }
 
             var multiplier = options.BackoffType switch
@@ -1157,7 +1163,7 @@ internal static class CommandExecutionEngine
     private static TimeSpan DecorrelatedJitterBackoffV2(
         int attempt,
         TimeSpan baseDelay,
-        RetryDelayState state,
+        ref double previousJitter,
         Func<double> randomizer)
     {
         const double pFactor = 4D;
@@ -1166,12 +1172,12 @@ internal static class CommandExecutionEngine
         var next = Math.Pow(2D, t) * Math.Tanh(Math.Sqrt(pFactor * t));
         if (double.IsInfinity(next))
         {
-            state.Previous = next;
+            previousJitter = next;
             return TimeSpan.MaxValue;
         }
 
-        var intrinsic = next - state.Previous;
-        state.Previous = next;
+        var intrinsic = next - previousJitter;
+        previousJitter = next;
         var ticks = intrinsic * scalingFactor * baseDelay.Ticks;
         if (!double.IsFinite(ticks) || ticks >= TimeSpan.MaxValue.Ticks)
         {
@@ -1184,12 +1190,7 @@ internal static class CommandExecutionEngine
     private static double NormalizeRandom(double value) =>
         double.IsFinite(value) ? Math.Clamp(value, 0D, 1D) : 0.5D;
 
-    private sealed class RetryDelayState
-    {
-        public double Previous { get; set; }
-    }
-
-    private readonly record struct RetryDelayDecision(bool ShouldRetry, TimeSpan Delay);
+    private readonly record struct RetryDelayDecision(bool ShouldRetry, TimeSpan Delay, double PreviousJitter);
 
     private readonly struct CommandHandler<TResult, TState>(
         TState state,

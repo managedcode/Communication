@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
 using System.Net.ServerSentEvents;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -23,7 +21,7 @@ namespace ManagedCode.Communication.AspNetCore;
 /// <remarks>
 ///     Detection results are cached per runtime type: the filters run on every response of every endpoint, so the
 ///     reflection cost must be paid once per type rather than once per request. Types that are not chunk streams cache
-///     a <c>null</c> converter so the negative case is just as cheap.
+///     a <c>null</c> converter. Cache entries do not keep their result types alive.
 /// </remarks>
 internal static class CqrsStreamResultFactory
 {
@@ -36,7 +34,7 @@ internal static class CqrsStreamResultFactory
         ?? throw new InvalidOperationException(
             $"{nameof(AdaptStream)} is missing; the CQRS SSE adapter cannot be initialised.");
 
-    private static readonly ConcurrentDictionary<Type, Func<object, CqrsStreamServerOptions, AspNetResult>?> Converters = new();
+    private static readonly ConditionalWeakTable<Type, Func<object, CqrsStreamServerOptions, AspNetResult>?> Converters = new();
 
     /// <summary>
     ///     Converts <paramref name="result" /> to an SSE <see cref="AspNetResult" /> when it is a chunk stream.
@@ -109,18 +107,11 @@ internal static class CqrsStreamResultFactory
 
     private static Type? TryGetChunkItemType(Type candidateType)
     {
-        var asyncEnumerableTypes = candidateType.GetInterfaces()
-            .Append(candidateType)
-            .Where(static type => type.IsGenericType &&
-                                  type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
-
-        Type? match = null;
-
-        foreach (var asyncEnumerableType in asyncEnumerableTypes)
+        var match = candidateType.IsInterface ? GetChunkItemType(candidateType) : null;
+        foreach (var interfaceType in candidateType.GetInterfaces())
         {
-            var itemType = asyncEnumerableType.GetGenericArguments()[0];
-
-            if (!itemType.IsGenericType || itemType.GetGenericTypeDefinition() != StreamChunkOpenType)
+            var itemType = GetChunkItemType(interfaceType);
+            if (itemType is null)
             {
                 continue;
             }
@@ -137,6 +128,19 @@ internal static class CqrsStreamResultFactory
         }
 
         return match;
+    }
+
+    private static Type? GetChunkItemType(Type interfaceType)
+    {
+        if (!interfaceType.IsGenericType || interfaceType.GetGenericTypeDefinition() != typeof(IAsyncEnumerable<>))
+        {
+            return null;
+        }
+
+        var itemType = interfaceType.GetGenericArguments()[0];
+        return itemType.IsGenericType && itemType.GetGenericTypeDefinition() == StreamChunkOpenType
+            ? itemType
+            : null;
     }
 
     internal static AspNetResult ToServerSentEventsResult<TProgress, TResult>(

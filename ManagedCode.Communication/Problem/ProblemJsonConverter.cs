@@ -16,6 +16,7 @@ public class ProblemJsonConverter : JsonConverter<Problem>
     private const string StatusMember = "status";
     private const string DetailMember = "detail";
     private const string InstanceMember = "instance";
+    private const int PropertyNameBufferLength = 64;
 
     /// <summary>
     ///     Reads a problem, accepting both lowercase RFC 7807 member names and PascalCase.
@@ -33,6 +34,7 @@ public class ProblemJsonConverter : JsonConverter<Problem>
         }
 
         var problem = new Problem();
+        Span<char> propertyNameBuffer = stackalloc char[PropertyNameBufferLength];
 
         while (reader.Read())
         {
@@ -46,7 +48,11 @@ public class ProblemJsonConverter : JsonConverter<Problem>
                 continue;
             }
 
-            var propertyName = reader.GetString();
+            var encodedNameLength = reader.HasValueSequence ? reader.ValueSequence.Length : reader.ValueSpan.Length;
+            string? longPropertyName = null;
+            ReadOnlySpan<char> propertyName = encodedNameLength <= propertyNameBuffer.Length
+                ? propertyNameBuffer[..reader.CopyString(propertyNameBuffer)]
+                : (longPropertyName = reader.GetString()).AsSpan();
             reader.Read();
 
             // RFC 7807 member names are lowercase, but producers that use PascalCase (the System.Text.Json
@@ -75,10 +81,7 @@ public class ProblemJsonConverter : JsonConverter<Problem>
             else
             {
                 var value = JsonSerializer.Deserialize<object>(ref reader, options);
-                if (propertyName is not null)
-                {
-                    problem.Extensions[propertyName] = value;
-                }
+                problem.Extensions[longPropertyName ?? propertyName.ToString()] = value;
             }
         }
 
@@ -133,9 +136,9 @@ public class ProblemJsonConverter : JsonConverter<Problem>
         writer.WriteEndObject();
     }
 
-    private static bool Matches(string? propertyName, string member)
+    private static bool Matches(ReadOnlySpan<char> propertyName, string member)
     {
-        return string.Equals(propertyName, member, StringComparison.OrdinalIgnoreCase);
+        return propertyName.Equals(member, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsStandardMember(string key)

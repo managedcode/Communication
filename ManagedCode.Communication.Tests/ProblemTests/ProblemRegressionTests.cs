@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using ManagedCode.Communication.Constants;
@@ -12,6 +14,13 @@ namespace ManagedCode.Communication.Tests.ProblemTests;
 /// </summary>
 public class ProblemRegressionTests
 {
+    private const string EscapedMemberProblem = """{"t\u0069tle":"Unavailable","status":503,"m\u00e9ta":1,"extensionWithANameLongerThanTheFixedProblemPropertyNameBufferCapacity":2}""";
+    private const string UnavailableTitle = "Unavailable";
+    private const string ShortExtensionName = "méta";
+    private const string LongExtensionName = "extensionWithANameLongerThanTheFixedProblemPropertyNameBufferCapacity";
+    private const string ValidationField = "email";
+    private const string ValidationMessage = "required";
+    private const string ReadOnlyValidationJson = """{"email":["required"]}""";
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
 
     // ---------- validation errors survive a round trip ----------
@@ -49,6 +58,24 @@ public class ProblemRegressionTests
         // Rebuilding the dictionary on every read made InvalidField/InvalidFieldError O(n) allocations each.
         first.ShouldNotBeNull();
         ReferenceEquals(first, second).ShouldBeTrue();
+    }
+
+    [Test]
+    public void GetValidationErrors_ReadsJsonFromReadOnlyExtensions()
+    {
+        using var document = JsonDocument.Parse(ReadOnlyValidationJson);
+        var extensions = new ReadOnlyDictionary<string, object?>(new Dictionary<string, object?>
+        {
+            [ProblemConstants.ExtensionKeys.Errors] = document.RootElement
+        });
+        var problem = new Problem { Extensions = extensions };
+
+        var errors = problem.GetValidationErrors();
+        errors.ShouldNotBeNull();
+        errors[ValidationField].ShouldBe([ValidationMessage]);
+        problem.InvalidFieldError(ValidationField).ShouldBe(ValidationMessage);
+        extensions[ProblemConstants.ExtensionKeys.Errors].ShouldBeOfType<JsonElement>();
+        Should.Throw<NotSupportedException>(() => problem.AddValidationError(ValidationField, ValidationMessage));
     }
 
     [Test]
@@ -92,6 +119,18 @@ public class ProblemRegressionTests
         var problem = JsonSerializer.Deserialize<Problem>(payload, Web)!;
 
         problem.StatusCode.ShouldBe(expected);
+    }
+
+    [Test]
+    public void Deserialize_PreservesEscapedStandardMembersAndExtensionNames()
+    {
+        var problem = JsonSerializer.Deserialize<Problem>(EscapedMemberProblem, Web)!;
+
+        problem.Title.ShouldBe(UnavailableTitle);
+        problem.StatusCode.ShouldBe(503);
+        problem.Extensions.Count.ShouldBe(2);
+        problem.Extensions[ShortExtensionName].ShouldBeOfType<JsonElement>().GetInt32().ShouldBe(1);
+        problem.Extensions[LongExtensionName].ShouldBeOfType<JsonElement>().GetInt32().ShouldBe(2);
     }
 
     [Test]

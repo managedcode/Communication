@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using ManagedCode.Communication.CQRS;
 using Microsoft.AspNetCore.TestHost;
@@ -118,10 +119,17 @@ public class CqrsHttpFrameBoundsIntegrationTests
     }
 
     [Test]
-    public async Task FrameAndAggregateLimits_AreTerminalEvenWhenMalformedFramesAreSkipped()
+    [Arguments(0)]
+    [Arguments(128 * 1024)]
+    public async Task FrameAndAggregateLimits_AreTerminalEvenWhenMalformedFramesAreSkipped(int dataLength)
     {
+        var payload = dataLength == 0
+            ? CqrsHttpBoundsTestSupport.Payload()
+            : JsonSerializer.SerializeToUtf8Bytes(
+                CqrsTestStreams.Completed(new string('x', dataLength)),
+                CqrsStreamSerialization.Default);
         var frame = CqrsHttpBoundsWireFactory.Frame(
-            CqrsHttpBoundsTestSupport.Payload(),
+            payload,
             CqrsHttpBoundsTestSupport.CrLf,
             includeComment: true);
         var wire = CqrsHttpBoundsWireFactory.Join(

@@ -46,6 +46,12 @@ internal sealed class HttpFailureDiagnostics : IDisposable
         {
             return default;
         }
+        var exceptionType = TypeName(exception);
+        if (exception.InnerException is null && exception is not AggregateException)
+        {
+            return (exceptionType, exceptionType, FormatStackTrace(exception, exceptionType));
+        }
+
         var causes = new List<Exception>();
         var pending = new Stack<Exception>();
         var visited = new HashSet<Exception>(ReferenceEqualityComparer.Instance);
@@ -69,9 +75,8 @@ internal sealed class HttpFailureDiagnostics : IDisposable
                 pending.Push(inner);
             }
         }
-        return (TypeName(exception), string.Join(CauseSeparator, causes.Select(TypeName)),
-            string.Join(Environment.NewLine, causes.Select(static cause =>
-                string.Concat(TypeName(cause), Environment.NewLine, new StackTrace(cause, false).ToString()))));
+        return (exceptionType, string.Join(CauseSeparator, causes.Select(TypeName)),
+            string.Join(Environment.NewLine, causes.Select(static cause => FormatStackTrace(cause, TypeName(cause)))));
     }
 
     internal static void RecordException(Activity? activity, Exception exception)
@@ -131,6 +136,9 @@ internal sealed class HttpFailureDiagnostics : IDisposable
             await enumerator.DisposeAsync().ConfigureAwait(false);
         }
     }
+
+    private static string FormatStackTrace(Exception exception, string exceptionType)
+        => string.Concat(exceptionType, Environment.NewLine, new StackTrace(exception, false).ToString());
 
     private static string TypeName(Exception exception) => exception.GetType().FullName ?? exception.GetType().Name;
 }
