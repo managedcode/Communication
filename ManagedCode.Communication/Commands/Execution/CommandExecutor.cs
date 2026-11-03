@@ -22,7 +22,8 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return await CommandExecutionEngine.ExecuteAsync(
                 command,
-                async (_, token) => Result<TValue>.Succeed(await handler(command, token).ConfigureAwait(false)),
+                (command, handler),
+                static async (state, _, token) => Result<TValue>.Succeed(await state.handler(state.command, token).ConfigureAwait(false)),
                 runtime,
                 cancellationToken)
             .ConfigureAwait(false);
@@ -39,7 +40,8 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return CommandExecutionEngine.ExecuteAsync(
             command,
-            async (_, token) => Result<TValue>.Succeed(await handler(command, token).ConfigureAwait(false)),
+            (command, handler),
+            static async (state, _, token) => Result<TValue>.Succeed(await state.handler(state.command, token).ConfigureAwait(false)),
             runtime,
             cancellationToken);
     }
@@ -80,9 +82,10 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return await CommandExecutionEngine.ExecuteAsync(
                 command,
-                async (_, token) =>
+                (command, handler),
+                static async (state, _, token) =>
                 {
-                    await handler(command, token).ConfigureAwait(false);
+                    await state.handler(state.command, token).ConfigureAwait(false);
                     return Result.Succeed();
                 },
                 runtime,
@@ -101,9 +104,10 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return CommandExecutionEngine.ExecuteAsync(
             command,
-            async (_, token) =>
+            (command, handler),
+            static async (state, _, token) =>
             {
-                await handler(command, token).ConfigureAwait(false);
+                await state.handler(state.command, token).ConfigureAwait(false);
                 return Result.Succeed();
             },
             runtime,
@@ -146,7 +150,8 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return await CommandExecutionEngine.ExecuteAsync(
                 command,
-                (_, token) => new ValueTask<Result<TValue>>(handler(command, token)),
+                (command, handler),
+                static (state, _, token) => new ValueTask<Result<TValue>>(state.handler(state.command, token)),
                 runtime,
                 cancellationToken)
             .ConfigureAwait(false);
@@ -163,7 +168,8 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return CommandExecutionEngine.ExecuteAsync(
             command,
-            (_, token) => handler(command, token),
+            (command, handler),
+            static (state, _, token) => state.handler(state.command, token),
             runtime,
             cancellationToken);
     }
@@ -180,7 +186,8 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return await CommandExecutionEngine.ExecuteAsync(
                 command,
-                (_, token) => new ValueTask<Result>(handler(command, token)),
+                (command, handler),
+                static (state, _, token) => new ValueTask<Result>(state.handler(state.command, token)),
                 runtime,
                 cancellationToken)
             .ConfigureAwait(false);
@@ -197,7 +204,8 @@ public static class CommandExecutor
         ArgumentNullException.ThrowIfNull(handler);
         return CommandExecutionEngine.ExecuteAsync(
             command,
-            (_, token) => handler(command, token),
+            (command, handler),
+            static (state, _, token) => state.handler(state.command, token),
             runtime,
             cancellationToken);
     }

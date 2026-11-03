@@ -21,6 +21,7 @@ public interface ICommandRateLimiter
 public sealed class CommandRateLimitLease : IAsyncDisposable
 {
     private readonly Func<ValueTask>? _disposeAsync;
+    private readonly IDisposable? _disposable;
     private int _disposed;
 
     private CommandRateLimitLease(
@@ -28,13 +29,15 @@ public sealed class CommandRateLimitLease : IAsyncDisposable
         bool wasQueued,
         Problem? problem,
         IReadOnlyDictionary<string, object?> metadata,
-        Func<ValueTask>? disposeAsync)
+        Func<ValueTask>? disposeAsync,
+        IDisposable? disposable = null)
     {
         IsAcquired = isAcquired;
         WasQueued = wasQueued;
         Problem = problem;
         Metadata = metadata;
         _disposeAsync = disposeAsync;
+        _disposable = disposable;
     }
 
     /// <summary>Whether the permit was acquired.</summary>
@@ -63,6 +66,12 @@ public sealed class CommandRateLimitLease : IAsyncDisposable
             disposeAsync);
     }
 
+    internal static CommandRateLimitLease Acquired(
+        IDisposable lease,
+        bool wasQueued,
+        IReadOnlyDictionary<string, object?>? metadata) =>
+        new(true, wasQueued, null, metadata ?? EmptyMetadata, disposeAsync: null, disposable: lease);
+
     /// <summary>Creates a rejected lease.</summary>
     public static CommandRateLimitLease Rejected(
         Problem problem,
@@ -86,6 +95,7 @@ public sealed class CommandRateLimitLease : IAsyncDisposable
             return ValueTask.CompletedTask;
         }
 
+        _disposable?.Dispose();
         return _disposeAsync?.Invoke() ?? ValueTask.CompletedTask;
     }
 

@@ -47,17 +47,16 @@ public sealed class PartitionedCommandRateLimiter : ICommandRateLimiter, IAsyncD
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(window, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfNegative(queueLimit);
 
+        Func<string, FixedWindowRateLimiterOptions> createOptions = _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = window,
+            QueueLimit = queueLimit,
+            QueueProcessingOrder = queueProcessingOrder,
+            AutoReplenishment = autoReplenishment
+        };
         var limiter = PartitionedRateLimiter.Create<ICommand, string>(command =>
-            RateLimitPartition.GetFixedWindowLimiter(
-                partitionKeySelector(command),
-                _ => new FixedWindowRateLimiterOptions
-                {
-                    PermitLimit = permitLimit,
-                    Window = window,
-                    QueueLimit = queueLimit,
-                    QueueProcessingOrder = queueProcessingOrder,
-                    AutoReplenishment = autoReplenishment
-                }));
+            RateLimitPartition.GetFixedWindowLimiter(partitionKeySelector(command), createOptions));
 
         return new PartitionedCommandRateLimiter(limiter, permitCountSelector, ownsRateLimiter: true);
     }
@@ -73,15 +72,14 @@ public sealed class PartitionedCommandRateLimiter : ICommandRateLimiter, IAsyncD
         ArgumentNullException.ThrowIfNull(partitionKeySelector);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(permitLimit);
         ArgumentOutOfRangeException.ThrowIfNegative(queueLimit);
+        Func<string, ConcurrencyLimiterOptions> createOptions = _ => new ConcurrencyLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            QueueLimit = queueLimit,
+            QueueProcessingOrder = queueProcessingOrder
+        };
         var limiter = PartitionedRateLimiter.Create<ICommand, string>(command =>
-            RateLimitPartition.GetConcurrencyLimiter(
-                partitionKeySelector(command),
-                _ => new ConcurrencyLimiterOptions
-                {
-                    PermitLimit = permitLimit,
-                    QueueLimit = queueLimit,
-                    QueueProcessingOrder = queueProcessingOrder
-                }));
+            RateLimitPartition.GetConcurrencyLimiter(partitionKeySelector(command), createOptions));
         return new PartitionedCommandRateLimiter(limiter, permitCountSelector, ownsRateLimiter: true);
     }
 
@@ -101,18 +99,17 @@ public sealed class PartitionedCommandRateLimiter : ICommandRateLimiter, IAsyncD
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(window, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(segmentsPerWindow);
         ArgumentOutOfRangeException.ThrowIfNegative(queueLimit);
+        Func<string, SlidingWindowRateLimiterOptions> createOptions = _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = window,
+            SegmentsPerWindow = segmentsPerWindow,
+            QueueLimit = queueLimit,
+            QueueProcessingOrder = queueProcessingOrder,
+            AutoReplenishment = autoReplenishment
+        };
         var limiter = PartitionedRateLimiter.Create<ICommand, string>(command =>
-            RateLimitPartition.GetSlidingWindowLimiter(
-                partitionKeySelector(command),
-                _ => new SlidingWindowRateLimiterOptions
-                {
-                    PermitLimit = permitLimit,
-                    Window = window,
-                    SegmentsPerWindow = segmentsPerWindow,
-                    QueueLimit = queueLimit,
-                    QueueProcessingOrder = queueProcessingOrder,
-                    AutoReplenishment = autoReplenishment
-                }));
+            RateLimitPartition.GetSlidingWindowLimiter(partitionKeySelector(command), createOptions));
         return new PartitionedCommandRateLimiter(limiter, permitCountSelector, ownsRateLimiter: true);
     }
 
@@ -132,18 +129,17 @@ public sealed class PartitionedCommandRateLimiter : ICommandRateLimiter, IAsyncD
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(tokensPerPeriod);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(replenishmentPeriod, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfNegative(queueLimit);
+        Func<string, TokenBucketRateLimiterOptions> createOptions = _ => new TokenBucketRateLimiterOptions
+        {
+            TokenLimit = tokenLimit,
+            TokensPerPeriod = tokensPerPeriod,
+            ReplenishmentPeriod = replenishmentPeriod,
+            QueueLimit = queueLimit,
+            QueueProcessingOrder = queueProcessingOrder,
+            AutoReplenishment = autoReplenishment
+        };
         var limiter = PartitionedRateLimiter.Create<ICommand, string>(command =>
-            RateLimitPartition.GetTokenBucketLimiter(
-                partitionKeySelector(command),
-                _ => new TokenBucketRateLimiterOptions
-                {
-                    TokenLimit = tokenLimit,
-                    TokensPerPeriod = tokensPerPeriod,
-                    ReplenishmentPeriod = replenishmentPeriod,
-                    QueueLimit = queueLimit,
-                    QueueProcessingOrder = queueProcessingOrder,
-                    AutoReplenishment = autoReplenishment
-                }));
+            RateLimitPartition.GetTokenBucketLimiter(partitionKeySelector(command), createOptions));
         return new PartitionedCommandRateLimiter(limiter, permitCountSelector, ownsRateLimiter: true);
     }
 
@@ -159,35 +155,40 @@ public sealed class PartitionedCommandRateLimiter : ICommandRateLimiter, IAsyncD
         var pendingLease = _rateLimiter.AcquireAsync(command, permitCount, cancellationToken);
         var wasQueued = !pendingLease.IsCompletedSuccessfully;
         var lease = await pendingLease.ConfigureAwait(false);
-        var metadata = ReadMetadata(lease);
-
-        if (!lease.IsAcquired)
+        var transferred = false;
+        try
         {
-            lease.Dispose();
-            var problem = Problem.Create(
-                ProblemConstants.CommandExecutionTitles.CommandRateLimitExceeded,
-                ProblemConstants.CommandExecutionMessages.RateLimitExceeded,
-                HttpStatusCode.TooManyRequests);
+            var metadata = ReadMetadata(lease);
 
-            if (metadata is not null)
+            if (!lease.IsAcquired)
             {
-                foreach (var pair in metadata)
+                var problem = Problem.Create(
+                    ProblemConstants.CommandExecutionTitles.CommandRateLimitExceeded,
+                    ProblemConstants.CommandExecutionMessages.RateLimitExceeded,
+                    HttpStatusCode.TooManyRequests);
+
+                if (metadata is not null)
                 {
-                    problem.Extensions[pair.Key] = pair.Value;
+                    foreach (var pair in metadata)
+                    {
+                        problem.Extensions[pair.Key] = pair.Value;
+                    }
                 }
+
+                return CommandRateLimitLease.Rejected(problem, wasQueued, metadata);
             }
 
-            return CommandRateLimitLease.Rejected(problem, wasQueued, metadata);
+            var commandLease = CommandRateLimitLease.Acquired(lease, wasQueued, metadata);
+            transferred = true;
+            return commandLease;
         }
-
-        return CommandRateLimitLease.Acquired(
-            wasQueued,
-            metadata,
-            () =>
+        finally
+        {
+            if (!transferred)
             {
                 lease.Dispose();
-                return ValueTask.CompletedTask;
-            });
+            }
+        }
     }
 
     /// <inheritdoc />

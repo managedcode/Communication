@@ -98,7 +98,7 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
 
         var partitionKey = _options.PartitionKeySelector(command);
         ArgumentException.ThrowIfNullOrWhiteSpace(partitionKey);
-        var partition = _partitions.GetOrAdd(partitionKey, static _ => new PartitionState());
+        var partition = _partitions.GetOrAdd(partitionKey, static key => new PartitionState(key));
         CommandCircuitBreakerEvent? transition = null;
         CommandCircuitBreakerLease lease;
         var now = _timeProvider.GetTimestamp();
@@ -132,7 +132,6 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
 
                         var previous = partition.State;
                         partition.State = CommandCircuitState.HalfOpen;
-                        partition.ProbeInProgress = true;
                         transition = CreateEvent(partitionKey, previous, partition.State, null);
                         lease = new CommandCircuitBreakerLease(
                             partitionKey,
@@ -140,10 +139,11 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
                             true,
                             CommandCircuitState.HalfOpen,
                             TimeSpan.Zero);
+                        partition.ActiveProbe = lease;
                         break;
                     }
 
-                case CommandCircuitState.HalfOpen when partition.ProbeInProgress:
+                case CommandCircuitState.HalfOpen when partition.ActiveProbe is not null:
                     lease = new CommandCircuitBreakerLease(
                         partitionKey,
                         false,
@@ -153,22 +153,17 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
                     break;
 
                 case CommandCircuitState.HalfOpen:
-                    partition.ProbeInProgress = true;
                     lease = new CommandCircuitBreakerLease(
                         partitionKey,
                         true,
                         true,
                         CommandCircuitState.HalfOpen,
                         TimeSpan.Zero);
+                    partition.ActiveProbe = lease;
                     break;
 
                 default:
-                    lease = new CommandCircuitBreakerLease(
-                        partitionKey,
-                        true,
-                        false,
-                        CommandCircuitState.Closed,
-                        TimeSpan.Zero);
+                    lease = partition.ClosedLease;
                     break;
             }
         }
@@ -182,16 +177,29 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
     }
 
     /// <inheritdoc />
-    public async ValueTask RecordAsync(
+    public ValueTask RecordAsync(
         ICommand command,
         CommandCircuitBreakerLease lease,
         IResult outcome,
         Exception? exception = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        RecordOutcomeAsync(command, lease, outcome, exception, cancellationToken);
+
+    internal async ValueTask RecordOutcomeAsync<TResult>(
+        ICommand command,
+        CommandCircuitBreakerLease lease,
+        TResult outcome,
+        Exception? exception,
+        CancellationToken cancellationToken)
+        where TResult : IResult
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(lease);
-        ArgumentNullException.ThrowIfNull(outcome);
+        if (outcome is null)
+        {
+            throw new ArgumentNullException(nameof(outcome));
+        }
+
         if (!lease.IsAllowed || !_partitions.TryGetValue(lease.PartitionKey, out var partition))
         {
             return;
@@ -206,7 +214,8 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
 
         lock (partition.Sync)
         {
-            if (partition.State == CommandCircuitState.Isolated)
+            if (partition.State == CommandCircuitState.Isolated
+                || (lease.IsProbe && !ReferenceEquals(partition.ActiveProbe, lease)))
             {
                 return;
             }
@@ -225,7 +234,6 @@ public sealed class PartitionedCommandCircuitBreaker : ICommandCircuitBreaker, I
 
             if (lease.IsProbe && partition.State == CommandCircuitState.HalfOpen)
             {
-                partition.ProbeInProgress = false;
                 var previous = partition.State;
                 if (isFailure)
                 {
@@ -306,13 +314,13 @@ FinishRecording:;
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(partitionKey);
         cancellationToken.ThrowIfCancellationRequested();
-        var partition = _partitions.GetOrAdd(partitionKey, static _ => new PartitionState());
+        var partition = _partitions.GetOrAdd(partitionKey, static key => new PartitionState(key));
         CommandCircuitBreakerEvent? transition;
         lock (partition.Sync)
         {
             var previous = partition.State;
             partition.State = CommandCircuitState.Isolated;
-            partition.ProbeInProgress = false;
+            partition.ActiveProbe = null;
             partition.Buckets.Clear();
             partition.CurrentBucket = null;
             partition.TotalCount = 0;
@@ -375,7 +383,7 @@ FinishRecording:;
     private static void Close(PartitionState partition)
     {
         partition.State = CommandCircuitState.Closed;
-        partition.ProbeInProgress = false;
+        partition.ActiveProbe = null;
         partition.Buckets.Clear();
         partition.CurrentBucket = null;
         partition.TotalCount = 0;
@@ -386,7 +394,7 @@ FinishRecording:;
     private static void Open(PartitionState partition, long now)
     {
         partition.State = CommandCircuitState.Open;
-        partition.ProbeInProgress = false;
+        partition.ActiveProbe = null;
         partition.Buckets.Clear();
         partition.CurrentBucket = null;
         partition.TotalCount = 0;
@@ -440,15 +448,18 @@ FinishRecording:;
         }
     }
 
-    private sealed class PartitionState
+    private sealed class PartitionState(string partitionKey)
     {
+        public CommandCircuitBreakerLease ClosedLease { get; } =
+            new(partitionKey, true, false, CommandCircuitState.Closed, TimeSpan.Zero);
+
         public object Sync { get; } = new();
         public Queue<CircuitBucket> Buckets { get; } = new();
         public CircuitBucket? CurrentBucket { get; set; }
         public long TotalCount { get; set; }
         public long FailureCount { get; set; }
         public CommandCircuitState State { get; set; }
-        public bool ProbeInProgress { get; set; }
+        public CommandCircuitBreakerLease? ActiveProbe { get; set; }
         public long OpenedAtTimestamp { get; set; }
     }
 

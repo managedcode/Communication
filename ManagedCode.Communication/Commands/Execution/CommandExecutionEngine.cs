@@ -13,15 +13,21 @@ namespace ManagedCode.Communication.Commands.Execution;
 
 internal static class CommandExecutionEngine
 {
-    public static async ValueTask<TResult> ExecuteAsync<TResult>(
+    public static async ValueTask<TResult> ExecuteAsync<TResult, TState>(
         ICommand command,
-        Func<ICommand, CancellationToken, ValueTask<TResult>> handler,
+        TState state,
+        Func<TState, ICommand, CancellationToken, ValueTask<TResult>> invoke,
         CommandExecutionRuntime runtime,
         CancellationToken cancellationToken)
         where TResult : struct, IResult, IResultFactory<TResult>
     {
         ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(handler);
+        var handler = new CommandHandler<TResult, TState>(state, invoke);
+        if (state is null)
+        {
+            throw new ArgumentNullException(nameof(handler));
+        }
+
         ArgumentNullException.ThrowIfNull(runtime);
 
         using var diagnostics = HttpFailureDiagnostics.Begin(runtime.RedactHttpDiagnostics);
@@ -44,10 +50,10 @@ internal static class CommandExecutionEngine
             totalTimeout = ResolveTotalTimeout(command, runtime.OptionsSnapshot.Timeout);
             ValidateResolvedTimeout(totalTimeout, CommandExecutionConstants.TotalTimeoutKind);
             timeoutSource = CreateTimeoutSource(totalTimeout, runtime.TimeProvider);
-            linkedSource = timeoutSource is null
-                ? null
-                : CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token);
-            var executionToken = linkedSource?.Token ?? cancellationToken;
+            linkedSource = timeoutSource is not null && cancellationToken.CanBeCanceled
+                ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token)
+                : null;
+            var executionToken = linkedSource?.Token ?? timeoutSource?.Token ?? cancellationToken;
             TResult result;
             if (runtime.OptionsSnapshot.Idempotency.Enabled && runtime.IdempotencyStore is not null)
             {
@@ -174,9 +180,9 @@ internal static class CommandExecutionEngine
         return false;
     }
 
-    private static async ValueTask<TResult> ExecuteIdempotentlyAsync<TResult>(
+    private static async ValueTask<TResult> ExecuteIdempotentlyAsync<TResult, TState>(
         ICommand command,
-        Func<ICommand, CancellationToken, ValueTask<TResult>> handler,
+        CommandHandler<TResult, TState> handler,
         CommandExecutionRuntime runtime,
         Activity? activity,
         CancellationToken cancellationToken)
@@ -260,9 +266,9 @@ internal static class CommandExecutionEngine
         }
     }
 
-    private static async ValueTask<TResult> ExecuteOwnedIdempotentAsync<TResult>(
+    private static async ValueTask<TResult> ExecuteOwnedIdempotentAsync<TResult, TState>(
         ICommand command,
-        Func<ICommand, CancellationToken, ValueTask<TResult>> handler,
+        CommandHandler<TResult, TState> handler,
         CommandExecutionRuntime runtime,
         Activity? activity,
         CommandIdempotencyClaim claim,
@@ -286,12 +292,15 @@ internal static class CommandExecutionEngine
         ValueTask<TResult> TrackedHandler(ICommand current, CancellationToken token)
         {
             handlerInvoked = true;
-            return handler(current, token);
+            return handler.Invoke(current, token);
         }
 
         try
         {
-            var result = await ExecuteRetriesAsync(command, TrackedHandler, runtime, activity, ownedExecution.Token)
+            var tracked = new CommandHandler<TResult, Func<ICommand, CancellationToken, ValueTask<TResult>>>(
+                TrackedHandler,
+                static (callback, current, token) => callback(current, token));
+            var result = await ExecuteRetriesAsync(command, tracked, runtime, activity, ownedExecution.Token)
                 .ConfigureAwait(false);
             await StopClaimRenewalAsync(renewalStop, renewalTask).ConfigureAwait(false);
 
@@ -557,9 +566,9 @@ internal static class CommandExecutionEngine
         return true;
     }
 
-    private static async ValueTask<TResult> ExecuteRetriesAsync<TResult>(
+    private static async ValueTask<TResult> ExecuteRetriesAsync<TResult, TState>(
         ICommand command,
-        Func<ICommand, CancellationToken, ValueTask<TResult>> handler,
+        CommandHandler<TResult, TState> handler,
         CommandExecutionRuntime runtime,
         Activity? activity,
         CancellationToken cancellationToken)
@@ -678,9 +687,9 @@ internal static class CommandExecutionEngine
         }
     }
 
-    private static async ValueTask<TResult> ExecuteAttemptAsync<TResult>(
+    private static async ValueTask<TResult> ExecuteAttemptAsync<TResult, TState>(
         ICommand command,
-        Func<ICommand, CancellationToken, ValueTask<TResult>> handler,
+        CommandHandler<TResult, TState> handler,
         CommandExecutionRuntime runtime,
         int attempt,
         CancellationToken cancellationToken)
@@ -695,10 +704,12 @@ internal static class CommandExecutionEngine
         }
 
         using var attemptSource = new CancellationTokenSource(attemptTimeout, runtime.TimeProvider);
-        using var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, attemptSource.Token);
+        using var linkedSource = cancellationToken.CanBeCanceled
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, attemptSource.Token)
+            : null;
         try
         {
-            return await ExecuteCircuitProtectedAttemptAsync(command, handler, runtime, attempt, linkedSource.Token)
+            return await ExecuteCircuitProtectedAttemptAsync(command, handler, runtime, attempt, linkedSource?.Token ?? attemptSource.Token)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (attemptSource.IsCancellationRequested
@@ -724,9 +735,9 @@ internal static class CommandExecutionEngine
         }
     }
 
-    private static async ValueTask<TResult> ExecuteCircuitProtectedAttemptAsync<TResult>(
+    private static async ValueTask<TResult> ExecuteCircuitProtectedAttemptAsync<TResult, TState>(
         ICommand command,
-        Func<ICommand, CancellationToken, ValueTask<TResult>> handler,
+        CommandHandler<TResult, TState> handler,
         CommandExecutionRuntime runtime,
         int attempt,
         CancellationToken cancellationToken)
@@ -760,7 +771,7 @@ internal static class CommandExecutionEngine
         {
             var result = await ExecuteRateLimitedAttemptAsync(command, handler, runtime, attempt, cancellationToken)
                 .ConfigureAwait(false);
-            await runtime.CircuitBreaker.RecordAsync(command, lease, result, cancellationToken: cancellationToken)
+            await RecordCircuitOutcomeAsync(runtime.CircuitBreaker, command, lease, result, null, cancellationToken)
                 .ConfigureAwait(false);
             return result;
         }
@@ -770,7 +781,8 @@ internal static class CommandExecutionEngine
                 ProblemConstants.CommandExecutionTitles.CommandAttemptCancelled,
                 caught.Message,
                 HttpStatusCode.RequestTimeout));
-            await runtime.CircuitBreaker.RecordAsync(
+            await RecordCircuitOutcomeAsync(
+                    runtime.CircuitBreaker,
                     command,
                     lease,
                     cancelled,
@@ -782,7 +794,8 @@ internal static class CommandExecutionEngine
         catch (Exception caught)
         {
             var failed = TResult.Fail(Problem.Create(caught, HttpStatusCode.InternalServerError));
-            await runtime.CircuitBreaker.RecordAsync(
+            await RecordCircuitOutcomeAsync(
+                    runtime.CircuitBreaker,
                     command,
                     lease,
                     failed,
@@ -793,9 +806,21 @@ internal static class CommandExecutionEngine
         }
     }
 
-    private static async ValueTask<TResult> ExecuteRateLimitedAttemptAsync<TResult>(
+    private static ValueTask RecordCircuitOutcomeAsync<TResult>(
+        ICommandCircuitBreaker circuitBreaker,
         ICommand command,
-        Func<ICommand, CancellationToken, ValueTask<TResult>> handler,
+        CommandCircuitBreakerLease lease,
+        TResult outcome,
+        Exception? exception,
+        CancellationToken cancellationToken)
+        where TResult : struct, IResult =>
+        circuitBreaker is PartitionedCommandCircuitBreaker partitioned
+            ? partitioned.RecordOutcomeAsync(command, lease, outcome, exception, cancellationToken)
+            : circuitBreaker.RecordAsync(command, lease, outcome, exception, cancellationToken);
+
+    private static async ValueTask<TResult> ExecuteRateLimitedAttemptAsync<TResult, TState>(
+        ICommand command,
+        CommandHandler<TResult, TState> handler,
         CommandExecutionRuntime runtime,
         int attempt,
         CancellationToken cancellationToken)
@@ -803,7 +828,7 @@ internal static class CommandExecutionEngine
     {
         if (!runtime.OptionsSnapshot.RateLimiter.Enabled || runtime.RateLimiter is null)
         {
-            return await handler(command, cancellationToken).ConfigureAwait(false);
+            return await handler.Invoke(command, cancellationToken).ConfigureAwait(false);
         }
 
         var queuedAt = runtime.TimeProvider.GetTimestamp();
@@ -862,7 +887,7 @@ internal static class CommandExecutionEngine
                 return TResult.Fail(problem);
             }
 
-            return await handler(command, cancellationToken).ConfigureAwait(false);
+            return await handler.Invoke(command, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -1165,4 +1190,12 @@ internal static class CommandExecutionEngine
     }
 
     private readonly record struct RetryDelayDecision(bool ShouldRetry, TimeSpan Delay);
+
+    private readonly struct CommandHandler<TResult, TState>(
+        TState state,
+        Func<TState, ICommand, CancellationToken, ValueTask<TResult>> invoke)
+    {
+        public ValueTask<TResult> Invoke(ICommand command, CancellationToken cancellationToken) =>
+            invoke(state, command, cancellationToken);
+    }
 }

@@ -871,6 +871,41 @@ public sealed class CommandExecutionEdgeCaseTests
     }
 
     [Test]
+    public async Task CircuitBreaker_WhenProbeFinishesAfterReset_DoesNotCompleteTheNewProbe()
+    {
+        var options = new CircuitBreakerOptions
+        {
+            Enabled = true,
+            MinimumThroughput = 1,
+            FailureRatio = 1D,
+            BreakDuration = TimeSpan.FromSeconds(1),
+            PartitionKeySelector = static command => command.CommandType
+        };
+        var time = new CircuitTimeProvider();
+        var breaker = new PartitionedCommandCircuitBreaker(options, time);
+        var command = Command.Create(CommandExecutionTestConstants.DependencyCall);
+        var failure = Result.Fail(Problem.Create(HttpStatusCode.ServiceUnavailable));
+
+        await breaker.RecordAsync(command, await breaker.AcquireAsync(command), failure);
+        time.Advance(options.BreakDuration);
+        var staleProbe = await breaker.AcquireAsync(command);
+        staleProbe.IsProbe.ShouldBeTrue();
+
+        await breaker.ResetAsync(command.CommandType);
+        await breaker.RecordAsync(command, await breaker.AcquireAsync(command), failure);
+        time.Advance(options.BreakDuration);
+        var currentProbe = await breaker.AcquireAsync(command);
+        currentProbe.IsProbe.ShouldBeTrue();
+
+        await breaker.RecordAsync(command, staleProbe, Result.Succeed());
+        breaker.GetState(command.CommandType).ShouldBe(CommandCircuitState.HalfOpen);
+        (await breaker.AcquireAsync(command)).IsAllowed.ShouldBeFalse();
+
+        await breaker.RecordAsync(command, currentProbe, Result.Succeed());
+        breaker.GetState(command.CommandType).ShouldBe(CommandCircuitState.Closed);
+    }
+
+    [Test]
     public async Task CircuitBreaker_ManualIsolationAndReset_ControlAdmission()
     {
         var options = new CommandExecutionOptions();
@@ -1057,6 +1092,19 @@ public sealed class CommandExecutionEdgeCaseTests
         afterRelease.IsAcquired.ShouldBeTrue();
     }
 
+    [Test]
+    public async Task PartitionedRateLimiter_WhenMetadataReadFails_ReleasesAcquiredPermit()
+    {
+        var permit = new UnreadableRateLimitLease();
+        await using var nativeLimiter = new SinglePermitRateLimiter(permit);
+        await using var limiter = new PartitionedCommandRateLimiter(nativeLimiter);
+
+        await Should.ThrowAsync<InvalidOperationException>(async () =>
+            await limiter.AcquireAsync(Command.Create(CommandExecutionTestConstants.BatchLarge)));
+
+        permit.DisposeCount.ShouldBe(1);
+    }
+
     private static MemoryCacheCommandIdempotencyStore CreateStore(IMemoryCache cache)
     {
         return new MemoryCacheCommandIdempotencyStore(
@@ -1093,5 +1141,50 @@ public sealed class CommandExecutionEdgeCaseTests
             Acquisitions++;
             return ValueTask.FromResult(_leases.Dequeue());
         }
+    }
+
+    private sealed class UnreadableRateLimitLease : RateLimitLease
+    {
+        public override bool IsAcquired => true;
+        public int DisposeCount { get; private set; }
+        public override IEnumerable<string> MetadataNames => throw new InvalidOperationException();
+
+        public override bool TryGetMetadata(string metadataName, out object? metadata)
+        {
+            metadata = null;
+            return false;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                DisposeCount++;
+            }
+        }
+    }
+
+    private sealed class SinglePermitRateLimiter(RateLimitLease permit) : PartitionedRateLimiter<ICommand>
+    {
+        public override RateLimiterStatistics? GetStatistics(ICommand resource) => null;
+
+        protected override RateLimitLease AttemptAcquireCore(ICommand resource, int permitCount) => permit;
+
+        protected override ValueTask<RateLimitLease> AcquireAsyncCore(
+            ICommand resource,
+            int permitCount,
+            CancellationToken cancellationToken) =>
+            ValueTask.FromResult(permit);
+    }
+
+    private sealed class CircuitTimeProvider : TimeProvider
+    {
+        private long _timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp() => _timestamp;
+
+        public void Advance(TimeSpan elapsed) => _timestamp += elapsed.Ticks;
     }
 }

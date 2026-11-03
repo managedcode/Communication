@@ -313,7 +313,7 @@ public sealed class MemoryCacheCommandIdempotencyStore :
         // turn that normal path into ObjectDisposedException and could split one key across two live locks.
     }
 
-    private async Task<LockScope> AcquireLockAsync(string key, CancellationToken cancellationToken)
+    private async ValueTask<LockScope> AcquireLockAsync(string key, CancellationToken cancellationToken)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         var commandLock = GetCommandLock(key);
@@ -439,16 +439,8 @@ public sealed class MemoryCacheCommandIdempotencyStore :
         public DateTime UpdatedAtUtc { get; } = updatedAtUtc;
     }
 
-    private sealed class LockScope(SemaphoreSlim commandLock) : IDisposable
+    private readonly struct LockScope(SemaphoreSlim commandLock) : IDisposable
     {
-        private int _disposed;
-
-        public void Dispose()
-        {
-            if (Interlocked.Exchange(ref _disposed, 1) == 0)
-            {
-                commandLock.Release();
-            }
-        }
+        public void Dispose() => commandLock.Release();
     }
 }

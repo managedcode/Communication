@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ManagedCode.Communication.CollectionResultT;
@@ -40,12 +41,12 @@ public partial struct Result
     {
         var problems = FailedProblems(results);
 
-        if (problems.Length == 0)
+        if (problems is null)
         {
             return Succeed();
         }
 
-        if (problems.Length == 1)
+        if (problems.Count == 1)
         {
             return Fail(problems[0]);
         }
@@ -70,7 +71,7 @@ public partial struct Result
             }
         }
 
-        return CollectionResult<T>.Succeed(results.Select(static result => result.Value!).ToList());
+        return CollectionResult<T>.Succeed(Array.ConvertAll(results, static result => result.Value!));
     }
 
     /// <summary>
@@ -80,9 +81,9 @@ public partial struct Result
     {
         var problems = FailedProblems(results);
 
-        if (problems.Length == 0)
+        if (problems is null)
         {
-            return CollectionResult<T>.Succeed(results.Select(static result => result.Value!).ToList());
+            return CollectionResult<T>.Succeed(Array.ConvertAll(results, static result => result.Value!));
         }
 
         return AllAreValidationFailures(problems)
@@ -90,23 +91,23 @@ public partial struct Result
             : CollectionResult<T>.Fail(CreateAggregateProblem(problems));
     }
 
-    private static Problem[] FailedProblems(Result[] results)
+    private static List<Problem>? FailedProblems<TResult>(TResult[] results)
+        where TResult : struct, IResult
     {
-        return results
-            .Where(static result => result.IsFailed)
-            .Select(static failure => failure.TryGetProblem(out var problem) ? problem : Problem.GenericError())
-            .ToArray();
+        ArgumentNullException.ThrowIfNull(results);
+        List<Problem>? problems = null;
+        foreach (var result in results)
+        {
+            if (result.IsFailed)
+            {
+                (problems ??= []).Add(result.Problem);
+            }
+        }
+
+        return problems;
     }
 
-    private static Problem[] FailedProblems<T>(Result<T>[] results)
-    {
-        return results
-            .Where(static result => result.IsFailed)
-            .Select(static failure => failure.TryGetProblem(out var problem) ? problem : Problem.GenericError())
-            .ToArray();
-    }
-
-    private static bool AllAreValidationFailures(Problem[] problems)
+    private static bool AllAreValidationFailures(List<Problem> problems)
     {
         return problems.All(static problem => problem.GetValidationErrors() is not null);
     }

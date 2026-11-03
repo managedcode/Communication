@@ -628,7 +628,8 @@ var invoice = await httpClient.SendForResultAsync(
 
 The library still handles transport failures and RFC 7807 failures. Serialized result envelopes are rejected.
 Plain-text remote errors remain supported. Connection failures produce `503` and client-side timeouts
-produce `504`; explicit caller cancellation propagates `OperationCanceledException`.
+produce `504`. As shown above, pass the caller token to cancel sending the request or reading a JSON or
+problem response. Caller cancellation propagates `OperationCanceledException`.
 
 For command-aware reliability, supply the command, a fresh-request factory, and an execution runtime:
 

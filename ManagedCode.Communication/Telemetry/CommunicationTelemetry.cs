@@ -333,7 +333,7 @@ public static class CommunicationTelemetry
     /// <summary>
     ///     Records an exception on the current span and exception counter without incrementing the final-result
     ///     failure counter. Command execution uses this for transient attempt failures so the final outcome is counted
-    ///     exactly once by <see cref="RecordCommandCompleted" />.
+    ///     exactly once by <see cref="RecordCommandCompleted(ICommand, IResult, TimeSpan)" />.
     /// </summary>
     public static void RecordAttemptFailure(ICommand command, Problem problem, Exception exception)
     {
@@ -469,11 +469,23 @@ public static class CommunicationTelemetry
         ICommand command,
         int attempt,
         IResult result,
+        TimeSpan duration) =>
+        RecordCommandAttempt<IResult>(command, attempt, result, duration);
+
+    internal static void RecordCommandAttempt<TResult>(
+        ICommand command,
+        int attempt,
+        TResult result,
         TimeSpan duration)
+        where TResult : IResult
     {
-        var tags = BuildCommandTags(command, result.IsSuccess);
-        CommandAttemptCounter.Add(1, tags);
-        CommandAttemptDuration.Record(duration.TotalMilliseconds, tags);
+        if (CommandAttemptCounter.Enabled || CommandAttemptDuration.Enabled)
+        {
+            var tags = BuildCommandTags(command, result.IsSuccess);
+            CommandAttemptCounter.Add(1, tags);
+            CommandAttemptDuration.Record(duration.TotalMilliseconds, tags);
+        }
+
         Activity.Current?.AddEvent(new ActivityEvent(
             CommandAttemptEventName,
             tags: new ActivityTagsCollection
@@ -487,10 +499,20 @@ public static class CommunicationTelemetry
     public static void RecordCommandCompleted(
         ICommand command,
         IResult result,
+        TimeSpan duration) =>
+        RecordCommandCompleted<IResult>(command, result, duration);
+
+    internal static void RecordCommandCompleted<TResult>(
+        ICommand command,
+        TResult result,
         TimeSpan duration)
+        where TResult : IResult
     {
-        var tags = BuildCommandTags(command, result.IsSuccess);
-        CommandDuration.Record(duration.TotalMilliseconds, tags);
+        if (CommandDuration.Enabled)
+        {
+            var tags = BuildCommandTags(command, result.IsSuccess);
+            CommandDuration.Record(duration.TotalMilliseconds, tags);
+        }
 
         if (result.IsFailed)
         {

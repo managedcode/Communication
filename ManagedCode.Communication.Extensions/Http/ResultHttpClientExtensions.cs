@@ -37,7 +37,8 @@ public static class ResultHttpClientExtensions
             return await SendCoreAsync(
                     client,
                     requestFactory,
-                    static response => response.FromJsonToResult<T>(),
+                    default(ValueTuple),
+                    static (response, _, token) => response.FromJsonToResult<T>(token),
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -76,7 +77,8 @@ public static class ResultHttpClientExtensions
             return await SendCoreAsync(
                     client,
                     requestFactory,
-                    response => ReadProjectedResultAsync(response, readSuccessAsync, cancellationToken),
+                    readSuccessAsync,
+                    ReadProjectedResultAsync,
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -111,7 +113,8 @@ public static class ResultHttpClientExtensions
             return await SendCoreAsync(
                     client,
                     requestFactory,
-                    static response => response.FromRequestToResult(),
+                    default(ValueTuple),
+                    static (response, _, token) => response.FromRequestToResult(token),
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -166,15 +169,16 @@ public static class ResultHttpClientExtensions
             cancellationToken);
     }
 
-    private static async Task<TResponse> SendCoreAsync<TResponse>(
+    private static async Task<TResponse> SendCoreAsync<TResponse, TState>(
         HttpClient client,
         Func<HttpRequestMessage> requestFactory,
-        Func<HttpResponseMessage, Task<TResponse>> convert,
+        TState state,
+        Func<HttpResponseMessage, TState, CancellationToken, Task<TResponse>> convert,
         CancellationToken cancellationToken)
     {
         using var request = requestFactory();
         using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        return await convert(response).ConfigureAwait(false);
+        return await convert(response, state, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<Result<T>> ReadProjectedResultAsync<T>(

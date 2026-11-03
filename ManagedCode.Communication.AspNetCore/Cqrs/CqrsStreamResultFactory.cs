@@ -29,12 +29,12 @@ internal static class CqrsStreamResultFactory
 {
     private static readonly Type StreamChunkOpenType = typeof(CqrsStreamChunk<,>);
 
-    private static readonly MethodInfo ToServerSentEventsResultMethod =
+    private static readonly MethodInfo AdaptStreamMethod =
         typeof(CqrsStreamResultFactory).GetMethod(
-            nameof(ToServerSentEventsResult),
+            nameof(AdaptStream),
             BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException(
-            $"{nameof(ToServerSentEventsResult)} is missing; the CQRS SSE adapter cannot be initialised.");
+            $"{nameof(AdaptStream)} is missing; the CQRS SSE adapter cannot be initialised.");
 
     private static readonly ConcurrentDictionary<Type, Func<object, CqrsStreamServerOptions, AspNetResult>?> Converters = new();
 
@@ -100,10 +100,12 @@ internal static class CqrsStreamResultFactory
         }
 
         var arguments = itemType.GetGenericArguments();
-        var method = ToServerSentEventsResultMethod.MakeGenericMethod(arguments[0], arguments[1]);
-
-        return (value, options) => (AspNetResult)method.Invoke(null, [value, options])!;
+        return AdaptStreamMethod.MakeGenericMethod(arguments)
+            .CreateDelegate<Func<object, CqrsStreamServerOptions, AspNetResult>>();
     }
+
+    private static AspNetResult AdaptStream<TProgress, TResult>(object value, CqrsStreamServerOptions options) =>
+        ToServerSentEventsResult((IAsyncEnumerable<CqrsStreamChunk<TProgress, TResult>>)value, options);
 
     private static Type? TryGetChunkItemType(Type candidateType)
     {

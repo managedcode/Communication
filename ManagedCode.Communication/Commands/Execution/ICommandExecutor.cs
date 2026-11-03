@@ -30,6 +30,11 @@ public sealed class DefaultCommandExecutor(CommandExecutionRuntime runtime) : IC
         CancellationToken cancellationToken = default)
         where TResult : struct, IResult, IResultFactory<TResult>
     {
-        return CommandExecutionEngine.ExecuteAsync(command, handler, runtime, cancellationToken);
+        return CommandExecutionEngine.ExecuteAsync(
+            command,
+            handler,
+            static (callback, current, token) => callback(current, token),
+            runtime,
+            cancellationToken);
     }
 }
