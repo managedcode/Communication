@@ -69,6 +69,13 @@ A core-only application can install `ManagedCode.Communication` directly:
 dotnet add package ManagedCode.Communication
 ```
 
+### Analyzer performance on recursive payloads
+
+MCC0003 checks the complete public payload graph, including shared and recursive DTOs. A safe closed
+cycle is analyzed once and reused across payload roots; branching paths do not repeat the same graph
+walk. Different closed generic types and expanding generic recursion retain their own checks, so a
+command or result hidden behind a neighboring generic payload is still rejected.
+
 ## Quick start
 
 Results and problems work without dependency injection or logging registration:

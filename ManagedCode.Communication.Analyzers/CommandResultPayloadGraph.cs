@@ -130,52 +130,75 @@ internal sealed class CommandResultPayloadGraph
     {
         var roots = SymbolEqualityComparer.Default.Equals(forbidden, command) ? commandPayloads : resultPayloads;
         return roots.GetOrAdd(payload, root => new Lazy<bool>(() =>
-            Contains(root, forbidden, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out _))).Value;
+        {
+            var seen = new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default);
+            var found = Contains(root, forbidden, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), seen, out var cycles);
+            if (!found && (cycles & PayloadCycles.Expanding) == 0)
+            {
+                // The complete closed graph was checked from its root. A cycle cannot hide
+                // an unexplored edge now, so every reached type has the same safe outcome.
+                var completed = SymbolEqualityComparer.Default.Equals(forbidden, command) ? commandMembers : resultMembers;
+                foreach (var type in seen)
+                {
+                    completed.TryAdd(type, false);
+                }
+            }
+            return found;
+        })).Value;
     }
 
     private bool Contains(ITypeSymbol type, INamedTypeSymbol forbidden, HashSet<ITypeSymbol> visiting,
-        out bool cycle)
+        HashSet<ITypeSymbol> seen, out PayloadCycles cycles)
     {
         var completed = SymbolEqualityComparer.Default.Equals(forbidden, command) ? commandMembers : resultMembers;
         if (completed.TryGetValue(type, out var cached))
         {
-            cycle = false;
+            cycles = PayloadCycles.None;
             return cached;
         }
-        var found = Inspect(type, forbidden, visiting, out cycle);
-        // A path stopped at an ancestor cannot prove a negative for that child.
-        // Acyclic subgraphs and positive paths are context-independent and reusable.
-        if (found || !cycle)
+        if (!seen.Add(type))
+        {
+            cycles = PayloadCycles.Closed;
+            return false;
+        }
+        var found = Inspect(type, forbidden, visiting, seen, out cycles);
+        if (found || cycles == PayloadCycles.None)
         {
             completed.TryAdd(type, found);
+        }
+        // A different generic substitution may be reachable outside the current
+        // definition's ancestry. Let that path inspect the type again in its own context.
+        if ((cycles & PayloadCycles.Expanding) != 0)
+        {
+            seen.Remove(type);
         }
         return found;
     }
 
     private bool Inspect(ITypeSymbol type, INamedTypeSymbol forbidden, HashSet<ITypeSymbol> visiting,
-        out bool cycle)
+        HashSet<ITypeSymbol> seen, out PayloadCycles cycles)
     {
-        cycle = false;
+        cycles = PayloadCycles.None;
         if (type is IArrayTypeSymbol array)
         {
-            return Contains(array.ElementType, forbidden, visiting, out cycle);
+            return Contains(array.ElementType, forbidden, visiting, seen, out cycles);
         }
         if (type is ITypeParameterSymbol parameter)
         {
             if (!visiting.Add(parameter))
             {
-                cycle = true;
+                cycles = PayloadCycles.Closed;
                 return false;
             }
             try
             {
                 foreach (var constraint in parameter.ConstraintTypes)
                 {
-                    if (Contains(constraint, forbidden, visiting, out var childCycle))
+                    if (Contains(constraint, forbidden, visiting, seen, out var childCycles))
                     {
                         return true;
                     }
-                    cycle |= childCycle;
+                    cycles |= childCycles;
                 }
                 return false;
             }
@@ -194,11 +217,11 @@ internal sealed class CommandResultPayloadGraph
         }
         foreach (var argument in named.TypeArguments)
         {
-            if (Contains(argument, forbidden, visiting, out var childCycle))
+            if (Contains(argument, forbidden, visiting, seen, out var childCycles))
             {
                 return true;
             }
-            cycle |= childCycle;
+            cycles |= childCycles;
         }
         if (named.SpecialType != SpecialType.None)
         {
@@ -206,7 +229,7 @@ internal sealed class CommandResultPayloadGraph
         }
         if (!visiting.Add(named.OriginalDefinition))
         {
-            cycle = true;
+            cycles |= PayloadCycles.Expanding;
             return false;
         }
         try
@@ -225,28 +248,28 @@ internal sealed class CommandResultPayloadGraph
                 };
                 if (memberType is not null)
                 {
-                    if (Contains(memberType, forbidden, visiting, out var childCycle))
+                    if (Contains(memberType, forbidden, visiting, seen, out var childCycles))
                     {
                         return true;
                     }
-                    cycle |= childCycle;
+                    cycles |= childCycles;
                 }
             }
             if (named.BaseType is { } baseType)
             {
-                if (Contains(baseType, forbidden, visiting, out var baseCycle))
+                if (Contains(baseType, forbidden, visiting, seen, out var baseCycles))
                 {
                     return true;
                 }
-                cycle |= baseCycle;
+                cycles |= baseCycles;
             }
             foreach (var inherited in named.Interfaces)
             {
-                if (Contains(inherited, forbidden, visiting, out var childCycle))
+                if (Contains(inherited, forbidden, visiting, seen, out var childCycles))
                 {
                     return true;
                 }
-                cycle |= childCycle;
+                cycles |= childCycles;
             }
             return false;
         }
@@ -254,6 +277,14 @@ internal sealed class CommandResultPayloadGraph
         {
             visiting.Remove(named.OriginalDefinition);
         }
+    }
+
+    [Flags]
+    private enum PayloadCycles
+    {
+        None = 0,
+        Closed = 1,
+        Expanding = 2
     }
 
     private static bool Implements(INamedTypeSymbol type, INamedTypeSymbol contract)

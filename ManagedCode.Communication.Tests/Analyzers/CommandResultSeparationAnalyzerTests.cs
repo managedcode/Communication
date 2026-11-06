@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Threading;
 using System.Threading.Tasks;
 using ManagedCode.Communication.Analyzers;
 using Microsoft.CodeAnalysis;
@@ -14,7 +15,7 @@ using Shouldly;
 
 namespace ManagedCode.Communication.Tests.Analyzers;
 
-public sealed class CommandResultSeparationAnalyzerTests
+public sealed partial class CommandResultSeparationAnalyzerTests
 {
     private const string AssemblyName = "CommunicationEnvelopeSeparationRegression";
     private const string MetadataAssemblyName = "CommunicationEnvelopePayloadMetadata";
@@ -223,15 +224,15 @@ public sealed class CommandResultSeparationAnalyzerTests
     private static MetadataReference[] References() => ((string)AppContext.GetData(TrustedAssembliesKey)!).Split(Path.PathSeparator)
         .Append(typeof(Result).Assembly.Location).Distinct().Select(path => MetadataReference.CreateFromFile(path)).ToArray();
 
-    private static Task<ImmutableArray<Diagnostic>> Analyze(CSharpCompilation compilation) =>
-        compilation.WithAnalyzers([new CommandResultSeparationAnalyzer()]).GetAnalyzerDiagnosticsAsync();
+    private static Task<ImmutableArray<Diagnostic>> Analyze(CSharpCompilation compilation, CancellationToken cancellationToken = default) =>
+        compilation.WithAnalyzers([new CommandResultSeparationAnalyzer()]).GetAnalyzerDiagnosticsAsync(cancellationToken);
 
-    private static async Task ExecuteValidFlow(string source = ValidFlow)
+    private static async Task ExecuteValidFlow(string source = ValidFlow, CancellationToken cancellationToken = default)
     {
         var compilation = CreateCompilation(source);
-        (await Analyze(compilation)).ShouldBeEmpty();
+        (await Analyze(compilation, cancellationToken)).ShouldBeEmpty();
         using var image = new MemoryStream();
-        var emitted = compilation.Emit(image);
+        var emitted = compilation.Emit(image, cancellationToken: cancellationToken);
         emitted.Success.ShouldBeTrue(string.Join(Environment.NewLine, emitted.Diagnostics));
         image.Position = 0;
         var context = new AssemblyLoadContext(AssemblyName, isCollectible: true);
