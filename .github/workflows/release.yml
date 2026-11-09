@@ -229,7 +229,7 @@ jobs:
         echo "*This release was automatically created by GitHub Actions*" >> release_notes.md
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v3.0.3
+      uses: softprops/action-gh-release@v3.0.4
       with:
         tag_name: v${{ needs.publish-nuget.outputs.version }}
         name: v${{ needs.publish-nuget.outputs.version }}
